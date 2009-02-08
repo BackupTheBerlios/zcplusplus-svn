@@ -1,0 +1,761 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html >
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>
+  Is it implementation-defined whether this errors? -
+  comp.lang.c |
+  Google Groups
+  </title>
+  <meta name="save" content="history">
+<style type="text/css"><!--
+  .noscripthide { display:none; } .noscriptinline { display:inline; } .noscriptblock { display:block; }
+--></style>
+<script language="javascript"><!--
+
+// ----------------------------------
+// used for dynamic function generation on event handlers
+
+var loaddef = "";
+var resizedef = "";
+
+//-----------------------------------
+// Browser detection and support
+
+var agt = navigator.userAgent.toLowerCase();
+var is_opera = (agt.indexOf("opera") != -1);
+var is_ie = (agt.indexOf("msie") != -1) && document.all && !is_opera;
+var is_ie5 = (agt.indexOf("msie 5") != -1) && document.all;
+window.agt = agt;
+window.is_opera = is_opera;
+window.is_ie = is_ie;
+window.is_ie5 = is_ie5;
+
+// ----------------------------------
+// cross-browser functions
+
+var IE_all_cache = new Object();
+function IE_getElementById(id) {
+  if (IE_all_cache[id] == null) {
+    IE_all_cache[id] = document.all[id];
+  }
+  return IE_all_cache[id];
+}
+
+if (document.all) {
+  if (!document.getElementById) {
+    document.getElementById = IE_getElementById;
+  }
+}
+
+
+
+  //----------------------------------
+  // Timezone detection (sets cookie)
+
+  try {
+    document.cookie = 'GTZ=' + (new Date()).getTimezoneOffset() + ';path=/;expires=Mon, 01-Jan-2024 00:00:01 GMT';
+  } catch(e) {}
+
+
+// ---------------------------------
+// shelled functions for old javascript
+function tog() {}
+
+//--></script>
+<script language="javascript1.3"><!--
+
+// ----------------------------------
+// visibility functions
+
+function tog() {
+  // tog: toggle the visibility of html elements (arguments[1..]) from none to
+  // arguments[0].  Return what should be returned in a javascript onevent().
+  display = arguments[0];
+  for( var i=1; i<arguments.length; i++ ) {    
+    var x = document.getElementById(arguments[i]);
+    if (!x) continue;
+    if (x.style.display == "none" || x.style.display == "") {
+      x.style.display = display;
+    } else {
+      x.style.display = "none";
+    }
+  }
+
+  var e = is_ie ? window.event : this;
+  if (e) {
+    if (is_ie) {
+      e.cancelBubble = true;
+      e.returnValue = false;
+      return false;
+    } else {
+      return false;
+    }
+  }
+}
+//--></script>
+</head>
+<body topmargin=0 leftmargin=0 marginheight=0 marginwidth=0 bgcolor=white>
+  <style type="text/css"><!--
+    .mygp1 { padding-bottom: 7px;}
+    .mygp2 { padding-bottom: 7px; padding-left: 12px}
+  --></style>
+  <div class="algnl padall8" id="myg_popup" style="display:none; position: absolute; background-color: white;border-top: 1px solid #cccccc; border-left: 2px solid #cccccc; border-right: 2px solid #b3b3b3; border-bottom: 2px solid #b3b3b3;z-index: 2">
+  <table cellpadding=0 border=0 cellspacing=0>
+  <col style="width: 23.0ex">
+  <tr><td class="padb7 padt8" valign="bottom" ><b>Recently visited</b>&nbsp;</td></tr>
+  <tr><td valign="top" class="mygp1">Comp</td></tr>
+  <tr><td valign="top" class="mygp1">comp.compilers</td></tr>
+  <tr><td valign="top" class="mygp1">comp.games.d...t.design</td></tr>
+  <tr><td valign="top" class="mygp1">comp.games.d...gorithms</td></tr>
+  <tr><td valign="top" class="mygp1">comp.games.d...ing.misc</td></tr>
+  <tr><td valign="top" class="mygp1">comp.lang.c</td></tr>
+  <tr><td valign="top" class="mygp1">comp.lang.c++</td></tr>
+  <tr><td valign="top" class="mygp1">comp.lang.c++.moderated</td></tr>
+  <tr><td valign="top" class="mygp1">comp.lang.c.moderated</td></tr>
+  <tr><td valign="top" class="mygp1">comp.lang.fortran</td></tr>
+  <tr><td valign="top" class="mygp1">gamess</td></tr>
+  <tr><td valign="top" class="mygp1">rec.games.ro....angband</td></tr>
+  <tr><td valign="top" class="mygp1">rec.games.ro...elopment</td></tr>
+  <tr><td valign="top" class="mygp1">rec.games.roguelike.misc</td></tr>
+  <tr><td valign="top" class="mygp1">rec.games.ro....nethack</td></tr>
+  </table>
+  </div>
+  <div class="gtopbar">
+  <table cellpadding=0 cellspacing=0 width=100% border=0>
+  <tr valign="top">
+  <td class="maincell">
+  </td>
+  <td class="maincell gbar" nowrap align="right" valign="top"><nobr>
+  <b>zaimoni@zaimoni.com</b> |
+  <a href="https://www.google.com/accounts/ManageAccount?hl=en">My Account</a> |
+  </nobr></font></td>
+  </tr>
+  </table></div>
+<script language="javascript"><!--
+// Shelled functions for javascript compatibility
+function c() {}
+function op() {}
+function rl() {}
+function tog_quote() {}
+//--></script>
+<script language="javascript1.2"><!--
+
+function c( idnum ) {	//cancel a message -- clear text and toggle the reply box. slight delay gives user time to perceive that text is being cleared.
+  document.getElementById( 't'+idnum ).value="";
+  func = "rl( '" + idnum + "' )";
+  window.setTimeout( func, 300 );
+}
+
+function op( idnum )  // hide/show headers
+{
+  optionLink = document.getElementById( 'o'+idnum );
+  x = tog('block', 'h'+idnum );
+  for (var i = 1; i < 4; i++) {
+    tog(is_ie ? 'block' : 'table-row', 'htr' + i + '_' + idnum );
+  }
+  if( optionLink.innerHTML == "show options" ) 
+  {
+    optionLink.innerHTML = "hide options";
+  } else {
+    optionLink.innerHTML = "show options";
+  }
+  optionLink.blur();
+  return x;
+}
+
+function rl( idnum ) {  //function to toggle "reply" link; gets rid of annoying linkfocus & toggles ticks
+  replyblockid = 'r' + idnum;
+  textareaObj = document.getElementById( 't'+idnum );
+  linkobj = document.getElementById( 'lo'+idnum );
+  x = tog('block', replyblockid);
+  visible = document.getElementById( replyblockid ).style.display;
+  tick = document.getElementById( 'ti'+idnum );
+  if( visible == "none" ) {
+    linkobj.blur();
+    tick.src = "/groups/img/r.gif";
+  } else {
+    textareaObj.focus();
+    tick.src = "/groups/img/d.gif";
+  }
+  return x;
+}
+
+function tog_quote( idnum ) {
+  return tog( 'block', 'qheader_shown_' + idnum, 'qheader_hidden_' + idnum,
+	   'qhide_' + idnum );
+}
+
+//--></script>
+  <div style="border-top: 1px solid #999999"></div>
+  <div style="background-color: #eeeeee; padding: 4px 10px 4px 10px; ">
+  <table class="grhdr " cellpadding="0" cellspacing="0" width="100%"><tbody>
+  <tr valign="middle">
+  <td>
+  <div class="ghgrn">comp.lang.c</div>
+  <td style="padding-left: 35px" align="right">
+  </td>
+  </tr>
+  </tbody></table>
+  </div>
+  <table class="wdth100  overflow-hide" cellpadding=0 cellspacing=0 style="table-layout: fixed;">
+  <col width="*" height="100%"><col style="width:32ex;"><tr valign="top"><td class=" overflow-hide" style="border-bottom: 1px solid #999999;; border-right: 1px solid #999999;">
+<div class="maincontheaderbox">
+  <div class="secttlbarwrap">
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=999999&bc=white&w=4&h=4&a=af) 0px 0px; width: 4px; height: 4px"></div><td bgcolor="#999999" width="100%" height="4"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=999999&bc=white&w=4&h=4&a=af) 4px 0px; width: 4px; height: 4px"></div></table></div>
+  <div class="secttlbar">
+  <div class="lf secttl">
+  <span id="thread_subject_site">
+  Is it implementation-defined whether this errors?
+  </span>
+  </div>
+  </div>
+  <div class="secttlbaroptpane hide" id="TH_optionsPane_optpane">
+  <script language="javascript1.2"><!--
+    window.TH_optionsPane = {
+      expanded: false,
+      toggle: function() {
+        var botcorner_el = document.getElementById('TH_optionsPane_botcorner');
+        var optpane_el = document.getElementById('TH_optionsPane_optpane');
+        this.expanded = !this.expanded;
+        botcorner_el.style.display = (this.expanded ? "none" : "block");
+        optpane_el.style.display = (this.expanded ? "block" : "none");
+      }
+    };
+  //--></script>
+  </div>
+  <div class="" id="TH_optionsPane_botcorner">
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=999999&bc=white&w=4&h=4&a=af) 0px 4px; width: 4px; height: 4px"></div><td bgcolor="#999999" width="100%" height="4"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=999999&bc=white&w=4&h=4&a=af) 4px 4px; width: 4px; height: 4px"></div></table></div>
+  </div>
+  </div>
+</div>
+<div class="maincontbox">
+  <table cellpadding=0 cellspacing=0 border=0>
+  <tr>
+  <td class="thread_star" width=17 id="thread_watch_site"></td>
+  <td></td>
+  <td></td>
+  <td width=5>&nbsp;</td>
+  <td align="left" width=100%>
+  <span id="thread_page_msg_site" class="uit">5</b> messages<span class="noscripthide">&nbsp;-&nbsp;<a name="expand_all_msgs_link" id="expand_all_msgs_link" href="#" class="grltl">Collapse all</a></span>
+  </span>
+  </td>
+  <td align="right"><nobr id="thread_page_links_site">
+  </nobr></td>
+  </tr>
+  </table>
+<div id="msgs">
+  <div style="margin-left: -3px; margin-right: -1px;">
+  <input name="persist_msg_render" id="persist_msg_render" type="hidden" style="behavior:url(#default#savehistory);">
+  <script><!--
+      var G2_cardManager = {
+        _getMessage:function(){return {_load:function(){}};},
+        _getCard:function(){return {_load:function(){}};}
+      };
+    //--></script>
+  <script language="javascript1.3"><!--
+      if (_G2_CardManager) {
+        var G2_cardManager = new _G2_CardManager(window, "comp.lang.c");
+
+        G2_cardManager._setComposerTemplateGenerator(function() {
+          return (window.SM_msg_cb2_value ? window.SM_msg_cb2_value : window.SM_msg_cb2_value = document.getElementById('SM_msg_cb2').innerHTML.replace(/(^.*<!--SSM|ESM-->.*$)/g, ""))
+  });
+  G2_cardManager._setDoneUrl("/group/comp.lang.c/topics");
+  G2_cardManager._setAcServerBase("/c/");
+  _MR_Message._COMPOSING_TITLE_COLOR = "#c3d9ff";
+  var MSG_USENET_POSTING_WARNING = document.getElementById("upw").innerHTML;
+  var MSG_ACTIVE_REPLY_WARNING = document.getElementById("arw").innerHTML;
+  var MSG_POST_SUCCESSFUL = document.getElementById("psw").innerHTML;
+  window.onbeforeunload = G2_cardManager._anyCardsComposing.bind(G2_cardManager);
+  }
+  //--></script>
+  <table cellpadding=0 border=0 cellspacing=0><tr>
+  <td></td>
+  <td width=100%>
+  <div class="msg wdth100" id="msg_329211b29209e52c" onmouseover="if (G2_cardManager) {G2_cardManager._getMessage('329211b29209e52c')._load();}" style="margin: 0 -1px 0 -1px">
+  <input id="hdn_reply_to_subj" type=hidden value="Is it implementation-defined whether this errors?">
+  <input id="hdn_from" type=hidden value="zaimoni@zaimoni.com">
+  <input id="hdn_date" type=hidden value="Aug 27, 1:06&nbsp;am">
+  <input id="hdn_author" type=hidden value="zaim...@zaimoni.com">
+  <input id="hdn_group_name" type=hidden value="comp.lang.c">
+  <div id="hdr">
+  <table id="top" class="h msg_meta" cellpadding="0" cellspacing="0"><tbody>
+  <tr id="sep">
+  <td rowspan="2" id="l" class="ctl"></td>
+  <td colspan="4" id="m" class="ctop" height="4px"></td>
+  <td rowspan="2" id="r" class="ctr"></td>
+  </tr>
+  <tr>
+  <td><span class="fontsize2 author">
+  <span style="color: #00681C;"><i>zaimoni@zaimoni.com</i></span>
+  &nbsp;
+  </td>
+  <td width="100%"></td>
+  <td align="right" nowrap>
+  <span style="background-color: white;">
+  <span class="fontsize0">&nbsp;<span class="noscripthide scripthide script12inline lk " id="oh_l">More options</span></span>
+  <span class="fontsize2">
+  Aug 27, 1:06&nbsp;am
+  </span>
+  </span>
+  </td>
+  </tr>
+  </tbody></table>
+  <div class="scripthide cb" id="oh">
+  <div class="exh">
+  <div class="fontsize2">
+  <div style="padding-left: 20px; text-indent: -16px;">Newsgroups: <b>comp.lang.c</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">From: <b>zaimoni@zaimoni.com</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Date: <b>Tue, 26 Aug 2008 23:06:59 -0700 (PDT)</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Local: <b>Wed, Aug 27 2008 1:06&nbsp;am</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Subject: <b>Is it implementation-defined whether this errors?</b></div>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div id="body" class="mb cb fontsize2 ">
+  <div id="inbdy">
+  <a name="msg_329211b29209e52c"></a><font face="Courier, Monospaced" class=fixed_width>This is a test case I constructed for a vaporware standalone C99 <br> preprocessor: <br> <p>#if 1 <br> #elif <br> #endif <br> <p>The text did not permit quickly deciding whether the syntax relaxation <br> for preprocessing directives in blocks that aren't processed (C99 6.10 <br> paragraph 4) dominates knowing what an elif-block actually was (C99 <br> 6.10 paragraph 1). &nbsp;If 6.10 paragraph 4 dominates, this should warn <br> (as the preprocessor got lucky). &nbsp;If C99 6.10 paragraph 1 dominates, <br> this should error. <br> <p>The obvious complementary test case <br> <p>#if 0 <br> #elif <br> #endif <br> <p>must error, as the control expression of the #elif is actually <br> needed. &nbsp;So I tentatively decided to make the first test case behave <br> like the obvious one: error [why should it only warn just because we <br> got lucky?]. <br> <p>When I ran my test suite against GCC's cpp, the first test case only <br> warned. &nbsp;Since this is a legitimate implementation: did I miss <br> something that guarantees that the syntax relaxation dominates knowing <br> that the elif-block is well-formed? <br> </font>
+  </div>
+  <br style="font-size:8px;" clear="all">
+  </div>
+  <span id="dl_msg_cb2"></span>
+  <div id="ftr_sep" class="" style="">
+  <table cellpadding="0" cellspacing="0" height="8"><tbody>
+  <tr>
+  <td class="cbl" id="lc"></td>
+  <td class="cbot"></td>
+  <td class="cbr"></td>
+  </tr>
+  </tbody></table>
+  </div>
+  <div class="mrgb8 " id="msg_sep"></div>
+  <div class="mrgb2 hide" id="pok" style="margin-top:-5px;position:relative;">
+  <table align="center"><tr><td>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 0px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 2px 0px; width: 2px; height: 2px"></div></table></div>
+  <div class="pokh" style="background-color: #fad163;">
+  <div id="pok_cnt"></div>
+  </div>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 2px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 2px 2px; width: 2px; height: 2px"></div></table></div>
+  </td></tr></table>
+  </div>
+  </div>
+  <script language="javascript1.3"><!--
+    var msg = G2_cardManager._getMessage("329211b29209e52c");
+    msg._init("329211b29209e52c", "815185ca-b277-40bc-a5c4-240780908811@m36g2000hse.googlegroups.com", true,
+              "over", true, false,
+              "", 1);
+
+    msg._addPreLoadHook(function() {
+        this._setPostNeedsCaptcha(true);
+        this._setIsUsenet(true);
+        this._setBottomPosting(true);
+    });
+  //--></script>
+</td></tr></table>
+  </div>
+  <a name="0fba2269b80cf2d8" id="anchor_0fba2269b80cf2d8"></a>
+  <div style="margin-left: -3px; margin-right: -1px;">
+  <table cellpadding=0 border=0 cellspacing=0><tr>
+  <td></td>
+  <td width=100%>
+  <div class="msg wdth100" id="msg_0fba2269b80cf2d8" onmouseover="if (G2_cardManager) {G2_cardManager._getMessage('0fba2269b80cf2d8')._load();}" style="margin: 0 -1px 0 -1px">
+  <input id="hdn_reply_to_subj" type=hidden value="Is it implementation-defined whether this errors?">
+  <input id="hdn_from" type=hidden value="zaimoni@zaimoni.com">
+  <input id="hdn_date" type=hidden value="Aug 27, 9:26&nbsp;am">
+  <input id="hdn_author" type=hidden value="Eric Sosman &lt;Eric.Sos...@sun.com&gt;">
+  <input id="hdn_group_name" type=hidden value="comp.lang.c">
+  <div id="hdr">
+  <table id="top" class="h msg_meta" cellpadding="0" cellspacing="0"><tbody>
+  <tr id="sep">
+  <td rowspan="2" id="l" class="ctl"></td>
+  <td colspan="4" id="m" class="ctop" height="4px"></td>
+  <td rowspan="2" id="r" class="ctr"></td>
+  </tr>
+  <tr>
+  <td><span class="fontsize2 author">
+  <span style="color: #790619;">Eric Sosman</span>
+  &nbsp;
+  </td>
+  <td width="100%"></td>
+  <td align="right" nowrap>
+  <span style="background-color: white;">
+  <span class="fontsize0">&nbsp;<span class="noscripthide scripthide script12inline lk " id="oh_l">More options</span></span>
+  <span class="fontsize2">
+  Aug 27, 9:26&nbsp;am
+  </span>
+  </span>
+  </td>
+  </tr>
+  </tbody></table>
+  <div class="scripthide cb" id="oh">
+  <div class="exh">
+  <div class="fontsize2">
+  <div style="padding-left: 20px; text-indent: -16px;">Newsgroups: <b>comp.lang.c</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">From: <b>Eric Sosman &lt;Eric.Sos...@sun.com&gt;</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Date: <b>Wed, 27 Aug 2008 10:26:59 -0400</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Local: <b>Wed, Aug 27 2008 9:26&nbsp;am
+</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Subject: <b>Re: Is it implementation-defined whether this errors?</b></div>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div id="body" class="mb cb fontsize2 ">
+  <div id="inbdy">
+  <a name="msg_0fba2269b80cf2d8"></a><font face="Courier, Monospaced" 
+                                                                                            class=fixed_width><p><div ID=qhide_560955 style="display:block;" class=qt>zaimoni@zaimoni.com wrote: <br> &gt; This is a test case I constructed for a vaporware standalone C99 <br> &gt; preprocessor: <br> <p>&gt; #if 1 <br> &gt; #elif <br> &gt; #endif <br> <p>&gt; The text did not permit quickly deciding whether the syntax relaxation <br> &gt; for preprocessing directives in blocks that aren't processed (C99 6.10 <br> &gt; paragraph 4) dominates knowing what an elif-block actually was (C99 <br> &gt; 6.10 paragraph 1). &nbsp;If 6.10 paragraph 4 dominates, this should warn <br> &gt; (as the preprocessor got lucky). &nbsp;If C99 6.10 paragraph 1 dominates, <br> &gt; this should error. <br> <br></div>&nbsp; &nbsp; &nbsp;The question boils down to whether #elif by itself is a malformed <br> #elif directive (because there's no expression) or whether it's just <br> a non-directive (because it doesn't parse as a directive). &nbsp;6.10p3 <br> settles the issue: <br> <p>&nbsp; &nbsp; &nbsp; &nbsp; &quot;[...] A non-directive shall not begin with any of the <br> &nbsp; &nbsp; &nbsp; &nbsp; directive names appearing in the syntax.&quot; <br> <p>That is, no line beginning with #elif can be a non-directive, so it <br> must be treated as a directive, and since an #elif alone does not <br> match the syntax of any preprocessor directive it's an error. <br> <p><div ID=qhide_560956 style="display:block;" class=qt>&gt; The obvious complementary test case <br> <p>&gt; #if 0 <br> &gt; #elif <br> &gt; #endif <br> <p>&gt; must error, as the control expression of the #elif is actually <br> &gt; needed. <br> <br></div>&nbsp; &nbsp; &nbsp;I see no difference between this example and the first one. <br> <p>-- <br> Eric.Sos...@sun.com <br> </font>
+  </div>
+  <br style="font-size:8px;" clear="all">
+  </div>
+  <span id="dl_msg_cb2"></span>
+  <div id="ftr_sep" class="" style="">
+  <table cellpadding="0" cellspacing="0" height="8"><tbody>
+  <tr>
+  <td class="cbl" id="lc"></td>
+  <td class="cbot"></td>
+  <td class="cbr"></td>
+  </tr>
+  </tbody></table>
+  </div>
+  <div class="mrgb8 " id="msg_sep"></div>
+  <div class="mrgb2 hide" id="pok" style="margin-top:-5px;position:relative;">
+  <table align="center"><tr><td>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 0px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 2px 0px; width: 2px; height: 2px"></div></table></div>
+  <div class="pokh" style="background-color: #fad163;">
+  <div id="pok_cnt"></div>
+  </div>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 2px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 2px 2px; width: 2px; height: 2px"></div></table></div>
+  </td></tr></table>
+  </div>
+  </div>
+  <script language="javascript1.3"><!--
+    var msg = G2_cardManager._getMessage("0fba2269b80cf2d8");
+    msg._init("0fba2269b80cf2d8", "1219847174.342054@news1nwk", true,
+              "over", true, false,
+              "", 1);
+      msg._setPrev(G2_cardManager._getCard("msg_329211b29209e52c"),
+                   1);
+    msg._addPreLoadHook(function() {
+        this._setPostNeedsCaptcha(true);
+        this._setIsUsenet(true);
+        this._setBottomPosting(true);
+    });
+  //--></script>
+</td></tr></table>
+  </div>
+  <a name="9030fdae00c99e83" id="anchor_9030fdae00c99e83"></a>
+  <div style="margin-left: -3px; margin-right: -1px;">
+  <table cellpadding=0 border=0 cellspacing=0><tr>
+  <td></td>
+  <td width=100%>
+  <div class="msg wdth100" id="msg_9030fdae00c99e83" onmouseover="if (G2_cardManager) {G2_cardManager._getMessage('9030fdae00c99e83')._load();}" style="margin: 0 -1px 0 -1px">
+  <input id="hdn_reply_to_subj" type=hidden value="Is it implementation-defined whether this errors?">
+  <input id="hdn_from" type=hidden value="zaimoni@zaimoni.com">
+  <input id="hdn_date" type=hidden value="Aug 27, 11:23&nbsp;am">
+  <input id="hdn_author" type=hidden value="zaim...@zaimoni.com">
+  <input id="hdn_group_name" type=hidden value="comp.lang.c">
+  <div id="hdr">
+  <table id="top" class="h msg_meta" cellpadding="0" cellspacing="0"><tbody>
+  <tr id="sep">
+  <td rowspan="2" id="l" class="ctl"></td>
+  <td colspan="4" id="m" class="ctop" height="4px"></td>
+  <td rowspan="2" id="r" class="ctr"></td>
+  </tr>
+  <tr>
+  <td><span class="fontsize2 author">
+  <span style="color: #00681C;"><i>zaimoni@zaimoni.com</i></span>
+  &nbsp;
+  </td>
+  <td width="100%"></td>
+  <td align="right" nowrap>
+  <span style="background-color: white;">
+  <span class="fontsize0">&nbsp;<span class="noscripthide scripthide script12inline lk " id="oh_l">More options</span></span>
+  <span class="fontsize2">
+  Aug 27, 11:23&nbsp;am
+  </span>
+  </span>
+  </td>
+  </tr>
+  </tbody></table>
+  <div class="scripthide cb" id="oh">
+  <div class="exh">
+  <div class="fontsize2">
+  <div style="padding-left: 20px; text-indent: -16px;">Newsgroups: <b>comp.lang.c</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">From: <b>zaimoni@zaimoni.com</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Date: <b>Wed, 27 Aug 2008 09:23:20 -0700 (PDT)</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Local: <b>Wed, Aug 27 2008 11:23&nbsp;am
+</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Subject: <b>Re: Is it implementation-defined whether this errors?</b></div>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div id="body" class="mb cb fontsize2 ">
+  <div id="inbdy">
+  <a name="msg_9030fdae00c99e83"></a><font face="Courier, Monospaced" 
+                                                                                                                                                                    class=fixed_width>On Aug 27, 9:26 am, Eric Sosman &lt;Eric.Sos...@sun.com&gt; wrote: <br> <p><p><a class=qt href="?hide_quotes=no#msg_9030fdae00c99e83" onclick="return tog_quote(560957); "><div ID=qheader_shown_560957 class="hqt" style="display: none;">- Hide quoted text -</div><div ID=qheader_hidden_560957 class="sqt" style="display: block;">- Show quoted text -</div></a></p><div ID=qhide_560957 style="display:none;" class=qt>&gt; zaimoni@zaimoni.com wrote: <br> &gt; &gt; This is a test case I constructed for a vaporware standalone C99 <br> &gt; &gt; preprocessor: <br> <p>&gt; &gt; #if 1 <br> &gt; &gt; #elif <br> &gt; &gt; #endif <br> <p>&gt; &gt; The text did not permit quickly deciding whether the syntax relaxation <br> &gt; &gt; for preprocessing directives in blocks that aren't processed (C99 6.10 <br> &gt; &gt; paragraph 4) dominates knowing what an elif-block actually was (C99 <br> &gt; &gt; 6.10 paragraph 1). &nbsp;If 6.10 paragraph 4 dominates, this should warn <br> &gt; &gt; (as the preprocessor got lucky). &nbsp;If C99 6.10 paragraph 1 dominates, <br> &gt; &gt; this should error. <br> <p>&gt; &nbsp; &nbsp; &nbsp;The question boils down to whether #elif by itself is a malformed <br> &gt; #elif directive (because there's no expression) or whether it's just <br> &gt; a non-directive (because it doesn't parse as a directive). &nbsp;6.10p3 <br> &gt; settles the issue: <br> <p>&gt; &nbsp; &nbsp; &nbsp; &nbsp; &quot;[...] A non-directive shall not begin with any of the <br> &gt; &nbsp; &nbsp; &nbsp; &nbsp; directive names appearing in the syntax.&quot; <br> <p>&gt; That is, no line beginning with #elif can be a non-directive, so it <br> &gt; must be treated as a directive, and since an #elif alone does not <br> &gt; match the syntax of any preprocessor directive it's an error. <br> <br></div>Yes -- *if* the #elif directive is being preprocessed. <br> <p><div ID=qhide_560958 style="display:block;" class=qt>&gt; &gt; The obvious complementary test case <br> <p>&gt; &gt; #if 0 <br> &gt; &gt; #elif <br> &gt; &gt; #endif <br> <p>&gt; &gt; must error, as the control expression of the #elif is actually <br> &gt; &gt; needed. <br> <p>&gt; &nbsp; &nbsp; &nbsp;I see no difference between this example and the first one. <br> <br></div>Superficially: <br> Whether the first case's malformed #elif directive is actually being <br> preprocessed (as a top-level construct) is a &quot;this sentence is false&quot; <br> paradox. &nbsp;(If I'm going off-course, this is why.) &nbsp;With the second <br> case, it's a &quot;this sentence is true&quot; non-paradox. <br> <p>We have to preprocess the #elif directive to determine that there is <br> an elif-block to not preprocess. &nbsp;(I chose to error at that point, <br> then discard the malformed elif-block.) &nbsp;But as the starting line of <br> the not-preprocessed elif-block we're not supposed to preprocess it <br> after all -- which trips the &quot;any tokens allowed&quot; override for blocks <br> that aren't preprocessed. <br> </font>
+  </div>
+  <br style="font-size:8px;" clear="all">
+  </div>
+  <div id="ftr_sep" class="" style="">
+  <table cellpadding="0" cellspacing="0" height="8"><tbody>
+  <tr>
+  <td class="cbl" id="lc"></td>
+  <td class="cbot"></td>
+  <td class="cbr"></td>
+  </tr>
+  </tbody></table>
+  </div>
+  <div class="mrgb8 " id="msg_sep"></div>
+  <div class="mrgb2 hide" id="pok" style="margin-top:-5px;position:relative;">
+  <table align="center"><tr><td>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 0px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 2px 0px; width: 2px; height: 2px"></div></table></div>
+  <div class="pokh" style="background-color: #fad163;">
+  <div id="pok_cnt"></div>
+  </div>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 2px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 2px 2px; width: 2px; height: 2px"></div></table></div>
+  </td></tr></table>
+  </div>
+  </div>
+  <script language="javascript1.3"><!--
+    var msg = G2_cardManager._getMessage("9030fdae00c99e83");
+    msg._init("9030fdae00c99e83", "9c46e9e2-d1fb-4003-ade7-6d930addf8a2@79g2000hsk.googlegroups.com", true,
+              "over", true, false,
+              "", 1);
+      msg._setPrev(G2_cardManager._getCard("msg_0fba2269b80cf2d8"),
+                   1);
+    msg._addPreLoadHook(function() {
+        this._setPostNeedsCaptcha(true);
+        this._setIsUsenet(true);
+        this._setBottomPosting(true);
+    });
+  //--></script>
+</td></tr></table>
+  </div>
+  <a name="bcb296f7b7543d53" id="anchor_bcb296f7b7543d53"></a>
+  <div style="margin-left: -3px; margin-right: -1px;">
+  <table cellpadding=0 border=0 cellspacing=0><tr>
+  <td></td>
+  <td width=100%>
+  <div class="msg wdth100" id="msg_bcb296f7b7543d53" onmouseover="if (G2_cardManager) {G2_cardManager._getMessage('bcb296f7b7543d53')._load();}" style="margin: 0 -1px 0 -1px">
+  <input id="hdn_reply_to_subj" type=hidden value="Is it implementation-defined whether this errors?">
+  <input id="hdn_from" type=hidden value="zaimoni@zaimoni.com">
+  <input id="hdn_date" type=hidden value="Aug 27, 12:32&nbsp;pm">
+  <input id="hdn_author" type=hidden value="Eric Sosman &lt;Eric.Sos...@sun.com&gt;">
+  <input id="hdn_group_name" type=hidden value="comp.lang.c">
+  <div id="hdr">
+  <table id="top" class="h msg_meta" cellpadding="0" cellspacing="0"><tbody>
+  <tr id="sep">
+  <td rowspan="2" id="l" class="ctl"></td>
+  <td colspan="4" id="m" class="ctop" height="4px"></td>
+  <td rowspan="2" id="r" class="ctr"></td>
+  </tr>
+  <tr>
+  <td><span class="fontsize2 author">
+  <span style="color: #790619;">Eric Sosman</span>
+  &nbsp;
+  </td>
+  <td width="100%"></td>
+  <td align="right" nowrap>
+  <span style="background-color: white;">
+  <span class="fontsize0">&nbsp;<span class="noscripthide scripthide script12inline lk " id="oh_l">More options</span></span>
+  <span class="fontsize2">
+  Aug 27, 12:32&nbsp;pm
+  </span>
+  </span>
+  </td>
+  </tr>
+  </tbody></table>
+  <div class="scripthide cb" id="oh">
+  <div class="exh">
+  <div class="fontsize2">
+  <div style="padding-left: 20px; text-indent: -16px;">Newsgroups: <b>comp.lang.c</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">From: <b>Eric Sosman &lt;Eric.Sos...@sun.com&gt;</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Date: <b>Wed, 27 Aug 2008 13:32:24 -0400</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Local: <b>Wed, Aug 27 2008 12:32&nbsp;pm</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Subject: <b>Re: Is it implementation-defined whether this errors?</b></div>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div id="body" class="mb cb fontsize2 ">
+  <div id="inbdy">
+  <a name="msg_bcb296f7b7543d53"></a><font face="Courier, Monospaced" class=fixed_width><p><p><a class=qt href="?hide_quotes=no#msg_bcb296f7b7543d53" 
+onclick="return tog_quote(560959); "><div ID=qheader_shown_560959 class="hqt" style="display: none;">- Hide quoted text -</div><div ID=qheader_hidden_560959 class="sqt" style="display: block;">- Show quoted text -</div></a></p><div ID=qhide_560959 style="display:none;" class=qt>zaimoni@zaimoni.com wrote: <br> &gt; On Aug 27, 9:26 am, Eric Sosman &lt;Eric.Sos...@sun.com&gt; wrote: <br> &gt;&gt; zaimoni@zaimoni.com wrote: <br> &gt;&gt;&gt; This is a test case I constructed for a vaporware standalone C99 <br> &gt;&gt;&gt; preprocessor: <br> &gt;&gt;&gt; #if 1 <br> &gt;&gt;&gt; #elif <br> &gt;&gt;&gt; #endif <br> &gt;&gt;&gt; The text did not permit quickly deciding whether the syntax relaxation <br> &gt;&gt;&gt; for preprocessing directives in blocks that aren't processed (C99 6.10 <br> &gt;&gt;&gt; paragraph 4) dominates knowing what an elif-block actually was (C99 <br> &gt;&gt;&gt; 6.10 paragraph 1). &nbsp;If 6.10 paragraph 4 dominates, this should warn <br> &gt;&gt;&gt; (as the preprocessor got lucky). &nbsp;If C99 6.10 paragraph 1 dominates, <br> &gt;&gt;&gt; this should error. <br> &gt;&gt; &nbsp; &nbsp; &nbsp;The question boils down to whether #elif by itself is a malformed <br> &gt;&gt; #elif directive (because there's no expression) or whether it's just <br> &gt;&gt; a non-directive (because it doesn't parse as a directive). &nbsp;6.10p3 <br> &gt;&gt; settles the issue: <br> <p>&gt;&gt; &nbsp; &nbsp; &nbsp; &nbsp; &quot;[...] A non-directive shall not begin with any of the <br> &gt;&gt; &nbsp; &nbsp; &nbsp; &nbsp; directive names appearing in the syntax.&quot; <br> <p>&gt;&gt; That is, no line beginning with #elif can be a non-directive, so it <br> &gt;&gt; must be treated as a directive, and since an #elif alone does not <br> &gt;&gt; match the syntax of any preprocessor directive it's an error. <br> <p>&gt; Yes -- *if* the #elif directive is being preprocessed. <br> <br></div>&nbsp; &nbsp; &nbsp;It is a directive, and it is not inside a skipped group, so <br> it is processed. &nbsp;The grammar of 6.10p1 makes it clear that the <br> #elif is not part of the if-group that is included or omitted by <br> the #if, but marks the start of the elif-group that follows the <br> if-group in the same if-section. &nbsp;Thus, 6.10.1p5 does not apply. <br> <p><div ID=qhide_560960 style="display:block;" class=qt>&gt;&gt;&gt; The obvious complementary test case <br> &gt;&gt;&gt; #if 0 <br> &gt;&gt;&gt; #elif <br> &gt;&gt;&gt; #endif <br> &gt;&gt;&gt; must error, as the control expression of the #elif is actually <br> &gt;&gt;&gt; needed. <br> &gt;&gt; &nbsp; &nbsp; &nbsp;I see no difference between this example and the first one. <br> <p>&gt; Superficially: <br> &gt; Whether the first case's malformed #elif directive is actually being <br> &gt; preprocessed (as a top-level construct) is a &quot;this sentence is false&quot; <br> &gt; paradox. &nbsp;(If I'm going off-course, this is why.) &nbsp;With the second <br> &gt; case, it's a &quot;this sentence is true&quot; non-paradox. <br> <br></div>&nbsp; &nbsp; &nbsp;I'm also susceptible to going off-course, but you've not yet <br> convinced me that the course and I have become non-proximal ... <br> As I understand the matter, the #elif directive *is* processed, no <br> matter what the value of the controlling expression in the preceding <br> #if or #elif, because the #elif is not part of the group that the <br> preceding directive includes or suppresses. <br> <p> &nbsp; &nbsp; &nbsp;6.10.1p5 applies to situations like this, which I think is <br> valid C despite its unusual appearance: <br> 
+                                                                                                                                 <p>&nbsp; &nbsp; &nbsp; &nbsp; #if 0 <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; #if &nbsp; *-*-*-*-*-*-*-* <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; #elif |-|-|-|-|-|-|-| <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; #elif &lt;&lt;&lt;&lt;&lt;-=-=-&gt;&gt;&gt;&gt;&gt; <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; #endif you must this old grey head <br> &nbsp; &nbsp; &nbsp; &nbsp; #elif 0 <br> &nbsp; &nbsp; &nbsp; &nbsp; #else <br> &nbsp; &nbsp; &nbsp; &nbsp; #endif <br> <p>IMHO, the directives in the inner if-section -- fully contained within <br> the if-group of the outer if-section -- are processed only as far as <br> their names, as 6.10.1p5 says. &nbsp;The other four directives are, I think, <br> fully processed regardless of the control expressions' values. <br> <p>-- <br> Eric.Sos...@sun.com <br> </font>
+  </div>
+  <br style="font-size:8px;" clear="all">
+  </div>
+  <span id="dl_msg_cb2"></span>
+  <div id="ftr_sep" class="" style="">
+  <table cellpadding="0" cellspacing="0" height="8"><tbody>
+  <tr>
+  <td class="cbl" id="lc"></td>
+  <td class="cbot"></td>
+  <td class="cbr"></td>
+  </tr>
+  </tbody></table>
+  </div>
+  <div class="mrgb8 " id="msg_sep"></div>
+  <div class="mrgb2 hide" id="pok" style="margin-top:-5px;position:relative;">
+  <table align="center"><tr><td>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 0px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 2px 0px; width: 2px; height: 2px"></div></table></div>
+  <div class="pokh" style="background-color: #fad163;">
+  <div id="pok_cnt"></div>
+  </div>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 2px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 2px 2px; width: 2px; height: 2px"></div></table></div>
+  </td></tr></table>
+  </div>
+  </div>
+  <script language="javascript1.3"><!--
+    var msg = G2_cardManager._getMessage("bcb296f7b7543d53");
+    msg._init("bcb296f7b7543d53", "1219858299.793563@news1nwk", true,
+              "over", true, false,
+              "", 1);
+      msg._setPrev(G2_cardManager._getCard("msg_9030fdae00c99e83"),
+                   1);
+    msg._addPreLoadHook(function() {
+        this._setPostNeedsCaptcha(true);
+        this._setIsUsenet(true);
+        this._setBottomPosting(true);
+    });
+  //--></script>
+</td></tr></table>
+  </div>
+  <a name="14501b3c6b8e6c75" id="anchor_14501b3c6b8e6c75"></a>
+  <div style="margin-left: -3px; margin-right: -1px;">
+  <table cellpadding=0 border=0 cellspacing=0><tr>
+  <td></td>
+  <td width=100%>
+  <div class="msg wdth100" id="msg_14501b3c6b8e6c75" onmouseover="if (G2_cardManager) {G2_cardManager._getMessage('14501b3c6b8e6c75')._load();}" style="margin: 0 -1px 0 -1px">
+  <input id="hdn_reply_to_subj" type=hidden value="Is it implementation-defined whether this errors?">
+  <input id="hdn_from" type=hidden value="zaimoni@zaimoni.com">
+  <input id="hdn_date" type=hidden value="Aug 27, 1:35&nbsp;pm">
+  <input id="hdn_author" type=hidden value="zaim...@zaimoni.com">
+  <input id="hdn_group_name" type=hidden value="comp.lang.c">
+  <div id="hdr">
+  <table id="top" class="h msg_meta" cellpadding="0" cellspacing="0"><tbody>
+  <tr id="sep">
+  <td rowspan="2" id="l" class="ctl"></td>
+  <td colspan="4" id="m" class="ctop" height="4px"></td>
+  <td rowspan="2" id="r" class="ctr"></td>
+  </tr>
+  <tr>
+  <td><span class="fontsize2 author">
+  <span style="color: #00681C;"><i>zaimoni@zaimoni.com</i></span>
+  &nbsp;
+  </td>
+  <td width="100%"></td>
+  <td align="right" nowrap>
+  <span style="background-color: white;">
+  <span class="fontsize0">&nbsp;<span class="noscripthide scripthide script12inline lk " id="oh_l">More options</span></span>
+  <span class="fontsize2">
+  Aug 27, 1:35&nbsp;pm
+  </span>
+  </span>
+  </td>
+  </tr>
+  </tbody></table>
+  <div class="scripthide cb" id="oh">
+  <div class="exh">
+  <div class="fontsize2">
+  <div style="padding-left: 20px; text-indent: -16px;">Newsgroups: <b>comp.lang.c</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">From: <b>zaimoni@zaimoni.com</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Date: <b>Wed, 27 Aug 2008 11:35:21 -0700 (PDT)</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Local: <b>Wed, Aug 27 2008 1:35&nbsp;pm
+</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Subject: <b>Re: Is it implementation-defined whether this errors?</b></div>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div id="body" class="mb cb fontsize2 ">
+  <div id="inbdy">
+  <a name="msg_14501b3c6b8e6c75"></a><font face="Courier, Monospaced" class=fixed_width>On Aug 27, 12:32 pm, Eric Sosman &lt;Eric.Sos...@sun.com&gt; 
+wrote: <br> <p><p><a class=qt href="?hide_quotes=no#msg_14501b3c6b8e6c75" 
+onclick="return tog_quote(560961); "><div ID=qheader_shown_560961 class="hqt" style="display: none;">- Hide quoted text -</div><div ID=qheader_hidden_560961 class="sqt" style="display: block;">- Show quoted text -</div></a></p><div ID=qhide_560961 style="display:none;" class=qt>&gt; zaimoni@zaimoni.com wrote: <br> &gt; &gt; On Aug 27, 9:26 am, Eric Sosman &lt;Eric.Sos...@sun.com&gt; wrote: <br> &gt; &gt;&gt; zaimoni@zaimoni.com wrote: <br> &gt; &gt;&gt;&gt; This is a test case I constructed for a vaporware standalone C99 <br> &gt; &gt;&gt;&gt; preprocessor: <br> &gt; &gt;&gt;&gt; #if 1 <br> &gt; &gt;&gt;&gt; #elif <br> &gt; &gt;&gt;&gt; #endif <br> &gt; &gt;&gt;&gt; .... <br> &gt; &gt;&gt; That is, no line beginning with #elif can be a non-directive, so it <br> &gt; &gt;&gt; must be treated as a directive, and since an #elif alone does not <br> &gt; &gt;&gt; match the syntax of any preprocessor directive it's an error. <br> <p>&gt; &gt; Yes -- *if* the #elif directive is being preprocessed. <br> <p>&gt; &nbsp; &nbsp; &nbsp;It is a directive, and it is not inside a skipped group, so <br> &gt; it is processed. &nbsp;The grammar of 6.10p1 makes it clear that the <br> &gt; #elif is not part of the if-group that is included or omitted by <br> &gt; the #if, but marks the start of the elif-group that follows the <br> &gt; if-group in the same if-section. <br> <br></div>Agreed. <br> <p><div ID=qhide_560962 style="display:block;" class=qt>&gt; Thus, 6.10.1p5 does not apply. <br> <br></div>6.10.1p5 entails the tie-breaker I needed, however. <br> <p><div ID=qhide_560963 style="display:block;" class=qt>&gt; &gt;&gt;&gt; The obvious complementary test case <br> &gt; &gt;&gt;&gt; #if 0 <br> &gt; &gt;&gt;&gt; #elif <br> &gt; &gt;&gt;&gt; #endif <br> &gt; &gt;&gt;&gt; must error, as the control expression of the #elif is actually <br> &gt; &gt;&gt;&gt; needed. <br> &gt; &gt;&gt; &nbsp; &nbsp; &nbsp;I see no difference between this example and the first one. <br> <p>&gt; &gt; Superficially: <br> &gt; &gt; Whether the first case's malformed #elif directive is actually being <br> &gt; &gt; preprocessed (as a top-level construct) is a &quot;this sentence is false&quot; <br> &gt; &gt; paradox. &nbsp;(If I'm going off-course, this is why.) &nbsp;With the second <br> &gt; &gt; case, it's a &quot;this sentence is true&quot; non-paradox. <br> <br></div>What I had not noticed: 6.10.1p5 entails that an #elif directive does <br> not suppress itself. &nbsp;This dispels the claimed paradox. &nbsp;(I plausibly <br> overlooked a more direct statement to that effect.) <br> <p><div ID=qhide_560964 style="display:block;" class=qt>&gt; .... <br> &gt; &nbsp; &nbsp; &nbsp;6.10.1p5 applies to situations like this, which I think is <br> &gt; valid C despite its unusual appearance: <br> <br></div>I'm certain your following example is valid C. <br> <p><div ID=qhide_560965 style="display:block;" class=qt>&gt; &nbsp; &nbsp; &nbsp; &nbsp; #if 0 <br> &gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; #if &nbsp; *-*-*-*-*-*-*-* <br> &gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; #elif |-|-|-|-|-|-|-| <br> &gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; #elif &lt;&lt;&lt;&lt;&lt;-=-=-&gt;&gt;&gt;&gt;&gt; <br> &gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; #endif you must this old grey head <br> &gt; &nbsp; &nbsp; &nbsp; &nbsp; #elif 0 <br> &gt; &nbsp; &nbsp; &nbsp; &nbsp; #else <br> &gt; &nbsp; &nbsp; &nbsp; &nbsp; #endif <br> 
+                                                                                                                                                                               <p>&gt; IMHO, the directives in the inner if-section -- fully contained within <br> &gt; the if-group of the outer if-section -- are processed only as far as <br> &gt; their names, as 6.10.1p5 says. <br> <br></div>Yes, this is unequivocal. <br> </font>
+  </div>
+  <br style="font-size:8px;" clear="all">
+  </div>
+  <span id="dl_msg_cb2"></span>
+  <div id="ftr_sep" class="" style="">
+  <table cellpadding="0" cellspacing="0" height="8"><tbody>
+  <tr>
+  <td class="cbl" id="lc"></td>
+  <td class="cbot"></td>
+  <td class="cbr"></td>
+  </tr>
+  </tbody></table>
+  </div>
+  <div class="mrgb8 " id="msg_sep"></div>
+  <div class="mrgb2 hide" id="pok" style="margin-top:-5px;position:relative;">
+  <table align="center"><tr><td>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 0px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 2px 0px; width: 2px; height: 2px"></div></table></div>
+  <div class="pokh" style="background-color: #fad163;">
+  <div id="pok_cnt"></div>
+  </div>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 2px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 2px 2px; width: 2px; height: 2px"></div></table></div>
+  </td></tr></table>
+  </div>
+  </div>
+  <script language="javascript1.3"><!--
+    var msg = G2_cardManager._getMessage("14501b3c6b8e6c75");
+    msg._init("14501b3c6b8e6c75", "d39456b7-be4f-42af-8e49-11c2feddf01c@79g2000hsk.googlegroups.com", true,
+              "over", true, false,
+              "", 1);
+      msg._setPrev(G2_cardManager._getCard("msg_bcb296f7b7543d53"),
+                   1);
+    msg._addPreLoadHook(function() {
+        this._setPostNeedsCaptcha(true);
+        this._setIsUsenet(true);
+        this._setBottomPosting(true);
+    });
+  //--></script>
+</td></tr></table>
+  </div>
+<table cellspacing=0 cellpadding=2>
+  <tr>
+  <td width=100% style="padding:0px 2px" class="uit">
+  End of messages
+  </td>
+  <td width=1><nobr>
+  </nobr></td>
+  </tr>
+</table>
+</div>
+</div>
+<br clear=all>
+  <div class="padt10 clear"></div>
+  </td><td style="background-color: #eeeeee; ">
+  <div style="width: 32ex; height: 500px;">
+  <img width=1 height=500 alt="">
+  </div>
+  </table>
+  <div style="background-color: #eeeeee">
+<div class="padt10 padb10">
+  <table width="100%" border="0" cellpadding="0" cellspacing="0">
+  <tr valign=center>
+  <td align="center" style="padding-right:1em;" class="fontsize2">Google Groups<font color="#333"> - </font>
+  <a style="color: #00c" target=_top href="http://www.google.com/webhp?hl=en">Google Home</a><font color="#333"> - </font>
+  <a style="color: #00c" target=_top href="http://groups.google.com/intl/en/googlegroups/terms_of_service3.html">Terms of Service</a><font color="#333"> - </font>
+  <a style="color: #00c" target=_top href="http://groups.google.com/intl/en/googlegroups/privacy3.html">Privacy Policy</a>
+  </td>
+  </tr>
+  <tr>
+  <td align="center" style="color: #333" class="fontsize1 padt5" >&copy;2008 Google</td>
+  </tr>
+  </table>
+</div>
+  </div>
+<script language="javascript"><!--
+if( loaddef != "" ) {
+  window.onload=new Function( loaddef );
+}
+if( resizedef != "" ) {
+  window.onresize = new Function( resizedef );
+}
+//--></script>
+</body>
+</html>

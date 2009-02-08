@@ -1,0 +1,59 @@
+Order of evaluation of # and ##
+* This is unspecified behavior.
+* ZCC 
+** discards malformed # operators first
+** then evaluates all # operators
+** then evaluates ## left-to-right
+* With this priority, test ## #A is less than useful (strings do not concatenate with other tokens at all)
+
+When a fully expanded macro replacement list contains a function-like macro name
+as its last preprocessing token and the next preprocessing token from the source file is
+a (, and the fully expanded replacement of that macro ends with the name of the first
+macro and the next preprocessing token from the source file is again a (, whether that
+is considered a nested replacement:
+* Undecided at this time.
+
+An unmatched ' or " character is encountered on a logical source line during
+tokenization
+* This is undefined behavior.
+** ZCC incurs a preprocessing error, and closes the string/character literal immediately.
+
+Whether the # operator inserts a \ character before the \ character that begins a
+universal character name in a character constant or string literal
+* This is implementation-defined behavior.
+** ZCC always escapes \ when applying #.
+
+Whether the calloc, malloc, and realloc functions return a null pointer or a
+pointer to an allocated object when the size requested is zero
+* This is implementation-defined behavior.
+** Considering the noxious consequences of actually using such a non-NULL pointer, ZCC's native memory manager will return NULL.
+
+Include paths searched
+* no options yet
+* we expect POSIX directory separators /
+* currently, normal search paths defined in CPreproc.cpp
+* We disallow .. in #include <...>, as we'd rather not be looking outside of our target directories on *NIX
+** NOTE: As a design decision to simplify cross-compiler design, ZCC 
+   auto-generates some system header files from machine-specific data 
+   (eventually to be controllable by command-line options).  These files 
+   do not correpond to a physical file, but are still legal by C99 6.10.2 p2 
+   (the "implementation defined place" searched is not in the file system).  
+   Affected files: limits.h/climits
+====
+Standards compliance notes:
+* In C++ mode, ZCC follow C++0x regarding what universal-character-encodings are legal.  C++98 is more permissive.
+* Regarding defining keywords as macros, in C++-mode ZCC follows C++0x rather than C++98 as a matter of ease of implementation.  The difference only matters for programs
+that include no standard headers whatsoever.  In this case, C++0x prohibits while C++98 does not.
+* While string literals as components of integer constant expressions are allowed as long as the expression has an integer-like type, they are not required.
+** Array-dereferencing a string literal with a compile-time constant that is out-of-bounds is an error.
+* The following C standard headers are available:
+** iso646.h/ciso646
+** limits.h/climits
+*** not even remotely POSIX-compliant.  As most of the POSIX extensions here have to do with POSIX C library features, this will not be fixed quickly.
+** stdbool.h/cstdbool
+* cstdint/stdint.h: When this is implemented, C++0x will be considered to be authoritative for the behavior of stdint.h in C++, not C99.  Thus, a number of macros are 
+unconditionally defined per C++0x, rather than invoking undefined behavior by requiring the definition of a macro reserved to the C99 standard/C++ implementation 
+as C99 requires.
+* We do not currently handle cross-preprocessing to a machine with a different CHAR_BIT size, or with a CHAR_BIT size other than 8.
+* We do not currently handle cross-preprocessing to a machine with a larger uintmax_t than ours.
+** limits.h/climits will not autogenerate properly.

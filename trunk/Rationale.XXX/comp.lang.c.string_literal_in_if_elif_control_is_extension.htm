@@ -1,0 +1,1146 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html >
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>
+  Vaporware C99 preprocessor: string literal corner cases -
+  comp.lang.c |
+  Google Groups
+  </title>
+  <meta name="save" content="history">
+<style type="text/css"><!--
+  .noscripthide { display:none; } .noscriptinline { display:inline; } .noscriptblock { display:block; }
+--></style>
+<script language="javascript"><!--
+
+// ----------------------------------
+// used for dynamic function generation on event handlers
+
+var loaddef = "";
+var resizedef = "";
+
+//-----------------------------------
+// Browser detection and support
+
+var agt = navigator.userAgent.toLowerCase();
+var is_opera = (agt.indexOf("opera") != -1);
+var is_ie = (agt.indexOf("msie") != -1) && document.all && !is_opera;
+var is_ie5 = (agt.indexOf("msie 5") != -1) && document.all;
+window.agt = agt;
+window.is_opera = is_opera;
+window.is_ie = is_ie;
+window.is_ie5 = is_ie5;
+
+// ----------------------------------
+// cross-browser functions
+
+var IE_all_cache = new Object();
+function IE_getElementById(id) {
+  if (IE_all_cache[id] == null) {
+    IE_all_cache[id] = document.all[id];
+  }
+  return IE_all_cache[id];
+}
+
+if (document.all) {
+  if (!document.getElementById) {
+    document.getElementById = IE_getElementById;
+  }
+}
+
+
+
+  //----------------------------------
+  // Timezone detection (sets cookie)
+
+  try {
+    document.cookie = 'GTZ=' + (new Date()).getTimezoneOffset() + ';path=/;expires=Mon, 01-Jan-2024 00:00:01 GMT';
+  } catch(e) {}
+
+
+// ---------------------------------
+// shelled functions for old javascript
+function tog() {}
+
+//--></script>
+<script language="javascript1.3"><!--
+
+// ----------------------------------
+// visibility functions
+
+function tog() {
+  // tog: toggle the visibility of html elements (arguments[1..]) from none to
+  // arguments[0].  Return what should be returned in a javascript onevent().
+  display = arguments[0];
+  for( var i=1; i<arguments.length; i++ ) {    
+    var x = document.getElementById(arguments[i]);
+    if (!x) continue;
+    if (x.style.display == "none" || x.style.display == "") {
+      x.style.display = display;
+    } else {
+      x.style.display = "none";
+    }
+  }
+
+  var e = is_ie ? window.event : this;
+  if (e) {
+    if (is_ie) {
+      e.cancelBubble = true;
+      e.returnValue = false;
+      return false;
+    } else {
+      return false;
+    }
+  }
+}
+
+
+_G2_initCurrentDomain('googlegroups.com',
+            false,
+            true);
+
+_G2_initCurrentGroup('comp.lang.c',
+            'a');
+
+
+
+
+//--></script>
+<script language="javascript"><!--
+function ad_resize() {}
+function if_resize() {}
+function fin_resize() {}
+function qs() {}
+//--></script>
+<script language="javascript1.2"><!--
+function if_resize(name, w, h) {
+  if (document.getElementById && document.getElementById(name)){
+    document.getElementById(name).style.height = h + "px";
+    document.getElementById(name).style.width = w + "px";
+  }
+}
+function ad_resize(w, h) {
+  if_resize("google_ads_frame",w,h);
+}
+function fin_resize(w, h) {
+  if_resize("google_finance_frame",w,h);
+}
+
+function qs(el) {
+  if (window.RegExp && window.encodeURIComponent) {
+    var qe=encodeURIComponent(document.gs.q.value);
+
+    if (qe == '') {
+      return 1;
+    }
+
+    if (el.href.indexOf("q=")!=-1) {
+      el.href=el.href.replace(new RegExp("q=[^&$]*"),"q="+qe);
+    } else {
+      el.href+="&q="+qe;
+    }
+  }
+  return 1;
+}
+
+//--></script>
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="http://groups.google.com/group/comp.lang.c/feed/rss_v2_0_msgs.xml">
+  <link rel="alternate" type="application/atom+xml" title="Atom" href="http://groups.google.com/group/comp.lang.c/feed/atom_v1_0_msgs.xml">
+</head>
+<body onresize=""
+      onload=""
+      
+        topmargin=0
+        leftmargin=0
+        marginheight=0
+        marginwidth=0
+      
+      bgcolor=white
+      
+      
+  >
+  <style type="text/css"><!--
+    .mygp1 { padding-bottom: 7px;}
+    .mygp2 { padding-bottom: 7px; padding-left: 12px}
+  --></style>
+  <div class="algnl padall8" id="myg_popup" style="display:none; position: absolute; background-color: white;border-top: 1px solid #cccccc; border-left: 2px solid #cccccc; border-right: 2px solid #b3b3b3; border-bottom: 2px solid #b3b3b3;z-index: 2">
+  <table cellpadding=0 border=0 cellspacing=0>
+  <col style="width: 23.0ex">
+  <tr><td class="padb7 padt8" valign="bottom" ><b>Recently visited</b></td></tr>
+  <tr><td valign="top" class="mygp1">Comp</td></tr>
+  <tr><td valign="top" class="mygp1">comp.compilers</td></tr>
+  <tr><td valign="top" class="mygp1">comp.games.d...t.design</td></tr>
+  <tr><td valign="top" class="mygp1">comp.games.d...gorithms</td></tr>
+  <tr><td valign="top" class="mygp1">comp.games.d...ing.misc</td></tr>
+  <tr><td valign="top" class="mygp1">comp.lang.c</td></tr>
+  <tr><td valign="top" class="mygp1">comp.lang.c++</td></tr>
+  <tr><td valign="top" class="mygp1">comp.lang.c++.moderated</td></tr>
+  <tr><td valign="top" class="mygp1">comp.lang.c.moderated</td></tr>
+  <tr><td valign="top" class="mygp1">comp.lang.fortran</td></tr>
+  <tr><td valign="top" class="mygp1">gamess</td></tr>
+  <tr><td valign="top" class="mygp1">IA32 System V Application Binary Interface</td></tr>
+  <tr><td valign="top" class="mygp1">rec.games.ro....angband</td></tr>
+  <tr><td valign="top" class="mygp1">rec.games.ro...elopment</td></tr>
+  <tr><td valign="top" class="mygp1">rec.games.roguelike.misc</td></tr>
+  </table>
+  </div>
+  <div class="gtopbar">
+  <table cellpadding=0 cellspacing=0 width=100% border=0>
+  <tr valign="top">
+  <td class="maincell">
+  </td>
+  <td class="maincell gbar" nowrap align="right" valign="top"><nobr>
+  <b>zaimoni@zaimoni.com</b> |
+  My Groups
+  <script language="javascript1.3"><!--
+    function MygPopup(el, link_el) {
+      this.link_el = link_el;
+      this.el = el;
+      this.popupOpened = false;
+      this.mouseOver = false;
+      this.el.onclick = this.onClick.bind(this);
+      this.el.onmouseover = this.onMouseOver.bind(this);
+      this.el.onmouseout = this.onMouseOut.bind(this);
+      window.onresize = this.onResize.bind(this);
+      this.ignoreNext = false;
+    }
+    MygPopup.prototype.onClick = function(e) {
+      var e = e || window.event;
+      if (IsDescendant(this.el, GetEventTarget(e))
+          && this.popupOpened) {
+        
+        if (this.ignoreNext) {
+          this.ignoreNext = false;
+          return;
+        }
+      }
+      if (!IsDescendant(this.getPopup(), GetEventTarget(e))) {
+        this.toggle();
+      }
+    }
+    MygPopup.prototype.getPopup = function() {
+      if (!this.popup_el) {
+        this.popup_el = document.getElementById('myg_popup');
+      }
+      return this.popup_el;
+    }
+    MygPopup.prototype.toggle = function() {
+      this.popupOpened = !this.popupOpened;
+      var popup = this.getPopup();
+      if (this.popupOpened) {
+        popup.style.visibility = "hidden";
+        popup.style.display = "block";
+        this.setLeftPos();
+        popup.style.top = (GetPageOffsetTop(this.el)
+                           + this.el.offsetHeight) + "px";
+        this.mouseUpListener = this.onClick.bind(this);
+        listen(document, "mousedown", this.mouseUpListener);
+        
+        popup.style.visibility = "visible";
+        this.ignoreNext = true;
+      } else {
+        unlisten(document, "mousedown", this.mouseUpListener);
+        this.mouseUpListener = null;
+        
+        popup.style.visibility = "hidden";
+      }
+      this.updateImage();
+    }
+    MygPopup.prototype.updateImage = function() {
+      if (this.popupOpened) {
+        this.el.src = "/groups/img/mygroups_down.gif";
+      } else if (this.mouseOver) {
+        this.el.src = "/groups/img/mygroups_up.gif";
+      } else {
+        this.el.src = "/groups/img/mygroups_lt.gif";
+      }
+    }
+    MygPopup.prototype.onMouseOver = function() {
+      this.mouseOver = true;
+      this.updateImage();
+    }
+    MygPopup.prototype.onMouseOut = function() {
+      this.mouseOver = false;
+      this.updateImage();
+    }
+
+    
+
+    MygPopup.prototype.setLeftPos = function() {
+      var popup = this.getPopup();
+      
+        var setLeft = GetWindowWidth(window) - popup.offsetWidth - 5;
+        popup.style.left = Math.min(setLeft,
+                                    GetPageOffsetLeft(this.link_el)) + "px";
+      
+    }
+    MygPopup.prototype.onResize = function() {
+      if (this.popupOpened) {
+        this.setLeftPos();
+      }
+    }
+
+    var mygPopup = new MygPopup(document.getElementById('myg_img'),
+                                document.getElementById('myg_lnk'));
+  //--></script>
+ |
+  <a href="https://www.google.com/accounts/ManageAccount?hl=en">My Account</a> 
+  </nobr></font></td>
+  </tr>
+  </table></div>
+<script language="javascript"><!--
+// Make functions exist for older browsers
+function toggle_watch() {}
+function toggleStar() {}
+//--></script>
+<script language="javascript"><!--
+// Shelled functions for javascript compatibility
+function c() {}
+function op() {}
+function rl() {}
+function tog_quote() {}
+//--></script>
+<script language="javascript1.2"><!--
+
+function c( idnum ) {	//cancel a message -- clear text and toggle the reply box. slight delay gives user time to perceive that text is being cleared.
+  document.getElementById( 't'+idnum ).value="";
+  func = "rl( '" + idnum + "' )";
+  window.setTimeout( func, 300 );
+}
+
+function op( idnum )  // hide/show headers
+{
+  optionLink = document.getElementById( 'o'+idnum );
+  x = tog('block', 'h'+idnum );
+  for (var i = 1; i < 4; i++) {
+    tog(is_ie ? 'block' : 'table-row', 'htr' + i + '_' + idnum );
+  }
+  if( optionLink.innerHTML == "show options" ) 
+  {
+    optionLink.innerHTML = "hide options";
+  } else {
+    optionLink.innerHTML = "show options";
+  }
+  optionLink.blur();
+  return x;
+}
+
+function rl( idnum ) {  //function to toggle "reply" link; gets rid of annoying linkfocus & toggles ticks
+  replyblockid = 'r' + idnum;
+  textareaObj = document.getElementById( 't'+idnum );
+  linkobj = document.getElementById( 'lo'+idnum );
+  x = tog('block', replyblockid);
+  visible = document.getElementById( replyblockid ).style.display;
+  tick = document.getElementById( 'ti'+idnum );
+  if( visible == "none" ) {
+    linkobj.blur();
+    tick.src = "/groups/img/r.gif";
+  } else {
+    textareaObj.focus();
+    tick.src = "/groups/img/d.gif";
+  }
+  return x;
+}
+
+function tog_quote( idnum ) {
+  return tog( 'block', 'qheader_shown_' + idnum, 'qheader_hidden_' + idnum,
+	   'qhide_' + idnum );
+}
+
+//--></script>
+  <div style="border-top: 1px solid #999999"></div>
+  <div style="background-color: #eeeeee; padding: 4px 10px 4px 10px; ">
+  <table class="grhdr " cellpadding="0" cellspacing="0" width="100%"><tbody>
+  <tr valign="middle"><td><div class="ghgrn">comp.lang.c</div></td></tr>
+  </tbody></table>
+  </div>
+  <table class="wdth100  overflow-hide" cellpadding=0 cellspacing=0 style="table-layout: fixed;">
+  <col width="*" height="100%"><col style="width:32ex;"><tr valign="top"><td class=" overflow-hide" style="border-bottom: 1px solid #999999;; border-right: 1px solid #999999;">
+<div class="maincontheaderbox">
+  <div class="secttlbarwrap">
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=999999&bc=white&w=4&h=4&a=af) 0px 0px; width: 4px; height: 4px"></div><td bgcolor="#999999" width="100%" height="4"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=999999&bc=white&w=4&h=4&a=af) -4px 0px; width: 4px; height: 4px"></div></table></div>
+  <div class="secttlbar">
+  <div class="lf secttl">
+  <span id="thread_subject_site">
+  Vaporware C99 preprocessor: string literal corner cases
+  </span>
+  </div>
+  <div class="rf secmsg frtxt padt2">
+  <a class="uitl" id="showoptions_lnk2" href="#" onclick="TH_ToggleOptionsPane(); return false;">Options</a>
+  </div>
+  <div class="hght0 clear" style="font-size:0;"></div>
+  </div>
+  <div class="secttlbaroptpane hide" id="TH_optionsPane_optpane">
+  <script language="javascript1.2"><!--
+    window.TH_optionsPane = {
+      expanded: false,
+      toggle: function() {
+        var botcorner_el = document.getElementById('TH_optionsPane_botcorner');
+        var optpane_el = document.getElementById('TH_optionsPane_optpane');
+        this.expanded = !this.expanded;
+        botcorner_el.style.display = (this.expanded ? "none" : "block");
+        optpane_el.style.display = (this.expanded ? "block" : "none");
+      }
+    };
+  //--></script>
+  </div>
+  <div class="" id="TH_optionsPane_botcorner">
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=999999&bc=white&w=4&h=4&a=af) 0px 4px; width: 4px; height: 4px"></div><td bgcolor="#999999" width="100%" height="4"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=999999&bc=white&w=4&h=4&a=af) -4px 4px; width: 4px; height: 4px"></div></table></div>
+  </div>
+  </div>
+</div>
+<div class="maincontbox">
+  <table cellpadding=0 cellspacing=0 border=0>
+  <tr>
+  <td class="thread_star" width=17 id="thread_watch_site"></td>
+  <td></td>
+  <td></td>
+  <td width=5>&nbsp;</td>
+  <td align="left" width=100%>
+  <span id="thread_page_msg_site" class="uit">6</b> messages<span class="noscripthide">&nbsp;-&nbsp;<a name="expand_all_msgs_link" id="expand_all_msgs_link" href="#" class="grltl">Collapse all</a></span>
+  </span>
+  </td>
+  <td align="right"><nobr id="thread_page_links_site">
+  </nobr></td>
+  </tr>
+  </table>
+  <script language="javascript1.2"><!--
+    function TH_ToggleOptionsPane() {
+      TH_optionsPane.toggle();
+      var showoptions_lnk2_el = document.getElementById('showoptions_lnk2');
+      showoptions_lnk2_el.innerHTML = (TH_optionsPane.expanded ? "Hide options" : "Options");
+
+      
+      if (!TH_optionsPane.expanded) {
+        TH_ToggleThreadSubNavAndInfo();
+      }
+    }
+
+    function TH_ToggleThreadSubNavAndInfo() {
+      
+      var display = TS_isThreadSubbed('comp.lang.c', 'a63812da75cbe0b4');
+      var ts_span_el = document.getElementById('ts_navinfo');
+
+      if (display) {
+        ts_span_el.style.display = 'block';
+      } else {
+        
+      }
+    }
+  //--></script>
+<div id="msgs">
+  <div style="margin-left: -3px; margin-right: -1px;">
+  <input name="persist_msg_render" id="persist_msg_render" type="hidden" style="behavior:url(#default#savehistory);">
+  <iframe name="post_res" id="post_res" style="position:absolute; visibility: hidden; width: 1px; height: 1px;"></iframe>
+  <script><!--
+      var G2_cardManager = {
+        _getMessage:function(){return {_load:function(){}};},
+        _getCard:function(){return {_load:function(){}};}
+      };
+    //--></script>
+  <script language="javascript1.3"><!--
+      if (_G2_CardManager) {
+        var G2_cardManager = new _G2_CardManager(window, "comp.lang.c");
+
+        G2_cardManager._setComposerTemplateGenerator(function() {
+          return (window.SM_msg_cb2_value ? window.SM_msg_cb2_value : window.SM_msg_cb2_value = document.getElementById('SM_msg_cb2').innerHTML)
+        });
+        G2_cardManager._setDoneUrl("/group/comp.lang.c/topics");
+        
+          G2_cardManager._setAcServerBase("/c/");
+        
+
+        _MR_Message._COMPOSING_TITLE_COLOR = "#c3d9ff";
+
+        var MSG_USENET_POSTING_WARNING = document.getElementById("upw").innerHTML;
+        var MSG_ACTIVE_REPLY_WARNING = document.getElementById("arw").innerHTML;
+        var MSG_POST_SUCCESSFUL = document.getElementById("psw").innerHTML;
+
+        window.onbeforeunload = G2_cardManager._anyCardsComposing.bind(G2_cardManager);
+      }
+
+      
+    //--></script>
+  <span class="hide" id="SM_msg_cb2">
+  <div id="cb2_cwrn" class="cpb2 hide">
+  <table class="ctb" cellpadding="0" cellspacing="0" width="100%"><tbody>
+  <tr>
+  <td colspan="2">
+  <div class="ci cb2 cd">
+  <div class="phd">
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=ffd4a2&bc&w=6&h=6&a=af) 0px 0px; width: 6px; height: 6px"></div><td bgcolor="#ffd4a2" width="100%" height="6"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=ffd4a2&bc&w=6&h=6&a=af) -6px 0px; width: 6px; height: 6px"></div></table></div>
+  <div class="ph" style="position:relative; margin:-2px 0px; background-color: #ffd4a2;">
+  <div id="wrn_cnt"></div>
+  </div>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=ffd4a2&bc&w=6&h=6&a=af) 0px 6px; width: 6px; height: 6px"></div><td bgcolor="#ffd4a2" width="100%" height="6"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=ffd4a2&bc&w=6&h=6&a=af) -6px 6px; width: 6px; height: 6px"></div></table></div>
+  </div>
+  </div>
+  </td>
+  </tr>
+  <tr class="cf cb2"><td colspan="2" height="5"></td></tr>
+  </tbody></table>
+  </div>
+  </span>
+  <table cellpadding=0 border=0 cellspacing=0><tr>
+  <td></td>
+  <td width=100%>
+  <div class="msg wdth100" id="msg_de7f3711ab475c05" onmouseover="if (G2_cardManager) {G2_cardManager._getMessage('de7f3711ab475c05')._load();}" style="margin: 0 -1px 0 -1px">
+  <input id="hdn_reply_to_subj" type=hidden value="Vaporware C99 preprocessor: string literal corner cases">
+  <input id="hdn_from" type=hidden value="zaimoni@zaimoni.com">
+  <input id="hdn_date" type=hidden value="Nov 5, 2:51&nbsp;pm">
+  <input id="hdn_author" type=hidden value="zaim...@zaimoni.com">
+  <input id="hdn_group_name" type=hidden value="comp.lang.c">
+  <div id="hdr">
+  <table id="top" class="h msg_meta" cellpadding="0" cellspacing="0"><tbody>
+  <tr id="sep">
+  <td rowspan="2" id="l" class="ctl"></td>
+  <td colspan="4" id="m" class="ctop" height="4px"></td>
+  <td rowspan="2" id="r" class="ctr"></td>
+  </tr>
+  <tr>
+  <td><span class="fontsize2 author">
+  <span style="color: #00681C;"><i>zaimoni@zaimoni.com</i></span>
+  &nbsp;
+  </td>
+  <td width="100%">
+  </td>
+  <td align="right" nowrap>
+  <span style="background-color: white;">
+  <span class="fontsize0">&nbsp;<span class="noscripthide scripthide script12inline lk " id="oh_l">More options</span></span>
+  <span class="fontsize2">
+  Nov 5, 2:51&nbsp;pm
+  </span>
+  </span>
+  </td>
+  </tr>
+  </tbody></table>
+  <div class="scripthide cb" id="oh">
+  <div class="exh">
+  <div class="fontsize2">
+  <div style="padding-left: 20px; text-indent: -16px;">Newsgroups: <b>comp.lang.c</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">From: <b>zaimoni@zaimoni.com</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Date: <b>Wed, 5 Nov 2008 12:51:52 -0800 (PST)</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Local: <b>Wed, Nov 5 2008 2:51&nbsp;pm</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Subject: <b>Vaporware C99 preprocessor: string literal corner cases</b></div>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div id="body" class="mb cb fontsize2 ">
+  <div id="inbdy">
+  <a name="msg_de7f3711ab475c05"></a><font face="Courier, Monospaced" class=fixed_width>I've already calculated that the following are valid and should not <br> error, as both just end up with the character literal 'A' being their <br> control expression. &nbsp;The unspecified value of the char* pointing to <br> the string literal is eliminated during evaluation, so the fact it is <br> unknowable doesn't matter. &nbsp;('A' is assumed not be to mapped to NUL.) <br> [GCC 4.2.1 accepts the first, and inconsistently considers *&quot;A&quot; to be <br> an invalid control expression.] <br> <p>#if &quot;A&quot;[0] <br> #else <br> #error &quot;A&quot;[0] is false <br> #endif <br> <p>#if *&quot;A&quot; <br> #else <br> #error *&quot;A&quot;[0] is false <br> #endif <br> <p>C99 6.4.4.1 does not clearly state that an integer literal is an <br> object, so this should be invalid as the requirements of the address- <br> of operator &amp; are imposed even though neither * nor &amp; are evaluated. <br> <p>#if *&amp;0 <br> #error *&amp;0 is true <br> #endif <br> <p>C99 6.4.5p5 goes into some detail regarding the exact layout of a <br> string literal, so it is clear that a string literal points to an <br> object -- at conceptual translation phase 7, three conceptual stages <br> after preprocessing (conceptual stage 4). &nbsp;Does an implementation have <br> license to assume said layout during preprocessing? &nbsp;Alternately, is <br> the following required to be invalid even though **&amp;&quot;A&quot; must be <br> accepted at compile-time? : <br> <p>#if **&amp;&quot;A&quot; <br> #else <br> #error **&amp;&quot;A&quot; is false <br> #endif <br> <p>If an implementation has license to accept the above example, is there <br> some way to infer that it is actually required to accept the above <br> example? <br> </font>
+  </div>
+  <br style="font-size:8px;" clear="all">
+  </div>
+  <span id="dl_msg_cb2"></span>
+  <div id="ftr_sep" class="" style="">
+  <table cellpadding="0" cellspacing="0" height="8"><tbody>
+  <tr>
+  <td class="cbl" id="lc"></td>
+  <td class="cbot"></td>
+  <td class="cbr"></td>
+  </tr>
+  </tbody></table>
+  </div>
+  <div class="mrgb8 " id="msg_sep"></div>
+  <div class="mrgb2 hide" id="pok" style="margin-top:-5px;position:relative;">
+  <table align="center"><tr><td>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 0px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) -2px 0px; width: 2px; height: 2px"></div></table></div>
+  <div class="pokh" style="background-color: #fad163;">
+  <div id="pok_cnt"></div>
+  </div>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 2px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) -2px 2px; width: 2px; height: 2px"></div></table></div>
+  </td></tr></table>
+  </div>
+  </div>
+  <script language="javascript1.3"><!--
+
+    
+      
+      
+      
+    
+
+    var msg = G2_cardManager._getMessage("de7f3711ab475c05");
+    msg._init("de7f3711ab475c05", "a148cb40-cc9c-48f8-973b-6222a38cfbc0@e1g2000pra.googlegroups.com", true,
+              "over", true, false,
+              "", 1);
+
+    
+
+    msg._addPreLoadHook(function() {
+      
+
+      
+        this._setIsUsenet(true);
+        this._setBottomPosting(true);
+      
+    });
+
+    
+
+    
+  //--></script>
+</td></tr></table>
+  </div>
+  <a name="b590d40823751774" id="anchor_b590d40823751774"></a>
+  <div style="margin-left: -3px; margin-right: -1px;">
+  <table cellpadding=0 border=0 cellspacing=0><tr>
+  <td></td>
+  <td width=100%>
+  <div class="msg wdth100" id="msg_b590d40823751774" onmouseover="if (G2_cardManager) {G2_cardManager._getMessage('b590d40823751774')._load();}" style="margin: 0 -1px 0 -1px">
+  <input id="hdn_reply_to_subj" type=hidden value="Vaporware C99 preprocessor: string literal corner cases">
+  <input id="hdn_from" type=hidden value="zaimoni@zaimoni.com">
+  <input id="hdn_date" type=hidden value="Nov 5, 3:09&nbsp;pm">
+  <input id="hdn_author" type=hidden value="Ben Pfaff &lt;b...@cs.stanford.edu&gt;">
+  <input id="hdn_group_name" type=hidden value="comp.lang.c">
+  <div id="hdr">
+  <table id="top" class="h msg_meta" cellpadding="0" cellspacing="0"><tbody>
+  <tr id="sep">
+  <td rowspan="2" id="l" class="ctl"></td>
+  <td colspan="4" id="m" class="ctop" height="4px"></td>
+  <td rowspan="2" id="r" class="ctr"></td>
+  </tr>
+  <tr>
+  <td><span class="fontsize2 author">
+  <span style="color: #790619;">Ben Pfaff</span>
+  &nbsp;
+  </td>
+  <td width="100%">
+  </td>
+  <td align="right" nowrap>
+  <span style="background-color: white;">
+  <span class="fontsize0">&nbsp;<span class="noscripthide scripthide script12inline lk " id="oh_l">More options</span></span>
+  <span class="fontsize2">
+  Nov 5, 3:09&nbsp;pm
+  </span>
+  </span>
+  </td>
+  </tr>
+  </tbody></table>
+  <div class="scripthide cb" id="oh">
+  <div class="exh">
+  <div class="fontsize2">
+  <div style="padding-left: 20px; text-indent: -16px;">Newsgroups: <b>comp.lang.c</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">From: <b>Ben Pfaff &lt;b...@cs.stanford.edu&gt;</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Date: <b>Wed, 05 Nov 2008 13:09:03 -0800</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Local: <b>Wed, Nov 5 2008 3:09&nbsp;pm</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Subject: <b>Re: Vaporware C99 preprocessor: string literal corner cases</b></div>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div id="body" class="mb cb fontsize2 ">
+  <div id="inbdy">
+  <a name="msg_b590d40823751774"></a><font face="Courier, Monospaced" class=fixed_width><p><div ID=qhide_346987 style="display:block;" class=qt>zaimoni@zaimoni.com writes: <br> &gt; #if &quot;A&quot;[0] <br> &gt; #else <br> &gt; #error &quot;A&quot;[0] is false <br> &gt; #endif <br> <br></div>String literals are not permitted in integer constant <br> expressions, see C99 6.6: <br> <p>6 &nbsp; &nbsp;An integer constant expression96) shall have integer type and <br> &nbsp; &nbsp; &nbsp;shall only have operands that are integer constants, <br> &nbsp; &nbsp; &nbsp;enumeration constants, character constants, sizeof <br> &nbsp; &nbsp; &nbsp;expressions whose results are integer constants, and <br> &nbsp; &nbsp; &nbsp;floating constants that are the immediate operands of <br> &nbsp; &nbsp; &nbsp;casts. Cast operators in an integer constant expression <br> &nbsp; &nbsp; &nbsp;shall only convert arithmetic types to integer types, except <br> &nbsp; &nbsp; &nbsp;as part of an operand to the sizeof operator. <br> <p>&nbsp; &nbsp; &nbsp;96) An integer constant expression is used to specify the <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;size of a bit-field member of a structure, the value of <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;an enumeration constant, the size of an array, or the <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;value of a case constant. Further constraints that apply <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;to the integer constant expressions used in <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;conditional-inclusion preprocessing directives are <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;discussed in 6.10.1. <br> <p>-- <br> &quot;The lusers I know are so clueless, that if they were dipped in clue <br> &nbsp;musk and dropped in the middle of pack of horny clues, on clue prom <br> &nbsp;night during clue happy hour, they still couldn't get a clue.&quot; <br> --Michael Girdwood, in the monastery <br> </font>
+  </div>
+  <br style="font-size:8px;" clear="all">
+  </div>
+  <div class="mrgb2 hide" id="pok" style="margin-top:-5px;position:relative;">
+  <table align="center"><tr><td>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 0px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) -2px 0px; width: 2px; height: 2px"></div></table></div>
+  <div class="pokh" style="background-color: #fad163;">
+  <div id="pok_cnt"></div>
+  </div>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 2px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) -2px 2px; width: 2px; height: 2px"></div></table></div>
+  </td></tr></table>
+  </div>
+  </div>
+  <script language="javascript1.3"><!--
+
+    
+      
+      
+      
+    
+
+    var msg = G2_cardManager._getMessage("b590d40823751774");
+    msg._init("b590d40823751774", "87k5bhubgw.fsf@blp.benpfaff.org", true,
+              "over", true, false,
+              "", 1);
+
+    
+      msg._setPrev(G2_cardManager._getCard("msg_de7f3711ab475c05"),
+                   1);
+    
+
+    msg._addPreLoadHook(function() {
+      
+
+      
+        this._setIsUsenet(true);
+        this._setBottomPosting(true);
+      
+    });
+
+    
+
+    
+  //--></script>
+</td></tr></table>
+  </div>
+  <a name="a69b70bc5a1aee4d" id="anchor_a69b70bc5a1aee4d"></a>
+  <div style="margin-left: -3px; margin-right: -1px;">
+  <table cellpadding=0 border=0 cellspacing=0><tr>
+  <td></td>
+  <td width=100%>
+  <div class="msg wdth100" id="msg_a69b70bc5a1aee4d" onmouseover="if (G2_cardManager) {G2_cardManager._getMessage('a69b70bc5a1aee4d')._load();}" style="margin: 0 -1px 0 -1px">
+  <input id="hdn_reply_to_subj" type=hidden value="Vaporware C99 preprocessor: string literal corner cases">
+  <input id="hdn_from" type=hidden value="zaimoni@zaimoni.com">
+  <input id="hdn_date" type=hidden value="Nov 5, 3:13&nbsp;pm">
+  <input id="hdn_author" type=hidden value="Keith Thompson &lt;ks...@mib.org&gt;">
+  <input id="hdn_group_name" type=hidden value="comp.lang.c">
+  <div id="hdr">
+  <table id="top" class="h msg_meta" cellpadding="0" cellspacing="0"><tbody>
+  <tr id="sep">
+  <td rowspan="2" id="l" class="ctl"></td>
+  <td colspan="4" id="m" class="ctop" height="4px"></td>
+  <td rowspan="2" id="r" class="ctr"></td>
+  </tr>
+  <tr>
+  <td><span class="fontsize2 author">
+  <span style="color: #5B1094;">Keith Thompson</span>
+  &nbsp;
+  </td>
+  <td width="100%">
+  </td>
+  <td align="right" nowrap>
+  <span style="background-color: white;">
+  <span class="fontsize0">&nbsp;<span class="noscripthide scripthide script12inline lk " id="oh_l">More options</span></span>
+  <span class="fontsize2">
+  Nov 5, 3:13&nbsp;pm
+  </span>
+  </span>
+  </td>
+  </tr>
+  </tbody></table>
+  <div class="scripthide cb" id="oh">
+  <div class="exh">
+  <div class="fontsize2">
+  <div style="padding-left: 20px; text-indent: -16px;">Newsgroups: <b>comp.lang.c</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">From: <b>Keith Thompson &lt;ks...@mib.org&gt;</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Date: <b>Wed, 05 Nov 2008 13:13:43 -0800</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Local: <b>Wed, Nov 5 2008 3:13&nbsp;pm</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Subject: <b>Re: Vaporware C99 preprocessor: string literal corner cases</b></div>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div id="body" class="mb cb fontsize2 ">
+  <div id="inbdy">
+  <a name="msg_a69b70bc5a1aee4d"></a><font 
+  face="Courier, Monospaced" class=fixed_width><p><div ID=qhide_346988 style="display:block;" class=qt>zaimoni@zaimoni.com writes: <br> &gt; I've already calculated that the following are valid and should not <br> &gt; error, as both just end up with the character literal 'A' being their <br> &gt; control expression. &nbsp;The unspecified value of the char* pointing to <br> &gt; the string literal is eliminated during evaluation, so the fact it is <br> &gt; unknowable doesn't matter. &nbsp;('A' is assumed not be to mapped to NUL.) <br> <br></div>'A' cannot be equal to 0 (NUL) in a conforming implementation. <br> <p><div ID=qhide_346989 style="display:block;" class=qt>&gt; [GCC 4.2.1 accepts the first, and inconsistently considers *&quot;A&quot; to be <br> &gt; an invalid control expression.] <br> <br></div>gcc 3.4.4 and 4.2.4 reject all of your examples. <br> <p><div ID=qhide_346990 style="display:block;" class=qt>&gt; #if &quot;A&quot;[0] <br> &gt; #else <br> &gt; #error &quot;A&quot;[0] is false <br> &gt; #endif <br> <p>&gt; #if *&quot;A&quot; <br> &gt; #else <br> &gt; #error *&quot;A&quot;[0] is false <br> &gt; #endif <br> <br></div>Both of these are constraint violations, requiring diagnostics. <br> <p>C99 6.10.1p1: <br> <p>&nbsp; &nbsp; The expression that controls conditional inclusion shall be an <br> &nbsp; &nbsp; integer constant expression except that [...] <br> <p>This is a constraint, so violating it requires a diagnostic. <br> <p>C99 6.6p6 defines &quot;integer constant expression&quot;; it may not contain a <br> string literal. <br> <p><div ID=qhide_346991 style="display:block;" class=qt>&gt; C99 6.4.4.1 does not clearly state that an integer literal is an <br> &gt; object, so this should be invalid as the requirements of the address- <br> &gt; of operator &amp; are imposed even though neither * nor &amp; are evaluated. <br> <p>&gt; #if *&amp;0 <br> &gt; #error *&amp;0 is true <br> &gt; #endif <br> <br></div>An integer constant is not an lvalue, so &amp;0 is a constraint violation. <br> <p><div ID=qhide_346992 style="display:block;" class=qt>&gt; C99 6.4.5p5 goes into some detail regarding the exact layout of a <br> &gt; string literal, so it is clear that a string literal points to an <br> &gt; object <br> <br></div>No, a string literal does not point to an object. &nbsp;If it did, <br> &nbsp; &nbsp; sizeof &quot;hello&quot; <br> would yield sizeof(char*); instead, it yields 6, the size of the array <br> object that corresponds to the string literal. <br> <p><div ID=qhide_346993 style="display:block;" class=qt>&gt; &nbsp; &nbsp; &nbsp; &nbsp;-- at conceptual translation phase 7, three conceptual stages <br> &gt; after preprocessing (conceptual stage 4). &nbsp;Does an implementation have <br> &gt; license to assume said layout during preprocessing? &nbsp;Alternately, is <br> &gt; the following required to be invalid even though **&amp;&quot;A&quot; must be <br> &gt; accepted at compile-time? : <br> <p>&gt; #if **&amp;&quot;A&quot; <br> &gt; #else <br> &gt; #error **&amp;&quot;A&quot; is false <br> &gt; #endif <br> <p>&gt; If an implementation has license to accept the above example, is there <br> &gt; some way to infer that it is actually required to accept the above <br> &gt; example? <br> <br></div>As above, the example violates a constraint by attempting to use a <br> string literal as part of an expression in a context that requires an <br> integer constant expression. &nbsp;A conforming compiler must issue a <br> diagnostic. &nbsp;Once it's done so, it may, but is not required to, <br> continue to process the translation unit. <br> <p>-- <br> Keith Thompson (The_Other_Keith) ks...@mib.org &nbsp;&lt;<a target="_blank" rel=nofollow href="http://www.ghoti.net/~kst">http://www.ghoti.net/~kst</a>&gt; <br> Nokia <br> &quot;We must do something. &nbsp;This is something. &nbsp;Therefore, we must do this.&quot; <br> &nbsp; &nbsp; -- Antony Jay and Jonathan Lynn, &quot;Yes Minister&quot; <br> </font>
+  </div>
+  <br style="font-size:8px;" clear="all">
+  </div>
+  <span id="dl_msg_cb2"></span>
+  <div id="ftr_sep" class="" style="">
+  <table cellpadding="0" cellspacing="0" height="8"><tbody>
+  <tr>
+  <td class="cbl" id="lc"></td>
+  <td class="cbot"></td>
+  <td class="cbr"></td>
+  </tr>
+  </tbody></table>
+  </div>
+  <div class="mrgb8 " id="msg_sep"></div>
+  <div class="mrgb2 hide" id="pok" style="margin-top:-5px;position:relative;">
+  <table align="center"><tr><td>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 0px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) -2px 0px; width: 2px; height: 2px"></div></table></div>
+  <div class="pokh" style="background-color: #fad163;">
+  <div id="pok_cnt"></div>
+  </div>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 2px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) -2px 2px; width: 2px; height: 2px"></div></table></div>
+  </td></tr></table>
+  </div>
+  </div>
+  <script language="javascript1.3"><!--
+
+    
+      
+      
+      
+    
+
+    var msg = G2_cardManager._getMessage("a69b70bc5a1aee4d");
+    msg._init("a69b70bc5a1aee4d", "lny6zxswoo.fsf@nuthaus.mib.org", true,
+              "over", true, false,
+              "", 1);
+
+    
+      msg._setPrev(G2_cardManager._getCard("msg_b590d40823751774"),
+                   1);
+    
+
+    msg._addPreLoadHook(function() {
+      
+
+      
+        this._setIsUsenet(true);
+        this._setBottomPosting(true);
+      
+    });
+
+    
+
+    
+  //--></script>
+</td></tr></table>
+  </div>
+  <a name="fc4d7599e4717a84" id="anchor_fc4d7599e4717a84"></a>
+  <div style="margin-left: -3px; margin-right: -1px;">
+  <table cellpadding=0 border=0 cellspacing=0><tr>
+  <td></td>
+  <td width=100%>
+  <div class="msg wdth100" id="msg_fc4d7599e4717a84" onmouseover="if (G2_cardManager) {G2_cardManager._getMessage('fc4d7599e4717a84')._load();}" style="margin: 0 -1px 0 -1px">
+  <input id="hdn_reply_to_subj" type=hidden value="Vaporware C99 preprocessor: string literal corner cases">
+  <input id="hdn_from" type=hidden value="zaimoni@zaimoni.com">
+  <input id="hdn_date" type=hidden value="Nov 5, 3:18&nbsp;pm">
+  <input id="hdn_author" type=hidden value="Ben Pfaff &lt;b...@cs.stanford.edu&gt;">
+  <input id="hdn_group_name" type=hidden value="comp.lang.c">
+  <div id="hdr">
+  <table id="top" class="h msg_meta" cellpadding="0" cellspacing="0"><tbody>
+  <tr id="sep">
+  <td rowspan="2" id="l" class="ctl"></td>
+  <td colspan="4" id="m" class="ctop" height="4px"></td>
+  <td rowspan="2" id="r" class="ctr"></td>
+  </tr>
+  <tr>
+  <td><span class="fontsize2 author">
+  <span style="color: #790619;">Ben Pfaff</span>
+  &nbsp;
+  </td>
+  <td width="100%">
+  </td>
+  <td align="right" nowrap>
+  <span style="background-color: white;">
+  <span class="fontsize0">&nbsp;<span class="noscripthide scripthide script12inline lk " id="oh_l">More options</span></span>
+  <span class="fontsize2">
+  Nov 5, 3:18&nbsp;pm
+  </span>
+  </span>
+  </td>
+  </tr>
+  </tbody></table>
+  <div class="scripthide cb" id="oh">
+  <div class="exh">
+  <div class="fontsize2">
+  <div style="padding-left: 20px; text-indent: -16px;">Newsgroups: <b>comp.lang.c</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">From: <b>Ben Pfaff &lt;b...@cs.stanford.edu&gt;</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Date: <b>Wed, 05 Nov 2008 13:18:28 -0800</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Local: <b>Wed, Nov 5 2008 3:18&nbsp;pm</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Subject: <b>Re: Vaporware C99 preprocessor: string literal corner cases</b></div>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div id="body" class="mb cb fontsize2 ">
+  <div id="inbdy">
+  <a name="msg_fc4d7599e4717a84"></a><font face="Courier, Monospaced" class=fixed_width><p><div ID=qhide_346994 style="display:block;" class=qt>Keith Thompson &lt;ks...@mib.org&gt; writes: <br> &gt; zaimoni@zaimoni.com writes: <br> &gt;&gt; #if &quot;A&quot;[0] <br> &gt;&gt; #else <br> &gt;&gt; #error &quot;A&quot;[0] is false <br> &gt;&gt; #endif <br> <p>&gt; C99 6.10.1p1: <br> <p>&gt; &nbsp; &nbsp; The expression that controls conditional inclusion shall be an <br> &gt; &nbsp; &nbsp; integer constant expression except that [...] <br> <p>&gt; This is a constraint, so violating it requires a diagnostic. <br> <br></div>Ordinarily I would agree, but C99 6.6p10 says, &quot;An implementation <br> may accept other forms of constant expressions.&quot; &nbsp;For me, at <br> least, this muddies the water a bit. <br> -- <br> char a[]=&quot;\n .CJacehknorstu&quot;;int putchar(int);int main(void){unsigned long b[] <br> ={0x67dffdff,0x9aa9aa6a,0xa77ffda9,0x7da6aa6a,0xa67f6aaa,0xaa9aa9f6,0x11f6} ,*p <br> =b,i=24;for(;p+=!*p;*p/=4)switch(0[p]&amp;3)case 0:{return 0;for(p--;i--;i--)case+ <br> 2:{i++;if(i)break;else default:continue;if(0)case 1:putchar(a[i&amp;15]);break;}}} <br> </font>
+  </div>
+  <br style="font-size:8px;" clear="all">
+  </div>
+  <span id="dl_msg_cb2"></span>
+  <div id="ftr_sep" class="" style="">
+  <table cellpadding="0" cellspacing="0" height="8"><tbody>
+  <tr>
+  <td class="cbl" id="lc"></td>
+  <td class="cbot"></td>
+  <td class="cbr"></td>
+  </tr>
+  </tbody></table>
+  </div>
+  <div class="mrgb8 " id="msg_sep"></div>
+  <div class="mrgb2 hide" id="pok" style="margin-top:-5px;position:relative;">
+  <table align="center"><tr><td>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 0px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) -2px 0px; width: 2px; height: 2px"></div></table></div>
+  <div class="pokh" style="background-color: #fad163;">
+  <div id="pok_cnt"></div>
+  </div>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 2px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) -2px 2px; width: 2px; height: 2px"></div></table></div>
+  </td></tr></table>
+  </div>
+  </div>
+  <script language="javascript1.3"><!--
+
+    
+      
+      
+      
+    
+
+    var msg = G2_cardManager._getMessage("fc4d7599e4717a84");
+    msg._init("fc4d7599e4717a84", "87fxm5ub17.fsf@blp.benpfaff.org", true,
+              "over", true, false,
+              "", 1);
+
+    
+      msg._setPrev(G2_cardManager._getCard("msg_a69b70bc5a1aee4d"),
+                   1);
+    
+
+    msg._addPreLoadHook(function() {
+      
+
+      
+        this._setIsUsenet(true);
+        this._setBottomPosting(true);
+      
+    });
+
+    
+
+    
+  //--></script>
+</td></tr></table>
+  </div>
+  <a name="01e57936edc65324" id="anchor_01e57936edc65324"></a>
+  <div style="margin-left: -3px; margin-right: -1px;">
+  <table cellpadding=0 border=0 cellspacing=0><tr>
+  <td></td>
+  <td width=100%>
+  <div class="msg wdth100" id="msg_01e57936edc65324" onmouseover="if (G2_cardManager) {G2_cardManager._getMessage('01e57936edc65324')._load();}" style="margin: 0 -1px 0 -1px">
+  <input id="hdn_reply_to_subj" type=hidden value="Vaporware C99 preprocessor: string literal corner cases">
+  <input id="hdn_from" type=hidden value="zaimoni@zaimoni.com">
+  <input id="hdn_date" type=hidden value="Nov 5, 3:29&nbsp;pm">
+  <input id="hdn_author" type=hidden value="Keith Thompson &lt;ks...@mib.org&gt;">
+  <input id="hdn_group_name" type=hidden value="comp.lang.c">
+  <div id="hdr">
+  <table id="top" class="h msg_meta" cellpadding="0" cellspacing="0"><tbody>
+  <tr id="sep">
+  <td rowspan="2" id="l" class="ctl"></td>
+  <td colspan="4" id="m" class="ctop" height="4px"></td>
+  <td rowspan="2" id="r" class="ctr"></td>
+  </tr>
+  <tr>
+  <td><span class="fontsize2 author">
+  <span style="color: #5B1094;">Keith Thompson</span>
+  &nbsp;
+  </td>
+  <td width="100%">
+  </td>
+  <td align="right" nowrap>
+  <span style="background-color: white;">
+  <span class="fontsize0">&nbsp;<span class="noscripthide scripthide script12inline lk " id="oh_l">More options</span></span>
+  <span class="fontsize2">
+  Nov 5, 3:29&nbsp;pm
+  </span>
+  </span>
+  </td>
+  </tr>
+  </tbody></table>
+  <div class="scripthide cb" id="oh">
+  <div class="exh">
+  <div class="fontsize2">
+  <div style="padding-left: 20px; text-indent: -16px;">Newsgroups: <b>comp.lang.c</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">From: <b>Keith Thompson &lt;ks...@mib.org&gt;</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Date: <b>Wed, 05 Nov 2008 13:29:56 -0800</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Local: <b>Wed, Nov 5 2008 3:29&nbsp;pm
+</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Subject: <b>Re: Vaporware C99 preprocessor: string literal corner cases</b></div>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div id="body" class="mb cb fontsize2 ">
+  <div id="inbdy">
+  <a name="msg_01e57936edc65324"></a><font face="Courier, Monospaced" 
+                                                                                            class=fixed_width><p><p><a class=qt href="?hide_quotes=no#msg_01e57936edc65324" onclick="return tog_quote(346995); "><div ID=qheader_shown_346995 class="hqt" style="display: none;">- Hide quoted text -</div><div ID=qheader_hidden_346995 class="sqt" style="display: block;">- Show quoted text -</div></a></p><div ID=qhide_346995 style="display:none;" class=qt>Ben Pfaff &lt;b...@cs.stanford.edu&gt; writes: <br> &gt; Keith Thompson &lt;ks...@mib.org&gt; writes: <br> &gt;&gt; zaimoni@zaimoni.com writes: <br> &gt;&gt;&gt; #if &quot;A&quot;[0] <br> &gt;&gt;&gt; #else <br> &gt;&gt;&gt; #error &quot;A&quot;[0] is false <br> &gt;&gt;&gt; #endif <br> <p>&gt;&gt; C99 6.10.1p1: <br> <p>&gt;&gt; &nbsp; &nbsp; The expression that controls conditional inclusion shall be an <br> &gt;&gt; &nbsp; &nbsp; integer constant expression except that [...] <br> <p>&gt;&gt; This is a constraint, so violating it requires a diagnostic. <br> <p>&gt; Ordinarily I would agree, but C99 6.6p10 says, &quot;An implementation <br> &gt; may accept other forms of constant expressions.&quot; &nbsp;For me, at <br> &gt; least, this muddies the water a bit. <br> <br></div>Good point. <br> <p>Hmm. &nbsp;Would additional forms of constant expressions be considered an <br> &quot;extension&quot;, and thus have to be documented? <br> <p>In any case, it's certainly non-portable. <br> <p>-- <br> Keith Thompson (The_Other_Keith) ks...@mib.org &nbsp;&lt;<a target="_blank" rel=nofollow href="http://www.ghoti.net/~kst">http://www.ghoti.net/~kst</a>&gt; <br> Nokia <br> &quot;We must do something. &nbsp;This is something. &nbsp;Therefore, we must do this.&quot; <br> &nbsp; &nbsp; -- Antony Jay and Jonathan Lynn, &quot;Yes Minister&quot; <br> </font>
+  </div>
+  <br style="font-size:8px;" clear="all">
+  </div>
+  <span id="dl_msg_cb2"></span>
+  <div id="ftr_sep" class="" style="">
+  <table cellpadding="0" cellspacing="0" height="8"><tbody>
+  <tr>
+  <td class="cbl" id="lc"></td>
+  <td class="cbot"></td>
+  <td class="cbr"></td>
+  </tr>
+  </tbody></table>
+  </div>
+  <div class="mrgb8 " id="msg_sep"></div>
+  <div class="mrgb2 hide" id="pok" style="margin-top:-5px;position:relative;">
+  <table align="center"><tr><td>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 0px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) -2px 0px; width: 2px; height: 2px"></div></table></div>
+  <div class="pokh" style="background-color: #fad163;">
+  <div id="pok_cnt"></div>
+  </div>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 2px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) -2px 2px; width: 2px; height: 2px"></div></table></div>
+  </td></tr></table>
+  </div>
+  </div>
+  <script language="javascript1.3"><!--
+
+    
+      
+      
+      
+    
+
+    var msg = G2_cardManager._getMessage("01e57936edc65324");
+    msg._init("01e57936edc65324", "lntzalsvxn.fsf@nuthaus.mib.org", true,
+              "over", true, false,
+              "", 1);
+
+    
+      msg._setPrev(G2_cardManager._getCard("msg_fc4d7599e4717a84"),
+                   1);
+    
+
+    msg._addPreLoadHook(function() {
+      
+
+      
+        this._setIsUsenet(true);
+        this._setBottomPosting(true);
+      
+    });
+
+    
+
+    
+  //--></script>
+</td></tr></table>
+  </div>
+  <a name="65be3a3a3f655f52" id="anchor_65be3a3a3f655f52"></a>
+  <div style="margin-left: -3px; margin-right: -1px;">
+  <table cellpadding=0 border=0 cellspacing=0><tr>
+  <td></td>
+  <td width=100%>
+  <div class="msg wdth100" id="msg_65be3a3a3f655f52" onmouseover="if (G2_cardManager) {G2_cardManager._getMessage('65be3a3a3f655f52')._load();}" style="margin: 0 -1px 0 -1px">
+  <input id="hdn_reply_to_subj" type=hidden value="Vaporware C99 preprocessor: string literal corner cases">
+  <input id="hdn_from" type=hidden value="zaimoni@zaimoni.com">
+  <input id="hdn_date" type=hidden value="Nov 5, 4:09&nbsp;pm">
+  <input id="hdn_author" type=hidden value="zaim...@zaimoni.com">
+  <input id="hdn_group_name" type=hidden value="comp.lang.c">
+  <div id="hdr">
+  <table id="top" class="h msg_meta" cellpadding="0" cellspacing="0"><tbody>
+  <tr id="sep">
+  <td rowspan="2" id="l" class="ctl"></td>
+  <td colspan="4" id="m" class="ctop" height="4px"></td>
+  <td rowspan="2" id="r" class="ctr"></td>
+  </tr>
+  <tr>
+  <td><span class="fontsize2 author">
+  <span style="color: #00681C;"><i>zaimoni@zaimoni.com</i></span> &nbsp;
+  </td>
+  <td width="100%">
+  </td>
+  <td align="right" nowrap>
+  <span style="background-color: white;">
+  <span class="fontsize0">&nbsp;<span class="noscripthide scripthide script12inline lk " id="oh_l">More options</span></span>
+  <span class="fontsize2">
+  Nov 5, 4:09&nbsp;pm
+  </span>
+  </span>
+  </td>
+  </tr>
+  </tbody></table>
+  <div class="scripthide cb" id="oh">
+  <div class="exh">
+  <div class="fontsize2">
+  <div style="padding-left: 20px; text-indent: -16px;">Newsgroups: <b>comp.lang.c</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">From: <b>zaimoni@zaimoni.com</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Date: <b>Wed, 5 Nov 2008 14:09:18 -0800 (PST)</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Local: <b>Wed, Nov 5 2008 4:09&nbsp;pm</b></div>
+  <div style="padding-left: 20px; text-indent: -16px;">Subject: <b>Re: Vaporware C99 preprocessor: string literal corner cases</b></div>
+  </div>
+  </div>
+  </div>
+  </div>
+  <div id="body" class="mb cb fontsize2 ">
+  <div id="inbdy">
+  <a name="msg_65be3a3a3f655f52"></a><font face="Courier, Monospaced" 
+                                                                                                                                                                 class=fixed_width>On Nov 5, 3:13 pm, Keith Thompson &lt;ks...@mib.org&gt; wrote: <br> <p><div ID=qhide_346996 style="display:block;" class=qt>&gt; zaimoni@zaimoni.com writes: <br> &gt; &gt; I've already calculated that the following are valid and should not <br> &gt; &gt; error, as both just end up with the character literal 'A' being their <br> &gt; &gt; control expression.  The unspecified value of the char* pointing to <br> &gt; &gt; the string literal is eliminated during evaluation, so the fact it is <br> &gt; &gt; unknowable doesn't matter.  .... <br> <p>&gt; &gt; [GCC 4.2.1 accepts the first, and inconsistently considers *&quot;A&quot; to be <br> &gt; &gt; an invalid control expression.] <br> <p>&gt; gcc 3.4.4 and 4.2.4 reject all of your examples. <br> <br></div>Rechecked...yes for 4.2.1. <br> <p><p><a class=qt href="?hide_quotes=no#msg_65be3a3a3f655f52" onclick="return tog_quote(346997); "><div ID=qheader_shown_346997 class="hqt" style="display: none;">- Hide quoted text -</div><div ID=qheader_hidden_346997 class="sqt" style="display: block;">- Show quoted text -</div></a></p><div ID=qhide_346997 style="display:none;" class=qt>&gt; &gt; #if &quot;A&quot;[0] <br> &gt; &gt; #else <br> &gt; &gt; #error &quot;A&quot;[0] is false <br> &gt; &gt; #endif <br> <p>&gt; &gt; #if *&quot;A&quot; <br> &gt; &gt; #else <br> &gt; &gt; #error *&quot;A&quot;[0] is false <br> &gt; &gt; #endif <br> <p>&gt; Both of these are constraint violations, requiring diagnostics. <br> <p>&gt; C99 6.10.1p1: <br> <p>&gt;     The expression that controls conditional inclusion shall be an <br> &gt;     integer constant expression except that [...] <br> <p>&gt; This is a constraint, so violating it requires a diagnostic. <br> <p>&gt; C99 6.6p6 defines &quot;integer constant expression&quot;; it may not contain a <br> &gt; string literal. <br> <br></div>I have some test cases to move out of the C99 conformance suite <br> elsewhere, then. &nbsp;(Looking elsewhere in-thread: &quot;default&quot; rather than <br> &quot;default.nonconforming&quot; should be the correct subdirectory, thanks to <br> C99 6.6p10.) <br> <p><div ID=qhide_346998 style="display:block;" class=qt>&gt; &gt; C99 6.4.5p5 goes into some detail regarding the exact layout of a <br> &gt; &gt; string literal, so it is clear that a string literal points to an <br> &gt; &gt; object <br> <p>&gt; No, a string literal does not point to an object.  If it did, <br> &gt;     sizeof &quot;hello&quot; <br> &gt; would yield sizeof(char*); instead, it yields 6, the size of the array <br> &gt; object that corresponds to the string literal. <br> <br></div>Ok. &nbsp;(Not sure how that slipped through, as I've been exploiting that <br> compile-time strlen sleight-of-hand fairly intensively for this.) <br> </font>
+  </div>
+  <br style="font-size:8px;" clear="all">
+  </div>
+  <div class="mrgb2 hide" id="pok" style="margin-top:-5px;position:relative;">
+  <table align="center"><tr><td>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 0px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) -2px 0px; width: 2px; height: 2px"></div></table></div>
+  <div class="pokh" style="background-color: #fad163;">
+  <div id="pok_cnt"></div>
+  </div>
+  <div><table cellpadding=0 cellspacing=0 width="100%"><tr><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) 0px 2px; width: 2px; height: 2px"></div><td bgcolor="#fad163" width="100%" height="2"><img alt="" width=1 height=1><td><div style="background: url(/groups/roundedcorners?c=fad163&bc&w=2&h=2&a=af) -2px 2px; width: 2px; height: 2px"></div></table></div>
+  </td></tr></table>
+  </div>
+  </div>
+  <script language="javascript1.3"><!--
+
+    
+      
+      
+      
+    
+
+    var msg = G2_cardManager._getMessage("65be3a3a3f655f52");
+    msg._init("65be3a3a3f655f52", "34375bdc-3643-4f57-b4c1-676a4f04a197@w1g2000prk.googlegroups.com", true,
+              "over", true, false,
+              "", 1);
+
+    
+      msg._setPrev(G2_cardManager._getCard("msg_01e57936edc65324"),
+                   1);
+    
+
+    msg._addPreLoadHook(function() {
+      
+
+      
+        this._setIsUsenet(true);
+        this._setBottomPosting(true);
+      
+    });
+
+    
+
+    
+  //--></script>
+</td></tr></table>
+  </div>
+<table cellspacing=0 cellpadding=2>
+  <tr>
+  <td width=100% style="padding:0px 2px" class="uit">
+  End of messages
+  </td>
+  <td width=1><nobr>
+  </nobr></td>
+  </tr>
+</table>
+</div>
+<br clear=all>
+  <div class="padt10 clear"></div>
+  </td><td style="background-color: #eeeeee; ">
+  <div style="width: 32ex; height: 500px;">
+  <img width=1 height=500 alt="">
+  </div>
+  </table>
+  <div style="background-color: #eeeeee">
+<div class="padt10 padb10">
+  <table width="100%" border="0" cellpadding="0" cellspacing="0">
+  <tr valign=center>
+  <td align="center" style="padding-right:1em;" class="fontsize2">
+  <font color="#333"> - </font>
+  Google Groups<font color="#333"> - </font>
+  <a style="color: #00c" target=_top href="http://www.google.com/webhp?hl=en">Google Home</a><font color="#333"> - </font>
+  <a style="color: #00c" target=_top href="http://groups.google.com/intl/en/googlegroups/terms_of_service3.html">Terms of Service</a><font color="#333"> - </font>
+  <a style="color: #00c" target=_top href="http://groups.google.com/intl/en/googlegroups/privacy3.html">Privacy Policy</a>
+  </td>
+  </tr>
+  <tr>
+  <td align="center" style="color: #333" class="fontsize1 padt5" >&copy;2008 Google</td>
+  </tr>
+  </table>
+</div>
+  </div>
+<script language="javascript"><!--
+if( loaddef != "" ) {
+  window.onload=new Function( loaddef );
+}
+if( resizedef != "" ) {
+  window.onresize = new Function( resizedef );
+}
+//--></script>
+</body>
+</html>

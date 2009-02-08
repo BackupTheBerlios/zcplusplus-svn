@@ -1,0 +1,189 @@
+boost libraries lightweight enough to use in std library reimplementation
+* <boost/config.hpp> (and its subdirectory)
+* preprocessor library
+
+* <boost/detail/dynamic_bitset.hpp> [whole class]
+* <boost/detail/endian.hpp>
+* <boost/detail/none_t.hpp> [?]
+* <boost/detail/no_exceptions_support.hpp> [workarounds]
+* <boost/detail/select_type.hpp> [metaprogramming]
+* <boost/detail/templated_streams.hpp> [workarounds]
+* <boost/detail/workaround.hpp> [workarounds]
+
+* <boost/utility/addressof.hpp> [*but* this is a workaround for stupid programming]
+* <boost/utility/base_from_member.hpp> [not sure if we'd want this]
+* <boost/utility/enable_if.hpp> [metaprogramming, requires SFINAE]
+
+Boost libraries invoking std library
+* <boost/detail/binary_search.hpp>
+* <boost/detail/catch_exceptions.hpp>
+* <boost/detail/compare_pointees.hpp>
+* <boost/detail/compressed_pair.hpp>
+* <boost/detail/iterator.hpp>
+
+* <boost/utility/compare_pointees.hpp>
+* <boost/utility/in_place_factory.hpp>
+* <boost/utility/typed_in_place_factory.hpp>
+
+Boost libraries invoking Windows, etc.
+* <boost/detail/interlocked.hpp>
+=====
+Re: [LLVMdev] Dependence Analysis [was: Flow-Sensitive AA]
+From: Eli Friedman <eli.friedman@gmail.com>
+
+Also, here's a trick that could be useful for calculations that are
+sensitive to overflow: if a loop has only a single possible exit
+controlled by an index variable, and it doesn't use any
+synchronization primitives, you can assume the loop isn't infinite for
+dependence analysis purposes.  If the loop does end up being infinite,
+the results aren't visible outside of the loop, so it doesn't matter
+if results aren't accurate.
+=====
+Re: [LLVMdev] Available code-generation parallism
+On Nov 6, 2008, at 6:55 PM, Jonathan Brandmeyer wrote:
+> > Why are Constants uniqued?  Is it purely for the memory savings?
+
+It's more than that.  Constants can be arbitrarily complicated (array  
+of structs of constantexprs of...) and uniquing allows by-pointer  
+equality comparisons.  Likewise for types.
+
+-Chris
+=====
+Andrei Alexandrescu   	
+View profile
+Gabriel Dos Reis wrote: > Andrei Alexandrescu <SeeWebsiteForEm...@erdani.org> writes: > | Gabriel Dos Reis wrote: > | > Andrei Alexandrescu <SeeWebsiteForEm...@erdani.org> writes: > | > > | > [...] > | > > | > | > | > What is the semantics of a max() over a pair of values of different > types? > | > | > | > | > | > | Well I have no problem with wanting a max given an int value and a const > | > | > | int value. > | > | > > | > | > Well, I do not see a difference a between a *value* of type int, and a > | > | > value of type const int.  And for that matter, I do not see much > | > | > difference between a *value* of type T, and a value of type const T. > | > | > | > | Mos def you are referring to rvalues. Because lvalues are quite different. > | > > | > I did mean *values*. > | > lvalue/rvalues are implementation details that do not and should not > | > alter the idea of `max()'. > | > | So you do not see a difference between a and b as in: > | > | T a = ...; > | const T b = ...? > As far as computing the maximumg of both values go?  I don't see any. > I hope the context of my statement was not stripped out for the > interest of the debate. > | That's odd. There's quite a lot of differences in between a and b, or I > | didn't get your point. > That would be the latter, but hopefully we will get back on track. > | Or were you referring to the distinction when > | such values are being passed to a function accepting a const T&? In that > | case, what you say is vacuously true. > And it surprised me that people would be quibbling with it. Ok, great. The difference of a function's parameter lvalue/rvalue-ness makes itself visible only when the function escapes the address of that parameter. In particular, when it returns such an address. This essentially makes max return, when facing rvalues, a reference to a temporary that is as evanescent as the dew in a scorching July morning in Texas. Saving that reference is a usage error. A good library would in general try to disallow certain usage errors by design. Right now, max is obviously usable with the known caveats. This thread discusses obviating some of the caveats. Andrei --       [ See http://www.gotw.ca/resources/clcm.htm for info about ]       [ comp.lang.c++.moderated.    First time posters: Do this! ]
+	 More options Sep 2, 2:50 pm
+Newsgroups: comp.lang.c++.moderated
+From: Andrei Alexandrescu <SeeWebsiteForEm...@erdani.org>
+Date: Tue, 2 Sep 2008 13:50:24 CST
+Local: Tues, Sep 2 2008 2:50 pm
+Subject: Re: std::max(unsigned, size_t), amd64 and C++0x
+Reply | Reply to author | Forward | Print | Individual message | Show original | Report this message | Find messages by this author
+
+Gabriel Dos Reis wrote:
+> Andrei Alexandrescu <SeeWebsiteForEm...@erdani.org> writes:
+
+> | Gabriel Dos Reis wrote:
+> | > Andrei Alexandrescu <SeeWebsiteForEm...@erdani.org> writes:
+> | >
+> | > [...]
+> | >
+> | > | > | > What is the semantics of a max() over a pair of values of different
+> types?
+> | > | > |
+> | > | > | Well I have no problem with wanting a max given an int value and a const
+> | > | > | int value.
+> | > | >
+> | > | > Well, I do not see a difference a between a *value* of type int, and a
+> | > | > value of type const int.  And for that matter, I do not see much
+> | > | > difference between a *value* of type T, and a value of type const T.
+> | > |
+> | > | Mos def you are referring to rvalues. Because lvalues are quite different.
+> | >
+> | > I did mean *values*.
+> | > lvalue/rvalues are implementation details that do not and should not
+> | > alter the idea of `max()'.
+> |
+> | So you do not see a difference between a and b as in:
+> |
+> | T a = ...;
+> | const T b = ...?
+
+> As far as computing the maximumg of both values go?  I don't see any.
+> I hope the context of my statement was not stripped out for the
+> interest of the debate.
+
+> | That's odd. There's quite a lot of differences in between a and b, or I
+> | didn't get your point.
+
+> That would be the latter, but hopefully we will get back on track.
+
+> | Or were you referring to the distinction when
+> | such values are being passed to a function accepting a const T&? In that
+> | case, what you say is vacuously true.
+
+> And it surprised me that people would be quibbling with it.
+
+Ok, great.
+
+The difference of a function's parameter lvalue/rvalue-ness makes itself
+visible only when the function escapes the address of that parameter. In
+particular, when it returns such an address. This essentially makes max
+return, when facing rvalues, a reference to a temporary that is as
+evanescent as the dew in a scorching July morning in Texas.
+
+Saving that reference is a usage error. A good library would in general
+try to disallow certain usage errors by design. Right now, max is
+obviously usable with the known caveats. This thread discusses obviating
+some of the caveats.
+
+Andrei 
+====
+	
+James Kanze  	
+View profile
+ More options Nov 13, 3:37 pm
+On Nov 13, 11:19 am, Rolf Magnus <ramag...@t-online.de> wrote: 
+- Show quoted text -
+
+Maybe we understand "semantically" differently, but I would say 
+that his problem is precisely that NULL can't be semantically 
+converted to an std::string.  His code only compiles because it 
+is syntactically correct; he provides a value which can be 
+converted to type char const*, and that's all the compiler 
+checks.  Semantically, of course, NULL isn't a string, in any 
+sense of the word, and it doesn't make sense to try to convert 
+it to a string.  (In C, one might use it to indicate the absense 
+of a string; std::string doesn't support that concept, however.) 
+> > How could we check for such arguments in our program when we 
+> > are using strings? 
+> I don't see a way to do that, except for providing an overload 
+> of the function for const char*. 
+
+An implementation of std::string could easily cause it to 
+trigger a compiler error; just provide a private constructor 
+which takes some other type of pointer (which would make 
+std::string(NULL) ambiguous). 
+> The problem is that the error already manifests before print 
+> is even entered, in the constructor of std::string.  BTW: The 
+> implementation I use throws an exception of type 
+> std::logic_error in this case, but I don't think that this is 
+> required by the standard. 
+
+It's undefined behavior.  With a good implementation of 
+std::string, it won't compile.  (Regretfully, I don't know of 
+any implementations which are good by that definition:-). 
+-- 
+James Kanze (GABI Software)             email:james.ka...@gmail.com 
+Conseils en informatique orientée objet/ 
+                   Beratung in objektorientierter Datenverarbeitung 
+9 place Sémard, 78210 St.-Cyr-l'École, France, +33 (0)1 30 23 00 34 
+====
+On Tue, Jan 20, 2009 at 20:46, David Chisnall <csdavec@swansea.ac.uk> wrote:
+> The question at hand is whether, according to the C++ spec, NULL, when
+> > passed to a variadic function, will always be a 0 pointer.  I can't
+> > find a single reference to support this.  If you have one, then it's a
+> > bug in g++ combined with the FreeBSD headers.  If you don't, then it's
+> > a fault in LLVM's usage of NULL, which happens not to matter on some
+> > platforms.
+> >
+
+The only description of NULL that I can find is 18.1/4:
+
+"The macro NULL is an implementation-defined C++ null pointer constant
+in this International Standard (4.10).[footnote: Possible definitions
+include 0 and 0L, but not (void*)0.]"
+
+A "null pointer constant" is, by 4.10, is an integral constant rvalue
+expression that evaluates to zero.
+
+Since variable argument don't trigger any implicit conversions, NULL
+has no reason to become a pointer.
+
+(Especially since, as you mentioned, the NULL macro is expanded in
+translation phase 4, well before the syntactic and semantic analysis
+and translation of phase 7.)
+
+** so: on machines where a null pointer can be physically bitwise all zeros, we require sizeof(void*)==sizeof(NULL) 
+to protect varargs functions by letting reinterpret_casting work.
+** on machines where a null pointer cannot be physically bitwise all zeros, we use C NULL in C++ (except in pedantic mode?)

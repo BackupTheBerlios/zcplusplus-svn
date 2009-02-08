@@ -1,0 +1,17 @@
+usage: z_cpp [options] infile
+boolean options
+ --test: final internal state to stderr
+ -Werror: all warnings are now errors
+ --pedantic: try to be standard-compliant rather than pragmatic
+ --int-sign-magnitude: preprocess for a sign-magnitude integer machine
+ --int-ones-complement: preprocess for a one's complement integer machine
+ --int-twos-complement: preprocess for a two's complement integer machine (defau
+lt)
+ --int-negative-zero-traps: -0 is a trap representation
+ -fsigned-char: char acts like signed char
+ -funsigned-char: char acts like unsigned char (default)
+override-default options
+ -x: language override
+** should be one of: c, C, c++, C++
+ --fdiagnostics-limit: how many errors are too many (default 100)
+** needs to be a positive integer numeral, upper limit is native INT_MAX

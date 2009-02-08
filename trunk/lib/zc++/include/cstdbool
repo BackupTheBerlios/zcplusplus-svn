@@ -1,0 +1,12 @@
+// cstdbool
+// wrapper for stdbool.h
+
+// This file is subject to the Boost licence.
+
+#ifndef __CSTDBOOL__
+#define __CSTDBOOL__ 1
+#pragma ZCC lock __CSTDBOOL__
+
+#include <stdbool.h>
+
+#endif

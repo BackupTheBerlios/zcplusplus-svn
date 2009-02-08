@@ -1,0 +1,12 @@
+// ciso646
+// not-that-useful wrapper for iso646.h
+
+// This file is subject to the Boost licence.
+
+#ifndef __CISO646__
+#define __CISO646__ 1
+#pragma ZCC lock __CISO646__
+
+#include <iso646.h>
+
+#endif
