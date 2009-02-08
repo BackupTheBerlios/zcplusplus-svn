@@ -167,6 +167,15 @@ void _bitwise_compl(unsigned char* buf, size_t buf_len)
 		};
 }
 
+void _bitwise_xor(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
+{
+	while(0<LHS_len)
+		{
+		--LHS_len;
+		LHS[LHS_len] ^= RHS[LHS_len];
+		};
+}
+
 void _bitwise_or(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
 {
 	while(0<LHS_len)
