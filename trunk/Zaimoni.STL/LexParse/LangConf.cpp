@@ -61,7 +61,7 @@ LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 		while('\n'!=Buffer[SweepIdx])
 			{
 			if (SweepIdx+2==ArraySize(Buffer) && '\n'==Buffer[SweepIdx+1])
-				Buffer = REALLOC(Buffer,_msize(Buffer)-sizeof(char));
+				Buffer = REALLOC(Buffer,_msize(Buffer)-1);
 			if (++SweepIdx==ArraySize(Buffer))
 				{
 				NewLine = Buffer;
@@ -75,7 +75,7 @@ LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 		while('\n'!=Buffer[SweepIdx] || InQuotes)
 			{
 			if (SweepIdx+2==ArraySize(Buffer) && '\n'==Buffer[SweepIdx+1] && !InQuotes)
-				Buffer = REALLOC(Buffer,_msize(Buffer)-sizeof(char));
+				Buffer = REALLOC(Buffer,_msize(Buffer)-1);
 			if (strchr(Quotes,Buffer[SweepIdx]))
 				InQuotes = !InQuotes;
 			else if ((InQuotes || !EscapeOnlyWithinQuotes) && SweepIdx+1<ArraySize(Buffer))
@@ -95,7 +95,7 @@ LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 			}
 		}
 
-	NewLine = REALLOC(NewLine,sizeof(char)*(SweepIdx<=(ArraySize(Buffer)>>1)) ? SweepIdx 
+	NewLine = REALLOC(NewLine,(SweepIdx<=(ArraySize(Buffer)>>1)) ? SweepIdx 
 															   : ArraySize(Buffer)-(SweepIdx+1));
 	if (NULL==NewLine)
 		return;
@@ -105,11 +105,11 @@ LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 		{
 		strcpy(NewLine,Buffer);
 		memmove(Buffer,&Buffer[SweepIdx+1],ArraySize(Buffer)-(SweepIdx+1));
-		Buffer = REALLOC(Buffer,sizeof(char)*(ArraySize(Buffer)-(SweepIdx+1)));
+		Buffer = REALLOC(Buffer,ArraySize(Buffer)-(SweepIdx+1));
 		}
 	else{
 		strcpy(NewLine,&Buffer[SweepIdx+1]);
-		Buffer = REALLOC(Buffer,sizeof(char)*SweepIdx);		
+		Buffer = REALLOC(Buffer,SweepIdx);		
 		char* AltNewLine = Buffer;
 		Buffer = NewLine;
 		NewLine = AltNewLine;
@@ -227,7 +227,7 @@ LangConf::Error(const char* msg, const char* filename, size_t line, size_t posit
 		SEVERE_WARNING(msg);
 		return;
 		};
-	char* target = reinterpret_cast<char*>(calloc(strlen(msg)+leading_space,sizeof(char)));
+	char* target = reinterpret_cast<char*>(calloc(strlen(msg)+leading_space,1));
 	if (NULL==target)
 		{
 		SEVERE_WARNING(msg);
@@ -303,8 +303,8 @@ LangConf::_compactWSAtIdx(char*& Text,size_t Idx) const
 			{
 			TextLength -= offset;
 			if (Idx<TextLength)
-				memmove(Text+Idx+1,Text+Idx+1+offset,sizeof(char)*(TextLength-Idx-1));
-			Text = REALLOC(Text,sizeof(char)*TextLength);
+				memmove(Text+Idx+1,Text+Idx+1+offset,TextLength-Idx-1);
+			Text = REALLOC(Text,TextLength);
 			}
 		};
 }
@@ -336,7 +336,7 @@ LangConf::_flattenComments(char*& Text)
 		if (0<entity_len)
 			{
 			if (entity_len+Idx+deduct>TextLength) entity_len = TextLength-(deduct+Idx);
-			memmove(Text+Idx,Text+Idx+entity_len,sizeof(char)*(TextLength-(Idx+entity_len+deduct)));
+			memmove(Text+Idx,Text+Idx+entity_len,TextLength-(Idx+entity_len+deduct));
 			deduct += entity_len;
 			}
 		else{
@@ -356,7 +356,7 @@ LangConf::_flattenComments(char*& Text)
 
 					memset(Text+Idx,'\n',lines_spanned);
 					memset(Text+Idx+lines_spanned,' ',(entity_len-backspan));
-					memmove(Text+Idx+lines_spanned+(entity_len-backspan),Text+Idx+entity_len,sizeof(char)*(TextLength-(Idx+entity_len)));
+					memmove(Text+Idx+lines_spanned+(entity_len-backspan),Text+Idx+entity_len,TextLength-(Idx+entity_len));
 					deduct += (backspan-lines_spanned);
 					}
 				else{	// white-out and let later filters clean up
@@ -373,7 +373,7 @@ LangConf::_flattenComments(char*& Text)
 		}
 	while(TextLength-deduct>++Idx);
 	if (0<deduct)
-		Text = REALLOC(Text,sizeof(char)*(TextLength-deduct));
+		Text = REALLOC(Text,TextLength-deduct);
 	return;
 }
 

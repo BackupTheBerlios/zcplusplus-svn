@@ -262,7 +262,7 @@ MetaToken<T>::intradelete(size_t offset, size_t len)
 	if (len>0)
 		{
 		if (oldsize>offset+len)
-			memmove(_token.c_array()+offset,_token.c_array()+offset+len,sizeof(char)*(oldsize-(offset+len)));
+			memmove(_token.c_array()+offset,_token.c_array()+offset+len,oldsize-(offset+len));
 		_token.Shrink(oldsize-len);
 		}
 }
@@ -280,15 +280,15 @@ MetaToken<T>::replace_once(const std::nothrow_t& tracer, size_t offset, size_t l
 		{
 		if (!_token.Resize(oldsize+(srcsize-len))) return false;
 		if (oldsize>offset+len)
-//			memmove(_token.c_array()+offset+len+(srcsize-len),_token.c_array()+offset+len,sizeof(char)*(oldsize-(offset+len)));
-			memmove(_token.c_array()+offset+srcsize,_token.c_array()+offset+len,sizeof(char)*(oldsize-(offset+len)));
+//			memmove(_token.c_array()+offset+len+(srcsize-len),_token.c_array()+offset+len,oldsize-(offset+len));
+			memmove(_token.c_array()+offset+srcsize,_token.c_array()+offset+len,oldsize-(offset+len));
 		}
-	if (0<srcsize) memmove(_token.c_array()+offset,value,sizeof(char)*srcsize);
+	if (0<srcsize) memmove(_token.c_array()+offset,value,srcsize);
 	if (len>srcsize)
 		{
 		if (oldsize>offset+len)
-//			memmove(_token.c_array()+offset+len+(srcsize-len),_token.c_array()+offset+len,sizeof(char)*(oldsize-(offset+len)));
-			memmove(_token.c_array()+offset+srcsize,_token.c_array()+offset+len,sizeof(char)*(oldsize-(offset+len)));
+//			memmove(_token.c_array()+offset+len+(srcsize-len),_token.c_array()+offset+len,oldsize-(offset+len));
+			memmove(_token.c_array()+offset+srcsize,_token.c_array()+offset+len,oldsize-(offset+len));
 		_token.Shrink(oldsize-(len-srcsize));
 		}
 	return true;
@@ -307,15 +307,15 @@ MetaToken<T>::replace_once(const std::nothrow_t& tracer, size_t offset, size_t l
 		{
 		if (!_token.Resize(oldsize+(srcsize-len))) return false;
 		if (oldsize>offset+len)
-//			memmove(_token.c_array()+offset+len+(srcsize-len),_token.c_array()+offset+len,sizeof(char)*(oldsize-(offset+len)));
-			memmove(_token.c_array()+offset+srcsize,_token.c_array()+offset+len,sizeof(char)*(oldsize-(offset+len)));
+//			memmove(_token.c_array()+offset+len+(srcsize-len),_token.c_array()+offset+len,oldsize-(offset+len));
+			memmove(_token.c_array()+offset+srcsize,_token.c_array()+offset+len,oldsize-(offset+len));
 		}
 	_token[offset] = value;
 	if (len>srcsize)
 		{
 		if (oldsize>offset+len)
-//			memmove(_token.c_array()+offset+len+(srcsize-len),_token.c_array()+offset+len,sizeof(char)*(oldsize-(offset+len)));
-			memmove(_token.c_array()+offset+srcsize,_token.c_array()+offset+len,sizeof(char)*(oldsize-(offset+len)));
+//			memmove(_token.c_array()+offset+len+(srcsize-len),_token.c_array()+offset+len,oldsize-(offset+len));
+			memmove(_token.c_array()+offset+srcsize,_token.c_array()+offset+len,oldsize-(offset+len));
 		_token.Shrink(oldsize-(len-srcsize));
 		}
 #undef srcsize

@@ -40,16 +40,16 @@ ConvertBinaryModeToTextMode(T*& Buffer, size_t& BufferLen)
 				if (WrongPlatform)
 					Buffer[ScanIdx]='\n';
 				else{
-					if (BufferLen>(ScanIdx+1)) memmove(&Buffer[ScanIdx],&Buffer[ScanIdx+1],sizeof(char)*(BufferLen-(ScanIdx+1)));
+					if (BufferLen>(ScanIdx+1)) memmove(&Buffer[ScanIdx],&Buffer[ScanIdx+1],BufferLen-(ScanIdx+1));
 					++Displace;
 					}
 				}
 		while(BufferLen-Displace>++ScanIdx);
 		if (0<Displace)
 #ifndef ZAIMONI_FORCE_ISO
-			Buffer = zaimoni::REALLOC(Buffer,_msize(Buffer)-Displace*sizeof(char));
+			Buffer = zaimoni::REALLOC(Buffer,_msize(Buffer)-Displace);
 #else
-			Buffer = zaimoni::REALLOC(Buffer,sizeof(char)*(BufferLen -= Displace));
+			Buffer = zaimoni::REALLOC(Buffer,(BufferLen -= Displace));
 #endif
 		}
 }
