@@ -335,43 +335,34 @@ LangConf::_flattenComments(char*& Text)
 		size_t entity_len = len_SingleLineComment(Text+Idx);
 		if (0<entity_len)
 			{
-			if (TextLength-deduct<=Idx+entity_len)
-				{
-				deduct += (TextLength-Idx);
-				}
-			else{
-				memmove(Text+Idx,Text+Idx+entity_len,sizeof(char)*(TextLength-(Idx+entity_len+deduct)));
-				deduct += entity_len;
-				}
+			if (entity_len+Idx+deduct>TextLength) entity_len = TextLength-(deduct+Idx);
+			memmove(Text+Idx,Text+Idx+entity_len,sizeof(char)*(TextLength-(Idx+entity_len+deduct)));
+			deduct += entity_len;
 			}
 		else{
 			entity_len = len_MultiLineComment(Text+Idx);
 			if (0<entity_len)
 				{
-				if (TextLength-deduct<=Idx+entity_len)
-					{
-					deduct += (TextLength-Idx);
-					}
-				else{	// ok...must:
-						// * count lines
-						// * replace with single space
-						// * put newlines after next newline
-					const size_t lines_spanned = std::count(Text+Idx,Text+Idx+entity_len,'\n');
-					if (lines_spanned)
-						{	// have to account for lines
-						const char* backline = std::find(std::reverse_iterator<char*>(Text+Idx+entity_len),std::reverse_iterator<char*>(Text+Idx),'\n').base();
-						const size_t backspan = backline-(Text+Idx);
+				if (entity_len+Idx+deduct>TextLength) entity_len = TextLength-(deduct+Idx);
+				// ok...must:
+				// * count lines
+				// * replace with single space
+				// * put newlines after next newline
+				const size_t lines_spanned = std::count(Text+Idx,Text+Idx+entity_len,'\n');
+				if (lines_spanned)
+					{	// have to account for lines
+					const char* backline = std::find(std::reverse_iterator<char*>(Text+Idx+entity_len),std::reverse_iterator<char*>(Text+Idx),'\n').base();
+					const size_t backspan = backline-(Text+Idx);
 
-						memset(Text+Idx,'\n',lines_spanned);
-						memset(Text+Idx+lines_spanned,' ',(entity_len-backspan));
-						memmove(Text+Idx+lines_spanned+(entity_len-backspan),Text+Idx+entity_len,sizeof(char)*(TextLength-(Idx+entity_len)));
-						deduct += (backspan-lines_spanned);
-						}
-					else{	// white-out and let later filters clean up
-						memset(Text+Idx,' ',entity_len);
-						Idx += entity_len-1;
-						};
+					memset(Text+Idx,'\n',lines_spanned);
+					memset(Text+Idx+lines_spanned,' ',(entity_len-backspan));
+					memmove(Text+Idx+lines_spanned+(entity_len-backspan),Text+Idx+entity_len,sizeof(char)*(TextLength-(Idx+entity_len)));
+					deduct += (backspan-lines_spanned);
 					}
+				else{	// white-out and let later filters clean up
+					memset(Text+Idx,' ',entity_len);
+					Idx += entity_len-1;
+					};
 				}
 			else{
 				lex_flags discard;
