@@ -5367,8 +5367,8 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, func_trai
 		if 		(res_int==lhs_int)
 			{	// lhs | rhs = lhs; conserve type
 			parse_tree tmp;
-			tmp = *src.data<2>();
-			src.c_array<2>()->clear();
+			tmp = *src.data<1>();
+			src.c_array<1>()->clear();
 			src.destroy();
 			src = tmp;
 			src.type_code = old_type;
