@@ -3374,8 +3374,8 @@ static bool is_C99_bitwise_XOR_expression(const parse_tree& src)
 	return (	robust_token_is_char<'^'>(src.index_tokens[0].token)
 			&&	NULL==src.index_tokens[1].token.first
 			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_BITOR_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_BITXOR_EXPRESSION & src.data<2>()->flags));
+			&&	1==src.size<1>() && (PARSE_BITXOR_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_BITAND_EXPRESSION & src.data<2>()->flags));
 }
 
 static bool is_CPP_bitwise_XOR_expression(const parse_tree& src)
@@ -3383,8 +3383,8 @@ static bool is_CPP_bitwise_XOR_expression(const parse_tree& src)
 	return (	(robust_token_is_char<'^'>(src.index_tokens[0].token) || robust_token_is_string<3>(src.index_tokens[0].token,"xor"))
 			&&	NULL==src.index_tokens[1].token.first
 			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_BITOR_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_BITXOR_EXPRESSION & src.data<2>()->flags));
+			&&	1==src.size<1>() && (PARSE_BITXOR_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_BITAND_EXPRESSION & src.data<2>()->flags));
 }
 
 static bool is_C99_bitwise_OR_expression(const parse_tree& src)
