@@ -4930,7 +4930,7 @@ static bool terse_locate_CPP_bitwise_XOR(parse_tree& src, size_t& i)
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
 		if (	(PARSE_BITXOR_EXPRESSION & src.data<0>()[i-1].flags)
-			&&	(PARSE_BITOR_EXPRESSION & src.data<0>()[i+1].flags))
+			&&	(PARSE_BITAND_EXPRESSION & src.data<0>()[i+1].flags))
 			{
 			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
 			assert(NULL!=tmp);
