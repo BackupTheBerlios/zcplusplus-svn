@@ -28,6 +28,7 @@ struct _unsigned_fixed_charint
 	_unsigned_fixed_charint& operator-=(const _unsigned_fixed_charint& RHS) {unsigned_diff(_x,N,RHS._x); return *this;};
 	_unsigned_fixed_charint& operator-=(uintmax_t RHS) {unsigned_diff(_x,N,RHS); return *this;};
 	_unsigned_fixed_charint& operator*=(const _unsigned_fixed_charint& RHS);
+	_unsigned_fixed_charint& operator&=(const _unsigned_fixed_charint& RHS) {bitwise_and(_x,N,RHS._x); return *this;};
 	_unsigned_fixed_charint& operator^=(const _unsigned_fixed_charint& RHS) {bitwise_xor(_x,N,RHS._x); return *this;};
 	_unsigned_fixed_charint& operator|=(const _unsigned_fixed_charint& RHS) {bitwise_or(_x,N,RHS._x); return *this;};
 	_unsigned_fixed_charint& operator>>=(uintmax_t RHS) {unsigned_right_shift(_x,N,RHS); return *this;};
