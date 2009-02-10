@@ -13,6 +13,7 @@ void _unsigned_sum(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
 void _unsigned_sum(unsigned char* LHS, size_t LHS_len, uintmax_t RHS);
 void _unsigned_diff(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS);
 void _unsigned_diff(unsigned char* LHS, size_t LHS_len, uintmax_t RHS);
+unsigned int _int_log2(unsigned char* buf, size_t buf_len);
 void _bitwise_compl(unsigned char* buf, size_t buf_len);
 void _bitwise_and(unsigned char* buf, size_t buf_len, const unsigned char* RHS);
 void _bitwise_xor(unsigned char* buf, size_t buf_len, const unsigned char* RHS);
@@ -84,6 +85,13 @@ inline void unsigned_diff(unsigned char* LHS, size_t LHS_len, uintmax_t RHS)
 	assert(NULL!=LHS);
 	assert(0<LHS_len);
 	_unsigned_diff(LHS,LHS_len,RHS);
+}
+
+inline unsigned int int_log2(unsigned char* buf, size_t buf_len)
+{
+	assert(NULL!=buf);
+	assert(0<buf_len);
+	_int_log2(buf,buf_len);
 }
 
 inline void bitwise_compl(unsigned char* buf, size_t buf_len)

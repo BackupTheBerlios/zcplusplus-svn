@@ -158,6 +158,18 @@ void _unsigned_diff(unsigned char* LHS, size_t LHS_len, uintmax_t RHS)
 	while(LHS_len > ++i && (RHS || carry));
 }
 
+unsigned int _int_log2(unsigned char* buf, size_t buf_len)
+{
+	while(0<buf_len)
+		{
+		size_t i = CHAR_BIT;
+		--buf_len;
+		do	if (buf[buf_len] & (1U<< --i)) return buf_len*CHAR_BIT+i;
+		while(0<i);
+		};
+	return 0;
+}
+
 void _bitwise_compl(unsigned char* buf, size_t buf_len)
 {
 	while(0<buf_len)

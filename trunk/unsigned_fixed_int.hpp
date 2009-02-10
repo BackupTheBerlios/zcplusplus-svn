@@ -39,6 +39,8 @@ struct _unsigned_fixed_charint
 	_unsigned_fixed_charint& operator/=(const _unsigned_fixed_charint& RHS);
 	_unsigned_fixed_charint& operator%=(const _unsigned_fixed_charint& RHS);
 
+	unsigned int int_log2() {return ::int_log2(_x,N);};
+
 	void set(size_t n)
 		{
 		assert(N>n/CHAR_BIT);
