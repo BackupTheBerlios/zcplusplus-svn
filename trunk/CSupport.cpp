@@ -4375,6 +4375,27 @@ static bool locate_CPP_logical_NOT(parse_tree& src, size_t& i, const type_system
 	return false;
 }
 
+static bool int_has_trapped(parse_tree& src,const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int)
+{
+	assert(C_TYPE::INT<=src.type_code.base_type_index && C_TYPE::INTEGERLIKE>src.type_code.base_type_index);
+	// check for trap representation for signed types
+	const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+	if (bool_options[boolopt::int_traps] && 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && target_machine->trap_int(src_int,machine_type))
+		{
+		if (!(parse_tree::INVALID & src.flags))
+			{
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" generated a trap representation: undefined behavior (C99 6.2.6.1p5)");
+			zcc_errors.inc_error();
+			}
+		return true;
+		}
+	return false;
+}
+
 static bool terse_locate_C99_bitwise_complement(parse_tree& src, size_t& i)
 {
 	assert(!src.empty<0>());
@@ -4455,20 +4476,7 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,func_tr
 		src_int.auto_bitwise_complement();
 		src_int.mask_to(target_machine->C_bit(machine_type));
 
-		// check for trap representation for signed types
-		if (bool_options[boolopt::int_traps] && 0==(old_type.base_type_index-C_TYPE::INT)%2 && target_machine->trap_int(src_int,machine_type))
-			{
-			src.flags |= parse_tree::INVALID;
-			if (!(parse_tree::INVALID & src.data<2>()->flags))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" generated a trap representation: undefined behavior (C99 6.2.6.1p5)");
-				zcc_errors.inc_error();
-				}
-			return false;
-			}
+		if (int_has_trapped(src,src_int)) return false;
 
 		const uintmax_t res = src_int.to_uint();
 		const char* suffix = literal_suffix(old_type.base_type_index);
@@ -5034,19 +5042,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, func_traits<bo
 					}
 #endif
 				res_int <<= rhs_int.to_uint();
-				if (bool_options[boolopt::int_traps] && 0==(old_type.base_type_index-C_TYPE::INT)%2 && target_machine->trap_int(res_int,machine_type))
-					{
-					src.flags |= parse_tree::INVALID;
-					if (!(parse_tree::INVALID & src.data<1>()->flags) && !(parse_tree::INVALID & src.data<2>()->flags))
-						{
-						message_header(src.index_tokens[0]);
-						INC_INFORM(ERR_STR);
-						INC_INFORM(src);
-						INFORM(" generated a trap representation: undefined behavior (C99 6.2.6.1p5)");
-						zcc_errors.inc_error();
-						}
-					return false;
-					}
+				if (int_has_trapped(src,res_int)) return false;
 				}
 			else
 				res_int >>= rhs_int.to_uint();
@@ -5381,7 +5377,6 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types, func_tra
 		{
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
-		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((old_type.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
 		intlike_literal_to_VM(lhs_int,*src.data<1>());
 		intlike_literal_to_VM(rhs_int,*src.data<2>());
 
@@ -5389,19 +5384,7 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types, func_tra
 		res_int &= rhs_int;
 
 		// check for trap representation for signed types
-		if (bool_options[boolopt::int_traps] && 0==(old_type.base_type_index-C_TYPE::INT)%2 && target_machine->trap_int(res_int,machine_type))
-			{
-			src.flags |= parse_tree::INVALID;
-			if (!(parse_tree::INVALID & src.data<2>()->flags))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" generated a trap representation: undefined behavior (C99 6.2.6.1p5)");
-				zcc_errors.inc_error();
-				}
-			return false;
-			}
+		if (int_has_trapped(src,res_int)) return false;
 
 		if 		(res_int==lhs_int)
 			{	// lhs & rhs = lhs; conserve type
@@ -5751,7 +5734,6 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, func_tra
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
 		const type_spec old_type = src.type_code;
-		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((old_type.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
 		intlike_literal_to_VM(lhs_int,*src.data<1>());
 		intlike_literal_to_VM(rhs_int,*src.data<2>());
 
@@ -5759,20 +5741,7 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, func_tra
 		res_int ^= rhs_int;
 //		res_int.mask_to(target_machine->C_bit(machine_type));	// shouldn't need this
 
-		// check for trap representation for signed types
-		if (bool_options[boolopt::int_traps] && 0==(old_type.base_type_index-C_TYPE::INT)%2 && target_machine->trap_int(res_int,machine_type))
-			{
-			src.flags |= parse_tree::INVALID;
-			if (!(parse_tree::INVALID & src.data<2>()->flags))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" generated a trap representation: undefined behavior (C99 6.2.6.1p5)");
-				zcc_errors.inc_error();
-				}
-			return false;
-			}
+		if (int_has_trapped(src,res_int)) return false;
 
 		const uintmax_t res = res_int.to_uint();
 		const char* suffix = literal_suffix(old_type.base_type_index);
