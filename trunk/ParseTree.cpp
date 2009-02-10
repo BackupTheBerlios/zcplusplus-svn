@@ -138,16 +138,8 @@ parse_tree::_eval_to_arg(size_t arg_idx, size_t i)
 {
 	parse_tree tmp = data(arg_idx)[i];
 	c_array(arg_idx)[i].clear();
-	_destroy(args[0]);
-	_destroy(args[1]);
-	_destroy(args[2]);
-
-	grab_index_token_from<1,1>(tmp);
-	grab_index_token_from<0,0>(tmp);
-
-	args[0] = tmp.args[0];
-	args[1] = tmp.args[1];
-	args[2] = tmp.args[2];
+	destroy();
+	*this = tmp;
 }
 
 bool

@@ -3539,12 +3539,7 @@ static void cancel_inner_parentheses(parse_tree& src)
 static void cancel_outermost_parentheses(parse_tree& src)
 {
 	while(1==src.size<0>() && is_naked_parentheses_pair(src))
-		{
-		parse_tree tmp = *src.data<0>();
-		src.c_array<0>()->clear();
-		src.destroy();
-		src = tmp;
-		}
+		src.eval_to_arg<0>(0);
 }
 
 /*! 
@@ -3575,10 +3570,7 @@ inspect_potential_paren_primary_expression(parse_tree& src, size_t& err_count)
 			};
 		if (1==content_length && (PARSE_PRIMARY_EXPRESSION & src.data<0>()->flags))
 			{	// primary expression that got parenthesized
-			parse_tree tmp = *src.c_array<0>();
-			src.c_array<0>()->clear();
-			src.destroy();
-			src = tmp;
+			src.eval_to_arg<0>(0);
 			return true;
 			}
 		if (1==content_length && (PARSE_EXPRESSION & src.data<0>()->flags))
@@ -4295,8 +4287,7 @@ static bool eval_logical_NOT(parse_tree& src, const type_system& types, func_tra
 		if (	is_logical_NOT(*src.data<2>()->data<2>())
 			||	(C_TYPE::BOOL==src.data<2>()->type_code.base_type_index && 0==src.data<2>()->type_code.pointer_power_after_array_decay()))
 			{
-			parse_tree tmp;
-			tmp = *src.data<2>()->data<2>();
+			parse_tree tmp = *src.data<2>()->data<2>();
 			src.c_array<2>()->c_array<2>()->clear();
 			src.destroy();
 			src = tmp;
@@ -4493,20 +4484,14 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,func_tr
 		if (!new_token) return false;	// catch this later
 		strcpy(new_token,buf);
 		src.c_array<2>()->grab_index_token_from<0>(new_token,new_flags | C_TESTFLAG_DECIMAL);
-
-		parse_tree tmp;
-		tmp = *src.data<2>();
-		src.c_array<2>()->clear();
-		src.destroy();
-		src = tmp;
+		src.eval_to_arg<2>(0);
 		src.type_code = old_type;
 		return true;
 		};
 	if (	is_bitwise_complement_expression(*src.data<2>())
 		&&	is_bitwise_complement_expression(*src.data<2>()->data<2>()))
 		{	// ~~~__ reduces to ~__ safely
-		parse_tree tmp;
-		tmp = *src.data<2>()->data<2>();
+		parse_tree tmp = *src.data<2>()->data<2>();
 		src.c_array<2>()->c_array<2>()->clear();
 		src.destroy();
 		src = tmp;
@@ -5045,11 +5030,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, func_traits<bo
 		{
 		if (!is_true)
 			{	// __ << 0 or __ >> 0: lift
-			parse_tree tmp;
-			tmp = *src.data<1>();
-			src.c_array<1>()->clear();
-			src.destroy();
-			src = tmp;
+			src.eval_to_arg<1>(0);
 			src.type_code = old_type;
 			return true;
 			}
@@ -5130,12 +5111,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, func_traits<bo
 			if (!new_token) return false;	// catch this later
 			strcpy(new_token,buf);
 			src.c_array<1>()->grab_index_token_from<0>(new_token,new_flags | C_TESTFLAG_DECIMAL);
-
-			parse_tree tmp;
-			tmp = *src.data<1>();
-			src.c_array<1>()->clear();
-			src.destroy();
-			src = tmp;
+			src.eval_to_arg<1>(0);
 			src.type_code = old_type;
 			return true;
 			}
@@ -5342,21 +5318,13 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types, func_tra
 
 		if 		(res_int==lhs_int)
 			{	// lhs & rhs = lhs; conserve type
-			parse_tree tmp;
-			tmp = *src.data<1>();
-			src.c_array<1>()->clear();
-			src.destroy();
-			src = tmp;
+			src.eval_to_arg<1>(0);
 			src.type_code = old_type;
 			return true;
 			}
 		else if (res_int==rhs_int)
 			{	// lhs & rhs = rhs; conserve type
-			parse_tree tmp;
-			tmp = *src.data<2>();
-			src.c_array<2>()->clear();
-			src.destroy();
-			src = tmp;
+			src.eval_to_arg<2>(0);
 			src.type_code = old_type;
 			return true;
 			}
@@ -5376,12 +5344,7 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types, func_tra
 			if (!new_token) return false;	// catch this later
 			strcpy(new_token,buf);
 			src.c_array<1>()->grab_index_token_from<0>(new_token,new_flags | C_TESTFLAG_DECIMAL);
-
-			parse_tree tmp;
-			tmp = *src.data<1>();
-			src.c_array<1>()->clear();
-			src.destroy();
-			src = tmp;
+			src.eval_to_arg<1>(0);
 			src.type_code = old_type;
 			return true;
 			}
@@ -5544,11 +5507,7 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, func_tra
 		{
 		if (!is_true)
 			{	// 0 ^ __
-			parse_tree tmp;
-			tmp = *src.data<2>();
-			src.c_array<2>()->clear();
-			src.destroy();
-			src = tmp;
+			src.eval_to_arg<2>(0);
 			//! \todo convert char literal to appropriate integer
 			return true;
 			}
@@ -5557,11 +5516,7 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, func_tra
 		{
 		if (!is_true)
 			{	// __ ^ 0
-			parse_tree tmp;
-			tmp = *src.data<1>();
-			src.c_array<1>()->clear();
-			src.destroy();
-			src = tmp;
+			src.eval_to_arg<1>(0);
 			//! \todo convert char literal to appropriate integer
 			return true;
 			}
@@ -5598,12 +5553,7 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, func_tra
 		if (!new_token) return false;	// catch this later
 		strcpy(new_token,buf);
 		src.c_array<1>()->grab_index_token_from<0>(new_token,new_flags | C_TESTFLAG_DECIMAL);
-//		src.eval_to_arg<1>(0);	//! \todo this catastrophically fails, fix (also applies to eval_bitwise_OR)
-		parse_tree tmp;
-		tmp = *src.data<1>();
-		src.c_array<1>()->clear();
-		src.destroy();
-		src = tmp;
+		src.eval_to_arg<1>(0);
 		src.type_code = old_type;
 		return true;
 		}
@@ -5765,11 +5715,7 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, func_trai
 		{
 		if (!is_true)
 			{	// 0 | __
-			parse_tree tmp;
-			tmp = *src.data<2>();
-			src.c_array<2>()->clear();
-			src.destroy();
-			src = tmp;
+			src.eval_to_arg<2>(0);
 			//! \todo convert char literal to appropriate integer
 			return true;
 			}
@@ -5778,11 +5724,7 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, func_trai
 		{
 		if (!is_true)
 			{	// __ | 0
-			parse_tree tmp;
-			tmp = *src.data<1>();
-			src.c_array<1>()->clear();
-			src.destroy();
-			src = tmp;
+			src.eval_to_arg<1>(0);
 			//! \todo convert char literal to appropriate integer
 			return true;
 			}
@@ -5802,21 +5744,13 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, func_trai
 		res_int |= rhs_int;
 		if 		(res_int==lhs_int)
 			{	// lhs | rhs = lhs; conserve type
-			parse_tree tmp;
-			tmp = *src.data<1>();
-			src.c_array<1>()->clear();
-			src.destroy();
-			src = tmp;
+			src.eval_to_arg<1>(0);
 			src.type_code = old_type;
 			return true;
 			}
 		else if (res_int==rhs_int)
 			{	// lhs | rhs = rhs; conserve type
-			parse_tree tmp;
-			tmp = *src.data<2>();
-			src.c_array<2>()->clear();
-			src.destroy();
-			src = tmp;
+			src.eval_to_arg<2>(0);
 			src.type_code = old_type;
 			return true;
 			}
@@ -5836,12 +5770,7 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, func_trai
 			if (!new_token) return false;	// catch this later
 			strcpy(new_token,buf);
 			src.c_array<1>()->grab_index_token_from<0>(new_token,new_flags | C_TESTFLAG_DECIMAL);
-
-			parse_tree tmp;
-			tmp = *src.data<1>();
-			src.c_array<1>()->clear();
-			src.destroy();
-			src = tmp;
+			src.eval_to_arg<1>(0);
 			src.type_code = old_type;
 			return true;
 			}
@@ -6560,18 +6489,11 @@ static bool eval_conditional_op(parse_tree& src, func_traits<bool (*)(const pars
 		{
 		const bool was_invalid = src.flags & parse_tree::INVALID;
 		const type_spec old_type = src.type_code;
-		parse_tree tmp;
 		if (is_true)
-			{	// it's the infix arg
-			tmp = *src.data<0>();
-			src.c_array<0>()->clear();
-			}
-		else{	// it's the postfix arg
-			tmp = *src.data<2>();
-			src.c_array<2>()->clear();
-			};
-		src.destroy();
-		src = tmp;
+			// it's the infix arg
+			src.eval_to_arg<0>(0);
+		else	// it's the postfix arg
+			src.eval_to_arg<2>(0);
 		if (was_invalid && !(src.flags & parse_tree::INVALID))
 			{
 			message_header(src.index_tokens[0]);
@@ -6920,12 +6842,7 @@ static size_t C99_locate_expressions(parse_tree& src,const size_t parent_identif
 		if (inspect_potential_paren_primary_expression(src,err_count))
 			{
 			if (top_level && 1==src.size<0>() && is_naked_parentheses_pair(src))
-				{
-				parse_tree tmp = *src.c_array<0>();
-				src.c_array<0>()->clear();
-				src.destroy();
-				src = tmp;
-				}
+				src.eval_to_arg<0>(0);
 			return err_count+(zcc_errors.err_count()-starting_errors);
 			}
 
@@ -7050,12 +6967,7 @@ static size_t CPlusPlus_locate_expressions(parse_tree& src,const size_t parent_i
 		if (inspect_potential_paren_primary_expression(src,err_count))
 			{
 			if (top_level && 1==src.size<0>() && is_naked_parentheses_pair(src))
-				{
-				parse_tree tmp = *src.c_array<0>();
-				src.c_array<0>()->clear();
-				src.destroy();
-				src = tmp;
-				}
+				src.eval_to_arg<0>(0);
 			return err_count+(zcc_errors.err_count()-starting_errors);
 			}
 
@@ -7175,13 +7087,7 @@ bool C99_CondenseParseTree(parse_tree& src,const type_system& types)
 
 	// ...
 
-	while(src.is_raw_list() && 1==src.size<0>())
-		{
-		parse_tree tmp = *src.data<0>();
-		src.c_array<0>()->clear();
-		src.destroy();
-		src = tmp;
-		};
+	while(src.is_raw_list() && 1==src.size<0>()) src.eval_to_arg<0>(0);
 	return true;
 }
 
@@ -7199,13 +7105,7 @@ bool CPlusPlus_CondenseParseTree(parse_tree& src,const type_system& types)
 
 	// ...
 
-	while(src.is_raw_list() && 1==src.size<0>())
-		{
-		parse_tree tmp = *src.data<0>();
-		src.c_array<0>()->clear();
-		src.destroy();
-		src = tmp;
-		};
+	while(src.is_raw_list() && 1==src.size<0>()) src.eval_to_arg<0>(0);
 	return true;
 }
 
