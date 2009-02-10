@@ -4145,7 +4145,6 @@ static void C_deref_easy_syntax_check(parse_tree& src,const type_system& types)
 static void CPP_deref_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_unary_operator_expression<'*'>(src));
-	//! \todo handle operator overloading
 	//! \todo handle *& identity when we have &
 	//! \todo multidimensional array target
 	//! \todo cv-qualified pointer target
@@ -4194,6 +4193,7 @@ static bool locate_CPP_deref(parse_tree& src, size_t& i, const type_system& type
 
 	if (terse_locate_deref(src,i))
 		{
+		//! \todo handle operator overloading
 		CPP_deref_easy_syntax_check(src.c_array<0>()[i],types);
 		return true;
 		}
@@ -4319,7 +4319,6 @@ static void C_logical_NOT_easy_syntax_check(parse_tree& src,const type_system& t
 static void CPP_logical_NOT_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_CPP_logical_NOT_expression(src));
-	//! \todo handle operator overloading
 	src.subtype = C99_UNARY_SUBTYPE_NOT;
 	src.type_code.set_type(C_TYPE::BOOL);	// technically wrong for C, but the range is restricted to _Bool's range
 	if (eval_logical_NOT(src,types,is_CPP_logical_NOT_expression,CPP_literal_converts_to_bool)) return;
@@ -4360,6 +4359,7 @@ static bool locate_CPP_logical_NOT(parse_tree& src, size_t& i, const type_system
 
 	if (terse_locate_CPP_logical_NOT(src,i))
 		{
+		//! \todo handle operator overloading
 		CPP_logical_NOT_easy_syntax_check(src.c_array<0>()[i],types);
 		return true;
 		}
@@ -4526,7 +4526,6 @@ static void CPP_bitwise_complement_easy_syntax_check(parse_tree& src,const type_
 {
 	assert(is_CPP_bitwise_complement_expression(src));
 	src.subtype = C99_UNARY_SUBTYPE_COMPL;
-	//! \todo handle overloading
 	if (!converts_to_integerlike(src.data<2>()->type_code))
 		{
 		src.type_code.set_type(0);
@@ -4569,6 +4568,7 @@ static bool locate_CPP_bitwise_complement(parse_tree& src, size_t& i, const type
 		&&	src.data<0>()[i].is_atomic()
 		&&	terse_locate_CPP_bitwise_complement(src,i))
 		{
+		//! \todo handle overloading
 		CPP_bitwise_complement_easy_syntax_check(src.c_array<0>()[i],types);
 		return true;
 		}
@@ -5132,7 +5132,6 @@ static void C_shift_expression_easy_syntax_check(parse_tree& src,const type_syst
 static void CPP_shift_expression_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_shift_expression(src));
-	//! \todo handle overloading
 	// C++98 5.8p1: requires being an integer or enumeration type
 	if (binary_infix_failed_integer_arguments(src,"(C++98 5.8p1)")) return;
 	src.type_code.base_type_index = default_promote_type(src.data<1>()->type_code.base_type_index);
@@ -5171,7 +5170,9 @@ static void locate_CPP_shift_expression(parse_tree& src, size_t& i, const type_s
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_shift_expression(src,i)) CPP_shift_expression_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_shift_expression(src,i))
+		//! \todo handle overloading
+		CPP_shift_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 static bool terse_locate_C99_bitwise_AND(parse_tree& src, size_t& i)
@@ -5365,7 +5366,6 @@ static void C_bitwise_AND_easy_syntax_check(parse_tree& src,const type_system& t
 static void CPP_bitwise_AND_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_CPP_bitwise_AND_expression(src));
-	//! \todo handle overloading
 	// C++98 5.11p1: requires being an integer or enumeration type
 	if (binary_infix_failed_integer_arguments(src,"(C++98 5.11p1)")) return;
 	src.type_code.base_type_index = default_promote_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
@@ -5402,7 +5402,9 @@ static void locate_CPP_bitwise_AND(parse_tree& src, size_t& i, const type_system
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_CPP_bitwise_AND(src,i)) CPP_bitwise_AND_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_CPP_bitwise_AND(src,i))
+		//! \todo handle overloading
+		CPP_bitwise_AND_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 static bool terse_locate_C99_bitwise_XOR(parse_tree& src, size_t& i)
@@ -5791,7 +5793,6 @@ static void C_bitwise_OR_easy_syntax_check(parse_tree& src,const type_system& ty
 static void CPP_bitwise_OR_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_CPP_bitwise_OR_expression(src));
-	//! \todo handle overloading
 	// C++98 5.13p1: requires being an integer or enumeration type
 	if (binary_infix_failed_integer_arguments(src,"(C++98 5.13p1)")) return;
 	src.type_code.base_type_index = arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index);
@@ -5828,7 +5829,9 @@ static void locate_CPP_bitwise_OR(parse_tree& src, size_t& i, const type_system&
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_CPP_bitwise_OR(src,i)) CPP_bitwise_OR_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_CPP_bitwise_OR(src,i))
+		//! \todo handle overloading
+		CPP_bitwise_OR_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 static bool terse_locate_C99_logical_AND(parse_tree& src, size_t& i)
@@ -6034,7 +6037,6 @@ static void C_logical_AND_easy_syntax_check(parse_tree& src,const type_system& t
 static void CPP_logical_AND_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_CPP_logical_AND_expression(src));
-	//! \todo check for operator overloading
 	if (!converts_to_bool(src.data<1>()->type_code))
 		{
 		src.flags |= parse_tree::INVALID;
@@ -6123,7 +6125,9 @@ static void locate_CPP_logical_AND(parse_tree& src, size_t& i, const type_system
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_CPP_logical_AND(src,i)) CPP_logical_AND_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_CPP_logical_AND(src,i))
+		//! \todo check for operator overloading
+		CPP_logical_AND_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 static bool terse_locate_C99_logical_OR(parse_tree& src, size_t& i)
@@ -6330,7 +6334,6 @@ static void C_logical_OR_easy_syntax_check(parse_tree& src,const type_system& ty
 static void CPP_logical_OR_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_CPP_logical_OR_expression(src));
-	//! \todo check for operator overloading
 	if (!converts_to_bool(src.data<1>()->type_code))
 		{
 		src.flags |= parse_tree::INVALID;
@@ -6419,7 +6422,9 @@ static void locate_CPP_logical_OR(parse_tree& src, size_t& i, const type_system&
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_CPP_logical_OR(src,i)) CPP_logical_OR_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_CPP_logical_OR(src,i))
+		//! \todo check for operator overloading
+		CPP_logical_OR_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 static bool terse_locate_conditional_op(parse_tree& src, size_t& i)
