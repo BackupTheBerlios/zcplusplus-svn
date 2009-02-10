@@ -4912,6 +4912,74 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 #endif
 }
 
+static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* standard)
+{
+	if (!converts_to_integerlike(src.data<1>()->type_code))
+		{
+		src.flags |= parse_tree::INVALID;
+		if (!converts_to_integerlike(src.data<2>()->type_code))
+			{
+			if (!(src.data<1>()->flags & parse_tree::INVALID))
+				{
+				if (!(src.data<2>()->flags & parse_tree::INVALID))
+					{
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INC_INFORM(" has nonintegral LHS and RHS ");
+					INFORM(standard);
+					zcc_errors.inc_error();
+					}
+				else{
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" has nonintegral LHS ");
+					INFORM(standard);
+					zcc_errors.inc_error();
+					}
+				}
+			else if (!(src.data<2>()->flags & parse_tree::INVALID))
+				{
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has nonintegral RHS ");
+				INFORM(standard);
+				zcc_errors.inc_error();
+				}
+			return true;
+			}
+		else{
+			if (!(src.data<1>()->flags & parse_tree::INVALID))
+				{
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has nonintegral LHS ");
+				INFORM(standard);
+				zcc_errors.inc_error();
+				}
+			return true;
+			}
+		}
+	else if (!converts_to_integerlike(src.data<2>()->type_code))
+		{
+		src.flags |= parse_tree::INVALID;
+		if (!(src.data<2>()->flags & parse_tree::INVALID))
+			{
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" has nonintegral RHS ");
+			INFORM(standard);
+			zcc_errors.inc_error();
+			}
+		return true;
+		}
+	return false;
+}
+
 static bool terse_locate_shift_expression(parse_tree& src, size_t& i)
 {
 	assert(!src.empty<0>());
@@ -5079,64 +5147,7 @@ static void C_shift_expression_easy_syntax_check(parse_tree& src,const type_syst
 {
 	assert(is_C99_shift_expression(src));
 	// C99 6.5.7p2: requires being an integer type
-	if (!converts_to_integerlike(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!converts_to_integerlike(src.data<2>()->type_code))
-			{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				if (!(src.data<2>()->flags & parse_tree::INVALID))
-					{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS and RHS (C99 6.5.7p2)");
-					zcc_errors.inc_error();
-					}
-				else{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS (C99 6.5.7p2)");
-					zcc_errors.inc_error();
-					}
-				}
-			else if (!(src.data<2>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral RHS (C99 6.5.7p2)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		else{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral LHS (C99 6.5.7p2)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		}
-	else if (!converts_to_integerlike(src.data<2>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!(src.data<2>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has nonintegral RHS (C99 6.5.7p2)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
+	if (binary_infix_failed_integer_arguments(src,"(C99 6.5.7p2)")) return;
 	src.type_code.base_type_index = default_promote_type(src.data<1>()->type_code.base_type_index);
 	assert(converts_to_integerlike(src.type_code.base_type_index));
 	if (eval_shift(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
@@ -5147,64 +5158,7 @@ static void CPP_shift_expression_easy_syntax_check(parse_tree& src,const type_sy
 	assert(is_C99_shift_expression(src));
 	//! \todo handle overloading
 	// C++98 5.8p1: requires being an integer or enumeration type
-	if (!converts_to_integerlike(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!converts_to_integerlike(src.data<2>()->type_code))
-			{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				if (!(src.data<2>()->flags & parse_tree::INVALID))
-					{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS and RHS (C++98 5.8p1)");
-					zcc_errors.inc_error();
-					}
-				else{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS (C++98 5.8p1)");
-					zcc_errors.inc_error();
-					}
-				}
-			else if (!(src.data<2>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral RHS (C++98 5.8p1)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		else{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral LHS (C++98 5.8p1)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		}
-	else if (!converts_to_integerlike(src.data<2>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!(src.data<2>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has nonintegral RHS (C++98 5.8p1)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
+	if (binary_infix_failed_integer_arguments(src,"(C++98 5.8p1)")) return;
 	src.type_code.base_type_index = default_promote_type(src.data<1>()->type_code.base_type_index);
 	assert(converts_to_integerlike(src.type_code.base_type_index));
 	if (eval_shift(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
@@ -5439,65 +5393,8 @@ static void C_bitwise_AND_easy_syntax_check(parse_tree& src,const type_system& t
 {
 	assert(is_C99_bitwise_AND_expression(src));
 	// C99 6.5.10p2: requires being an integer type
-	if (!converts_to_integerlike(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!converts_to_integerlike(src.data<2>()->type_code))
-			{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				if (!(src.data<2>()->flags & parse_tree::INVALID))
-					{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS and RHS (C99 6.5.10p2)");
-					zcc_errors.inc_error();
-					}
-				else{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS (C99 6.5.10p2)");
-					zcc_errors.inc_error();
-					}
-				}
-			else if (!(src.data<2>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral RHS (C99 6.5.10p2)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		else{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral LHS (C99 6.5.10p2)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		}
-	else if (!converts_to_integerlike(src.data<2>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!(src.data<2>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has nonintegral RHS (C99 6.5.10p2)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
-	src.type_code.base_type_index = arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index);
+	if (binary_infix_failed_integer_arguments(src,"(C99 6.5.10p2)")) return;
+	src.type_code.base_type_index = default_promote_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
 	assert(converts_to_integerlike(src.type_code.base_type_index));
 	if (eval_bitwise_AND(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
 }
@@ -5507,65 +5404,8 @@ static void CPP_bitwise_AND_easy_syntax_check(parse_tree& src,const type_system&
 	assert(is_CPP_bitwise_AND_expression(src));
 	//! \todo handle overloading
 	// C++98 5.11p1: requires being an integer or enumeration type
-	if (!converts_to_integerlike(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!converts_to_integerlike(src.data<2>()->type_code))
-			{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				if (!(src.data<2>()->flags & parse_tree::INVALID))
-					{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS and RHS (C++98 5.11p1)");
-					zcc_errors.inc_error();
-					}
-				else{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS (C++98 5.11p1)");
-					zcc_errors.inc_error();
-					}
-				}
-			else if (!(src.data<2>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral RHS (C++98 5.11p1)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		else{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral LHS (C++98 5.11p1)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		}
-	else if (!converts_to_integerlike(src.data<2>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!(src.data<2>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has nonintegral RHS (C++98 5.11p1)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
-	src.type_code.base_type_index = arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index);
+	if (binary_infix_failed_integer_arguments(src,"(C++98 5.11p1)")) return;
+	src.type_code.base_type_index = default_promote_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
 	assert(converts_to_integerlike(src.type_code.base_type_index));
 	if (eval_bitwise_AND(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
 }
@@ -5774,67 +5614,9 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, func_tra
 static void C_bitwise_XOR_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_bitwise_XOR_expression(src));
-
 	// C99 6.5.11p2: requires being an integer type
-	if (!converts_to_integerlike(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!converts_to_integerlike(src.data<2>()->type_code))
-			{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				if (!(src.data<2>()->flags & parse_tree::INVALID))
-					{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS and RHS (C99 6.5.11p2)");
-					zcc_errors.inc_error();
-					}
-				else{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS (C99 6.5.11p2)");
-					zcc_errors.inc_error();
-					}
-				}
-			else if (!(src.data<2>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral RHS (C99 6.5.11p2)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		else{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral LHS (C99 6.5.11p2)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		}
-	else if (!converts_to_integerlike(src.data<2>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!(src.data<2>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has nonintegral RHS (C99 6.5.11p2)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
-	src.type_code.base_type_index = arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index);
+	if (binary_infix_failed_integer_arguments(src,"(C99 6.5.11p2)")) return;
+	src.type_code.base_type_index = default_promote_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
 	assert(converts_to_integerlike(src.type_code.base_type_index));
 	if (eval_bitwise_XOR(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
 }
@@ -5842,67 +5624,9 @@ static void C_bitwise_XOR_easy_syntax_check(parse_tree& src,const type_system& t
 static void CPP_bitwise_XOR_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_CPP_bitwise_XOR_expression(src));
-
 	// C++98 5.12p1: requires being an integer or enumeration type
-	if (!converts_to_integerlike(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!converts_to_integerlike(src.data<2>()->type_code))
-			{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				if (!(src.data<2>()->flags & parse_tree::INVALID))
-					{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS and RHS (C++98 5.12p1)");
-					zcc_errors.inc_error();
-					}
-				else{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS (C++98 5.12p1)");
-					zcc_errors.inc_error();
-					}
-				}
-			else if (!(src.data<2>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral RHS (C++98 5.12p1)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		else{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral LHS (C++98 5.12p1)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		}
-	else if (!converts_to_integerlike(src.data<2>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!(src.data<2>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has nonintegral RHS (C++98 5.12p1)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
-	src.type_code.base_type_index = arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index);
+	if (binary_infix_failed_integer_arguments(src,"(C++98 5.12p1)")) return;
+	src.type_code.base_type_index = default_promote_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
 	assert(converts_to_integerlike(src.type_code.base_type_index));
 	if (eval_bitwise_XOR(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
 }
@@ -6129,64 +5853,7 @@ static void C_bitwise_OR_easy_syntax_check(parse_tree& src,const type_system& ty
 {
 	assert(is_C99_bitwise_OR_expression(src));
 	// C99 6.5.12p2: requires being an integer type
-	if (!converts_to_integerlike(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!converts_to_integerlike(src.data<2>()->type_code))
-			{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				if (!(src.data<2>()->flags & parse_tree::INVALID))
-					{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS and RHS (C99 6.5.12p2)");
-					zcc_errors.inc_error();
-					}
-				else{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS (C99 6.5.12p2)");
-					zcc_errors.inc_error();
-					}
-				}
-			else if (!(src.data<2>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral RHS (C99 6.5.12p2)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		else{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral LHS (C99 6.5.12p2)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		}
-	else if (!converts_to_integerlike(src.data<2>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!(src.data<2>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has nonintegral RHS (C99 6.5.12p2)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
+	if (binary_infix_failed_integer_arguments(src,"(C99 6.5.12p2)")) return;
 	src.type_code.base_type_index = arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index);
 	assert(converts_to_integerlike(src.type_code.base_type_index));
 	if (eval_bitwise_OR(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
@@ -6197,64 +5864,7 @@ static void CPP_bitwise_OR_easy_syntax_check(parse_tree& src,const type_system& 
 	assert(is_CPP_bitwise_OR_expression(src));
 	//! \todo handle overloading
 	// C++98 5.13p1: requires being an integer or enumeration type
-	if (!converts_to_integerlike(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!converts_to_integerlike(src.data<2>()->type_code))
-			{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				if (!(src.data<2>()->flags & parse_tree::INVALID))
-					{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS and RHS (C++98 5.13p1)");
-					zcc_errors.inc_error();
-					}
-				else{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonintegral LHS (C++98 5.13p1)");
-					zcc_errors.inc_error();
-					}
-				}
-			else if (!(src.data<2>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral RHS (C++98 5.13p1)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		else{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral LHS (C++98 5.13p1)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
-		}
-	else if (!converts_to_integerlike(src.data<2>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!(src.data<2>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has nonintegral RHS (C++98 5.13p1)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
+	if (binary_infix_failed_integer_arguments(src,"(C++98 5.13p1)")) return;
 	src.type_code.base_type_index = arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index);
 	assert(converts_to_integerlike(src.type_code.base_type_index));
 	if (eval_bitwise_OR(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
