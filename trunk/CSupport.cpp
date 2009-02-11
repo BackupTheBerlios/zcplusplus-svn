@@ -4897,6 +4897,33 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 #endif
 }
 
+static void assemble_binary_infix_arguments(parse_tree& src, size_t& i, const zaimoni::lex_flags _flags)
+{
+	assert(1<=i || 2<=src.size<0>()-i);
+	parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
+	assert(NULL!=tmp);
+	*tmp = src.data<0>()[i-1];
+	parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
+	assert(NULL!=tmp2);
+	*tmp2 = src.data<0>()[i+1];
+	src.c_array<0>()[i].fast_set_arg<1>(tmp);
+	src.c_array<0>()[i].fast_set_arg<2>(tmp2);
+	src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
+	src.c_array<0>()[i].flags |= _flags;
+	if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
+		&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags))
+		src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
+	if (	(parse_tree::INVALID & tmp->flags)
+		|| 	(parse_tree::INVALID & tmp2->flags))
+		src.c_array<0>()[i].flags |= parse_tree::INVALID;
+	src.c_array<0>()[i-1].clear();
+	src.c_array<0>()[i+1].clear();
+	src.DeleteIdx<0>(i+1);
+	src.DeleteIdx<0>(--i);
+	cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
+	cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
+}
+
 static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* standard)
 {
 	if (!converts_to_integerlike(src.data<1>()->type_code))
@@ -4979,29 +5006,8 @@ static bool terse_locate_shift_expression(parse_tree& src, size_t& i)
 		if (	(PARSE_SHIFT_EXPRESSION & src.data<0>()[i-1].flags)
 			&&	(PARSE_ADD_EXPRESSION & src.data<0>()[i+1].flags))
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i-1];
-			parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp2);
-			*tmp2 = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<1>(tmp);
-			src.c_array<0>()[i].fast_set_arg<2>(tmp2);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_SHIFT_EXPRESSION;
-			if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-				&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags))
-				src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (	(parse_tree::INVALID & tmp->flags)
-				|| 	(parse_tree::INVALID & tmp2->flags))
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i-1].clear();
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			src.DeleteIdx<0>(--i);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_SHIFT_EXPRESSION);
 			assert(is_C99_shift_expression(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
 			src.c_array<0>()[i].subtype = (is_left_shift) ? C99_SHIFT_SUBTYPE_LEFT : C99_SHIFT_SUBTYPE_RIGHT;
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_shift_expression(src.data<0>()[i]));
@@ -5189,29 +5195,8 @@ static bool terse_locate_C99_bitwise_AND(parse_tree& src, size_t& i)
 		if (	(PARSE_BITAND_EXPRESSION & src.data<0>()[i-1].flags)
 			&&	(PARSE_EQUALITY_EXPRESSION & src.data<0>()[i+1].flags))
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i-1];
-			parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp2);
-			*tmp2 = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<1>(tmp);
-			src.c_array<0>()[i].fast_set_arg<2>(tmp2);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_BITAND_EXPRESSION;
-			if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-				&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags))
-				src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (	(parse_tree::INVALID & tmp->flags)
-				|| 	(parse_tree::INVALID & tmp2->flags))
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i-1].clear();
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			src.DeleteIdx<0>(--i);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_BITAND_EXPRESSION);
 			assert(is_C99_bitwise_AND_expression(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_bitwise_AND_expression(src.data<0>()[i]));
 			return true;
@@ -5233,29 +5218,8 @@ static bool terse_locate_CPP_bitwise_AND(parse_tree& src, size_t& i)
 		if (	(PARSE_BITAND_EXPRESSION & src.data<0>()[i-1].flags)
 			&&	(PARSE_EQUALITY_EXPRESSION & src.data<0>()[i+1].flags))
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i-1];
-			parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp2);
-			*tmp2 = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<1>(tmp);
-			src.c_array<0>()[i].fast_set_arg<2>(tmp2);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_BITAND_EXPRESSION;
-			if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-				&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags))
-				src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (	(parse_tree::INVALID & tmp->flags)
-				|| 	(parse_tree::INVALID & tmp2->flags))
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i-1].clear();
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			src.DeleteIdx<0>(--i);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_BITAND_EXPRESSION);
 			assert(is_CPP_bitwise_AND_expression(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_CPP_bitwise_AND_expression(src.data<0>()[i]));
 			return true;
@@ -5420,29 +5384,8 @@ static bool terse_locate_C99_bitwise_XOR(parse_tree& src, size_t& i)
 		if (	(PARSE_BITXOR_EXPRESSION & src.data<0>()[i-1].flags)
 			&&	(PARSE_BITAND_EXPRESSION & src.data<0>()[i+1].flags))
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i-1];
-			parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp2);
-			*tmp2 = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<1>(tmp);
-			src.c_array<0>()[i].fast_set_arg<2>(tmp2);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_BITOR_EXPRESSION;
-			if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-				&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags))
-				src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (	(parse_tree::INVALID & tmp->flags)
-				|| 	(parse_tree::INVALID & tmp2->flags))
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i-1].clear();
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			src.DeleteIdx<0>(--i);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_BITXOR_EXPRESSION);
 			assert(is_C99_bitwise_XOR_expression(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_bitwise_XOR_expression(src.data<0>()[i]));
 			return true;
@@ -5464,29 +5407,8 @@ static bool terse_locate_CPP_bitwise_XOR(parse_tree& src, size_t& i)
 		if (	(PARSE_BITXOR_EXPRESSION & src.data<0>()[i-1].flags)
 			&&	(PARSE_BITAND_EXPRESSION & src.data<0>()[i+1].flags))
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i-1];
-			parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp2);
-			*tmp2 = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<1>(tmp);
-			src.c_array<0>()[i].fast_set_arg<2>(tmp2);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_BITOR_EXPRESSION;
-			if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-				&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags))
-				src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (	(parse_tree::INVALID & tmp->flags)
-				|| 	(parse_tree::INVALID & tmp2->flags))
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i-1].clear();
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			src.DeleteIdx<0>(--i);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_BITXOR_EXPRESSION);
 			assert(is_CPP_bitwise_XOR_expression(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_CPP_bitwise_XOR_expression(src.data<0>()[i]));
 			return true;
@@ -5628,29 +5550,8 @@ static bool terse_locate_C99_bitwise_OR(parse_tree& src, size_t& i)
 		if (	(PARSE_BITOR_EXPRESSION & src.data<0>()[i-1].flags)
 			&&	(PARSE_BITXOR_EXPRESSION & src.data<0>()[i+1].flags))
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i-1];
-			parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp2);
-			*tmp2 = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<1>(tmp);
-			src.c_array<0>()[i].fast_set_arg<2>(tmp2);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_BITOR_EXPRESSION;
-			if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-				&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags))
-				src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (	(parse_tree::INVALID & tmp->flags)
-				|| 	(parse_tree::INVALID & tmp2->flags))
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i-1].clear();
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			src.DeleteIdx<0>(--i);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_BITOR_EXPRESSION);
 			assert(is_C99_bitwise_OR_expression(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_bitwise_OR_expression(src.data<0>()[i]));
 			return true;
@@ -5672,29 +5573,8 @@ static bool terse_locate_CPP_bitwise_OR(parse_tree& src, size_t& i)
 		if (	(PARSE_BITOR_EXPRESSION & src.data<0>()[i-1].flags)
 			&&	(PARSE_BITXOR_EXPRESSION & src.data<0>()[i+1].flags))
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i-1];
-			parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp2);
-			*tmp2 = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<1>(tmp);
-			src.c_array<0>()[i].fast_set_arg<2>(tmp2);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_BITOR_EXPRESSION;
-			if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-				&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags))
-				src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (	(parse_tree::INVALID & tmp->flags)
-				|| 	(parse_tree::INVALID & tmp2->flags))
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i-1].clear();
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			src.DeleteIdx<0>(--i);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_BITOR_EXPRESSION);
 			assert(is_CPP_bitwise_OR_expression(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_CPP_bitwise_OR_expression(src.data<0>()[i]));
 			return true;
@@ -5847,29 +5727,8 @@ static bool terse_locate_C99_logical_AND(parse_tree& src, size_t& i)
 		if (	(PARSE_LOGICAND_EXPRESSION & src.data<0>()[i-1].flags)
 			&&	(PARSE_BITOR_EXPRESSION & src.data<0>()[i+1].flags))
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i-1];
-			parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp2);
-			*tmp2 = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<1>(tmp);
-			src.c_array<0>()[i].fast_set_arg<2>(tmp2);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_LOGICAND_EXPRESSION;
-			if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-				&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags))
-				src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (	(parse_tree::INVALID & tmp->flags)
-				|| 	(parse_tree::INVALID & tmp2->flags))
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i-1].clear();
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			src.DeleteIdx<0>(--i);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_LOGICAND_EXPRESSION);
 			assert(is_C99_logical_AND_expression(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
 			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);	// technically wrong, but range is correct
 			assert(is_C99_logical_AND_expression(src.data<0>()[i]));
 			return true;
@@ -5891,29 +5750,8 @@ static bool terse_locate_CPP_logical_AND(parse_tree& src, size_t& i)
 		if (	(PARSE_LOGICAND_EXPRESSION & src.data<0>()[i-1].flags)
 			&&	(PARSE_BITOR_EXPRESSION & src.data<0>()[i+1].flags))
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i-1];
-			parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp2);
-			*tmp2 = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<1>(tmp);
-			src.c_array<0>()[i].fast_set_arg<2>(tmp2);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_LOGICAND_EXPRESSION;
-			if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-				&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags))
-				src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (	(parse_tree::INVALID & tmp->flags)
-				|| 	(parse_tree::INVALID & tmp2->flags))
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i-1].clear();
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			src.DeleteIdx<0>(--i);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_LOGICAND_EXPRESSION);
 			assert(is_CPP_logical_AND_expression(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
 			//! \todo handle overloading
 			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);
 			assert(is_CPP_logical_AND_expression(src.data<0>()[i]));
@@ -6143,30 +5981,8 @@ static bool terse_locate_C99_logical_OR(parse_tree& src, size_t& i)
 		if (	(PARSE_LOGICOR_EXPRESSION & src.data<0>()[i-1].flags)
 			&&	(PARSE_LOGICAND_EXPRESSION & src.data<0>()[i+1].flags))
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i-1];
-			parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp2);
-			*tmp2 = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<1>(tmp);
-			src.c_array<0>()[i].fast_set_arg<2>(tmp2);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_LOGICOR_EXPRESSION;
-			// Conservative: only one of the infix and postfix expressions is going to be evaluated
-			if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-				&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags))
-				src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (	(parse_tree::INVALID & tmp->flags)
-				|| 	(parse_tree::INVALID & tmp2->flags))
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i-1].clear();
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			src.DeleteIdx<0>(--i);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_LOGICOR_EXPRESSION);
 			assert(is_C99_logical_OR_expression(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
 			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);	// technically wrong, but range is correct
 			assert(is_C99_logical_OR_expression(src.data<0>()[i]));
 			return true;
@@ -6188,30 +6004,8 @@ static bool terse_locate_CPP_logical_OR(parse_tree& src, size_t& i)
 		if (	(PARSE_LOGICOR_EXPRESSION & src.data<0>()[i-1].flags)
 			&&	(PARSE_LOGICAND_EXPRESSION & src.data<0>()[i+1].flags))
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i-1];
-			parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp2);
-			*tmp2 = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<1>(tmp);
-			src.c_array<0>()[i].fast_set_arg<2>(tmp2);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_LOGICOR_EXPRESSION;
-			// Conservative: only one of the infix and postfix expressions is going to be evaluated
-			if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-				&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags))
-				src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (	(parse_tree::INVALID & tmp->flags)
-				|| 	(parse_tree::INVALID & tmp2->flags))
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i-1].clear();
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			src.DeleteIdx<0>(--i);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_LOGICOR_EXPRESSION);
 			assert(is_CPP_logical_OR_expression(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
 			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);
 			assert(is_CPP_logical_OR_expression(src.data<0>()[i]));
 			return true;
