@@ -50,9 +50,19 @@
 #error "A"[0] ? 'A' : '\0' is '\0'
 #endif
 
+#if "AA"[1] ? 'A' : '\0'
+#else
+#error "AA"[0] ? 'A' : '\0' is '\0'
+#endif
+
 #if "A"[0] ? 'A' : 'A'
 #else
 #error "A"[0] ? 'A' : 'A' is not 'A'
+#endif
+
+#if "AA"[1] ? 'A' : 'A'
+#else
+#error "AA"[0] ? 'A' : 'A' is not 'A'
 #endif
 
 #if "A"[0] ? '\0' : '\0'
@@ -60,8 +70,18 @@
 #else
 #endif
 
+#if "AA"[1] ? '\0' : '\0'
+#error "AA"[1] ? '\0' : '\0' is not '\0'
+#else
+#endif
+
 #if "A"[0] ? '\0' : 'A'
 #error "A"[0] ? '\0' : 'A' is 'A'
+#else
+#endif
+
+#if "AA"[1] ? '\0' : 'A'
+#error "AA"[1] ? '\0' : 'A' is 'A'
 #else
 #endif
 
