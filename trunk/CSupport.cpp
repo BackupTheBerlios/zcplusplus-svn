@@ -2480,15 +2480,17 @@ bool LocateCCharacterLiteralAt(const char* const src, size_t src_len, size_t tar
 	src_len -= 2;
 
 	size_t i = 0;
+	size_t j = 0;
 	do	{
 		const size_t step = EscapedCharLength_C(src2+i,src_len-i);
-		if (0==target_idx)
+		if (j==target_idx)
 			{
 			char_offset = i+(src2-src);
 			char_len = step;
 			return true;
 			}
 		i += step;
+		++j;
 		}
 	while(src_len > i);
 	return false;
@@ -2523,9 +2525,10 @@ GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, char*
 		};
 
 	size_t i = 0;
+	size_t j = 0;
 	do	{
 		const size_t step = EscapedCharLength_C(src+i,src_len-i);
-		if (0==target_idx)
+		if (j==target_idx)
 			{
 			char* tmp2 = reinterpret_cast<char*>(calloc(((wide_str) ? 3 : 2)+step,1));
 			if (NULL==tmp2) throw std::bad_alloc();
@@ -2537,6 +2540,7 @@ GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, char*
 			return;
 			}
 		i += step;
+		++j;
 		}
 	while(src_len > i);
 }
