@@ -13,8 +13,6 @@
 // This saves sizeof(size_t) bytes/object in the main program (but as the size is stored twice)
 // in the memory manager, there should be no net gain.
 
-// The Win95 implementation does *not* support address alignment (speed penalty, no errors).
-
 // Startup code: reserve a huge block of VRAM
 // Commit it only as necessary
 // two stacks: bottom-up is stack of pointers
