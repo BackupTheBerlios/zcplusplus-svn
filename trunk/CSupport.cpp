@@ -3384,6 +3384,26 @@ static bool is_C99_shift_expression(const parse_tree& src)
 			&&	1==src.size<2>() && (PARSE_ADD_EXPRESSION & src.data<2>()->flags);
 }
 
+#define C99_EQUALITY_SUBTYPE_EQ 1
+#define C99_EQUALITY_SUBTYPE_NEQ 2
+static bool is_C99_equality_expression(const parse_tree& src)
+{
+	return		(robust_token_is_string<2>(src.index_tokens[0].token,"==") || robust_token_is_string<2>(src.index_tokens[0].token,"!="))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_EQUALITY_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_RELATIONAL_EXPRESSION & src.data<2>()->flags);
+}
+
+static bool is_CPP_equality_expression(const parse_tree& src)
+{
+	return		(robust_token_is_string<2>(src.index_tokens[0].token,"==") || robust_token_is_string<2>(src.index_tokens[0].token,"!=") || robust_token_is_string<6>(src.index_tokens[0].token,"not_eq"))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_EQUALITY_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_RELATIONAL_EXPRESSION & src.data<2>()->flags);
+}
+
 static bool is_C99_bitwise_AND_expression(const parse_tree& src)
 {
 	return (	robust_token_is_char<'&'>(src.index_tokens[0].token)
@@ -3801,7 +3821,7 @@ static void CPP_array_easy_syntax_check(parse_tree& src, const type_system& type
 			// otherwise, we dereferenced a 1-d static array...fine for now
 			//! \todo change target for implementing multidimensional arrays
 			}
-		else{	// need type-checking facity
+		else{	// need type-checking facility
 				// could work in C++ (don't see anything in 13.5.5p1 prohibiting a pointer overload for in [ ]
 			src.flags |= parse_tree::INVALID;
 			if (!(parse_tree::INVALID & src.data<1>()->flags))
@@ -5185,6 +5205,351 @@ static void locate_CPP_shift_expression(parse_tree& src, size_t& i, const type_s
 		CPP_shift_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
+static bool terse_locate_C99_equality_expression(parse_tree& src, size_t& i)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
+	assert(src.data<0>()[i].is_atomic());
+
+	const bool is_equal_op = token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"==");
+	if (is_equal_op || token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"!="))
+		{
+		if (1>i || 2>src.size<0>()-i) return false;
+		if (	(PARSE_EQUALITY_EXPRESSION & src.data<0>()[i-1].flags)
+			&&	(PARSE_RELATIONAL_EXPRESSION & src.data<0>()[i+1].flags))
+			{
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_EQUALITY_EXPRESSION);
+			assert(is_C99_equality_expression(src.data<0>()[i]));
+			src.c_array<0>()[i].subtype = (is_equal_op) ? C99_EQUALITY_SUBTYPE_EQ : C99_EQUALITY_SUBTYPE_NEQ;
+			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);
+			assert(is_C99_equality_expression(src.data<0>()[i]));
+			return true;
+			}
+		}
+	return false;
+}
+
+static bool terse_locate_CPP_equality_expression(parse_tree& src, size_t& i)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
+	assert(src.data<0>()[i].is_atomic());
+
+	const bool is_equal_op = token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"==");
+	if (is_equal_op || token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"!=") || token_is_string<6>(src.data<0>()[i].index_tokens[0].token,"not_eq"))
+		{
+		if (1>i || 2>src.size<0>()-i) return false;
+		if (	(PARSE_EQUALITY_EXPRESSION & src.data<0>()[i-1].flags)
+			&&	(PARSE_RELATIONAL_EXPRESSION & src.data<0>()[i+1].flags))
+			{
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_EQUALITY_EXPRESSION);
+			assert(is_CPP_equality_expression(src.data<0>()[i]));
+			src.c_array<0>()[i].subtype = (is_equal_op) ? C99_EQUALITY_SUBTYPE_EQ : C99_EQUALITY_SUBTYPE_NEQ;
+			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);
+			assert(is_CPP_equality_expression(src.data<0>()[i]));
+			return true;
+			}
+		}
+	return false;
+}
+
+static bool eval_equality_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{	// handle:
+	BOOST_STATIC_ASSERT(1==C99_EQUALITY_SUBTYPE_NEQ-C99_EQUALITY_SUBTYPE_EQ);
+	assert(C99_EQUALITY_SUBTYPE_EQ<=src.subtype && C99_EQUALITY_SUBTYPE_NEQ>=src.subtype);
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+	const unsigned int integer_literal_case = 	  (converts_to_integerlike(src.data<1>()->type_code) && C_TYPE::INTEGERLIKE!=src.data<1>()->type_code.base_type_index && (PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
+											+	2*(converts_to_integerlike(src.data<2>()->type_code) && C_TYPE::INTEGERLIKE!=src.data<2>()->type_code.base_type_index && (PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags));
+	const bool is_equal_op = src.subtype==C99_EQUALITY_SUBTYPE_EQ;
+	bool is_true = false;
+	switch(integer_literal_case)
+	{
+	case 0:	{	// string literal == string literal (assume hyper-optimizing linker, this should be true iff the string literals are equal as static arrays of char)
+			if (C_TESTFLAG_STRING_LITERAL==src.data<1>()->index_tokens[0].flags && C_TESTFLAG_STRING_LITERAL==src.data<2>()->index_tokens[0].flags)
+				{
+				const size_t lhs_len = LengthOfCStringLiteral(src.data<1>()->index_tokens[0].token.first);
+				if (LengthOfCStringLiteral(src.data<2>()->index_tokens[0].token.first)!=lhs_len)
+					{	// string literals of different length are necessarily different decayed pointers even if they overlap
+					src.destroy();
+					src.index_tokens[0].token.first = (is_equal_op) ? "0" : "1";
+					src.index_tokens[0].token.second = 1;
+					src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+					_label_one_literal(src,types);
+					return true;
+					};
+				size_t i = 0;
+				while(i<lhs_len-1)
+					{
+					char* lhs_lit = NULL;
+					char* rhs_lit = NULL;
+					GetCCharacterLiteralAt(src.data<1>()->index_tokens[0].token.first,src.data<1>()->index_tokens[0].token.second,i,lhs_lit);
+					GetCCharacterLiteralAt(src.data<2>()->index_tokens[0].token.first,src.data<2>()->index_tokens[0].token.second,i,rhs_lit);
+					const uintmax_t lhs_val = EvalCharacterLiteral(lhs_lit,strlen(lhs_lit));
+					const uintmax_t rhs_val = EvalCharacterLiteral(rhs_lit,strlen(rhs_lit));
+					free(lhs_lit);
+					free(rhs_lit);
+					if (lhs_val!=rhs_val)
+						{	// different at this place, so different
+						src.destroy();
+						src.index_tokens[0].token.first = (is_equal_op) ? "0" : "1";
+						src.index_tokens[0].token.second = 1;
+						src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+						_label_one_literal(src,types);
+						return true;
+						}
+					++i;
+					}
+				// assume hyper-optimizing linker; the string literals overlap
+				src.destroy();
+				src.index_tokens[0].token.first = (is_equal_op) ? "1" : "0";
+				src.index_tokens[0].token.second = 1;
+				src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+				_label_one_literal(src,types);
+				return true;
+				}
+			break;
+			}
+	case 1:	{
+			if (0<src.data<2>()->type_code.pointer_power_after_array_decay() && literal_converts_to_bool(*src.data<1>(),is_true)) 
+				{
+				if (!is_true)
+					{	
+					if (src.data<2>()->type_code.decays_to_nonnull_pointer())
+						{	// string literal != NULL, etc.
+						src.destroy();
+						src.index_tokens[0].token.first = (is_equal_op) ? "0" : "1";
+						src.index_tokens[0].token.second = 1;
+						src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+						_label_one_literal(src,types);
+						return true;
+						}
+					}
+				else if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares pointer to integer that is not a null pointer constant (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
+					zcc_errors.inc_error();
+					}
+				return false;
+				}
+			break;
+			}
+	case 2:	{
+			if (0<src.data<1>()->type_code.pointer_power_after_array_decay() && literal_converts_to_bool(*src.data<2>(),is_true)) 
+				{
+				if (!is_true)
+					{	// string literal != NULL
+					if (src.data<1>()->type_code.decays_to_nonnull_pointer())
+						{
+						src.destroy();
+						src.index_tokens[0].token.first = (is_equal_op) ? "0" : "1";
+						src.index_tokens[0].token.second = 1;
+						src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+						_label_one_literal(src,types);
+						return true;
+						}
+					}
+				else if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares pointer to integer that is not a null pointer constant (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
+					zcc_errors.inc_error();
+					}
+				return false;
+				}
+			break;
+			}
+	case 3:	{	// integer literal == integer literal
+			intlike_literal_to_VM(lhs_int,*src.data<1>());
+			intlike_literal_to_VM(rhs_int,*src.data<2>());
+			const char* const result = ((lhs_int==rhs_int)==(is_equal_op)) ? "1" : "0";
+			src.destroy();
+			src.index_tokens[0].token.first = result;
+			src.index_tokens[0].token.second = 1;
+			src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+			_label_one_literal(src,types);
+			return true;
+			}
+	};
+	
+	return false;
+}
+
+static void C_equality_expression_easy_syntax_check(parse_tree& src,const type_system& types)
+{	// admit legality of:
+	// numeric == numeric
+	// string literal == string literal
+	// string literal == integer literal zero
+	// deny legality of : string literal == integer/float
+	// more to come later
+	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power_after_array_decay())+2*(0<src.data<2>()->type_code.pointer_power_after_array_decay());
+	switch(ptr_case)
+	{
+	case 0:	{
+			if (C_TYPE::VOID>=src.data<1>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index)
+				{
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" can't use a void or indeterminately typed argument");
+					zcc_errors.inc_error();
+					}
+				return;
+				}
+			break;
+			}
+	case 1:	{
+			if (!converts_to_integerlike(src.data<2>()->type_code) || C_TYPE::INTEGERLIKE==src.data<2>()->type_code.base_type_index || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+				{	// oops
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
+					zcc_errors.inc_error();
+					}
+				return;
+				}
+			break;
+			}
+	case 2:	{
+			if (!converts_to_integerlike(src.data<1>()->type_code) || C_TYPE::INTEGERLIKE==src.data<1>()->type_code.base_type_index || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
+				{	// oops
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
+					zcc_errors.inc_error();
+					}
+				return;
+				}
+			break;
+			}
+	case 3:	{
+			break;
+			}
+	}
+	if (eval_equality_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
+}
+
+static void CPP_equality_expression_easy_syntax_check(parse_tree& src,const type_system& types)
+{	// admit legality of
+	// numeric == numeric
+	// string literal == string literal
+	// string literal == integer literal zero
+	// deny legality of : string literal == integer/float
+	// more to come later
+	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power_after_array_decay())+2*(0<src.data<2>()->type_code.pointer_power_after_array_decay());
+	switch(ptr_case)
+	{
+	case 0:	{
+			if (C_TYPE::VOID>=src.data<1>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index)
+				{
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" can't use a void or indeterminately typed argument");
+					zcc_errors.inc_error();
+					}
+				return;
+				}
+			break;
+			}
+	case 1:	{
+			if (!converts_to_integerlike(src.data<2>()->type_code) || C_TYPE::INTEGERLIKE==src.data<2>()->type_code.base_type_index || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+				{	// oops
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
+					zcc_errors.inc_error();
+					}
+				return;
+				}
+			break;
+			}
+	case 2:	{
+			if (!converts_to_integerlike(src.data<1>()->type_code) || C_TYPE::INTEGERLIKE==src.data<1>()->type_code.base_type_index || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
+				{	// oops
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
+					zcc_errors.inc_error();
+					}
+				return;
+				}
+			break;
+			}
+	case 3:	{
+			break;
+			}
+	}
+	if (eval_equality_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
+}
+
+/*
+equality-expression:
+	relational-expression
+	equality-expression == relational-expression
+	equality-expression != relational-expression
+*/
+static void locate_C99_equality_expression(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	if (   (PARSE_OBVIOUS & src.data<0>()[i].flags)
+		|| !src.data<0>()[i].is_atomic())
+		return;
+
+	if (terse_locate_C99_equality_expression(src,i)) C_equality_expression_easy_syntax_check(src.c_array<0>()[i],types);
+}
+
+/*
+equality-expression:
+	relational-expression
+	equality-expression == relational-expression
+	equality-expression != relational-expression
+*/
+static void locate_CPP_equality_expression(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	if (   (PARSE_OBVIOUS & src.data<0>()[i].flags)
+		|| !src.data<0>()[i].is_atomic())
+		return;
+
+	if (terse_locate_CPP_equality_expression(src,i))
+		//! \todo handle operator overloading
+		CPP_equality_expression_easy_syntax_check(src.c_array<0>()[i],types);
+}
+
 static bool terse_locate_C99_bitwise_AND(parse_tree& src, size_t& i)
 {
 	assert(!src.empty<0>());
@@ -5538,7 +5903,9 @@ static void locate_CPP_bitwise_XOR(parse_tree& src, size_t& i, const type_system
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_CPP_bitwise_XOR(src,i)) CPP_bitwise_XOR_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_CPP_bitwise_XOR(src,i))
+		//! \todo handle operator overloading
+		CPP_bitwise_XOR_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 static bool terse_locate_C99_bitwise_OR(parse_tree& src, size_t& i)
@@ -6697,19 +7064,7 @@ relational-expression:
 			}
 		while(src.size<0>() > ++i);	
 #endif
-/*
-equality-expression:
-	relational-expression
-	equality-expression == relational-expression
-	equality-expression != relational-expression
-*/
-#if 0
-		i = 0;
-		do	{
-			if (parse_tree::INVALID & src.data<0>()[i].flags) continue;
-			}
-		while(src.size<0>() > ++i);	
-#endif
+		parse_forward(src,types,locate_C99_equality_expression);
 		parse_forward(src,types,locate_C99_bitwise_AND);
 		parse_forward(src,types,locate_C99_bitwise_XOR);
 		parse_forward(src,types,locate_C99_bitwise_OR);
@@ -6829,19 +7184,7 @@ relational-expression >= shift-expression
 			}
 		while(src.size<0>() > ++i);	
 #endif
-/*
-equality-expression:
-	relational-expression
-	equality-expression == relational-expression
-	equality-expression != relational-expression
-*/
-#if 0
-		i = 0;
-		do	{
-			if (parse_tree::INVALID & src.data<0>()[i].flags) continue;
-			}
-		while(src.size<0>() > ++i);	
-#endif
+		parse_forward(src,types,locate_CPP_equality_expression);
 		parse_forward(src,types,locate_CPP_bitwise_AND);
 		parse_forward(src,types,locate_CPP_bitwise_XOR);
 		parse_forward(src,types,locate_CPP_bitwise_OR);
@@ -7217,6 +7560,21 @@ static bool eval_shift(parse_tree& src,const type_system& types,
 	return false;
 }
 
+static bool eval_equality_expression(parse_tree& src,const type_system& types,
+							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
+							func_traits<bool (*)(const parse_tree&)>::function_ref_type is_equality_expression,
+							func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
+							func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	if (is_equality_expression(src))
+		{
+		EvalParseTree(*src.c_array<1>(),types);
+		EvalParseTree(*src.c_array<2>(),types);
+		if (eval_equality_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		}
+	return false;
+}
+
 static bool eval_bitwise_AND(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_AND_expression,
@@ -7339,6 +7697,7 @@ RestartEval:
 	if (eval_deref(src,types,C99_EvalParseTree)) goto RestartEval; 
 	if (eval_logical_NOT(src,types,C99_EvalParseTree,is_C99_unary_operator_expression<'!'>,C99_literal_converts_to_bool)) goto RestartEval;
 	if (eval_shift(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_equality_expression(src,types,C99_EvalParseTree,is_C99_equality_expression,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_AND(src,types,C99_EvalParseTree,is_C99_bitwise_AND_expression,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_XOR(src,types,C99_EvalParseTree,is_C99_bitwise_XOR_expression,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_OR(src,types,C99_EvalParseTree,is_C99_bitwise_OR_expression,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
@@ -7424,18 +7783,19 @@ bool CPlusPlus_EvalParseTree(parse_tree& src,const type_system& types)
 RestartEval:
 	if (src.is_atomic() || (parse_tree::INVALID & src.flags)) return starting_errors==zcc_errors.err_count();
 	if (eval_array_deref(src,types,CPlusPlus_EvalParseTree,CPlusPlus_literal_converts_to_integer,CPlusPlus_convert_literal_to_integer)) goto RestartEval;
-	//! apply bool literal converter to unary !, not operators
 	if (eval_conditional_operator(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool)) goto RestartEval;
 	if (eval_logical_OR(src,types,CPlusPlus_EvalParseTree,is_CPP_logical_OR_expression,CPP_literal_converts_to_bool)) goto RestartEval;
 	if (eval_logical_AND(src,types,CPlusPlus_EvalParseTree,is_CPP_logical_AND_expression,CPP_literal_converts_to_bool)) goto RestartEval;
 	if (eval_deref(src,types,CPlusPlus_EvalParseTree)) goto RestartEval; 
 	if (eval_logical_NOT(src,types,CPlusPlus_EvalParseTree,is_CPP_logical_NOT_expression,CPP_literal_converts_to_bool)) goto RestartEval;
 	if (eval_shift(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_equality_expression(src,types,CPlusPlus_EvalParseTree,is_CPP_equality_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_AND(src,types,CPlusPlus_EvalParseTree,is_CPP_bitwise_AND_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_XOR(src,types,CPlusPlus_EvalParseTree,is_CPP_bitwise_XOR_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_OR(src,types,CPlusPlus_EvalParseTree,is_CPP_bitwise_OR_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_compl(src,types,CPlusPlus_EvalParseTree,is_CPP_bitwise_complement_expression,CPP_intlike_literal_to_VM)) goto RestartEval;
 #if 0
+	//! apply bool literal converter to unary !, not operators
 	if (is_C99_unary_operator_expression(src))
 		{	// periodicity weirdnesses should already have been intercepted
 			// have to move *now* to handle some problems: &*str_literal is legal, but &char_literal is not; likewise for &(str_literal[0])

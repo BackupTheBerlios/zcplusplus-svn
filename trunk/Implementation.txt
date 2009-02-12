@@ -46,6 +46,8 @@ Standards compliance notes:
 that include no standard headers whatsoever.  In this case, C++0x prohibits while C++98 does not.
 * While string literals as components of integer constant expressions are allowed as long as the expression has an integer-like type, they are not required.
 ** Array-dereferencing a string literal with a compile-time constant that is out-of-bounds is an error.
+** We assume an optimizing linker: "A"=="A" will be optimized to 1 because the two "A" literals will be assumed to have only one physical instance.
+   Likewise, "BA"=="A" and "A"=="B" will both be optimized to 0.
 * The following C standard headers are available:
 ** iso646.h/ciso646
 ** limits.h/climits
