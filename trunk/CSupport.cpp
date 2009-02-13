@@ -5036,8 +5036,9 @@ static bool terse_locate_shift_expression(parse_tree& src, size_t& i)
 	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
 	assert(src.data<0>()[i].is_atomic());
 
-	const bool is_left_shift = token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"<<");
-	if (is_left_shift || token_is_string<2>(src.data<0>()[i].index_tokens[0].token,">>"))
+	const size_t shift_subtype 	= (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"<<")) ? C99_SHIFT_SUBTYPE_LEFT
+								: (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,">>")) ? C99_SHIFT_SUBTYPE_RIGHT : 0;
+	if (shift_subtype)
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
 		if (	(PARSE_SHIFT_EXPRESSION & src.data<0>()[i-1].flags)
@@ -5045,7 +5046,7 @@ static bool terse_locate_shift_expression(parse_tree& src, size_t& i)
 			{
 			assemble_binary_infix_arguments(src,i,PARSE_STRICT_SHIFT_EXPRESSION);
 			assert(is_C99_shift_expression(src.data<0>()[i]));
-			src.c_array<0>()[i].subtype = (is_left_shift) ? C99_SHIFT_SUBTYPE_LEFT : C99_SHIFT_SUBTYPE_RIGHT;
+			src.c_array<0>()[i].subtype = shift_subtype;
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_shift_expression(src.data<0>()[i]));
 			return true;
@@ -5136,7 +5137,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, func_traits<bo
 				res_int <<= rhs_int.to_uint();
 				if (int_has_trapped(src,res_int)) return false;
 				}
-			else
+			else	// if (C99_SHIFT_SUBTYPE_RIGHT==src.subtype)
 				res_int >>= rhs_int.to_uint();
 
 			const uintmax_t res = res_int.to_uint();
@@ -5225,8 +5226,9 @@ static bool terse_locate_C99_equality_expression(parse_tree& src, size_t& i)
 	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
 	assert(src.data<0>()[i].is_atomic());
 
-	const bool is_equal_op = token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"==");
-	if (is_equal_op || token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"!="))
+	const size_t eq_subtype = (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"==")) ? C99_EQUALITY_SUBTYPE_EQ
+							: (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"!=")) ? C99_EQUALITY_SUBTYPE_NEQ : 0;
+	if (eq_subtype)
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
 		if (	(PARSE_EQUALITY_EXPRESSION & src.data<0>()[i-1].flags)
@@ -5234,7 +5236,7 @@ static bool terse_locate_C99_equality_expression(parse_tree& src, size_t& i)
 			{
 			assemble_binary_infix_arguments(src,i,PARSE_STRICT_EQUALITY_EXPRESSION);
 			assert(is_C99_equality_expression(src.data<0>()[i]));
-			src.c_array<0>()[i].subtype = (is_equal_op) ? C99_EQUALITY_SUBTYPE_EQ : C99_EQUALITY_SUBTYPE_NEQ;
+			src.c_array<0>()[i].subtype = eq_subtype;
 			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);
 			assert(is_C99_equality_expression(src.data<0>()[i]));
 			return true;
@@ -5250,8 +5252,10 @@ static bool terse_locate_CPP_equality_expression(parse_tree& src, size_t& i)
 	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
 	assert(src.data<0>()[i].is_atomic());
 
-	const bool is_equal_op = token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"==");
-	if (is_equal_op || token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"!=") || token_is_string<6>(src.data<0>()[i].index_tokens[0].token,"not_eq"))
+	const size_t eq_subtype = (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"==")) ? C99_EQUALITY_SUBTYPE_EQ
+							: (		token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"!=")
+							   ||	token_is_string<6>(src.data<0>()[i].index_tokens[0].token,"not_eq")) ? C99_EQUALITY_SUBTYPE_NEQ : 0;
+	if (eq_subtype)
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
 		if (	(PARSE_EQUALITY_EXPRESSION & src.data<0>()[i-1].flags)
@@ -5259,7 +5263,7 @@ static bool terse_locate_CPP_equality_expression(parse_tree& src, size_t& i)
 			{
 			assemble_binary_infix_arguments(src,i,PARSE_STRICT_EQUALITY_EXPRESSION);
 			assert(is_CPP_equality_expression(src.data<0>()[i]));
-			src.c_array<0>()[i].subtype = (is_equal_op) ? C99_EQUALITY_SUBTYPE_EQ : C99_EQUALITY_SUBTYPE_NEQ;
+			src.c_array<0>()[i].subtype = eq_subtype;
 			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);
 			assert(is_CPP_equality_expression(src.data<0>()[i]));
 			return true;
