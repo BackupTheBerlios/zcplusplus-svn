@@ -594,6 +594,19 @@ static bool converts_to_integerlike(const type_spec& type_code)
 	return C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::INTEGERLIKE>=type_code.base_type_index;
 }
 
+static bool converts_to_integer(size_t base_type_index)
+{	//! \todo handle cast operator overloading
+	//! \todo handle enum types
+	return C_TYPE::BOOL<=base_type_index && C_TYPE::INTEGERLIKE>base_type_index;
+}
+
+static bool converts_to_integer(const type_spec& type_code)
+{	//! \todo handle cast operator overloading
+	//! \todo handle enum types
+	if (0<type_code.pointer_power_after_array_decay()) return false;	// pointers do not have a standard conversion to integers
+	return C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::INTEGERLIKE>type_code.base_type_index;
+}
+
 static bool converts_to_arithmeticlike(size_t base_type_index)
 {	//! \todo handle cast operator overloading
 	return C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE__COMPLEX>=base_type_index;
@@ -5261,8 +5274,8 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 	assert(C99_EQUALITY_SUBTYPE_EQ<=src.subtype && C99_EQUALITY_SUBTYPE_NEQ>=src.subtype);
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
-	const unsigned int integer_literal_case = 	  (converts_to_integerlike(src.data<1>()->type_code) && C_TYPE::INTEGERLIKE!=src.data<1>()->type_code.base_type_index && (PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
-											+	2*(converts_to_integerlike(src.data<2>()->type_code) && C_TYPE::INTEGERLIKE!=src.data<2>()->type_code.base_type_index && (PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags));
+	const unsigned int integer_literal_case = 	  (converts_to_integer(src.data<1>()->type_code) && (PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
+											+	2*(converts_to_integer(src.data<2>()->type_code) && (PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags));
 	const bool is_equal_op = src.subtype==C99_EQUALITY_SUBTYPE_EQ;
 	bool is_true = false;
 	switch(integer_literal_case)
@@ -5411,7 +5424,7 @@ static void C_equality_expression_easy_syntax_check(parse_tree& src,const type_s
 			break;
 			}
 	case 1:	{
-			if (!converts_to_integerlike(src.data<2>()->type_code) || C_TYPE::INTEGERLIKE==src.data<2>()->type_code.base_type_index || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+			if (!converts_to_integer(src.data<2>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
 				{	// oops
 				if (!(parse_tree::INVALID & src.flags))
 					{
@@ -5427,7 +5440,7 @@ static void C_equality_expression_easy_syntax_check(parse_tree& src,const type_s
 			break;
 			}
 	case 2:	{
-			if (!converts_to_integerlike(src.data<1>()->type_code) || C_TYPE::INTEGERLIKE==src.data<1>()->type_code.base_type_index || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
+			if (!converts_to_integer(src.data<1>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
 				{	// oops
 				if (!(parse_tree::INVALID & src.flags))
 					{
@@ -5476,7 +5489,7 @@ static void CPP_equality_expression_easy_syntax_check(parse_tree& src,const type
 			break;
 			}
 	case 1:	{
-			if (!converts_to_integerlike(src.data<2>()->type_code) || C_TYPE::INTEGERLIKE==src.data<2>()->type_code.base_type_index || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+			if (!converts_to_integer(src.data<2>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
 				{	// oops
 				if (!(parse_tree::INVALID & src.flags))
 					{
@@ -5492,7 +5505,7 @@ static void CPP_equality_expression_easy_syntax_check(parse_tree& src,const type
 			break;
 			}
 	case 2:	{
-			if (!converts_to_integerlike(src.data<1>()->type_code) || C_TYPE::INTEGERLIKE==src.data<1>()->type_code.base_type_index || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
+			if (!converts_to_integer(src.data<1>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
 				{	// oops
 				if (!(parse_tree::INVALID & src.flags))
 					{
