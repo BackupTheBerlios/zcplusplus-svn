@@ -594,17 +594,17 @@ static bool converts_to_integerlike(const type_spec& type_code)
 	return C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::INTEGERLIKE>=type_code.base_type_index;
 }
 
-static bool converts_to_integer(size_t base_type_index)
-{	//! \todo handle cast operator overloading
-	//! \todo handle enum types
-	return C_TYPE::BOOL<=base_type_index && C_TYPE::INTEGERLIKE>base_type_index;
-}
-
 static bool converts_to_integer(const type_spec& type_code)
 {	//! \todo handle cast operator overloading
 	//! \todo handle enum types
 	if (0<type_code.pointer_power_after_array_decay()) return false;	// pointers do not have a standard conversion to integers
 	return C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::INTEGERLIKE>type_code.base_type_index;
+}
+
+static bool converts_to_reallike(size_t base_type_index)
+{	//! \todo handle cast operator overloading
+	//! \todo handle enum types
+	return C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE>=base_type_index;
 }
 
 static bool converts_to_arithmeticlike(size_t base_type_index)
@@ -3397,6 +3397,20 @@ static bool is_C99_shift_expression(const parse_tree& src)
 			&&	1==src.size<2>() && (PARSE_ADD_EXPRESSION & src.data<2>()->flags);
 }
 
+#define C99_RELATION_SUBTYPE_LT 1
+#define C99_RELATION_SUBTYPE_GT 2
+#define C99_RELATION_SUBTYPE_LTE 3
+#define C99_RELATION_SUBTYPE_GTE 4
+
+static bool is_C99_relation_expression(const parse_tree& src)
+{
+	return		(robust_token_is_char<'<'>(src.index_tokens[0].token) || robust_token_is_char<'>'>(src.index_tokens[0].token) || robust_token_is_string<2>(src.index_tokens[0].token,"<=") || robust_token_is_string<2>(src.index_tokens[0].token,">="))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_RELATIONAL_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_SHIFT_EXPRESSION & src.data<2>()->flags);
+}
+
 #define C99_EQUALITY_SUBTYPE_EQ 1
 #define C99_EQUALITY_SUBTYPE_NEQ 2
 static bool is_C99_equality_expression(const parse_tree& src)
@@ -5217,6 +5231,240 @@ static void locate_CPP_shift_expression(parse_tree& src, size_t& i, const type_s
 	if (terse_locate_shift_expression(src,i))
 		//! \todo handle overloading
 		CPP_shift_expression_easy_syntax_check(src.c_array<0>()[i],types);
+}
+
+static bool terse_locate_relation_expression(parse_tree& src, size_t& i)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
+	assert(src.data<0>()[i].is_atomic());
+
+	const size_t rel_subtype 	= (token_is_char<'<'>(src.data<0>()[i].index_tokens[0].token)) ? C99_RELATION_SUBTYPE_LT
+								: (token_is_char<'>'>(src.data<0>()[i].index_tokens[0].token)) ? C99_RELATION_SUBTYPE_GT
+								: (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"<=")) ? C99_RELATION_SUBTYPE_LTE
+								: (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,">=")) ? C99_RELATION_SUBTYPE_GTE : 0;
+	if (rel_subtype)
+		{
+		if (1>i || 2>src.size<0>()-i) return false;
+		if (	(PARSE_SHIFT_EXPRESSION & src.data<0>()[i-1].flags)
+			&&	(PARSE_ADD_EXPRESSION & src.data<0>()[i+1].flags))
+			{
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_RELATIONAL_EXPRESSION);
+			assert(is_C99_relation_expression(src.data<0>()[i]));
+			src.c_array<0>()[i].subtype = rel_subtype;
+			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);
+			assert(is_C99_relation_expression(src.data<0>()[i]));
+			return true;
+			}
+		}
+	return false;
+}
+
+static bool eval_relation_expression(parse_tree& src, const type_system& types,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	BOOST_STATIC_ASSERT(1==C99_RELATION_SUBTYPE_GT-C99_RELATION_SUBTYPE_LT);
+	BOOST_STATIC_ASSERT(1==C99_RELATION_SUBTYPE_LTE-C99_RELATION_SUBTYPE_GT);
+	BOOST_STATIC_ASSERT(1==C99_RELATION_SUBTYPE_GTE-C99_RELATION_SUBTYPE_LTE);
+	assert(C99_RELATION_SUBTYPE_LT<=src.subtype && C99_RELATION_SUBTYPE_GTE>=src.subtype);
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+
+	if (	 converts_to_integer(src.data<1>()->type_code)
+		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
+		&&	 converts_to_integer(src.data<2>()->type_code)
+		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+		{
+		intlike_literal_to_VM(lhs_int,*src.data<1>());
+		intlike_literal_to_VM(rhs_int,*src.data<2>());
+		const char* result 	= NULL;
+		switch(src.subtype)
+		{
+		case C99_RELATION_SUBTYPE_LT:	{
+										result = (lhs_int<rhs_int) ? "1" : "0";
+										break;
+										}
+		case C99_RELATION_SUBTYPE_GT:	{
+										result = (lhs_int>rhs_int) ? "1" : "0";
+										break;
+										}
+		case C99_RELATION_SUBTYPE_LTE:	{
+										result = (lhs_int<=rhs_int) ? "1" : "0";
+										break;
+										}
+		case C99_RELATION_SUBTYPE_GTE:	{
+										result = (lhs_int>=rhs_int) ? "1" : "0";
+										break;
+										}
+		}
+		src.destroy();
+		src.index_tokens[0].token.first = result;
+		src.index_tokens[0].token.second = 1;
+		src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+		_label_one_literal(src,types);
+		return true;
+		};
+	return false;
+}
+
+static void C_relation_expression_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power_after_array_decay())+2*(0<src.data<2>()->type_code.pointer_power_after_array_decay());
+	switch(ptr_case)
+	{
+	case 0:	{
+			if (!converts_to_reallike(src.data<1>()->type_code.base_type_index) || !converts_to_reallike(src.data<2>()->type_code.base_type_index))
+				{
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares non-real type(s) (C99 6.5.8p2/C++98 5.9p2)");
+					zcc_errors.inc_error();
+					}
+				return;
+				}
+			break;
+			}
+	case 1:	{
+			if (!converts_to_integer(src.data<2>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+				{	// oops
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
+					zcc_errors.inc_error();
+					}
+				return;
+				}
+			break;
+			}
+	case 2:	{
+			if (!converts_to_integer(src.data<1>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
+				{	// oops
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
+					zcc_errors.inc_error();
+					}
+				return;
+				}
+			break;
+			}
+	case 3:	{
+			break;
+			}
+	}
+	if (eval_relation_expression(src,types,C99_intlike_literal_to_VM)) return;
+}
+
+static void CPP_relation_expression_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power_after_array_decay())+2*(0<src.data<2>()->type_code.pointer_power_after_array_decay());
+	switch(ptr_case)
+	{
+	case 0:	{
+			if (!converts_to_reallike(src.data<1>()->type_code.base_type_index) || !converts_to_reallike(src.data<2>()->type_code.base_type_index))
+				{
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares non-real type(s) (C99 6.5.8p2/C++98 5.9p2)");
+					zcc_errors.inc_error();
+					}
+				return;
+				}
+			break;
+			}
+	case 1:	{
+			if (!converts_to_integer(src.data<2>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+				{	// oops
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
+					zcc_errors.inc_error();
+					}
+				return;
+				}
+			break;
+			}
+	case 2:	{
+			if (!converts_to_integer(src.data<1>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
+				{	// oops
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
+					zcc_errors.inc_error();
+					}
+				return;
+				}
+			break;
+			}
+	case 3:	{
+			break;
+			}
+	}
+	if (eval_relation_expression(src,types,CPP_intlike_literal_to_VM)) return;
+}
+
+/*
+relational-expression:
+	shift-expression
+	relational-expression < shift-expression
+	relational-expression > shift-expression
+	relational-expression <= shift-expression
+	relational-expression >= shift-expression
+*/
+static void locate_C99_relation_expression(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	if (   (PARSE_OBVIOUS & src.data<0>()[i].flags)
+		|| !src.data<0>()[i].is_atomic())
+		return;
+
+	if (terse_locate_relation_expression(src,i)) C_relation_expression_easy_syntax_check(src.c_array<0>()[i],types);
+}
+
+/*
+relational-expression:
+	shift-expression
+	relational-expression < shift-expression
+	relational-expression > shift-expression
+	relational-expression <= shift-expression
+	relational-expression >= shift-expression
+*/
+static void locate_CPP_relation_expression(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	if (   (PARSE_OBVIOUS & src.data<0>()[i].flags)
+		|| !src.data<0>()[i].is_atomic())
+		return;
+
+	if (terse_locate_relation_expression(src,i))
+		//! \todo handle overloading
+		CPP_relation_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 static bool terse_locate_C99_equality_expression(parse_tree& src, size_t& i)
@@ -7066,21 +7314,7 @@ additiveexpression:
 		while(src.size<0>() > ++i);	
 #endif
 		parse_forward(src,types,locate_C99_shift_expression);
-/*
-relational-expression:
-	shift-expression
-	relational-expression < shift-expression
-	relational-expression > shift-expression
-	relational-expression <= shift-expression
-	relational-expression >= shift-expression
-*/
-#if 0
-		i = 0;
-		do	{
-			if (parse_tree::INVALID & src.data<0>()[i].flags) continue;
-			}
-		while(src.size<0>() > ++i);	
-#endif
+		parse_forward(src,types,locate_C99_relation_expression);
 		parse_forward(src,types,locate_C99_equality_expression);
 		parse_forward(src,types,locate_C99_bitwise_AND);
 		parse_forward(src,types,locate_C99_bitwise_XOR);
@@ -7186,21 +7420,7 @@ additive-expression:
 		while(src.size<0>() > ++i);	
 #endif
 		parse_forward(src,types,locate_CPP_shift_expression);
-/*
-relational-expression:
-shift-expression
-relational-expression < shift-expression
-relational-expression > shift-expression
-relational-expression <= shift-expression
-relational-expression >= shift-expression
-*/
-#if 0
-		i = 0;
-		do	{
-			if (parse_tree::INVALID & src.data<0>()[i].flags) continue;
-			}
-		while(src.size<0>() > ++i);	
-#endif
+		parse_forward(src,types,locate_CPP_relation_expression);
 		parse_forward(src,types,locate_CPP_equality_expression);
 		parse_forward(src,types,locate_CPP_bitwise_AND);
 		parse_forward(src,types,locate_CPP_bitwise_XOR);
@@ -7577,6 +7797,19 @@ static bool eval_shift(parse_tree& src,const type_system& types,
 	return false;
 }
 
+static bool eval_relation_expression(parse_tree& src,const type_system& types,
+							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
+							func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	if (is_C99_relation_expression(src))
+		{
+		EvalParseTree(*src.c_array<1>(),types);
+		EvalParseTree(*src.c_array<2>(),types);
+		if (eval_relation_expression(src,types,intlike_literal_to_VM)) return true;
+		}
+	return false;
+}
+
 static bool eval_equality_expression(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&)>::function_ref_type is_equality_expression,
@@ -7714,6 +7947,7 @@ RestartEval:
 	if (eval_deref(src,types,C99_EvalParseTree)) goto RestartEval; 
 	if (eval_logical_NOT(src,types,C99_EvalParseTree,is_C99_unary_operator_expression<'!'>,C99_literal_converts_to_bool)) goto RestartEval;
 	if (eval_shift(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_relation_expression(src,types,C99_EvalParseTree,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_equality_expression(src,types,C99_EvalParseTree,is_C99_equality_expression,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_AND(src,types,C99_EvalParseTree,is_C99_bitwise_AND_expression,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_XOR(src,types,C99_EvalParseTree,is_C99_bitwise_XOR_expression,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
@@ -7806,6 +8040,7 @@ RestartEval:
 	if (eval_deref(src,types,CPlusPlus_EvalParseTree)) goto RestartEval; 
 	if (eval_logical_NOT(src,types,CPlusPlus_EvalParseTree,is_CPP_logical_NOT_expression,CPP_literal_converts_to_bool)) goto RestartEval;
 	if (eval_shift(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_relation_expression(src,types,CPlusPlus_EvalParseTree,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_equality_expression(src,types,CPlusPlus_EvalParseTree,is_CPP_equality_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_AND(src,types,CPlusPlus_EvalParseTree,is_CPP_bitwise_AND_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_XOR(src,types,CPlusPlus_EvalParseTree,is_CPP_bitwise_XOR_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
