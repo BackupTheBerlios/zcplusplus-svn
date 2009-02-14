@@ -1,4 +1,10 @@
 Installation instructions with GNU make
+-1) Install the Boost libraries ( http://www.boost.org/ ) first.
+0) Install the Zaimoni.STL directory second.
+0.1) Adjust makeconf.inc to have the correct values for your system.
+0.2) make
+0.3) make install if there were no errors
+
 1) Adjust makeconf.inc to have the correct values for your system.
 2) make
 3) using a Bourne shell in the tests/cpp subdirectory:
