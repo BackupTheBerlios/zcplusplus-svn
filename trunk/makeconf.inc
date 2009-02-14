@@ -17,3 +17,6 @@ CFLAGS := -fargument-alias -finline -Os -Wall --pedantic
 CXXFLAGS :=
 ARCH_FLAGS := -mwindows -mno-cygwin -march=pentium -mtune=pentium3
 
+OTHER_INCLUDEDIR :=
+C_MACROS := 
+CXX_MACROS := -D__STDC_LIMIT_MACROS
