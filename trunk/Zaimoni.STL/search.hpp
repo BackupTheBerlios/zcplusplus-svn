@@ -4,7 +4,7 @@
 #ifndef ZAIMONI_STL_SEARCH_HPP
 #define ZAIMONI_STL_SEARCH_HPP 1
 
-#include "Zaimoni.STL/Logging.h"
+#include "Logging.h"
 
 typedef intmax_t errr;	// error-code convention: negative value is error
 

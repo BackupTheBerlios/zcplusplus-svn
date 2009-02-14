@@ -2,7 +2,7 @@
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
 #include "type_system.hpp"
-#include "search.hpp"
+#include "Zaimoni.STL/search.hpp"
 
 type_system::type_index
 type_system::_get_id(const char* const x,size_t x_len) const

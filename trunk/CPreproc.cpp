@@ -20,7 +20,6 @@
 #include "errcount.hpp"
 #include "filesystem.h"
 #include "load_src.hpp"
-#include "search.hpp"
 #include "ParseTree.hpp"
 #include "type_system.hpp"
 #include "weak_token.hpp"
@@ -28,6 +27,7 @@
 #include "Zaimoni.STL/LexParse/Token.hpp"
 #include "Zaimoni.STL/LexParse/LangConf.hpp"
 #include "Zaimoni.STL/pure.C/format_util.h"
+#include "Zaimoni.STL/search.hpp"
 
 #include "DebugCSupport.h"
 
