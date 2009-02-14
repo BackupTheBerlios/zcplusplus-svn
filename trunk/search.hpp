@@ -1,11 +1,10 @@
 // search.hpp
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
-#ifndef SEARCH_HPP
-#define SEARCH_HPP 1
+#ifndef ZAIMONI_STL_SEARCH_HPP
+#define ZAIMONI_STL_SEARCH_HPP 1
 
 #include "Zaimoni.STL/Logging.h"
-#include <cstring>
 
 typedef intmax_t errr;	// error-code convention: negative value is error
 
@@ -100,8 +99,7 @@ linear_find<const char* const *>(const char* const x, const char* const * ref_da
 DEFINE_STL_WRAPPED_SUBSTRING_SEARCH(linear_find)
 
 template<class STLcontainer>
-errr
-linear_find(const char* const x, const STLcontainer& ref_data)
+errr linear_find(const char* const x, const STLcontainer& ref_data)
 {
 	assert(NULL!=x && '\0'!=x[0]);
 	if (!ref_data.empty()) return linear_find(x,ref_data.begin(),ref_data.size());
@@ -126,8 +124,7 @@ linear_find(const Target& x, Iterator ref_data, const Iterator ref_data_end)
 }
 
 template<class Target,class STLContainer>
-errr
-linear_find(const Target& x, const STLContainer& ref_data)
+errr linear_find(const Target& x, const STLContainer& ref_data)
 {
 	if (!ref_data.empty()) return linear_find(x,ref_data.begin(),ref_data.end());
 	return -1;
@@ -264,7 +261,7 @@ DEFINE_STL_WRAPPED_SUBSTRING_SEARCH(linear_find_STL_deref2)
 template<class RandomAccessIterator>
 errr
 binary_find(const char* const x,const size_t x_len, RandomAccessIterator ref_data, size_t StrictUB)
-{	// actualy a binary search
+{	// actually a binary search
 	// bsearch won't work here because the x, x_len pair might just refer to a string-slice
 	assert(NULL!=x && '\0'!=x[0]);
 	assert(0<x_len);
@@ -301,7 +298,7 @@ binary_find(const char* const x,const size_t x_len, RandomAccessIterator ref_dat
 template<>
 inline errr
 binary_find<const char* const *>(const char* const x,const size_t x_len, const char* const * ref_data, size_t StrictUB)
-{	// actualy a binary search
+{	// actually a binary search
 	// bsearch won't work here because the x, x_len pair might just refer to a string-slice
 	assert(NULL!=x && '\0'!=x[0]);
 	assert(0<x_len);
@@ -346,6 +343,36 @@ binary_find<char* const *>(const char* const x,const size_t x_len,char* const * 
 	return binary_find<const char* const *>(x,x_len,const_cast<const char* const *>(ref_data),StrictUB);
 }
 
+template<class Target, class RandomAccessIterator>
+errr
+binary_find(const Target& x, RandomAccessIterator ref_data, size_t StrictUB)
+{	// actually a binary search
+	if (0>=StrictUB) return -2;
+
+	size_t LB = 0;
+	while(LB<StrictUB)
+		{
+		const size_t midpoint = LB + (StrictUB-LB)/2;
+		RandomAccessIterator mid_iter = ref_data+midpoint; 
+		int test = zaimoni::cmp(x,mid_iter);
+		if (0==test) return midpoint;
+		if (midpoint==LB)
+			{
+			StrictUB = midpoint + (0<test);
+			break;
+			}
+		if (0<test)
+			LB = midpoint+1;
+		else
+			StrictUB = midpoint;
+		};
+#if UINTMAX_MAX!=SIZE_MAX
+	return (-(errr)(StrictUB))-2;
+#else
+	if ((uintmax_t)(-(INTMAX_MIN+2))>=StrictUB) return (-(errr)(StrictUB))-2;
+	return -1;	// generic don't-know-where-to-insert code
+#endif
+}
 
 DEFINE_STL_WRAPPED_SUBSTRING_SEARCH(binary_find)
 
