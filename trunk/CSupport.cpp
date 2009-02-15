@@ -609,6 +609,7 @@ static bool converts_to_reallike(size_t base_type_index)
 
 static bool converts_to_arithmeticlike(size_t base_type_index)
 {	//! \todo handle cast operator overloading
+	//! \todo handle enum types
 	return C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE__COMPLEX>=base_type_index;
 }
 
@@ -4131,6 +4132,23 @@ static bool unary_operator_asphyxiates_empty_parentheses_and_brackets(parse_tree
 	return false;
 }
 
+static void assemble_unary_postfix_arguments(parse_tree& src, size_t& i, const size_t _subtype)
+{
+	assert(1<src.size<0>()-i);
+	parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
+	assert(NULL!=tmp);
+	*tmp = src.data<0>()[i+1];
+	src.c_array<0>()[i].fast_set_arg<2>(tmp);
+	src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
+	src.c_array<0>()[i].flags |= PARSE_STRICT_UNARY_EXPRESSION;
+	src.c_array<0>()[i].subtype = _subtype;
+	if (PARSE_CONSTANT_EXPRESSION & tmp->flags) src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
+	if (parse_tree::INVALID & tmp->flags) src.c_array<0>()[i].flags |= parse_tree::INVALID;
+	src.c_array<0>()[i+1].clear();
+	src.DeleteIdx<0>(i+1);
+	cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
+}
+
 // no eval_deref because of &* cancellation
 
 static bool terse_locate_deref(parse_tree& src, size_t& i)
@@ -4145,18 +4163,7 @@ static bool terse_locate_deref(parse_tree& src, size_t& i)
 		assert(1<src.size<0>()-i);	// should be intercepted at context-free check
 		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<2>(tmp);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_UNARY_EXPRESSION;
-			if (PARSE_CONSTANT_EXPRESSION & tmp->flags) src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (parse_tree::INVALID & tmp->flags) src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			assert(is_C99_unary_operator_expression<'*'>(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
+			assemble_unary_postfix_arguments(src,i,C99_UNARY_SUBTYPE_DEREF);
 			assert(is_C99_unary_operator_expression<'*'>(src.data<0>()[i]));
 			return true;
 			};
@@ -4172,10 +4179,8 @@ static void C_deref_easy_syntax_check(parse_tree& src,const type_system& types)
 	//! \todo: handle *& identity when we have &
 	//! \todo multidimensional array target
 	//! \todo cv-qualified pointer target
-	src.type_code.traits |= type_spec::lvalue;	// result is lvalue; C99 unclear regarding string literals, follow C++98
-	src.subtype = C99_UNARY_SUBTYPE_DEREF;
 	src.type_code = src.data<2>()->type_code;
-	src.type_code.traits |= type_spec::lvalue;
+	src.type_code.traits |= type_spec::lvalue;	// result is lvalue; C99 unclear regarding string literals, follow C++98
 	if (0<src.type_code.pointer_power)
 		{
 		--src.type_code.pointer_power;
@@ -4199,10 +4204,8 @@ static void CPP_deref_easy_syntax_check(parse_tree& src,const type_system& types
 	//! \todo handle *& identity when we have &
 	//! \todo multidimensional array target
 	//! \todo cv-qualified pointer target
-	src.type_code.traits |= type_spec::lvalue;	// result is lvalue
-	src.subtype = C99_UNARY_SUBTYPE_DEREF;
 	src.type_code = src.data<2>()->type_code;
-	src.type_code.traits |= type_spec::lvalue;
+	src.type_code.traits |= type_spec::lvalue;	// result is lvalue
 	if (0<src.type_code.pointer_power)
 		{
 		--src.type_code.pointer_power;
@@ -4263,18 +4266,7 @@ static bool terse_locate_C_logical_NOT(parse_tree& src, size_t& i)
 		assert(1<src.size<0>()-i);	// should be intercepted at context-free check
 		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<2>(tmp);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_UNARY_EXPRESSION;
-			if (PARSE_CONSTANT_EXPRESSION & tmp->flags) src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (parse_tree::INVALID & tmp->flags) src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			assert(is_C99_unary_operator_expression<'!'>(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
+			assemble_unary_postfix_arguments(src,i,C99_UNARY_SUBTYPE_NOT);
 			assert(is_C99_unary_operator_expression<'!'>(src.data<0>()[i]));
 			return true;
 			};
@@ -4296,18 +4288,7 @@ static bool terse_locate_CPP_logical_NOT(parse_tree& src, size_t& i)
 		assert(1<src.size<0>()-i);	// should be intercepted at context-free check
 		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<2>(tmp);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_UNARY_EXPRESSION;
-			if (PARSE_CONSTANT_EXPRESSION & tmp->flags) src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (parse_tree::INVALID & tmp->flags) src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			assert(is_CPP_logical_NOT_expression(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
+			assemble_unary_postfix_arguments(src,i,C99_UNARY_SUBTYPE_NOT);
 			assert(is_CPP_logical_NOT_expression(src.data<0>()[i]));
 			return true;
 			};
@@ -4351,7 +4332,6 @@ static bool eval_logical_NOT(parse_tree& src, const type_system& types, func_tra
 static void C_logical_NOT_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_unary_operator_expression<'!'>(src));
-	src.subtype = C99_UNARY_SUBTYPE_NOT;
 	src.type_code.set_type(C_TYPE::BOOL);	// technically wrong for C, but the range is restricted to _Bool's range
 	if (eval_logical_NOT(src,types,is_C99_unary_operator_expression<'!'>,C99_literal_converts_to_bool)) return;
 
@@ -4370,7 +4350,6 @@ static void C_logical_NOT_easy_syntax_check(parse_tree& src,const type_system& t
 static void CPP_logical_NOT_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_CPP_logical_NOT_expression(src));
-	src.subtype = C99_UNARY_SUBTYPE_NOT;
 	src.type_code.set_type(C_TYPE::BOOL);	// technically wrong for C, but the range is restricted to _Bool's range
 	if (eval_logical_NOT(src,types,is_CPP_logical_NOT_expression,CPP_literal_converts_to_bool)) return;
 
@@ -4450,18 +4429,7 @@ static bool terse_locate_C99_bitwise_complement(parse_tree& src, size_t& i)
 		assert(1<src.size<0>()-i);	// should be intercepted at context-free check
 		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<2>(tmp);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_UNARY_EXPRESSION;
-			if (PARSE_CONSTANT_EXPRESSION & tmp->flags) src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (parse_tree::INVALID & tmp->flags) src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			assert(is_C99_unary_operator_expression<'~'>(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
+			assemble_unary_postfix_arguments(src,i,C99_UNARY_SUBTYPE_COMPL);
 			assert(is_C99_unary_operator_expression<'~'>(src.data<0>()[i]));
 			return true;
 			};
@@ -4483,18 +4451,7 @@ static bool terse_locate_CPP_bitwise_complement(parse_tree& src, size_t& i)
 		assert(1<src.size<0>()-i);	// should be intercepted at context-free check
 		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
 			{
-			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-			assert(NULL!=tmp);
-			*tmp = src.data<0>()[i+1];
-			src.c_array<0>()[i].fast_set_arg<2>(tmp);
-			src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.c_array<0>()[i].flags |= PARSE_STRICT_UNARY_EXPRESSION;
-			if (PARSE_CONSTANT_EXPRESSION & tmp->flags) src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-			if (parse_tree::INVALID & tmp->flags) src.c_array<0>()[i].flags |= parse_tree::INVALID;
-			src.c_array<0>()[i+1].clear();
-			src.DeleteIdx<0>(i+1);
-			assert(is_CPP_bitwise_complement_expression(src.data<0>()[i]));
-			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
+			assemble_unary_postfix_arguments(src,i,C99_UNARY_SUBTYPE_COMPL);
 			assert(is_CPP_bitwise_complement_expression(src.data<0>()[i]));
 			return true;
 			};
@@ -4554,7 +4511,6 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,func_tr
 static void C_bitwise_complement_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_unary_operator_expression<'~'>(src));
-	src.subtype = C99_UNARY_SUBTYPE_COMPL;
 	if (!converts_to_integerlike(src.data<2>()->type_code))
 		{
 		src.type_code.set_type(0);
@@ -4576,7 +4532,6 @@ static void C_bitwise_complement_easy_syntax_check(parse_tree& src,const type_sy
 static void CPP_bitwise_complement_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_CPP_bitwise_complement_expression(src));
-	src.subtype = C99_UNARY_SUBTYPE_COMPL;
 	if (!converts_to_integerlike(src.data<2>()->type_code))
 		{
 		src.type_code.set_type(0);
@@ -4838,6 +4793,9 @@ static void locate_C99_unary_expression(parse_tree& src, size_t& i, const type_s
 	if (locate_C99_deref(src,i,types)) return;
 	if (locate_C99_logical_NOT(src,i,types)) return;
 	if (locate_C99_bitwise_complement(src,i,types)) return;
+#if 0
+	if (locate_C99_CPP_unary_plusminus(src,i,types)) return;
+#endif
 
 #if 0
 	if (terse_locate_unary_operator(src,i))
@@ -4916,6 +4874,9 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 	if (locate_CPP_deref(src,i,types)) return;
 	if (locate_CPP_logical_NOT(src,i,types)) return;
 	if (locate_CPP_bitwise_complement(src,i,types)) return;
+#if 0
+	if (locate_C99_CPP_unary_plusminus(src,i,types)) return;
+#endif
 
 #if 0
 	if (terse_locate_unary_operator(src,i))
