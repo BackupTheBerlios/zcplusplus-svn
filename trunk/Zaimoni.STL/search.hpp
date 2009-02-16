@@ -374,6 +374,12 @@ binary_find(const Target& x, RandomAccessIterator ref_data, size_t StrictUB)
 #endif
 }
 
+template<class Target, class STLContainer>
+inline errr binary_find(const Target& x, const STLContainer& ref_data)
+{	// actually a binary search
+	return binary_find(x,ref_data.data(),ref_data.size());
+}
+
 DEFINE_STL_WRAPPED_SUBSTRING_SEARCH(binary_find)
 
 // this macro must not pollute the main source
