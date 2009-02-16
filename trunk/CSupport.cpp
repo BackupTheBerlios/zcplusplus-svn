@@ -613,6 +613,13 @@ static bool converts_to_arithmeticlike(size_t base_type_index)
 	return C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE__COMPLEX>=base_type_index;
 }
 
+static bool converts_to_arithmeticlike(const type_spec& type_code)
+{	//! \todo handle cast operator overloading
+	//! \todo handle enum types
+	if (0<type_code.pointer_power_after_array_decay()) return false;	// pointers do not have a standard conversion to integers/floats/complex
+	return C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::LDOUBLE__COMPLEX>=type_code.base_type_index;
+}
+
 static bool converts_to_bool(const type_spec& type_code)
 {
 	if (0<type_code.pointer_power_after_array_decay()) return true;	// pointers are comparable to NULL
@@ -3328,12 +3335,12 @@ is_array_deref(const parse_tree& src)
 			&&	src.empty<2>();
 }
 
-#define C99_UNARY_OPERATORS "*&+-!~"
+#define C99_UNARY_OPERATORS "+-*&!~"
 
-#define C99_UNARY_SUBTYPE_DEREF 1
-#define C99_UNARY_SUBTYPE_ADDRESSOF 2
-#define C99_UNARY_SUBTYPE_PLUS 3
-#define C99_UNARY_SUBTYPE_NEG 4
+#define C99_UNARY_SUBTYPE_PLUS 1
+#define C99_UNARY_SUBTYPE_NEG 2
+#define C99_UNARY_SUBTYPE_DEREF 3
+#define C99_UNARY_SUBTYPE_ADDRESSOF 4
 #define C99_UNARY_SUBTYPE_NOT 5
 #define C99_UNARY_SUBTYPE_COMPL 6
 
@@ -3376,7 +3383,13 @@ static bool is_CPP_bitwise_complement_expression(const parse_tree& src)
 }
 
 #if 0
-#define C99_MULT_OPERATORS "*/%"
+#define C99_MULT_OPERATORS "/%*"
+#define C99_MULT_SUBTYPE_DIV 1
+#define C99_MULT_SUBTYPE_MOD 2
+#define C99_MULT_SUBTYPE_MULT 3
+
+BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_DEREF==C99_MULT_SUBTYPE_MULT)
+
 static bool is_C99_mult_operator_expression(const parse_tree& src)
 {
 	return		NULL!=src.index_tokens[0].token.first && 1==src.index_tokens[0].token.second && '\0'!=src.index_tokens[0].token.first[0] && strchr(C99_MULT_OPERATORS,src.index_tokens[0].token.first[0])
@@ -3385,6 +3398,14 @@ static bool is_C99_mult_operator_expression(const parse_tree& src)
 			&&	1==src.size<1>() && (PARSE_MULT_EXPRESSION & src.data<1>()->flags)
 			&&	1==src.size<2>() && (PARSE_PM_EXPRESSION & src.data<2>()->flags);
 }
+#endif
+
+#if 0
+#define C99_ADD_SUBTYPE_PLUS 1
+#define C99_ADD_SUBTYPE_MINUS 2
+
+BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_PLUS==C99_ADD_SUBTYPE_PLUS);
+BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_NEG==C99_ADD_SUBTYPE_MINUS);
 #endif
 
 #define C99_SHIFT_SUBTYPE_LEFT 1
@@ -4581,6 +4602,262 @@ static bool locate_CPP_bitwise_complement(parse_tree& src, size_t& i, const type
 	return false;
 }
 
+static bool terse_locate_unary_plusminus(parse_tree& src, size_t& i)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
+	assert(src.data<0>()[i].is_atomic());
+
+	const size_t unary_subtype 	= (token_is_char<'-'>(src.data<0>()[i].index_tokens[0].token)) ? C99_UNARY_SUBTYPE_NEG
+								: (token_is_char<'+'>(src.data<0>()[i].index_tokens[0].token)) ? C99_UNARY_SUBTYPE_PLUS : 0;
+	if (unary_subtype)
+		{
+		assert(1<src.size<0>()-i);	// should be intercepted at context-free check
+		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
+			{
+			assemble_unary_postfix_arguments(src,i,unary_subtype);
+			src.c_array<0>()[i].type_code.set_type(C_TYPE::NOT_VOID);	// defer to later
+			assert((C99_UNARY_SUBTYPE_PLUS==unary_subtype) ? is_C99_unary_operator_expression<'+'>(src.data<0>()[i]) : is_C99_unary_operator_expression<'-'>(src.data<0>()[i]));
+			return true;
+			};
+		if (unary_operator_asphyxiates_empty_parentheses_and_brackets(src.c_array<0>()[i],src.c_array<0>()[i+1]))
+			return false;	//! \todo lift this into a +/- expression anyway?
+		}
+	return false;
+}
+
+static bool eval_unary_plus(parse_tree& src, const type_system& types)
+{
+	assert(is_C99_unary_operator_expression<'+'>(src));
+	if (0<src.data<2>()->type_code.pointer_power_after_array_decay())
+		{	// assume C++98 interpretation, as this is illegal in C99
+		if (!(parse_tree::INVALID & src.flags))
+			{
+			assert(src.type_code==src.data<2>()->type_code);
+			src.eval_to_arg<2>(0);
+			return true;
+			}
+		return false;
+		}
+	// handle integer-like literals like a real integer literal
+	else if (converts_to_integerlike(src.data<2>()->type_code) && (PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+		{
+		const type_spec old_type = src.type_code;
+		src.eval_to_arg<2>(0);
+		src.type_code = old_type;
+		return true;
+		}
+	return false;
+}
+
+static bool eval_unary_minus(parse_tree& src, const type_system& types,func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	assert(is_C99_unary_operator_expression<'-'>(src));
+	bool is_true = false;
+	if (literal_converts_to_bool(*src.data<2>(),is_true) && !is_true && (1==(src.type_code.base_type_index-C_TYPE::INT)%2 || virtual_machine::twos_complement==target_machine->C_signed_int_representation() || bool_options[boolopt::int_traps]))
+		{	// -0=0 most of the time (except for trap-signed-int machines using sign/magnitude or one's-complement integers
+		const type_spec old_type = src.type_code;
+		src.destroy();
+		src.index_tokens[0].token.first = "0";
+		src.index_tokens[0].token.second = 1;
+		src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+		_label_one_literal(src,types);
+		src.type_code = old_type;		
+		return true;
+		};
+	if (converts_to_integer(src.data<2>()->type_code) && 1==(src.type_code.base_type_index-C_TYPE::INT)%2 && (PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+		{	// unsigned...we're fine
+		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int = target_machine->unsigned_max(machine_type);
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> src_int;
+		const type_spec old_type = src.type_code;
+		intlike_literal_to_VM(src_int,*src.data<2>());
+		assert(res_int>=src_int);
+		(res_int -= src_int) += 1;
+
+		const uintmax_t res = res_int.to_uint();
+		const char* suffix = literal_suffix(old_type.base_type_index);
+		const zaimoni::lex_flags new_flags = literal_flags(old_type.base_type_index);
+		char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
+		z_umaxtoa(res,buf,10);
+		assert(!suffix || 3>=strlen(suffix));
+		assert(new_flags);
+		if (suffix) strcat(buf,suffix);
+		assert(strlen(buf));
+
+		char* new_token = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(strlen(buf)),1));
+		//! \todo flag failures to reduce as RAM-stalled
+		if (!new_token) return false;	// catch this later
+		strcpy(new_token,buf);
+		src.c_array<2>()->grab_index_token_from<0>(new_token,new_flags | C_TESTFLAG_DECIMAL);
+		src.eval_to_arg<2>(0);
+		src.type_code = old_type;
+		return true;
+		};
+	if (converts_to_integerlike(src.data<2>()->type_code) && is_C99_unary_operator_expression<'-'>(*src.data<2>()))
+		{	// - - __ |-> __, trap-int machines fine as -0=0 for sign/magnitude and one's complement, and the offending literal for two's complement is an unsigned int
+		assert(converts_to_integerlike(src.data<2>()->data<2>()->type_code));
+		const type_spec old_type = src.type_code;
+		parse_tree tmp = *src.data<2>()->data<2>();
+		src.c_array<2>()->c_array<2>()->clear();
+		src.destroy();
+		src = tmp;
+		src.type_code = old_type;
+		return true;		
+		}
+	return false;
+}
+
+// can't do much syntax-checking or immediate-evaluation here because of binary +/-
+static void C_unary_plusminus_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	assert(C99_UNARY_SUBTYPE_NEG==src.subtype || C99_UNARY_SUBTYPE_PLUS==src.subtype);
+	assert((C99_UNARY_SUBTYPE_PLUS==src.subtype) ? is_C99_unary_operator_expression<'+'>(src) : is_C99_unary_operator_expression<'-'>(src));
+	// return immediately if applied to a pointer type (C++98 would type here)
+	if (0<src.data<2>()->type_code.pointer_power_after_array_decay()) return;
+	// can type if result is a primitive arithmetic type
+	if (converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index))
+		src.type_code.set_type(default_promote_type(src.data<2>()->type_code.base_type_index));
+
+	const size_t arg_unary_subtype 	= (is_C99_unary_operator_expression<'-'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_NEG
+									: (is_C99_unary_operator_expression<'+'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_PLUS : 0;
+	if (!arg_unary_subtype) return;
+	// two deep:
+	// 2) if inner +/- is applied to a raw pointer, error out and change type to 0
+	// 1) if inner +/- is applied to an arithmetic literal, try to crunch it (but handle - signed carefully)
+	if (C99_UNARY_SUBTYPE_PLUS==src.subtype)
+		{
+		if (0<src.data<2>()->data<2>()->type_code.pointer_power_after_array_decay())
+			{
+			src.flags |= parse_tree::INVALID;
+			src.type_code.set_type(0);
+			if (!(parse_tree::INVALID & src.data<2>()->flags))
+				{
+				src.c_array<2>()->flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" applies unary + to a pointer (C99 6.5.3.3p1)");	// NOTE: unary + on pointer is legal in C++98
+				zcc_errors.inc_error();
+				}
+			return;
+			}
+		if 		(C99_UNARY_SUBTYPE_PLUS==arg_unary_subtype)
+			eval_unary_plus(*src.c_array<2>(),types);
+		else	// if (C99_UNARY_SUBTYPE_NEG==arg_unary_subtype)
+			eval_unary_minus(*src.c_array<2>(),types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
+		}
+	else{	// if (C99_UNARY_SUBTYPE_NEG==src.subtype)
+		if (0<src.data<2>()->data<2>()->type_code.pointer_power_after_array_decay())
+			{
+			src.flags |= parse_tree::INVALID;
+			src.type_code.set_type(0);
+			if (!(parse_tree::INVALID & src.data<2>()->flags))
+				{
+				src.c_array<2>()->flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" applies unary - to a pointer (C99 6.5.3.3p1)");
+				zcc_errors.inc_error();
+				}
+			return;
+			}
+		if 		(C99_UNARY_SUBTYPE_PLUS==arg_unary_subtype)
+			eval_unary_plus(*src.c_array<2>(),types);
+		else	// if (C99_UNARY_SUBTYPE_NEG==arg_unary_subtype)
+			eval_unary_minus(*src.c_array<2>(),types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
+		}
+}
+
+static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	assert(C99_UNARY_SUBTYPE_NEG==src.subtype || C99_UNARY_SUBTYPE_PLUS==src.subtype);
+	assert((C99_UNARY_SUBTYPE_PLUS==src.subtype) ? is_C99_unary_operator_expression<'+'>(src) : is_C99_unary_operator_expression<'-'>(src));
+	
+	// can type if result is a primitive arithmetic type
+	if (converts_to_arithmeticlike(src.data<2>()->type_code))
+		src.type_code.set_type(default_promote_type(src.data<2>()->type_code.base_type_index));
+
+	// two deep:
+	// 1) if inner +/- is applied to an arithmetic literal, try to crunch it (but leave - signed alone)
+	// 2) if inner +/- is applied to a raw pointer, error out and change type to 0
+	if (C99_UNARY_SUBTYPE_PLUS==src.subtype)
+		{
+		if (0<src.data<2>()->type_code.pointer_power_after_array_decay())
+			// C++98 5.3.1p6: pointer type allowed for unary +, not for unary - (C99 errors)
+			src.type_code = src.data<2>()->type_code;
+
+		if 		(is_C99_unary_operator_expression<'+'>(*src.data<2>()))
+			eval_unary_plus(*src.c_array<2>(),types);
+		else if (is_C99_unary_operator_expression<'-'>(*src.data<2>()))
+			eval_unary_minus(*src.c_array<2>(),types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+		}
+	else{	// if (C99_UNARY_SUBTYPE_NEG==src.subtype)
+		// return immediately if result is a pointer type; nested application to a pointer type dies
+		if (0<src.data<2>()->type_code.pointer_power_after_array_decay()) return;
+
+		const size_t arg_unary_subtype 	= (is_C99_unary_operator_expression<'-'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_NEG
+										: (is_C99_unary_operator_expression<'+'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_PLUS : 0;
+		if (arg_unary_subtype)
+			{
+			if (0<src.data<2>()->data<2>()->type_code.pointer_power_after_array_decay())
+				{
+				src.flags |= parse_tree::INVALID;
+				src.type_code.set_type(0);
+				if (!(parse_tree::INVALID & src.data<2>()->flags))
+					{
+					src.c_array<2>()->flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" applies unary - to a pointer (C++98 5.3.1p7)");
+					zcc_errors.inc_error();
+					}
+				return;
+				}
+			if 		(C99_UNARY_SUBTYPE_PLUS==arg_unary_subtype)
+				eval_unary_plus(*src.c_array<2>(),types);
+			else	// if (C99_UNARY_SUBTYPE_NEG==arg_unary_subtype)
+				eval_unary_minus(*src.c_array<2>(),types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+			}
+		}
+}
+
+static bool locate_C99_unary_plusminus(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	if (   (PARSE_OBVIOUS & src.data<0>()[i].flags)
+		|| !src.data<0>()[i].is_atomic())
+		return false;
+
+	if (terse_locate_unary_plusminus(src,i))
+		{
+		C_unary_plusminus_easy_syntax_check(src.c_array<0>()[i],types);
+		return true;
+		};
+	return false;
+}
+
+static bool locate_CPP_unary_plusminus(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	if (   (PARSE_OBVIOUS & src.data<0>()[i].flags)
+		|| !src.data<0>()[i].is_atomic())
+		return false;
+
+	if (terse_locate_unary_plusminus(src,i))
+		{
+		//! \todo handle operator overloading
+		CPP_unary_plusminus_easy_syntax_check(src.c_array<0>()[i],types);
+		return true;
+		};
+	return false;
+}
+
 #if 0
 //! \todo need !, * implemented to disconnect bad design
 static bool terse_locate_unary_operator(parse_tree& src, size_t& i)
@@ -4647,32 +4924,8 @@ static void C_unary_op_easy_syntax_check(parse_tree& src,const type_system& type
 					}
 				break;
 				}
-	case '+':	{
-				if (	is_C99_unary_operator_expression<'+'>(*src.data<2>())
-					&& 	is_C99_unary_operator_expression<'-'>(*src.data<2>()->data<2>()))
-					lift_n = 1;
-				else{
-					// tentative type assignment
-					src.subtype = C99_UNARY_SUBTYPE_PLUS;
-					src.type_code = src.data<2>()->type_code;
-					src.type_code.traits &= ~type_spec::lvalue;
-					return;	// could actually be binary +, so postpone error checks
-					}
-				break;
-				}
-	case '-':	{
-				if (	is_C99_unary_operator_expression<'-'>(*src.data<2>())
-					&& 	is_C99_unary_operator_expression<'-'>(*src.data<2>()->data<2>()))
-					lift_n = 2;
-				else{	//! \todo handle operator overloading
-					// tentative type assignment
-					src.subtype = C99_UNARY_SUBTYPE_NEG;
-					src.type_code = src.data<2>()->type_code;
-					src.type_code.traits &= ~type_spec::lvalue;
-					return;	// could actually be binary -, so postpone error checks
-					}
-				break;
-				}
+	case '+':	FATAL_CODE("already ported",3);
+	case '-':	FATAL_CODE("already ported",3);
 	case '!':	FATAL_CODE("already ported",3);
 	case '~':	FATAL_CODE("already ported",3);
 	}
@@ -4720,32 +4973,8 @@ static void CPP_unary_op_easy_syntax_check(parse_tree& src,const type_system& ty
 					}
 				break;
 				}
-	case '+':	{
-				if (	is_C99_unary_operator_expression<'+'>(*src.data<2>())
-					&& 	is_C99_unary_operator_expression<'-'>(*src.data<2>()->data<2>()))
-					lift_n = 1;
-				else{
-					// tentative type assignment
-					src.subtype = C99_UNARY_SUBTYPE_PLUS;
-					src.type_code = src.data<2>()->type_code;
-					src.type_code.traits &= ~type_spec::lvalue;
-					return;	// could actually be binary +, so postpone error checks
-					}
-				break;
-				}
-	case '-':	{
-				if (	is_C99_unary_operator_expression<'-'>(*src.data<2>())
-					&& 	is_C99_unary_operator_expression<'-'>(*src.data<2>()->data<2>()))
-					lift_n = 2;
-				else{	//! \todo handle operator overloading
-					// tentative type assignment
-					src.subtype = C99_UNARY_SUBTYPE_NEG;
-					src.type_code = src.data<2>()->type_code;
-					src.type_code.traits &= ~type_spec::lvalue;
-					return;	// could actually be binary -, so postpone error checks
-					}
-				break;
-				}
+	case '+':	FATAL_CODE("already ported",3);
+	case '-':	FATAL_CODE("already ported",3);
 	case '!':	FATAL_CODE("already ported",3);
 	case '~':	FATAL_CODE("already ported",3);
 	}
@@ -4793,9 +5022,7 @@ static void locate_C99_unary_expression(parse_tree& src, size_t& i, const type_s
 	if (locate_C99_deref(src,i,types)) return;
 	if (locate_C99_logical_NOT(src,i,types)) return;
 	if (locate_C99_bitwise_complement(src,i,types)) return;
-#if 0
-	if (locate_C99_CPP_unary_plusminus(src,i,types)) return;
-#endif
+	if (locate_C99_unary_plusminus(src,i,types)) return;
 
 #if 0
 	if (terse_locate_unary_operator(src,i))
@@ -4874,9 +5101,7 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 	if (locate_CPP_deref(src,i,types)) return;
 	if (locate_CPP_logical_NOT(src,i,types)) return;
 	if (locate_CPP_bitwise_complement(src,i,types)) return;
-#if 0
-	if (locate_C99_CPP_unary_plusminus(src,i,types)) return;
-#endif
+	if (locate_CPP_unary_plusminus(src,i,types)) return;
 
 #if 0
 	if (terse_locate_unary_operator(src,i))
@@ -7744,6 +7969,30 @@ static bool eval_bitwise_compl(	parse_tree& src, const type_system& types,
 	return false;
 }
 
+static bool eval_unary_plus(parse_tree& src, const type_system& types,
+							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree)
+{
+	if (is_C99_unary_operator_expression<'+'>(src))
+		{
+		EvalParseTree(*src.c_array<2>(),types);
+		if (eval_unary_plus(src,types)) return true;
+		}
+	return false;
+}
+
+static bool eval_unary_minus(parse_tree& src, const type_system& types,
+							 func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
+							 func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,
+							 func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	if (is_C99_unary_operator_expression<'-'>(src))
+		{
+		EvalParseTree(*src.c_array<2>(),types);
+		if (eval_unary_minus(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		}
+	return false;
+}
+
 static bool eval_shift(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
@@ -7907,6 +8156,8 @@ RestartEval:
 	if (eval_logical_AND(src,types,C99_EvalParseTree,is_C99_logical_AND_expression,C99_literal_converts_to_bool)) goto RestartEval;
 	if (eval_deref(src,types,C99_EvalParseTree)) goto RestartEval; 
 	if (eval_logical_NOT(src,types,C99_EvalParseTree,is_C99_unary_operator_expression<'!'>,C99_literal_converts_to_bool)) goto RestartEval;
+	if (eval_unary_plus(src,types,C99_EvalParseTree)) goto RestartEval;
+	if (eval_unary_minus(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_shift(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_relation_expression(src,types,C99_EvalParseTree,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_equality_expression(src,types,C99_EvalParseTree,is_C99_equality_expression,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
@@ -7953,32 +8204,8 @@ RestartEval:
 							}
 						return starting_errors==zcc_errors.err_count();
 						}
-			case '+':	{	//! \bug implement
-						if (!converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index))
-							{
-							message_header(src.index_tokens[0]);
-							INC_INFORM(ERR_STR);
-							INC_INFORM(src);
-							INFORM("applied to non-arithmetic type");
-							src.flags |= parse_tree::INVALID;
-							zcc_errors.inc_error();
-							}
-						//! \todo no-op: double or higher, int or higher; causes type promotion on float, char, short (intercept after failed binary + creation)?
-						return starting_errors==zcc_errors.err_count();
-						}
-			case '-':	{	//! \bug implement
-						if (!converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index))
-							{
-							message_header(src.index_tokens[0]);
-							INC_INFORM(ERR_STR);
-							INC_INFORM(src);
-							INFORM("applied to non-arithmetic type");
-							src.flags |= parse_tree::INVALID;
-							zcc_errors.inc_error();
-							}
-						//! \todo causes type promotion on float, char, short (intercept after failed binary - creation)?
-						return starting_errors==zcc_errors.err_count();
-						}
+			case '+':	FATAL_CODE("already ported",3);
+			case '-':	FATAL_CODE("already ported",3);
 			case '!':	FATAL_CODE("already ported",3);
 			case '~':	FATAL_CODE("already ported",3);
 			}
@@ -8000,6 +8227,8 @@ RestartEval:
 	if (eval_logical_AND(src,types,CPlusPlus_EvalParseTree,is_CPP_logical_AND_expression,CPP_literal_converts_to_bool)) goto RestartEval;
 	if (eval_deref(src,types,CPlusPlus_EvalParseTree)) goto RestartEval; 
 	if (eval_logical_NOT(src,types,CPlusPlus_EvalParseTree,is_CPP_logical_NOT_expression,CPP_literal_converts_to_bool)) goto RestartEval;
+	if (eval_unary_plus(src,types,CPlusPlus_EvalParseTree)) goto RestartEval;
+	if (eval_unary_minus(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_shift(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_relation_expression(src,types,CPlusPlus_EvalParseTree,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_equality_expression(src,types,CPlusPlus_EvalParseTree,is_CPP_equality_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
@@ -8047,33 +8276,8 @@ RestartEval:
 							}
 						return starting_errors==zcc_errors.err_count();
 						}
-			case '+':	{	//! \bug implement
-						//! \todo C++: handle overrides
-						if (!converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index))
-							{
-							message_header(src.index_tokens[0]);
-							INC_INFORM(ERR_STR);
-							INC_INFORM(src);
-							INFORM("applied to non-arithmetic type");
-							src.flags |= parse_tree::INVALID;
-							zcc_errors.inc_error();
-							}
-						//! \todo no-op: double or higher, int or higher; causes type promotion on float, char, short (intercept after failed binary + creation)?
-						return starting_errors==zcc_errors.err_count();
-						}
-			case '-':	{	//! \bug implement
-						//! \todo C++: handle overrides
-						if (!converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index))
-							{
-							message_header(src.index_tokens[0]);
-							INC_INFORM(ERR_STR);
-							INC_INFORM(src);
-							INFORM("applied to non-arithmetic type");
-							src.flags |= parse_tree::INVALID;
-							zcc_errors.inc_error();
-							}
-						return starting_errors==zcc_errors.err_count();
-						}
+			case '+':	FATAL_CODE("already ported",3);
+			case '-':	FATAL_CODE("already ported",3);
 			case '!':	FATAL_CODE("already ported",3);
 			case '~':	FATAL_CODE("already ported",3);
 			}
@@ -8082,6 +8286,17 @@ RestartEval:
 #endif
 	// ...
 	return starting_errors==zcc_errors.err_count();
+}
+
+void C99_CPP_PPHackTree(parse_tree& src,const type_system& types)
+{
+	if (	is_C99_unary_operator_expression<'-'>(src)
+		&& 	!(parse_tree::INVALID & src.flags)
+		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+		{	// compact - literal to literal to get past preprocessor
+		src.eval_to_arg<2>(0);
+		return;
+		}
 }
 
 PP_auxfunc C99_aux
@@ -8096,6 +8311,7 @@ PP_auxfunc C99_aux
 	C99_ContextFreeErrorCount,
 	C99_CondenseParseTree,
 	C99_EvalParseTree,
+	C99_CPP_PPHackTree,
 	ConcatenateCStringLiterals
 	};
 
@@ -8111,6 +8327,7 @@ PP_auxfunc CPlusPlus_aux
 	CPlusPlus_ContextFreeErrorCount,
 	CPlusPlus_CondenseParseTree,
 	CPlusPlus_EvalParseTree,
+	C99_CPP_PPHackTree,
 	ConcatenateCStringLiterals
 	};
 

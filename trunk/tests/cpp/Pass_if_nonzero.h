@@ -82,3 +82,14 @@
 #else
 #error #if !L'\0' is false
 #endif
+
+/* spot-check unary +,- */
+#if +1
+#else
+#error +1 is false
+#endif
+
+#if -1
+#else
+#error -1 is false
+#endif

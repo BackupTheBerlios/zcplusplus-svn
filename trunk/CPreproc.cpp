@@ -3167,6 +3167,7 @@ oneTokenExit:
 	assert(parsetree.is_raw_list() || parsetree.is_atomic());
 	if (parsetree.is_raw_list() && !lang.pp_support->CondenseParseTree(parsetree,min_types)) return false;
 	if (!parsetree.is_atomic() && !lang.pp_support->EvalParseTree(parsetree,min_types)) return false;
+	lang.pp_support->PPHackTree(parsetree,min_types);
 	// final, when above is working properly
 	if (!parsetree.is_atomic())
 		{

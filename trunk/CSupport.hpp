@@ -96,6 +96,7 @@ struct PP_auxfunc
 	func_traits<size_t (*)(const weak_token*,size_t,bool,bool)>::function_ref_type ContextFreeErrorCount;	// returns number of errors detected
 	func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type CondenseParseTree;	// returns number of errors detected
 	func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree;		// return true iff no errors
+	func_traits<void (*)(parse_tree&,const type_system&)>::function_ref_type PPHackTree;	// makes near-constants look constant to the preprocessor (trashes parse tree to do it)
 /*! 
  * concatenates two string literals into a string literal.
  * 

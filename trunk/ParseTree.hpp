@@ -54,6 +54,13 @@ struct type_spec
 		static_array_size = 0;
 		traits = 0;
 	};
+
+	bool operator==(const type_spec& rhs)
+		{return 	base_type_index==rhs.base_type_index
+				&&	pointer_power==rhs.pointer_power
+				&& 	static_array_size==rhs.static_array_size
+				&&	traits==rhs.traits;};
+	bool operator!=(const type_spec& rhs) {return !(*this==rhs);};
 };
 
 struct parse_tree

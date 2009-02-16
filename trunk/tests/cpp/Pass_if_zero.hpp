@@ -56,3 +56,14 @@
 #if !L'A'
 #error #if !L'A' is true
 #endif
+
+/* spot-check unary +,- */
+#if +0
+#error +0 is true
+#else
+#endif
+
+#if -0
+#error -0 is true
+#else
+#endif
