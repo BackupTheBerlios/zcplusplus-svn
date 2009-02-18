@@ -71,10 +71,11 @@ struct parse_tree
 	typedef parse_tree* arglist_array;
 #endif
 
-	enum core_flags {
-		INVALID = (1<<2),	// standardize bitflag use
+	enum core_flags {	// standardize bitflag use
+		INVALID = (1<<2),	// invalid node
+		CONSTANT_EXPRESSION = (1<<3),	// compile-time constant expression
 		RESERVED_MASK = 3,	// lowest two bits are used to track memory ownership of weak_token
-		PREDEFINED_STRICT_UB = 3	// number of bits reserved by parse_tree
+		PREDEFINED_STRICT_UB = 4	// number of bits reserved by parse_tree
 	};
 
 	zaimoni::POD_pair<unsigned char*,size_t> rawdata;	// first: raw bit pattern; size_t is the significant bit count

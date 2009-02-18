@@ -2774,11 +2774,9 @@ CCharLiteralIsNUL(const char* x,size_t x_len)
 #define PARSE_STRICT_CONDITIONAL_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-16))
 #define PARSE_STRICT_ASSIGNMENT_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-17))
 #define PARSE_STRICT_COMMA_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-18))
-// compile-time constant
-#define PARSE_CONSTANT_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-19))
 
 // check for collision with lowest three bits
-BOOST_STATIC_ASSERT(sizeof(zaimoni::lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>=19);
+BOOST_STATIC_ASSERT(sizeof(zaimoni::lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>=18);
 
 /* nonstrict expression types */
 #define PARSE_POSTFIX_EXPRESSION (PARSE_PRIMARY_EXPRESSION | PARSE_STRICT_POSTFIX_EXPRESSION)
@@ -2802,7 +2800,7 @@ BOOST_STATIC_ASSERT(sizeof(zaimoni::lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_S
 /* already-parsed */
 #define PARSE_OBVIOUS (PARSE_EXPRESSION | parse_tree::INVALID)
 
-#define PARSE_PAREN_PRIMARY_PASSTHROUGH (PARSE_CONSTANT_EXPRESSION)
+#define PARSE_PAREN_PRIMARY_PASSTHROUGH (parse_tree::CONSTANT_EXPRESSION)
 
 static void INC_INFORM(const parse_tree& src)
 {	// generally...
@@ -2928,7 +2926,7 @@ static void _label_one_literal(parse_tree& src,const type_system& types)
 	assert(src.is_atomic());
 	if ((C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_PP_NUMERAL) & src.index_tokens[0].flags)
 		{
-		src.flags |= (PARSE_PRIMARY_EXPRESSION | PARSE_CONSTANT_EXPRESSION);
+		src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
 		src.type_code.pointer_power = 0;
 		src.type_code.traits = 0;
 		if (C_TESTFLAG_STRING_LITERAL==src.index_tokens[0].flags)
@@ -3066,7 +3064,7 @@ static void _label_literals(parse_tree& src,const type_system& types)
 				zaimoni::POD_pair<size_t,size_t> scan = {str_span.first,str_span.first+2};
 				while(src.size<0>()>scan.second+1 && C_TESTFLAG_STRING_LITERAL==src.data<0>()[scan.second+1].index_tokens[0].flags) ++scan.second;
 				if (parse_tree::collapse_matched_pair(src,scan))
-					src.c_array<0>()[scan.first].flags |= (PARSE_PRIMARY_EXPRESSION | PARSE_CONSTANT_EXPRESSION);
+					src.c_array<0>()[scan.first].flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
 				else
 					RAMfail = true;
 				}
@@ -3092,7 +3090,7 @@ static void _label_literals(parse_tree& src,const type_system& types)
 				zaimoni::POD_pair<size_t,size_t> scan = {str_span.second-2,str_span.second};
 				while(0<scan.first && C_TESTFLAG_STRING_LITERAL==src.data<0>()[scan.first-1].index_tokens[0].flags) --scan.first;
 				if (parse_tree::collapse_matched_pair(src,scan))
-					src.c_array<0>()[scan.first].flags |= (PARSE_PRIMARY_EXPRESSION | PARSE_CONSTANT_EXPRESSION);
+					src.c_array<0>()[scan.first].flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
 					// note: as current item was already typed properly, do not need to update
 				else
 					RAMfail = true;
@@ -3145,7 +3143,7 @@ static void _label_cplusplus_literals(parse_tree& src)
 				{
 				if 		(!strncmp(src.index_tokens[0].token.first,"true",4))
 					{
-					src.flags |= (PARSE_PRIMARY_EXPRESSION | PARSE_CONSTANT_EXPRESSION);
+					src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
 					src.type_code.set_type(C_TYPE::BOOL);
 					}
 				else if (!strncmp(src.index_tokens[0].token.first,"this",4))
@@ -3161,7 +3159,7 @@ static void _label_cplusplus_literals(parse_tree& src)
 				{
 				if (!strncmp(src.index_tokens[0].token.first,"false",5))
 					{
-					src.flags |= (PARSE_PRIMARY_EXPRESSION | PARSE_CONSTANT_EXPRESSION);
+					src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
 					src.type_code.set_type(C_TYPE::BOOL);
 					}	
 				}
@@ -3393,6 +3391,15 @@ static bool is_C99_mult_operator_expression(const parse_tree& src)
 
 BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_PLUS==C99_ADD_SUBTYPE_PLUS);
 BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_NEG==C99_ADD_SUBTYPE_MINUS);
+
+static bool is_C99_add_operator_expression(const parse_tree& src)
+{
+	return		(robust_token_is_char<'+'>(src.index_tokens[0].token) || robust_token_is_char<'-'>(src.index_tokens[0].token))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_ADD_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_MULT_EXPRESSION & src.data<2>()->flags);
+}
 #endif
 
 #define C99_SHIFT_SUBTYPE_LEFT 1
@@ -3621,7 +3628,7 @@ inspect_potential_paren_primary_expression(parse_tree& src, size_t& err_count)
 		if (0==content_length)
 			{	// ahem...invalid
 			src.flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.flags |= (PARSE_PRIMARY_EXPRESSION | PARSE_CONSTANT_EXPRESSION | parse_tree::INVALID);
+			src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION | parse_tree::INVALID);
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INFORM("tried to use () as expression (C99 6.5.2p1/C++98 5.2p1)");
@@ -3705,9 +3712,9 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 		src.c_array<0>()[i].fast_set_arg<1>(tmp);
 		src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
 		src.c_array<0>()[i].flags |= PARSE_STRICT_POSTFIX_EXPRESSION;
-		if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-			&& 	(PARSE_CONSTANT_EXPRESSION & src.data<0>()[i].data<0>()->flags))
-			src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
+		if (	(parse_tree::CONSTANT_EXPRESSION & tmp->flags)
+			&& 	(parse_tree::CONSTANT_EXPRESSION & src.data<0>()[i].data<0>()->flags))
+			src.c_array<0>()[i].flags |= parse_tree::CONSTANT_EXPRESSION;
 		if (	(parse_tree::INVALID & tmp->flags)
 			|| 	(parse_tree::INVALID & src.data<0>()[i].data<0>()->flags))
 			src.c_array<0>()[i].flags |= parse_tree::INVALID;
@@ -4150,7 +4157,7 @@ static void assemble_unary_postfix_arguments(parse_tree& src, size_t& i, const s
 	src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
 	src.c_array<0>()[i].flags |= PARSE_STRICT_UNARY_EXPRESSION;
 	src.c_array<0>()[i].subtype = _subtype;
-	if (PARSE_CONSTANT_EXPRESSION & tmp->flags) src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
+	if (parse_tree::CONSTANT_EXPRESSION & tmp->flags) src.c_array<0>()[i].flags |= parse_tree::CONSTANT_EXPRESSION;
 	if (parse_tree::INVALID & tmp->flags) src.c_array<0>()[i].flags |= parse_tree::INVALID;
 	src.c_array<0>()[i+1].clear();
 	src.DeleteIdx<0>(i+1);
@@ -4876,7 +4883,12 @@ static void locate_C99_unary_expression(parse_tree& src, size_t& i, const type_s
 	if (locate_C99_unary_plusminus(src,i,types)) return;
 
 #if 0
-	if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"++"))
+	if (terse_locate_unary_operator(src,i))
+		{
+		C_unary_op_easy_syntax_check(src.c_array<0>()[i],types);
+		return;
+		}
+	else if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"++"))
 		{
 		}
 	else if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"--"))
@@ -4988,9 +5000,9 @@ static void assemble_binary_infix_arguments(parse_tree& src, size_t& i, const za
 	src.c_array<0>()[i].fast_set_arg<2>(tmp2);
 	src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
 	src.c_array<0>()[i].flags |= _flags;
-	if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-		&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags))
-		src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
+	if (	(parse_tree::CONSTANT_EXPRESSION & tmp->flags)
+		&& 	(parse_tree::CONSTANT_EXPRESSION & tmp2->flags))
+		src.c_array<0>()[i].flags |= parse_tree::CONSTANT_EXPRESSION;
 	if (	(parse_tree::INVALID & tmp->flags)
 		|| 	(parse_tree::INVALID & tmp2->flags))
 		src.c_array<0>()[i].flags |= parse_tree::INVALID;
@@ -6918,10 +6930,10 @@ static bool terse_locate_conditional_op(parse_tree& src, size_t& i)
 				src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
 				src.c_array<0>()[i].flags |= PARSE_STRICT_CONDITIONAL_EXPRESSION;
 				// Conservative: only one of the infix and postfix expressions is going to be evaluated
-				if (	(PARSE_CONSTANT_EXPRESSION & tmp->flags)
-					&& 	(PARSE_CONSTANT_EXPRESSION & tmp2->flags)
-					&& 	(PARSE_CONSTANT_EXPRESSION & tmp3->flags))
-					src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
+				if (	(parse_tree::CONSTANT_EXPRESSION & tmp->flags)
+					&& 	(parse_tree::CONSTANT_EXPRESSION & tmp2->flags)
+					&& 	(parse_tree::CONSTANT_EXPRESSION & tmp3->flags))
+					src.c_array<0>()[i].flags |= parse_tree::CONSTANT_EXPRESSION;
 				if (	(parse_tree::INVALID & tmp->flags)
 					|| 	(parse_tree::INVALID & tmp2->flags)
 					|| 	(parse_tree::INVALID & tmp3->flags))
@@ -7745,7 +7757,7 @@ eval_array_deref(parse_tree& src,const type_system& types,
 		{	// canonical definition: *((__)+(...))
 		EvalParseTree(*src.c_array<0>(),types);
 		EvalParseTree(*src.c_array<1>(),types);
-		if (PARSE_CONSTANT_EXPRESSION & src.flags)
+		if (parse_tree::CONSTANT_EXPRESSION & src.flags)
 			{
 			const unsigned int str_index = 	(C_TESTFLAG_STRING_LITERAL==src.data<0>()->index_tokens[0].flags) ? 0 :
 											(C_TESTFLAG_STRING_LITERAL==src.data<1>()->index_tokens[0].flags) ? 1 : UINT_MAX;
