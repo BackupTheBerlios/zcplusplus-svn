@@ -5136,7 +5136,7 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 
 static void assemble_binary_infix_arguments(parse_tree& src, size_t& i, const zaimoni::lex_flags _flags)
 {
-	assert(1<=i || 2<=src.size<0>()-i);
+	assert(1<=i && 2<=src.size<0>()-i);
 	parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
 	assert(NULL!=tmp);
 	*tmp = src.data<0>()[i-1];
