@@ -3335,25 +3335,12 @@ is_array_deref(const parse_tree& src)
 			&&	src.empty<2>();
 }
 
-#define C99_UNARY_OPERATORS "+-*&!~"
-
 #define C99_UNARY_SUBTYPE_PLUS 1
 #define C99_UNARY_SUBTYPE_NEG 2
 #define C99_UNARY_SUBTYPE_DEREF 3
 #define C99_UNARY_SUBTYPE_ADDRESSOF 4
 #define C99_UNARY_SUBTYPE_NOT 5
 #define C99_UNARY_SUBTYPE_COMPL 6
-
-#if 0
-static bool is_C99_unary_operator_expression(const parse_tree& src)
-{
-	return		NULL!=src.index_tokens[0].token.first && 1==src.index_tokens[0].token.second && '\0'!=src.index_tokens[0].token.first[0] && strchr(C99_UNARY_OPERATORS,src.index_tokens[0].token.first[0])
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	src.empty<1>()
-			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
-}
-#endif
 
 template<char c> static bool is_C99_unary_operator_expression(const parse_tree& src)
 {
@@ -4858,142 +4845,6 @@ static bool locate_CPP_unary_plusminus(parse_tree& src, size_t& i, const type_sy
 	return false;
 }
 
-#if 0
-//! \todo need !, * implemented to disconnect bad design
-static bool terse_locate_unary_operator(parse_tree& src, size_t& i)
-{
-	assert(!src.empty<0>());
-	assert(i<src.size<0>());
-	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
-	assert(src.data<0>()[i].is_atomic());
-
-	if (	1!=src.data<0>()[i].index_tokens[0].token.second 
-		||	!strchr(C99_UNARY_OPERATORS,src.data<0>()[i].index_tokens[0].token.first[0]))
-		return false;
-
-	assert(1<src.size<0>()-i);	// should be intercepted at context-free check
-
-	if (unary_operator_asphyxiates_empty_parentheses_and_brackets(src.c_array<0>()[i],src.c_array<0>()[i+1]))
-		return false;
-
-	if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
-		{
-		parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-		assert(NULL!=tmp);
-		*tmp = src.data<0>()[i+1];
-		src.c_array<0>()[i].fast_set_arg<2>(tmp);
-		src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
-		src.c_array<0>()[i].flags |= PARSE_STRICT_UNARY_EXPRESSION;
-		if (PARSE_CONSTANT_EXPRESSION & tmp->flags) src.c_array<0>()[i].flags |= PARSE_CONSTANT_EXPRESSION;
-		if (parse_tree::INVALID & tmp->flags) src.c_array<0>()[i].flags |= parse_tree::INVALID;
-		src.c_array<0>()[i+1].clear();
-		src.DeleteIdx<0>(i+1);
-		assert(is_C99_unary_operator_expression(src.data<0>()[i]));
-		cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
-		assert(is_C99_unary_operator_expression(src.data<0>()[i]));
-		return true;
-		}
-	return false;
-}
-
-static void C_unary_op_easy_syntax_check(parse_tree& src,const type_system& types)
-{
-	assert(is_C99_unary_operator_expression(src));
-
-	// handle periodicity weirdnesses now (memory conservation)
-	unsigned int lift_n = 0;
-	switch(*src.index_tokens[0].token.first)
-	{
-#ifdef NDEBUG
-	default:	return;	// fail-safe default
-#else
-	default:	FATAL_CODE("invariant violation, *src.index_tokens[0].first not in range",3);
-#endif
-	case '*':	FATAL_CODE("already ported",3);
-	case '&':	{
-				if (	is_C99_unary_operator_expression<'*'>(*src.data<2>())
-					&& 	is_C99_unary_operator_expression<'&'>(*src.data<2>()->data<2>()))
-					lift_n = 2;
-				else{
-					// tentative type assignment
-					src.subtype = C99_UNARY_SUBTYPE_ADDRESSOF;
-					src.type_code = src.data<2>()->type_code;
-					src.type_code.pointer_power++;
-					src.type_code.traits &= ~type_spec::lvalue;
-					return;	// could actually be binary &, so postpone error checks
-					}
-				break;
-				}
-	case '+':	FATAL_CODE("already ported",3);
-	case '-':	FATAL_CODE("already ported",3);
-	case '!':	FATAL_CODE("already ported",3);
-	case '~':	FATAL_CODE("already ported",3);
-	}
-	assert(1<=lift_n && 2>=lift_n);
-	parse_tree tmp2;
-	if (1==lift_n)
-		{
-		tmp2 = *src.data<2>();
-		src.c_array<2>()->clear();
-		}
-	else{
-		tmp2 = *src.data<2>()->data<2>();
-		src.c_array<2>()->c_array<2>()->clear();
-		}
-	src.destroy();
-	src = tmp2;
-}
-
-static void CPP_unary_op_easy_syntax_check(parse_tree& src,const type_system& types)
-{
-	assert(is_C99_unary_operator_expression(src));
-
-	// handle periodicity weirdnesses now (memory conservation)
-	//! \todo handle operator overloading
-	unsigned int lift_n = 0;
-	switch(*src.index_tokens[0].token.first)
-	{
-#ifdef NDEBUG
-	default:	return;	// fail-safe default
-#else
-	default:	FATAL_CODE("invariant violation, *src.index_tokens[0].first not in range",3);
-#endif
-	case '*':	FATAL_CODE("already ported",3);
-	case '&':	{
-				if (	is_C99_unary_operator_expression<'*'>(*src.data<2>())
-					&& 	is_C99_unary_operator_expression<'&'>(*src.data<2>()->data<2>()))
-					lift_n = 2;
-				else{
-					// tentative type assignment
-					src.subtype = C99_UNARY_SUBTYPE_ADDRESSOF;
-					src.type_code = src.data<2>()->type_code;
-					src.type_code.pointer_power++;
-					src.type_code.traits &= ~type_spec::lvalue;
-					return;	// could actually be binary &, so postpone error checks
-					}
-				break;
-				}
-	case '+':	FATAL_CODE("already ported",3);
-	case '-':	FATAL_CODE("already ported",3);
-	case '!':	FATAL_CODE("already ported",3);
-	case '~':	FATAL_CODE("already ported",3);
-	}
-	assert(1<=lift_n && 2>=lift_n);
-	parse_tree tmp2;
-	if (1==lift_n)
-		{
-		tmp2 = *src.data<2>();
-		src.c_array<2>()->clear();
-		}
-	else{
-		tmp2 = *src.data<2>()->data<2>();
-		src.c_array<2>()->c_array<2>()->clear();
-		}
-	src.destroy();
-	src = tmp2;
-}
-#endif
-
 /* Scan for unary operators and cast expressions
 unary-expression:
 	postfix-expression
@@ -5025,12 +4876,7 @@ static void locate_C99_unary_expression(parse_tree& src, size_t& i, const type_s
 	if (locate_C99_unary_plusminus(src,i,types)) return;
 
 #if 0
-	if (terse_locate_unary_operator(src,i))
-		{
-		C_unary_op_easy_syntax_check(src.c_array<0>()[i],types);
-		return;
-		}
-	else if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"++"))
+	if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"++"))
 		{
 		}
 	else if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"--"))
@@ -5104,12 +4950,7 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 	if (locate_CPP_unary_plusminus(src,i,types)) return;
 
 #if 0
-	if (terse_locate_unary_operator(src,i))
-		{
-		CPP_unary_op_easy_syntax_check(src.c_array<0>()[i],types);
-		return;
-		}
-	else if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"++"))
+	if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"++"))
 		{
 		}
 	else if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"--"))
@@ -8165,54 +8006,6 @@ RestartEval:
 	if (eval_bitwise_XOR(src,types,C99_EvalParseTree,is_C99_bitwise_XOR_expression,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_OR(src,types,C99_EvalParseTree,is_C99_bitwise_OR_expression,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_compl(src,types,C99_EvalParseTree,is_C99_unary_operator_expression<'~'>,C99_intlike_literal_to_VM)) goto RestartEval;
-#if 0
-	if (is_C99_unary_operator_expression(src))
-		{	// periodicity weirdnesses should already have been intercepted
-			// have to move *now* to handle some problems: &*str_literal is legal, but &char_literal is not; likewise for &(str_literal[0])
-		if (cancel_addressof_deref_operators(src)) goto RestartEval;
-		C99_EvalParseTree(*src.c_array<2>(),types);
-		if (C_TYPE::VOID==src.data<2>()->type_code.base_type_index)
-			{
-			assert('!'!= *src.index_tokens[0].token.first && '~'!= *src.index_tokens[0].token.first);	/* these should never have been generated */
-			src.flags |= parse_tree::INVALID;
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" : void expression used as argument");
-			zcc_errors.inc_error();
-			return false;
-			}
-		if (PARSE_CONSTANT_EXPRESSION & src.flags && src.data<2>()->is_atomic())
-			{
-			switch(*src.index_tokens[0].token.first)
-			{
-#ifdef NDEBUG
-			default: return err_count;	// fail-safe
-#else
-			default: FATAL_CODE("*src.index_tokens[0].first out of range",3);
-#endif
-			case '*':	FATAL_CODE("already ported",3);
-			case '&':	{	//! bug review C/C++ standards to see whether &"0" really is illegal (GCC rejects, at least)
-						if ((C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_PP_NUMERAL) & src.data<2>()->index_tokens[0].flags)
-							{
-							message_header(src.index_tokens[0]);
-							INC_INFORM(ERR_STR);
-							INC_INFORM(src);
-							INFORM("takes address of literal");
-							src.flags |= parse_tree::INVALID;
-							zcc_errors.inc_error();
-							}
-						return starting_errors==zcc_errors.err_count();
-						}
-			case '+':	FATAL_CODE("already ported",3);
-			case '-':	FATAL_CODE("already ported",3);
-			case '!':	FATAL_CODE("already ported",3);
-			case '~':	FATAL_CODE("already ported",3);
-			}
-			}
-		}
-	// ...
-#endif
 	return starting_errors==zcc_errors.err_count();
 }
 
@@ -8236,55 +8029,6 @@ RestartEval:
 	if (eval_bitwise_XOR(src,types,CPlusPlus_EvalParseTree,is_CPP_bitwise_XOR_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_OR(src,types,CPlusPlus_EvalParseTree,is_CPP_bitwise_OR_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_bitwise_compl(src,types,CPlusPlus_EvalParseTree,is_CPP_bitwise_complement_expression,CPP_intlike_literal_to_VM)) goto RestartEval;
-#if 0
-	//! apply bool literal converter to unary !, not operators
-	if (is_C99_unary_operator_expression(src))
-		{	// periodicity weirdnesses should already have been intercepted
-			// have to move *now* to handle some problems: &*str_literal is legal, but &char_literal is not; likewise for &(str_literal[0])
-		if (cancel_addressof_deref_operators(src)) goto RestartEval;
-		if (!CPlusPlus_EvalParseTree(*src.c_array<2>(),types)) return false;
-		if (C_TYPE::VOID==src.data<2>()->type_code.base_type_index)
-			{
-			assert('!'!= *src.index_tokens[0].token.first && '~'!= *src.index_tokens[0].token.first);	/* these should never have been generated */
-			src.flags |= parse_tree::INVALID;
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" : void expression used as argument");
-			zcc_errors.inc_error();
-			return false;
-			}
-		if (PARSE_CONSTANT_EXPRESSION & src.flags && src.data<2>()->is_atomic())
-			{
-			switch(*src.index_tokens[0].token.first)
-			{
-#ifdef NDEBUG
-			default: return err_count;	// fail-safe
-#else
-			default: FATAL_CODE("*src.index_tokens[0].first out of range",3);
-#endif
-			case '*':	FATAL_CODE("already ported",3);
-			case '&':	{	//! bug review C/C++ standards to see whether &"0" really is illegal (GCC rejects, at least)
-						if ((C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_PP_NUMERAL) & src.data<2>()->index_tokens[0].flags)
-							{
-							message_header(src.index_tokens[0]);
-							INC_INFORM(ERR_STR);
-							INC_INFORM(src);
-							INFORM("takes address of literal");
-							src.flags |= parse_tree::INVALID;
-							zcc_errors.inc_error();
-							}
-						return starting_errors==zcc_errors.err_count();
-						}
-			case '+':	FATAL_CODE("already ported",3);
-			case '-':	FATAL_CODE("already ported",3);
-			case '!':	FATAL_CODE("already ported",3);
-			case '~':	FATAL_CODE("already ported",3);
-			}
-			}
-		}
-#endif
-	// ...
 	return starting_errors==zcc_errors.err_count();
 }
 
