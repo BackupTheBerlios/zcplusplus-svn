@@ -3710,14 +3710,8 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 		assert(NULL!=tmp);
 		*tmp = src.data<0>()[i-1];
 		src.c_array<0>()[i].fast_set_arg<1>(tmp);
-		src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
+		src.c_array<0>()[i].core_flag_update();
 		src.c_array<0>()[i].flags |= PARSE_STRICT_POSTFIX_EXPRESSION;
-		if (	(parse_tree::CONSTANT_EXPRESSION & tmp->flags)
-			&& 	(parse_tree::CONSTANT_EXPRESSION & src.data<0>()[i].data<0>()->flags))
-			src.c_array<0>()[i].flags |= parse_tree::CONSTANT_EXPRESSION;
-		if (	(parse_tree::INVALID & tmp->flags)
-			|| 	(parse_tree::INVALID & src.data<0>()[i].data<0>()->flags))
-			src.c_array<0>()[i].flags |= parse_tree::INVALID;
 		src.c_array<0>()[--i].clear();
 		src.DeleteIdx<0>(i);
 		assert(is_array_deref(src.data<0>()[i]));
@@ -4154,11 +4148,9 @@ static void assemble_unary_postfix_arguments(parse_tree& src, size_t& i, const s
 	assert(NULL!=tmp);
 	*tmp = src.data<0>()[i+1];
 	src.c_array<0>()[i].fast_set_arg<2>(tmp);
-	src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
+	src.c_array<0>()[i].core_flag_update();
 	src.c_array<0>()[i].flags |= PARSE_STRICT_UNARY_EXPRESSION;
 	src.c_array<0>()[i].subtype = _subtype;
-	if (parse_tree::CONSTANT_EXPRESSION & tmp->flags) src.c_array<0>()[i].flags |= parse_tree::CONSTANT_EXPRESSION;
-	if (parse_tree::INVALID & tmp->flags) src.c_array<0>()[i].flags |= parse_tree::INVALID;
 	src.c_array<0>()[i+1].clear();
 	src.DeleteIdx<0>(i+1);
 	cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
@@ -4998,14 +4990,8 @@ static void assemble_binary_infix_arguments(parse_tree& src, size_t& i, const za
 	*tmp2 = src.data<0>()[i+1];
 	src.c_array<0>()[i].fast_set_arg<1>(tmp);
 	src.c_array<0>()[i].fast_set_arg<2>(tmp2);
-	src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
+	src.c_array<0>()[i].core_flag_update();
 	src.c_array<0>()[i].flags |= _flags;
-	if (	(parse_tree::CONSTANT_EXPRESSION & tmp->flags)
-		&& 	(parse_tree::CONSTANT_EXPRESSION & tmp2->flags))
-		src.c_array<0>()[i].flags |= parse_tree::CONSTANT_EXPRESSION;
-	if (	(parse_tree::INVALID & tmp->flags)
-		|| 	(parse_tree::INVALID & tmp2->flags))
-		src.c_array<0>()[i].flags |= parse_tree::INVALID;
 	src.c_array<0>()[i-1].clear();
 	src.c_array<0>()[i+1].clear();
 	src.DeleteIdx<0>(i+1);
@@ -6927,17 +6913,8 @@ static bool terse_locate_conditional_op(parse_tree& src, size_t& i)
 				src.c_array<0>()[i].fast_set_arg<0>(tmp2);
 				src.c_array<0>()[i].fast_set_arg<1>(tmp);
 				src.c_array<0>()[i].fast_set_arg<2>(tmp3);
-				src.c_array<0>()[i].flags &= parse_tree::RESERVED_MASK;	// just in case
+				src.c_array<0>()[i].core_flag_update();
 				src.c_array<0>()[i].flags |= PARSE_STRICT_CONDITIONAL_EXPRESSION;
-				// Conservative: only one of the infix and postfix expressions is going to be evaluated
-				if (	(parse_tree::CONSTANT_EXPRESSION & tmp->flags)
-					&& 	(parse_tree::CONSTANT_EXPRESSION & tmp2->flags)
-					&& 	(parse_tree::CONSTANT_EXPRESSION & tmp3->flags))
-					src.c_array<0>()[i].flags |= parse_tree::CONSTANT_EXPRESSION;
-				if (	(parse_tree::INVALID & tmp->flags)
-					|| 	(parse_tree::INVALID & tmp2->flags)
-					|| 	(parse_tree::INVALID & tmp3->flags))
-					src.c_array<0>()[i].flags |= parse_tree::INVALID;
 				src.c_array<0>()[i-1].clear();
 				src.c_array<0>()[i+1].clear();
 				src.c_array<0>()[i+2].clear();

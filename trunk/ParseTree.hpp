@@ -214,6 +214,7 @@ struct parse_tree
 	bool is_raw_list() const;
 	void clear();	// XXX should be constructor; good way to leak memory in other contexts
 	void destroy();	// XXX should be destructor; note that this does *not* touch line/col information or src_filename in its own index_tokens
+	void core_flag_update();
 
 	template<size_t dest_idx> void fast_set_arg(parse_tree* src)
 		{

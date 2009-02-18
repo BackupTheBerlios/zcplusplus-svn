@@ -103,6 +103,33 @@ parse_tree::destroy()
 	type_code.clear();
 }
 
+void
+parse_tree::core_flag_update()
+{
+	size_t i = size<0>();
+	bool is_constant = true;
+	bool is_invalid = false;
+	flags &= parse_tree::RESERVED_MASK;	// just in case
+	while(0<i)
+		{
+		if (!(parse_tree::CONSTANT_EXPRESSION & data<0>()[--i].flags)) is_constant = false;
+		if (parse_tree::INVALID & data<0>()[i].flags) is_invalid = true;
+		};
+	i = size<1>();
+	while(0<i)
+		{
+		if (!(parse_tree::CONSTANT_EXPRESSION & data<1>()[--i].flags)) is_constant = false;
+		if (parse_tree::INVALID & data<1>()[i].flags) is_invalid = true;
+		};
+	i = size<2>();
+	while(0<i)
+		{
+		if (!(parse_tree::CONSTANT_EXPRESSION & data<2>()[--i].flags)) is_constant = false;
+		if (parse_tree::INVALID & data<2>()[i].flags) is_invalid = true;
+		};
+	flags |= parse_tree::CONSTANT_EXPRESSION*is_constant+parse_tree::INVALID*is_invalid;
+}
+
 bool
 parse_tree::collapse_matched_pair(parse_tree& src, const zaimoni::POD_pair<size_t,size_t>& target)
 {
