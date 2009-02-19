@@ -3368,7 +3368,6 @@ static bool is_CPP_bitwise_complement_expression(const parse_tree& src)
 }
 
 #if 0
-#define C99_MULT_OPERATORS "/%*"
 #define C99_MULT_SUBTYPE_DIV 1
 #define C99_MULT_SUBTYPE_MOD 2
 #define C99_MULT_SUBTYPE_MULT 3
@@ -3377,7 +3376,7 @@ BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_DEREF==C99_MULT_SUBTYPE_MULT)
 
 static bool is_C99_mult_operator_expression(const parse_tree& src)
 {
-	return		NULL!=src.index_tokens[0].token.first && 1==src.index_tokens[0].token.second && '\0'!=src.index_tokens[0].token.first[0] && strchr(C99_MULT_OPERATORS,src.index_tokens[0].token.first[0])
+	return		(robust_token_is_char<'/'>(src.index_tokens[0].token) || robust_token_is_char<'%'>(src.index_tokens[0].token) || robust_token_is_char<'*'>(src.index_tokens[0].token))
 			&&	NULL==src.index_tokens[1].token.first
 			&&	src.empty<0>()
 			&&	1==src.size<1>() && (PARSE_MULT_EXPRESSION & src.data<1>()->flags)
