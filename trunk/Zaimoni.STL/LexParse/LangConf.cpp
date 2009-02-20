@@ -26,13 +26,12 @@ using namespace zaimoni;
 //! <br>NOTE: we can pre-emptively break on newline outside of strings no matter what.
 //! <br>NOTE: we can discard pure-whitespace lines no matter what
 
-static bool
-_applyFilters(LangConf::Filter** FilterList,char*& Target)
+static bool _applyFilters(LangConf::Filter** FilterList, const size_t FilterSize, char*& Target)
 {	//! \pre FilterList!=NULL
 	//! \pre Target!=NULL
 	size_t i = 0;
 	do	if (!FilterList[i](Target) || NULL==Target) return false;
-	while(ArraySize(FilterList)> ++i);
+	while(FilterSize> ++i);
 	return true;
 }
 
@@ -121,7 +120,7 @@ LangConf::ApplyGlobalFilters(char*& Target) const
 {
 	if (NULL!=Target)
 		{	// legal char set is a global filter, but should be fairly late (after comment-stripping)
-		if (NULL!=GlobalFilters && !_applyFilters(GlobalFilters,Target))
+		if (NULL!=GlobalFilters && !_applyFilters(GlobalFilters,GlobalFilters.size(),Target))
 			return NULL==Target;
 		}
 	return true;
@@ -131,7 +130,7 @@ bool
 LangConf::ApplyTokenizingFilters(char*& Target) const
 {
 	if (NULL==TokenizingFilters || NULL==Target) return true;
-	return _applyFilters(TokenizingFilters,Target);
+	return _applyFilters(TokenizingFilters,TokenizingFilters.size(),Target);
 }
 
 size_t
@@ -182,7 +181,7 @@ size_t
 LangConf::NextToken(char*& Target, lex_flags& Flags) const
 {
 	if (NULL==Target) return 0;
-	if (NULL!=TokenizingFilters && !_applyFilters(TokenizingFilters,Target))
+	if (NULL!=TokenizingFilters && !_applyFilters(TokenizingFilters,TokenizingFilters.size(),Target))
 		return 0;
 
 	return TokenizeCore(Target,Flags);
@@ -323,7 +322,11 @@ static bool check_newline(char Test, _error_location& _loc)
 void
 LangConf::_flattenComments(char*& Text)
 {	// note: have to be able to lex
+#ifdef ZAIMONI_FORCE_ISO
 	const size_t TextLength = ArraySize(Text);
+#else
+	const size_t TextLength = strlen(Text);
+#endif
 	if (2>=TextLength) return;
 
 	// forward pass
@@ -373,7 +376,10 @@ LangConf::_flattenComments(char*& Text)
 		}
 	while(TextLength-deduct>++Idx);
 	if (0<deduct)
-		Text = REALLOC(Text,TextLength-deduct);
+		{
+		Text = REALLOC(Text,ZAIMONI_LEN_WITH_NULL(TextLength-deduct));
+		ZAIMONI_NULL_TERMINATE(Text[TextLength-deduct]);
+		}
 	return;
 }
 
