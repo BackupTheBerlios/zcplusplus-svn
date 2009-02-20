@@ -54,14 +54,22 @@ _applyTokenizers(LangConf::Tokenizer** Tokenizers,lex_flags* TokenizerFlags,cons
 void
 LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 {
+#ifdef ZAIMONI_FORCE_ISO
+	size_t BufferLength = _msize(Buffer);
+#else
+	size_t BufferLength = strlen(Buffer);
+#endif
 	size_t SweepIdx = 0;
 	if (BreakTokenOnNewline)
 		{
 		while('\n'!=Buffer[SweepIdx])
 			{
-			if (SweepIdx+2==ArraySize(Buffer) && '\n'==Buffer[SweepIdx+1])
-				Buffer = REALLOC(Buffer,_msize(Buffer)-1);
-			if (++SweepIdx==ArraySize(Buffer))
+			if (SweepIdx+2==BufferLength && '\n'==Buffer[SweepIdx+1])
+				{
+				Buffer = REALLOC(Buffer,ZAIMONI_LEN_WITH_NULL(--BufferLength));
+				ZAIMONI_NULL_TERMINATE(Buffer[BufferLength]);
+				}
+			if (++SweepIdx==BufferLength)
 				{
 				NewLine = Buffer;
 				Buffer = NULL;
@@ -73,8 +81,11 @@ LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 		bool InQuotes = false;
 		while('\n'!=Buffer[SweepIdx] || InQuotes)
 			{
-			if (SweepIdx+2==ArraySize(Buffer) && '\n'==Buffer[SweepIdx+1] && !InQuotes)
-				Buffer = REALLOC(Buffer,_msize(Buffer)-1);
+			if (SweepIdx+2==BufferLength && '\n'==Buffer[SweepIdx+1] && !InQuotes)
+				{
+				Buffer = REALLOC(Buffer,ZAIMONI_LEN_WITH_NULL(--BufferLength));
+				ZAIMONI_NULL_TERMINATE(Buffer[BufferLength]);
+				}
 			if (strchr(Quotes,Buffer[SweepIdx]))
 				InQuotes = !InQuotes;
 			else if ((InQuotes || !EscapeOnlyWithinQuotes) && SweepIdx+1<ArraySize(Buffer))
@@ -85,7 +96,7 @@ LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 						 && strchr(Quotes,Buffer[SweepIdx+1])))
 					SweepIdx++;
 				}
-			if (++SweepIdx==ArraySize(Buffer))
+			if (++SweepIdx==BufferLength)
 				{
 				NewLine = Buffer;
 				Buffer = NULL;
@@ -94,21 +105,28 @@ LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 			}
 		}
 
-	NewLine = REALLOC(NewLine,(SweepIdx<=(ArraySize(Buffer)>>1)) ? SweepIdx 
-															   : ArraySize(Buffer)-(SweepIdx+1));
-	if (NULL==NewLine)
-		return;
+	size_t NewLineLength = (SweepIdx<=(BufferLength>>1)) ? SweepIdx : BufferLength-(SweepIdx+1);
+#ifdef ZAIMONI_FORCE_ISO
+	NewLine = (0<NewLineLength) ? REALLOC(NewLine,NewLineLength+1) : NULL;
+	if (NULL==NewLine) return;
+	NewLine[NewLineLength] = '\0';
+#else
+	NewLine = REALLOC(NewLine,NewLineLength);
+	if (NULL==NewLine) return;
+#endif
 
-	Buffer[SweepIdx] = '\x00';
-	if (SweepIdx<=(ArraySize(Buffer)>>1))
+	Buffer[SweepIdx] = '\0';
+	if (SweepIdx<=(BufferLength>>1))
 		{
 		strcpy(NewLine,Buffer);
-		memmove(Buffer,&Buffer[SweepIdx+1],ArraySize(Buffer)-(SweepIdx+1));
-		Buffer = REALLOC(Buffer,ArraySize(Buffer)-(SweepIdx+1));
+		memmove(Buffer,&Buffer[SweepIdx+1],BufferLength-(SweepIdx+1));
+		Buffer = REALLOC(Buffer,ZAIMONI_LEN_WITH_NULL(BufferLength-(SweepIdx+1)));
+		ZAIMONI_NULL_TERMINATE(Buffer[BufferLength-(SweepIdx+1)]);
 		}
 	else{
 		strcpy(NewLine,&Buffer[SweepIdx+1]);
-		Buffer = REALLOC(Buffer,SweepIdx);		
+		Buffer = REALLOC(Buffer,ZAIMONI_LEN_WITH_NULL(SweepIdx));
+		ZAIMONI_NULL_TERMINATE(Buffer[SweepIdx]);
 		char* AltNewLine = Buffer;
 		Buffer = NewLine;
 		NewLine = AltNewLine;
@@ -323,9 +341,9 @@ void
 LangConf::_flattenComments(char*& Text)
 {	// note: have to be able to lex
 #ifdef ZAIMONI_FORCE_ISO
-	const size_t TextLength = ArraySize(Text);
-#else
 	const size_t TextLength = strlen(Text);
+#else
+	const size_t TextLength = ArraySize(Text);
 #endif
 	if (2>=TextLength) return;
 
