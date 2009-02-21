@@ -5021,7 +5021,7 @@ static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* s
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM(src);
-					INFORM(" has nonintegral LHS ");
+					INC_INFORM(" has nonintegral LHS ");
 					INFORM(standard);
 					zcc_errors.inc_error();
 					}
@@ -5031,7 +5031,7 @@ static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* s
 				message_header(src.index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM(src);
-				INFORM(" has nonintegral RHS ");
+				INC_INFORM(" has nonintegral RHS ");
 				INFORM(standard);
 				zcc_errors.inc_error();
 				}
@@ -5043,7 +5043,7 @@ static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* s
 				message_header(src.index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM(src);
-				INFORM(" has nonintegral LHS ");
+				INC_INFORM(" has nonintegral LHS ");
 				INFORM(standard);
 				zcc_errors.inc_error();
 				}
@@ -5058,7 +5058,7 @@ static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* s
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INC_INFORM(src);
-			INFORM(" has nonintegral RHS ");
+			INC_INFORM(" has nonintegral RHS ");
 			INFORM(standard);
 			zcc_errors.inc_error();
 			}
