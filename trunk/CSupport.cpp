@@ -3726,6 +3726,8 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 
 static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 {
+	if (parse_tree::INVALID & src.flags) return;	// cannot optimize to valid
+
 	const size_t effective_pointer_power_prefix = src.data<1>()->type_code.pointer_power_after_array_decay();
 	const size_t effective_pointer_power_infix = src.data<0>()->type_code.pointer_power_after_array_decay();
 	if (0<effective_pointer_power_prefix)
@@ -3752,16 +3754,13 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 			}
 		else{
 			src.flags |= parse_tree::INVALID;
-			if (!(parse_tree::INVALID & src.data<0>()->flags))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM("array dereference of pointer by ");
-				INFORM(types.name(src.data<0>()->type_code.base_type_index));
-				INFORM(" (C99 6.5.2.1p1)");
-				zcc_errors.inc_error();
-				return;
-				}
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM("array dereference of pointer by ");
+			INFORM(types.name(src.data<0>()->type_code.base_type_index));
+			INFORM(" (C99 6.5.2.1p1)");
+			zcc_errors.inc_error();
+			return;
 			}
 		}
 	else if (0<effective_pointer_power_infix)
@@ -3779,15 +3778,12 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 			}
 		else{	// autofails in C
 			src.flags |= parse_tree::INVALID;
-			if (!(parse_tree::INVALID & src.data<1>()->flags))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM("array dereference of pointer by ");
-				INFORM(types.name(src.data<1>()->type_code.base_type_index));
-				zcc_errors.inc_error();
-				return;
-				}
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM("array dereference of pointer by ");
+			INFORM(types.name(src.data<1>()->type_code.base_type_index));
+			zcc_errors.inc_error();
+			return;
 			}
 		}
 	else{	// autofails in C
@@ -3805,6 +3801,8 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 
 static void CPP_array_easy_syntax_check(parse_tree& src, const type_system& types)
 {
+	if (parse_tree::INVALID & src.flags) return;	// cannot optimize to valid
+
 	const size_t effective_pointer_power_prefix = src.data<1>()->type_code.pointer_power_after_array_decay();
 	const size_t effective_pointer_power_infix = src.data<0>()->type_code.pointer_power_after_array_decay();
 	if (0<effective_pointer_power_prefix)
@@ -3831,19 +3829,15 @@ static void CPP_array_easy_syntax_check(parse_tree& src, const type_system& type
 			}
 		else{
 			src.flags |= parse_tree::INVALID;
-			if (!(parse_tree::INVALID & src.data<0>()->flags))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM("array dereference of pointer by ");
-				INFORM(types.name(src.data<0>()->type_code.base_type_index));
-				INFORM(" (C++98 5.2.1p1,13.5.5p1)");
-				zcc_errors.inc_error();
-				return;
-				}
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM("array dereference of pointer by ");
+			INFORM(types.name(src.data<0>()->type_code.base_type_index));
+			INFORM(" (C++98 5.2.1p1,13.5.5p1)");
+			zcc_errors.inc_error();
+			return;
 			}
 		}
-	//! \todo check for operator[] overloading -- src.data<1>()
 	else if (0<effective_pointer_power_infix)
 		{
 		if (converts_to_integerlike(src.data<1>()->type_code.base_type_index))
@@ -3857,22 +3851,17 @@ static void CPP_array_easy_syntax_check(parse_tree& src, const type_system& type
 			// otherwise, we dereferenced a 1-d static array...fine for now
 			//! \todo change target for implementing multidimensional arrays
 			}
-		else{	// need type-checking facility
-				// could work in C++ (don't see anything in 13.5.5p1 prohibiting a pointer overload for in [ ]
+		else{
 			src.flags |= parse_tree::INVALID;
-			if (!(parse_tree::INVALID & src.data<1>()->flags))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM("array dereference of pointer by ");
-				INFORM(types.name(src.data<1>()->type_code.base_type_index));
-				zcc_errors.inc_error();
-				return;
-				}
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM("array dereference of pointer by ");
+			INFORM(types.name(src.data<1>()->type_code.base_type_index));
+			zcc_errors.inc_error();
+			return;
 			}
 		}
-	else{	// need type-checking facility
-			// could work in C++
+	else{
 		src.flags |= parse_tree::INVALID;
 		message_header(src.index_tokens[0]);
 		INC_INFORM(ERR_STR);
@@ -3987,7 +3976,7 @@ static void locate_CPP_postfix_expression(parse_tree& src, size_t& i, const type
 	if (NULL!=src.data<0>()[i].index_tokens[1].token.first)
 		{
 		if (terse_locate_array_deref(src,i))
-			{
+			{	//! \todo handle operator [] overloading
 			CPP_array_easy_syntax_check(src.c_array<0>()[i],types);
 			return;
 			}
@@ -5001,67 +4990,30 @@ static void assemble_binary_infix_arguments(parse_tree& src, size_t& i, const za
 
 static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* standard)
 {
+	assert(NULL!=standard);
+	if (parse_tree::INVALID & src.flags)	// already invalid, don't make noise
+		return !converts_to_integerlike(src.data<1>()->type_code) || !converts_to_integerlike(src.data<2>()->type_code);
+
 	if (!converts_to_integerlike(src.data<1>()->type_code))
 		{
 		src.flags |= parse_tree::INVALID;
-		if (!converts_to_integerlike(src.data<2>()->type_code))
-			{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				if (!(src.data<2>()->flags & parse_tree::INVALID))
-					{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INC_INFORM(" has nonintegral LHS and RHS ");
-					INFORM(standard);
-					zcc_errors.inc_error();
-					}
-				else{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INC_INFORM(" has nonintegral LHS ");
-					INFORM(standard);
-					zcc_errors.inc_error();
-					}
-				}
-			else if (!(src.data<2>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INC_INFORM(" has nonintegral RHS ");
-				INFORM(standard);
-				zcc_errors.inc_error();
-				}
-			return true;
-			}
-		else{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INC_INFORM(" has nonintegral LHS ");
-				INFORM(standard);
-				zcc_errors.inc_error();
-				}
-			return true;
-			}
+		message_header(src.index_tokens[0]);
+		INC_INFORM(ERR_STR);
+		INC_INFORM(src);
+		INC_INFORM(converts_to_integerlike(src.data<2>()->type_code) ? " has nonintegral LHS " : " has nonintegral LHS and RHS ");
+		INFORM(standard);
+		zcc_errors.inc_error();
+		return true;
 		}
 	else if (!converts_to_integerlike(src.data<2>()->type_code))
 		{
 		src.flags |= parse_tree::INVALID;
-		if (!(src.data<2>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INC_INFORM(" has nonintegral RHS ");
-			INFORM(standard);
-			zcc_errors.inc_error();
-			}
+		message_header(src.index_tokens[0]);
+		INC_INFORM(ERR_STR);
+		INC_INFORM(src);
+		INC_INFORM(" has nonintegral RHS ");
+		INFORM(standard);
+		zcc_errors.inc_error();
 		return true;
 		}
 	return false;
@@ -6374,6 +6326,48 @@ static void locate_CPP_bitwise_OR(parse_tree& src, size_t& i, const type_system&
 		CPP_bitwise_OR_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
+static bool binary_infix_failed_boolean_arguments(parse_tree& src, const char* standard)
+{	//! \todo so the error message isn't technically right...convertible to bool in C++ is morally equivalent to scalar in C
+	assert(NULL!=standard);
+	if (parse_tree::INVALID & src.flags)	// already invalid, don't make noise
+		return !converts_to_bool(src.data<1>()->type_code) || !converts_to_bool(src.data<2>()->type_code);
+
+	if (!converts_to_bool(src.data<1>()->type_code))
+		{
+		src.flags |= parse_tree::INVALID;
+		if (!converts_to_bool(src.data<2>()->type_code))
+			{
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INC_INFORM(" has nonscalar LHS and RHS ");
+			INFORM(standard);
+			zcc_errors.inc_error();
+			}
+		else{
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INC_INFORM(" has nonscalar LHS ");
+			INFORM(standard);
+			zcc_errors.inc_error();
+			}
+		return true;
+		}
+	else if (!converts_to_bool(src.data<2>()->type_code))
+		{
+		src.flags |= parse_tree::INVALID;
+		message_header(src.index_tokens[0]);
+		INC_INFORM(ERR_STR);
+		INC_INFORM(src);
+		INC_INFORM(" has nonscalar RHS ");
+		INFORM(standard);
+		zcc_errors.inc_error();
+		return true;
+		}
+	return false;
+}
+
 static bool terse_locate_C99_logical_AND(parse_tree& src, size_t& i)
 {
 	assert(!src.empty<0>());
@@ -6473,61 +6467,7 @@ static bool eval_logical_AND(parse_tree& src, const type_system& types, func_tra
 static void C_logical_AND_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_logical_AND_expression(src));
-	if (!converts_to_bool(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!converts_to_bool(src.data<2>()->type_code))
-			{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				if (!(src.data<2>()->flags & parse_tree::INVALID))
-					{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonscalar LHS and RHS (C99 6.5.13p2)");
-					zcc_errors.inc_error();
-					}
-				else{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonscalar LHS (C99 6.5.13p2)");
-					zcc_errors.inc_error();
-					}
-				}
-			else if (!(src.data<2>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonscalar RHS (C99 6.5.13p2)");
-				zcc_errors.inc_error();
-				}
-			}
-		else if (!(src.data<1>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has nonscalar LHS (C99 6.5.13p2)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
-	else if (!converts_to_bool(src.data<2>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!(src.data<2>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has nonscalar RHS (C99 6.5.13p2)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
+	if (binary_infix_failed_boolean_arguments(src,"(C99 6.5.13p2)")) return;
 
 	if (eval_logical_AND(src,types,C99_literal_converts_to_bool)) return;
 }
@@ -6535,61 +6475,7 @@ static void C_logical_AND_easy_syntax_check(parse_tree& src,const type_system& t
 static void CPP_logical_AND_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_CPP_logical_AND_expression(src));
-	if (!converts_to_bool(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!converts_to_bool(src.data<2>()->type_code))
-			{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				if (!(src.data<2>()->flags & parse_tree::INVALID))
-					{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has LHS and RHS unconvertible to bool (C++98 5.14p1)");
-					zcc_errors.inc_error();
-					}
-				else{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has LHS unconvertible to bool (C++98 5.14p1)");
-					zcc_errors.inc_error();
-					}
-				}
-			else if (!(src.data<2>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has RHS unconvertible to bool (C++98 5.14p1)");
-				zcc_errors.inc_error();
-				}
-			}
-		else if (!(src.data<1>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has LHS unconvertible to bool (C++98 5.14p1)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
-	else if (!converts_to_bool(src.data<2>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!(src.data<2>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has RHS unconvertible to bool (C++98 5.14p1)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
+	if (binary_infix_failed_boolean_arguments(src,"(C++98 5.14p1)")) return;
 
 	if (eval_logical_AND(src,types,CPP_literal_converts_to_bool)) return;
 }
@@ -6726,61 +6612,7 @@ static bool eval_logical_OR(parse_tree& src, const type_system& types, func_trai
 static void C_logical_OR_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_logical_OR_expression(src));
-	if (!converts_to_bool(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!converts_to_bool(src.data<2>()->type_code))
-			{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				if (!(src.data<2>()->flags & parse_tree::INVALID))
-					{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonscalar LHS and RHS (C99 6.5.14p2)");
-					zcc_errors.inc_error();
-					}
-				else{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has nonscalar LHS (C99 6.5.14p2)");
-					zcc_errors.inc_error();
-					}
-				}
-			else if (!(src.data<2>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonscalar RHS (C99 6.5.14p2)");
-				zcc_errors.inc_error();
-				}
-			}
-		else if (!(src.data<1>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has nonscalar LHS (C99 6.5.14p2)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
-	else if (!converts_to_bool(src.data<2>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!(src.data<2>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has nonscalar RHS (C99 6.5.14p2)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
+	if (binary_infix_failed_boolean_arguments(src,"(C99 6.5.14p2)")) return;
 
 	if (eval_logical_OR(src,types,C99_literal_converts_to_bool)) return;
 }
@@ -6788,61 +6620,7 @@ static void C_logical_OR_easy_syntax_check(parse_tree& src,const type_system& ty
 static void CPP_logical_OR_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_CPP_logical_OR_expression(src));
-	if (!converts_to_bool(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!converts_to_bool(src.data<2>()->type_code))
-			{
-			if (!(src.data<1>()->flags & parse_tree::INVALID))
-				{
-				if (!(src.data<2>()->flags & parse_tree::INVALID))
-					{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has LHS and RHS unconvertible to bool (C++98 5.15p1)");
-					zcc_errors.inc_error();
-					}
-				else{
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has LHS unconvertible to bool (C++98 5.15p1)");
-					zcc_errors.inc_error();
-					}
-				}
-			else if (!(src.data<2>()->flags & parse_tree::INVALID))
-				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has RHS unconvertible to bool (C++98 5.15p1)");
-				zcc_errors.inc_error();
-				}
-			}
-		else if (!(src.data<1>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has LHS unconvertible to bool (C++98 5.15p1)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
-	else if (!converts_to_bool(src.data<2>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!(src.data<2>()->flags & parse_tree::INVALID))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" has RHS unconvertible to bool (C++98 5.15p1)");
-			zcc_errors.inc_error();
-			}
-		return;
-		}
+	if (binary_infix_failed_boolean_arguments(src,"(C++98 5.15p1)")) return;
 
 	if (eval_logical_OR(src,types,CPP_literal_converts_to_bool)) return;
 }
