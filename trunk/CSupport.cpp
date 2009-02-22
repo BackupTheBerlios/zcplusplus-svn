@@ -4391,6 +4391,24 @@ static bool locate_CPP_logical_NOT(parse_tree& src, size_t& i, const type_system
 	return false;
 }
 
+static bool VM_to_token(const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,const size_t base_type_index,zaimoni::POD_pair<char*,zaimoni::lex_flags>& dest)
+{
+	const uintmax_t res = src_int.to_uint();
+	const char* suffix = literal_suffix(base_type_index);
+	char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
+	dest.second = literal_flags(base_type_index);
+	z_umaxtoa(res,buf,10);
+	assert(!suffix || 3>=strlen(suffix));
+	assert(dest.second);
+	if (suffix) strcat(buf,suffix);
+	assert(strlen(buf));
+
+	dest.first = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(strlen(buf)),1));
+	if (!dest.first) return false;
+	strcpy(dest.first,buf);
+	return true;
+}
+
 static bool int_has_trapped(parse_tree& src,const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int)
 {
 	assert(C_TYPE::INT<=src.type_code.base_type_index && C_TYPE::INTEGERLIKE>src.type_code.base_type_index);
@@ -4472,21 +4490,10 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,func_tr
 
 		if (int_has_trapped(src,src_int)) return false;
 
-		const uintmax_t res = src_int.to_uint();
-		const char* suffix = literal_suffix(old_type.base_type_index);
-		zaimoni::lex_flags new_flags = literal_flags(old_type.base_type_index);
-		char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
-		z_umaxtoa(res,buf,10);
-		assert(!suffix || 3>=strlen(suffix));
-		assert(new_flags);
-		if (suffix) strcat(buf,suffix);
-		assert(strlen(buf));
-
-		char* new_token = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(strlen(buf)),1));
 		//! \todo flag failures to reduce as RAM-stalled
-		if (!new_token) return false;	// catch this later
-		strcpy(new_token,buf);
-		src.c_array<2>()->grab_index_token_from<0>(new_token,new_flags | C_TESTFLAG_DECIMAL);
+		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+		if (!VM_to_token(src_int,old_type.base_type_index,new_token)) return false;
+		src.c_array<2>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
 		src.eval_to_arg<2>(0);
 		src.type_code = old_type;
 		return true;
@@ -4650,21 +4657,10 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,func_trai
 		assert(res_int>=src_int);
 		(res_int -= src_int) += 1;
 
-		const uintmax_t res = res_int.to_uint();
-		const char* suffix = literal_suffix(old_type.base_type_index);
-		const zaimoni::lex_flags new_flags = literal_flags(old_type.base_type_index);
-		char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
-		z_umaxtoa(res,buf,10);
-		assert(!suffix || 3>=strlen(suffix));
-		assert(new_flags);
-		if (suffix) strcat(buf,suffix);
-		assert(strlen(buf));
-
-		char* new_token = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(strlen(buf)),1));
 		//! \todo flag failures to reduce as RAM-stalled
-		if (!new_token) return false;	// catch this later
-		strcpy(new_token,buf);
-		src.c_array<2>()->grab_index_token_from<0>(new_token,new_flags | C_TESTFLAG_DECIMAL);
+		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+		src.c_array<2>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
 		src.eval_to_arg<2>(0);
 		src.type_code = old_type;
 		return true;
@@ -5130,21 +5126,10 @@ static bool eval_shift(parse_tree& src, const type_system& types, func_traits<bo
 			else	// if (C99_SHIFT_SUBTYPE_RIGHT==src.subtype)
 				res_int >>= rhs_int.to_uint();
 
-			const uintmax_t res = res_int.to_uint();
-			const char* suffix = literal_suffix(old_type.base_type_index);
-			const zaimoni::lex_flags new_flags = literal_flags(old_type.base_type_index);
-			char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
-			z_umaxtoa(res,buf,10);
-			assert(!suffix || 3>=strlen(suffix));
-			assert(new_flags);
-			if (suffix) strcat(buf,suffix);
-			assert(strlen(buf));
-
-			char* new_token = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(strlen(buf)),1));
 			//! \todo flag failures to reduce as RAM-stalled
-			if (!new_token) return false;	// catch this later
-			strcpy(new_token,buf);
-			src.c_array<1>()->grab_index_token_from<0>(new_token,new_flags | C_TESTFLAG_DECIMAL);
+			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+			src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
 			src.eval_to_arg<1>(0);
 			src.type_code = old_type;
 			return true;
@@ -5904,21 +5889,10 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types, func_tra
 			return true;
 			}
 		else{
-			const uintmax_t res = res_int.to_uint();
-			const char* suffix = literal_suffix(old_type.base_type_index);
-			const zaimoni::lex_flags new_flags = literal_flags(old_type.base_type_index);
-			char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
-			z_umaxtoa(res,buf,10);
-			assert(!suffix || 3>=strlen(suffix));
-			assert(new_flags);
-			if (suffix) strcat(buf,suffix);
-			assert(strlen(buf));
-
-			char* new_token = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(strlen(buf)),1));
 			//! \todo flag failures to reduce as RAM-stalled
-			if (!new_token) return false;	// catch this later
-			strcpy(new_token,buf);
-			src.c_array<1>()->grab_index_token_from<0>(new_token,new_flags | C_TESTFLAG_DECIMAL);
+			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+			src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
 			src.eval_to_arg<1>(0);
 			src.type_code = old_type;
 			return true;
@@ -6072,21 +6046,10 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, func_tra
 
 		if (int_has_trapped(src,res_int)) return false;
 
-		const uintmax_t res = res_int.to_uint();
-		const char* suffix = literal_suffix(old_type.base_type_index);
-		const zaimoni::lex_flags new_flags = literal_flags(old_type.base_type_index);
-		char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
-		z_umaxtoa(res,buf,10);
-		assert(!suffix || 3>=strlen(suffix));
-		assert(new_flags);
-		if (suffix) strcat(buf,suffix);
-		assert(strlen(buf));
-
-		char* new_token = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(strlen(buf)),1));
 		//! \todo flag failures to reduce as RAM-stalled
-		if (!new_token) return false;	// catch this later
-		strcpy(new_token,buf);
-		src.c_array<1>()->grab_index_token_from<0>(new_token,new_flags | C_TESTFLAG_DECIMAL);
+		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+		src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
 		src.eval_to_arg<1>(0);
 		src.type_code = old_type;
 		return true;
@@ -6249,21 +6212,10 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, func_trai
 			return true;
 			}
 		else{
-			const uintmax_t res = res_int.to_uint();
-			const char* suffix = literal_suffix(old_type.base_type_index);
-			const zaimoni::lex_flags new_flags = literal_flags(old_type.base_type_index);
-			char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
-			z_umaxtoa(res,buf,10);
-			assert(!suffix || 3>=strlen(suffix));
-			assert(new_flags);
-			if (suffix) strcat(buf,suffix);
-			assert(strlen(buf));
-
-			char* new_token = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(strlen(buf)),1));
 			//! \todo flag failures to reduce as RAM-stalled
-			if (!new_token) return false;	// catch this later
-			strcpy(new_token,buf);
-			src.c_array<1>()->grab_index_token_from<0>(new_token,new_flags | C_TESTFLAG_DECIMAL);
+			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+			src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
 			src.eval_to_arg<1>(0);
 			src.type_code = old_type;
 			return true;
