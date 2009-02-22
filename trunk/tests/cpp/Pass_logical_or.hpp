@@ -85,3 +85,56 @@
 #else
 #endif
 
+// spot-check -1
+// 2-ary
+#if -1 || -1
+#else
+#error -1 || -1 is false
+#endif
+
+#if -1 || 0
+#else
+#error -1 || 0 is false
+#endif
+
+#if 0 || -1
+#else
+#error 0 || -1 is false
+#endif
+
+// check implicit left-right associativity
+#if -1 || -1 || -1
+#else
+#error -1 || -1 || -1 is false
+#endif
+
+#if -1 || -1 || 0
+#else
+#error -1 || -1 || 0 is false
+#endif
+
+#if -1 || 0 || -1
+#else
+#error -1 || 0 || -1 is false
+#endif
+
+#if -1 || 0 || 0
+#else
+#error -1 || 0 || 0 is false
+#endif
+
+#if 0 || -1 || -1
+#else
+#error 0 || -1 || -1 is false
+#endif
+
+#if 0 || -1 || 0
+#else
+#error 0 || -1 || 0 is false
+#endif
+
+#if 0 || 0 || -1
+#else
+#error 0 || 0 || -1 is false
+#endif
+

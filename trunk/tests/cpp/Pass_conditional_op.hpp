@@ -105,3 +105,24 @@
 #else
 #endif
 
+// spot-check -1
+#if -1 ? 1 : 0
+#else
+#error -1 ? 1 : 0 is 0
+#endif
+
+#if -1 ? 1 : 1
+#else
+#error -1 ? 1 : 1 is not 1
+#endif
+
+#if -1 ? 0 : 0
+#error -1 ? 0 : 0 is not 0
+#else
+#endif
+
+#if -1 ? 0 : 1
+#error -1 ? 0 : 1 is 1
+#else
+#endif
+

@@ -4063,12 +4063,18 @@ static bool _C99_literal_converts_to_bool(const parse_tree& src, bool& is_true)
 
 static bool C99_literal_converts_to_bool(const parse_tree& src, bool& is_true)
 {
+	// deal with -1 et. al.
+	if (is_C99_unary_operator_expression<'-'>(src) && src.data<2>()->is_atomic()) return _C99_literal_converts_to_bool(*src.data<2>(),is_true);
+
 	if (!src.is_atomic()) return false;
 	return _C99_literal_converts_to_bool(src,is_true);
 }
 
 static bool CPP_literal_converts_to_bool(const parse_tree& src, bool& is_true)
 {
+	// deal with -1 et. al.
+	if (is_C99_unary_operator_expression<'-'>(src) && src.data<2>()->is_atomic()) return CPP_literal_converts_to_bool(*src.data<2>(),is_true);
+
 	if (!src.is_atomic()) return false;
 	if (_C99_literal_converts_to_bool(src,is_true)) return true;
 	// deal with: this, true, false
