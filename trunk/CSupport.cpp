@@ -1568,7 +1568,7 @@ static void air_for_left_bracket(const weak_token* tokenlist,size_t i,bool hard_
 		}
 }
 
-// this forks when logical-OR is supported
+//! \todo this forks when distinctions between C, C++ are supported
 // balancing errors are handled earlier
 static bool right_paren_asphyxiates(const weak_token& token)
 {
@@ -1578,15 +1578,43 @@ static bool right_paren_asphyxiates(const weak_token& token)
 		|| token_is_char<'-'>(token.token)
 		|| token_is_char<'~'>(token.token)
 		|| token_is_char<'!'>(token.token)
+	    || token_is_char<'/'>(token.token)	// proper multiplicative operators
+	    || token_is_char<'%'>(token.token)
+//		|| token_is_string<2>(token.token,"<<")	// shift operators -- watch out for parsing problems with templates, this really is C only
+//		|| token_is_string<2>(token.token,">>")
+//		|| token_is_char<'<'>(token.token)	// relational operators -- watch out for parsing problems with templates
+//	    || token_is_char<'>'>(token.token)
+		|| token_is_string<2>(token.token,"<=")
+		|| token_is_string<2>(token.token,">=")
+		|| token_is_string<2>(token.token,"==")	// equality operators
+		|| token_is_string<2>(token.token,"!=")
+	    || token_is_char<'^'>(token.token)		// bitwise XOR
+		|| token_is_char<'|'>(token.token)		// bitwise OR
+		|| token_is_string<2>(token.token,"&&")	// logical AND
+		|| token_is_string<2>(token.token,"||")	// logical OR
 		|| token_is_char<'?'>(token.token))	// operator ? :
 		return true;
 	return false;
 }
 
-// this forks when logical-OR is supported
+//! \todo this forks when distinctions between C, C++ are supported
 static bool left_paren_asphyxiates(const weak_token& token)
 {
-	if (	token_is_char<'?'>(token.token)		// operator ? : 
+	if (	token_is_char<'/'>(token.token)	// proper multiplicative operators
+	    ||	token_is_char<'%'>(token.token)
+//		|| token_is_string<2>(token.token,"<<")	// shift operators -- watch out for parsing problems with templates, this really is C only
+//		|| token_is_string<2>(token.token,">>")
+//		|| token_is_char<'<'>(token.token)	// relational operators -- watch out for parsing problems with templates
+//	    || token_is_char<'>'>(token.token)
+		|| token_is_string<2>(token.token,"<=")
+		|| token_is_string<2>(token.token,">=")
+		|| token_is_string<2>(token.token,"==")	// equality operators
+		|| token_is_string<2>(token.token,"!=")
+	    || token_is_char<'^'>(token.token)		// bitwise XOR
+		|| token_is_char<'|'>(token.token)		// bitwise OR
+		|| token_is_string<2>(token.token,"&&")	// logical AND
+		|| token_is_string<2>(token.token,"||")	// logical OR
+		||	token_is_char<'?'>(token.token)		// operator ? : 
 		||	token_is_char<':'>(token.token))	// one of operator ? :, or a label
 		return true;
 	return false;
