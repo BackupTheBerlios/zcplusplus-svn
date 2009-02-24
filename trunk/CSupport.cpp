@@ -5868,31 +5868,29 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types, func_tra
 	// unary - gives us problems (result is target-specific, could generate a trap representation)
 	const type_spec old_type = src.type_code;
 	bool is_true = false;
-	if (literal_converts_to_bool(*src.data<1>(),is_true))
+	if (	(literal_converts_to_bool(*src.data<1>(),is_true) && !is_true)	// 0 & __
+		||	(literal_converts_to_bool(*src.data<2>(),is_true) && !is_true))	// __ & 0
 		{
-		if (!is_true)
-			{	// 0 & __
-			src.destroy();
-			src.index_tokens[0].token.first = "0";
-			src.index_tokens[0].token.second = 1;
-			src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-			_label_one_literal(src,types);
+		if (C_TYPE::INTEGERLIKE==old_type.base_type_index)
+			{
+			message_header(src.index_tokens[0]);
+			INC_INFORM("invalid ");
+			INC_INFORM(src);
+			INFORM(" optimized to valid 0");
+			};
+		src.destroy();
+		src.index_tokens[0].token.first = "0";
+		src.index_tokens[0].token.second = 1;
+		src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+		_label_one_literal(src,types);
+		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
+			{
 			src.type_code = old_type;
-			return true;
 			}
-		};
-	if (literal_converts_to_bool(*src.data<2>(),is_true))
-		{
-		if (!is_true)
-			{	// __ & 0
-			src.destroy();
-			src.index_tokens[0].token.first = "0";
-			src.index_tokens[0].token.second = 1;
-			src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-			_label_one_literal(src,types);
-			src.type_code = old_type;
-			return true;
+		else{
+			src.type_code.set_type(C_TYPE::LLONG);	// legalize
 			}
+		return true;
 		};
 	if (	C_TYPE::INTEGERLIKE!=src.data<1>()->type_code.base_type_index
 		&& 	C_TYPE::INTEGERLIKE!=src.data<2>()->type_code.base_type_index
