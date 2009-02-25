@@ -3395,12 +3395,11 @@ static bool is_CPP_bitwise_complement_expression(const parse_tree& src)
 			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
 }
 
-#if 0
 #define C99_MULT_SUBTYPE_DIV 1
 #define C99_MULT_SUBTYPE_MOD 2
 #define C99_MULT_SUBTYPE_MULT 3
 
-BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_DEREF==C99_MULT_SUBTYPE_MULT)
+BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_DEREF==C99_MULT_SUBTYPE_MULT);
 
 static bool is_C99_mult_operator_expression(const parse_tree& src)
 {
@@ -3410,7 +3409,15 @@ static bool is_C99_mult_operator_expression(const parse_tree& src)
 			&&	1==src.size<1>() && (PARSE_MULT_EXPRESSION & src.data<1>()->flags)
 			&&	1==src.size<2>() && (PARSE_PM_EXPRESSION & src.data<2>()->flags);
 }
-#endif
+
+template<char c> static bool is_C99_mult_operator_expression(const parse_tree& src)
+{
+	return		robust_token_is_char<c>(src.index_tokens[0].token)
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_MULT_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_PM_EXPRESSION & src.data<2>()->flags);
+}
 
 #if 0
 #define C99_ADD_SUBTYPE_PLUS 1
@@ -4259,12 +4266,8 @@ static bool locate_C99_deref(parse_tree& src, size_t& i, const type_system& type
 	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
 	assert(src.data<0>()[i].is_atomic());
 
-	if (terse_locate_deref(src,i))
-		{
-		C_deref_easy_syntax_check(src.c_array<0>()[i],types);
-		return true;
-		}
-	return false;
+	// defer deref syntax check to failed parse as multiply
+	return terse_locate_deref(src,i);
 }
 
 static bool locate_CPP_deref(parse_tree& src, size_t& i, const type_system& types)
@@ -4274,13 +4277,8 @@ static bool locate_CPP_deref(parse_tree& src, size_t& i, const type_system& type
 	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
 	assert(src.data<0>()[i].is_atomic());
 
-	if (terse_locate_deref(src,i))
-		{
-		//! \todo handle operator overloading
-		CPP_deref_easy_syntax_check(src.c_array<0>()[i],types);
-		return true;
-		}
-	return false;
+	// defer deref syntax check to failed parse as multiply
+	return terse_locate_deref(src,i);
 }
 
 static bool terse_locate_C_logical_NOT(parse_tree& src, size_t& i)
@@ -5016,6 +5014,481 @@ static void assemble_binary_infix_arguments(parse_tree& src, size_t& i, const za
 	src.DeleteIdx<0>(--i);
 	cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
 	cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
+}
+
+static void merge_binary_infix_argument(parse_tree& src, size_t& i, const zaimoni::lex_flags _flags)
+{
+	assert(1<=i);
+	parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
+	assert(NULL!=tmp);
+	*tmp = src.data<0>()[i-1];
+
+	src.c_array<0>()[i].fast_set_arg<1>(tmp);
+	src.c_array<0>()[i].core_flag_update();
+	src.c_array<0>()[i].flags |= _flags;
+	src.c_array<0>()[i-1].clear();
+	src.DeleteIdx<0>(--i);
+	cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
+}
+
+static bool terse_C99_augment_mult_expression(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i]))
+		{
+		if (1<=i && (PARSE_MULT_EXPRESSION & src.data<0>()[i-1].flags))
+			{
+			merge_binary_infix_argument(src,i,PARSE_STRICT_MULT_EXPRESSION);
+			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
+			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
+			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
+			return true;
+			}
+		else{	// run syntax-checks against unary *
+			C_deref_easy_syntax_check(src.c_array<0>()[i],types);
+			}
+		}
+	return false;
+}
+
+static bool terse_CPP_augment_mult_expression(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i]))
+		{
+		if (1<=i && (PARSE_MULT_EXPRESSION & src.data<0>()[i-1].flags))
+			{
+			merge_binary_infix_argument(src,i,PARSE_STRICT_MULT_EXPRESSION);
+			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
+			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
+			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
+			return true;
+			}
+		else{	// run syntax-checks against unary *
+			CPP_deref_easy_syntax_check(src.c_array<0>()[i],types);
+			}
+		}
+	return false;
+}
+
+static bool terse_locate_mult_expression(parse_tree& src, size_t& i)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
+	assert(src.data<0>()[i].is_atomic());
+
+	const size_t mult_subtype 	= (token_is_char<'/'>(src.data<0>()[i].index_tokens[0].token)) ? C99_MULT_SUBTYPE_DIV
+								: (token_is_char<'%'>(src.data<0>()[i].index_tokens[0].token)) ? C99_MULT_SUBTYPE_MOD
+								: (token_is_char<'*'>(src.data<0>()[i].index_tokens[0].token)) ? C99_MULT_SUBTYPE_MULT : 0;
+	if (mult_subtype)
+		{
+		if (1>i || 2>src.size<0>()-i) return false;
+		if (	(PARSE_MULT_EXPRESSION & src.data<0>()[i-1].flags)
+			&&	(PARSE_PM_EXPRESSION & src.data<0>()[i+1].flags))
+			{
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_MULT_EXPRESSION);
+			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
+			src.c_array<0>()[i].subtype = mult_subtype;
+			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
+			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
+			return true;
+			}
+		}
+	return false;
+}
+
+static bool eval_mult_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	assert(is_C99_mult_operator_expression<'*'>(src));
+
+	const type_spec old_type = src.type_code;
+	bool is_true = false;
+
+	// do this first to avoid unnecessary dynamic memory allocation
+	if (	(literal_converts_to_bool(*src.data<1>(),is_true) && !is_true)	// 0 * __
+		||	(literal_converts_to_bool(*src.data<2>(),is_true) && !is_true))	// __ * 0
+		{
+		if (C_TYPE::INTEGERLIKE==old_type.base_type_index)
+			{
+			message_header(src.index_tokens[0]);
+			INC_INFORM("invalid ");
+			INC_INFORM(src);
+			INFORM(" optimized to valid 0");
+			};
+		//! \todo unfortunately, leading +/- will invalidate this when binary +/- comes up: 1-0*5 should be accepted
+		src.destroy();
+		src.index_tokens[0].token.first = "0";
+		src.index_tokens[0].token.second = 1;
+		src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+		_label_one_literal(src,types);
+		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
+			{
+			src.type_code = old_type;
+			}
+		else{
+			src.type_code.set_type(C_TYPE::LLONG);	// legalize
+			}
+		return true;
+		};
+
+	if (	 converts_to_integer(src.data<1>()->type_code)
+		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
+		&&	 converts_to_integer(src.data<2>()->type_code)
+		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+		{
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+		intlike_literal_to_VM(res_int,*src.data<1>());
+		intlike_literal_to_VM(rhs_int,*src.data<2>());
+		res_int *= rhs_int;	//! \todo what about overflow?
+
+		//! \todo flag failures to reduce as RAM-stalled
+		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+		src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
+		src.eval_to_arg<1>(0);
+		src.type_code = old_type;
+		return true;
+		}
+
+	return false;
+}
+
+static bool eval_div_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	assert(is_C99_mult_operator_expression<'/'>(src));
+
+	bool is_true = false;
+	if (converts_to_integerlike(src.type_code))
+		{
+		if 		(literal_converts_to_bool(*src.data<2>(),is_true) && !is_true)
+			{
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" division by zero, undefined behavior (C99 6.5.5p5, C++98 5.6p4)");
+			zcc_errors.inc_error();
+			return false;
+			}
+#if 0
+		else if (/* would like a simple comparison of absolute values to auto-detect zero, possibly after mainline code */)
+			{
+			}
+		//! \todo change target for formal verification; would like to inject a constraint against div-by-integer-zero here
+#endif
+		};
+
+	if (	 converts_to_integer(src.data<1>()->type_code)
+		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
+		&&	 converts_to_integer(src.data<2>()->type_code)
+		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+		{
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+		const type_spec old_type = src.type_code;
+		intlike_literal_to_VM(res_int,*src.data<1>());
+		intlike_literal_to_VM(rhs_int,*src.data<2>());
+		res_int /= rhs_int;
+
+		//! \todo flag failures to reduce as RAM-stalled
+		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+		src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
+		src.eval_to_arg<1>(0);
+		src.type_code = old_type;
+		return true;
+		}
+	return false;
+}
+
+static bool eval_mod_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	assert(is_C99_mult_operator_expression<'%'>(src));
+
+	bool is_true = false;
+	if (converts_to_integerlike(src.type_code))
+		{
+		if 		(literal_converts_to_bool(*src.data<2>(),is_true) && !is_true)
+			{
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" division by zero, undefined behavior (C99 6.5.5p5, C++98 5.6p4)");
+			zcc_errors.inc_error();
+			return false;
+			}
+#if 0
+		else if (/* would like a simple comparison of (absolute?) values to auto-detect identity-map, possibly after mainline code */)
+			{
+			}
+		//! \todo change target for formal verification; would like to inject a constraint against div-by-integer-zero here
+#endif
+		};
+
+	if (	 converts_to_integer(src.data<1>()->type_code)
+		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
+		&&	 converts_to_integer(src.data<2>()->type_code)
+		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+		{
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+		const type_spec old_type = src.type_code;
+		intlike_literal_to_VM(res_int,*src.data<1>());
+		intlike_literal_to_VM(rhs_int,*src.data<2>());
+		res_int %= rhs_int;
+
+		//! \todo flag failures to reduce as RAM-stalled
+		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+		src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
+		src.eval_to_arg<1>(0);
+		src.type_code = old_type;
+		return true;
+		}
+	return false;
+}
+
+BOOST_STATIC_ASSERT(1==C99_MULT_SUBTYPE_MOD-C99_MULT_SUBTYPE_DIV);
+BOOST_STATIC_ASSERT(1==C99_MULT_SUBTYPE_MULT-C99_MULT_SUBTYPE_MOD);
+
+static void C_mult_expression_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	assert(C99_MULT_SUBTYPE_DIV<=src.subtype && C99_MULT_SUBTYPE_MULT>=src.subtype);
+	assert((C99_MULT_SUBTYPE_DIV==src.subtype) ? is_C99_mult_operator_expression<'/'>(src) : (C99_MULT_SUBTYPE_MULT==src.subtype) ? is_C99_mult_operator_expression<'*'>(src) : is_C99_mult_operator_expression<'%'>(src));
+	// note that 0*integerlike and so on are invalid, but do optimize to valid (but this is probably worth a separate execution path)
+	if (C99_MULT_SUBTYPE_MOD==src.subtype)
+		{	// require integral type
+		if (parse_tree::INVALID & src.flags)
+			{
+			if (!converts_to_integerlike(src.data<1>()->type_code) || !converts_to_integerlike(src.data<2>()->type_code)) return;
+			}
+		else if (!converts_to_integerlike(src.data<1>()->type_code))
+			{
+			if (!converts_to_integerlike(src.data<2>()->type_code))
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has nonintegral LHS and RHS (C99 6.5.5p2)");
+				zcc_errors.inc_error();
+				return;
+				}
+			else{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has nonintegral LHS (C99 6.5.5p2)");
+				zcc_errors.inc_error();
+				return;
+				}
+			}
+		else if (!converts_to_integerlike(src.data<2>()->type_code))
+			{
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" has nonintegral RHS (C99 6.5.5p2)");
+			zcc_errors.inc_error();
+			return;
+			}
+		src.type_code.set_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
+		eval_mod_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
+		}
+	else{	// require arithmetic type
+		if (parse_tree::INVALID & src.flags)
+			{
+			if (!converts_to_arithmeticlike(src.data<1>()->type_code) || !converts_to_arithmeticlike(src.data<2>()->type_code)) return;
+			}
+		else if (!converts_to_arithmeticlike(src.data<1>()->type_code))
+			{
+			if (!converts_to_arithmeticlike(src.data<2>()->type_code))
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has nonarithmetic LHS and RHS (C99 6.5.5p2)");
+				zcc_errors.inc_error();
+				return;
+				}
+			else{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has nonarithmetic LHS (C99 6.5.5p2)");
+				zcc_errors.inc_error();
+				return;
+				}
+			}
+		else if (!converts_to_arithmeticlike(src.data<2>()->type_code))
+			{
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" has nonarithmetic RHS (C99 6.5.5p2)");
+			zcc_errors.inc_error();
+			return;
+			}
+		src.type_code.set_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
+		if (C99_MULT_SUBTYPE_MULT==src.subtype)
+			eval_mult_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
+		else
+			eval_div_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);			
+		}
+}
+
+static void CPP_mult_expression_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	assert(C99_MULT_SUBTYPE_DIV<=src.subtype && C99_MULT_SUBTYPE_MULT>=src.subtype);
+	assert((C99_MULT_SUBTYPE_DIV==src.subtype) ? is_C99_mult_operator_expression<'/'>(src) : (C99_MULT_SUBTYPE_MULT==src.subtype) ? is_C99_mult_operator_expression<'*'>(src) : is_C99_mult_operator_expression<'%'>(src));
+
+	if (C99_MULT_SUBTYPE_MOD==src.subtype)
+		{	// require integral type
+		if (parse_tree::INVALID & src.flags)
+			{
+			if (!converts_to_integerlike(src.data<1>()->type_code) || !converts_to_integerlike(src.data<2>()->type_code)) return;
+			}
+		else if (!converts_to_integerlike(src.data<1>()->type_code))
+			{
+			if (!converts_to_integerlike(src.data<2>()->type_code))
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has nonintegral LHS and RHS (C++98 5.6p2)");
+				zcc_errors.inc_error();
+				return;
+				}
+			else{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has nonintegral LHS (C++98 5.6p2)");
+				zcc_errors.inc_error();
+				return;
+				}
+			}
+		else if (!converts_to_integerlike(src.data<2>()->type_code))
+			{
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" has nonintegral RHS (C++98 5.6p2)");
+			zcc_errors.inc_error();
+			return;
+			}
+		src.type_code.set_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
+		eval_mod_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+		}
+	else{	// require arithmetic type
+		if (parse_tree::INVALID & src.flags)
+			{
+			if (!converts_to_arithmeticlike(src.data<1>()->type_code) || !converts_to_arithmeticlike(src.data<2>()->type_code)) return;
+			}
+		else if (!converts_to_arithmeticlike(src.data<1>()->type_code))
+			{
+			if (!converts_to_arithmeticlike(src.data<2>()->type_code))
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has nonarithmetic LHS and RHS (C++98 5.6p2)");
+				zcc_errors.inc_error();
+				return;
+				}
+			else{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has nonarithmetic LHS (C++98 5.6p2)");
+				zcc_errors.inc_error();
+				return;
+				}
+			}
+		else if (!converts_to_arithmeticlike(src.data<2>()->type_code))
+			{
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" has nonarithmetic RHS (C++98 5.6p2)");
+			zcc_errors.inc_error();
+			return;
+			}
+		src.type_code.set_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
+		if (C99_MULT_SUBTYPE_MULT==src.subtype)
+			eval_mult_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+		else
+			eval_div_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+		}
+}
+
+/*
+multiplicative-expression:
+	cast-expression
+	multiplicative-expression * cast-expression
+	multiplicative-expression / cast-expression
+	multiplicative-expression % cast-expression
+*/
+static void locate_C99_mult_expression(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+
+	if (terse_C99_augment_mult_expression(src,i,types))
+		{
+		C_mult_expression_easy_syntax_check(src.c_array<0>()[i],types);
+		return;
+		}
+
+	if (   (PARSE_OBVIOUS & src.data<0>()[i].flags)
+		|| !src.data<0>()[i].is_atomic())
+		return;
+
+	if (terse_locate_mult_expression(src,i)) C_mult_expression_easy_syntax_check(src.c_array<0>()[i],types);
+}
+
+/*
+multexpression:
+	pmexpression
+	multexpression * pmexpression
+	multexpression / pmexpression
+	multexpression % pmexpression
+*/
+static void locate_CPP_mult_expression(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+
+	if (terse_CPP_augment_mult_expression(src,i,types))
+		{
+		//! \todo handle operator overloading
+		CPP_mult_expression_easy_syntax_check(src.c_array<0>()[i],types);
+		return;
+		}
+
+	if (   (PARSE_OBVIOUS & src.data<0>()[i].flags)
+		|| !src.data<0>()[i].is_atomic())
+		return;
+
+	if (terse_locate_mult_expression(src,i))
+		//! \todo handle operator overloading
+		CPP_mult_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* standard)
@@ -7067,16 +7540,7 @@ static size_t C99_locate_expressions(parse_tree& src,const size_t parent_identif
 		if (suppress_naked_brackets_and_braces(*src.c_array<0>(),"top-level",sizeof("top-level")-1)) ++err_count;
 		parse_forward(src,types,locate_C99_postfix_expression);
 		parse_backward(src,types,locate_C99_unary_expression);
-#if 0
-/*
-multiplicativeexpression:
-	unaryexpression
-	multiplicativeexpression * pmexpression
-	multiplicativeexpression / pmexpression
-	multiplicativeexpression % pmexpression
-*/
 		parse_forward(src,types,locate_C99_mult_expression);
-#endif
 /*
 additiveexpression:
 	multiplicativeexpression
@@ -7084,11 +7548,7 @@ additiveexpression:
 	additiveexpression - multiplicativeexpression
 */
 #if 0
-		i = 0;
-		do	{
-			if (parse_tree::INVALID & src.data<0>()[i].flags) continue;
-			}
-		while(src.size<0>() > ++i);	
+		parse_forward(src,types,locate_C99_add_expression);
 #endif
 		parse_forward(src,types,locate_C99_shift_expression);
 		parse_forward(src,types,locate_C99_relation_expression);
@@ -7173,16 +7633,7 @@ pmexpression:
 	pmexpression ->* castexpression
 */
 #endif
-#if 0
-/*
-multexpression:
-	pmexpression
-	multexpression * pmexpression
-	multexpression / pmexpression
-	multexpression % pmexpression
-*/
 		parse_forward(src,types,locate_CPP_mult_expression);
-#endif
 /*
 additive-expression:
 	multiplicative-expression
@@ -7190,11 +7641,7 @@ additive-expression:
 	additive-expression - multiplicative-expression
 */
 #if 0
-		i = 0;
-		do	{
-			if (parse_tree::INVALID & src.data<0>()[i].flags) continue;
-			}
-		while(src.size<0>() > ++i);	
+		parse_forward(src,types,locate_CPP_add_expression);
 #endif
 		parse_forward(src,types,locate_CPP_shift_expression);
 		parse_forward(src,types,locate_CPP_relation_expression);
@@ -7584,6 +8031,48 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,
 	return false;
 }
 
+static bool eval_mult_expression(parse_tree& src,const type_system& types,
+								func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
+								func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
+								func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	if (is_C99_mult_operator_expression<'*'>(src))
+		{
+		EvalParseTree(*src.c_array<1>(),types);
+		EvalParseTree(*src.c_array<2>(),types);
+		if (eval_mod_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		}
+	return false;
+}
+
+static bool eval_div_expression(parse_tree& src,const type_system& types,
+								func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
+								func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
+								func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	if (is_C99_mult_operator_expression<'*'>(src))
+		{
+		EvalParseTree(*src.c_array<1>(),types);
+		EvalParseTree(*src.c_array<2>(),types);
+		if (eval_mod_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		}
+	return false;
+}
+
+static bool eval_mod_expression(parse_tree& src,const type_system& types,
+								func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
+								func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
+								func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	if (is_C99_mult_operator_expression<'%'>(src))
+		{
+		EvalParseTree(*src.c_array<1>(),types);
+		EvalParseTree(*src.c_array<2>(),types);
+		if (eval_mod_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		}
+	return false;
+}
+
 static bool eval_shift(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
@@ -7749,6 +8238,9 @@ RestartEval:
 	if (eval_logical_NOT(src,types,C99_EvalParseTree,is_C99_unary_operator_expression<'!'>,C99_literal_converts_to_bool)) goto RestartEval;
 	if (eval_unary_plus(src,types,C99_EvalParseTree)) goto RestartEval;
 	if (eval_unary_minus(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_mult_expression(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_div_expression(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_mod_expression(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_shift(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_relation_expression(src,types,C99_EvalParseTree,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_equality_expression(src,types,C99_EvalParseTree,is_C99_equality_expression,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
@@ -7772,6 +8264,9 @@ RestartEval:
 	if (eval_logical_NOT(src,types,CPlusPlus_EvalParseTree,is_CPP_logical_NOT_expression,CPP_literal_converts_to_bool)) goto RestartEval;
 	if (eval_unary_plus(src,types,CPlusPlus_EvalParseTree)) goto RestartEval;
 	if (eval_unary_minus(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_mult_expression(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_div_expression(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_mod_expression(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_shift(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_relation_expression(src,types,CPlusPlus_EvalParseTree,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_equality_expression(src,types,CPlusPlus_EvalParseTree,is_CPP_equality_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
