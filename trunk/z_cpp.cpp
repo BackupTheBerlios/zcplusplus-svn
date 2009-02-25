@@ -305,7 +305,7 @@ main(int argc, char* argv[])
 	// error count enforcement
 	zcc_errors.set_error_ub(int_options[intopt::error_ub]);
 
-	virtual_machine::CPUInfo target_machine(8,2,4,4,8,(bool_options[boolopt::int_twos_complement]) ? virtual_machine::twos_complement : (bool_options[boolopt::int_ones_complement]) ? virtual_machine::ones_complement : virtual_machine::sign_and_magnitude,true);
+	virtual_machine::CPUInfo target_machine(8,2,4,4,8,(bool_options[boolopt::int_twos_complement]) ? virtual_machine::twos_complement : (bool_options[boolopt::int_ones_complement]) ? virtual_machine::ones_complement : virtual_machine::sign_and_magnitude,bool_options[boolopt::char_is_signed]);
 
 	// check that we actually can preprocess for this machine
 	//! \todo remove these limitations at some point
