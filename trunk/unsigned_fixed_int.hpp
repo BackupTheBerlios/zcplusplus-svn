@@ -83,10 +83,16 @@ struct _unsigned_fixed_charint
 		ZAIMONI_STATIC_ASSERT(N>n/CHAR_BIT);
 		return _x[n/CHAR_BIT] & (((unsigned char)(1U))<<(n%CHAR_BIT));
 		}
+
+	void toggle(size_t n)
+		{
+		assert(N>n/CHAR_BIT);
+		_x[n/CHAR_BIT] ^= (((unsigned char)(1U))<<(n%CHAR_BIT));
+		};
 	template<size_t n> void toggle()
 		{
 		ZAIMONI_STATIC_ASSERT(N>n/CHAR_BIT);
-		_x[n/CHAR_BIT] ^ (((unsigned char)(1U))<<(n%CHAR_BIT));
+		_x[n/CHAR_BIT] ^= (((unsigned char)(1U))<<(n%CHAR_BIT));
 		}
 
 	bool representable_as_uint() const

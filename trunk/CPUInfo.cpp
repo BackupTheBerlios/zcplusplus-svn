@@ -67,6 +67,25 @@ bool CPUInfo::trap_int(const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,st
 	return false;
 }
 
+void CPUInfo::signed_additive_inverse(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,std_int_enum machine_type) const
+{
+	assert(machine_type);
+	const int signed_int_rep = C_signed_int_representation();
+	if (sign_and_magnitude==signed_int_rep)
+		{
+		src_int.toggle(C_bit(machine_type)-1);
+		return;
+		}
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(unsigned_max(machine_type));
+	tmp -= src_int;
+	if (twos_complement==signed_int_rep)
+		{
+		tmp += 1;
+		tmp.mask_to(C_bit(machine_type));
+		}
+	src_int = tmp;
+}
+
 }	// end namespace virtual_machine
 
 #undef C_sizeof_char
