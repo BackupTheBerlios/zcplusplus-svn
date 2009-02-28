@@ -126,3 +126,24 @@
 #else
 #endif
 
+// spot-check that the unevaluated expression really is unevaluated
+#if 1 ? 1 : 1/0
+#else
+#error 1 ? 1 : 1/0 is false
+#endif
+
+#if 1 ? 0 : 1/0
+#error 1 ? 0 : 1/0 is true
+#else
+#endif
+
+#if 0 ? 1/0 : 1
+#else
+#error 0 ? 1/0 : 1 is true
+#endif
+
+#if 0 ? 1/0 : 0
+#error 0 ? 1/0 : 0 is false
+#else
+#endif
+

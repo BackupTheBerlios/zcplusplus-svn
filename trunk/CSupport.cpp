@@ -4441,14 +4441,14 @@ static bool VM_to_token(const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,c
 	return true;
 }
 
-static bool int_has_trapped(parse_tree& src,const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int)
+static bool int_has_trapped(parse_tree& src,const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,bool hard_error)
 {
 	assert(C_TYPE::INT<=src.type_code.base_type_index && C_TYPE::INTEGERLIKE>src.type_code.base_type_index);
 	// check for trap representation for signed types
 	const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
 	if (bool_options[boolopt::int_traps] && 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && target_machine->trap_int(src_int,machine_type))
 		{
-		if (!(parse_tree::INVALID & src.flags))
+		if (hard_error && !(parse_tree::INVALID & src.flags))
 			{
 			src.flags |= parse_tree::INVALID;
 			message_header(src.index_tokens[0]);
@@ -4506,7 +4506,7 @@ static bool terse_locate_CPP_bitwise_complement(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_bitwise_compl(parse_tree& src, const type_system& types,func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_complement_expression,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool hard_error,func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_complement_expression,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_bitwise_complement_expression(src));
 	assert(converts_to_integerlike(src.data<2>()->type_code));
@@ -4520,7 +4520,7 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,func_tr
 		src_int.auto_bitwise_complement();
 		src_int.mask_to(target_machine->C_bit(machine_type));
 
-		if (int_has_trapped(src,src_int)) return false;
+		if (int_has_trapped(src,src_int,hard_error)) return false;
 
 		//! \todo flag failures to reduce as RAM-stalled
 		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
@@ -4560,7 +4560,7 @@ static void C_bitwise_complement_easy_syntax_check(parse_tree& src,const type_sy
 		return;
 		}
 	src.type_code.set_type(default_promote_type(src.data<2>()->type_code.base_type_index));
-	if (eval_bitwise_compl(src,types,is_C99_unary_operator_expression<'~'>,C99_intlike_literal_to_VM)) return;
+	if (eval_bitwise_compl(src,types,false,is_C99_unary_operator_expression<'~'>,C99_intlike_literal_to_VM)) return;
 }
 
 static void CPP_bitwise_complement_easy_syntax_check(parse_tree& src,const type_system& types)
@@ -4581,7 +4581,7 @@ static void CPP_bitwise_complement_easy_syntax_check(parse_tree& src,const type_
 		return;
 		}
 	src.type_code.set_type(default_promote_type(src.data<2>()->type_code.base_type_index));
-	if (eval_bitwise_compl(src,types,is_CPP_bitwise_complement_expression,CPP_intlike_literal_to_VM)) return;
+	if (eval_bitwise_compl(src,types,false,is_CPP_bitwise_complement_expression,CPP_intlike_literal_to_VM)) return;
 }
 
 static bool locate_C99_bitwise_complement(parse_tree& src, size_t& i, const type_system& types)
@@ -5157,7 +5157,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, func
 	return false;
 }
 
-static bool eval_div_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_div_expression(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_C99_mult_operator_expression<'/'>(src));
 
@@ -5166,12 +5166,15 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, func_
 		{
 		if 		(literal_converts_to_bool(*src.data<2>(),is_true) && !is_true)
 			{
-			src.flags |= parse_tree::INVALID;
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" division by zero, undefined behavior (C99 6.5.5p5, C++98 5.6p4)");
-			zcc_errors.inc_error();
+			if (hard_error)
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" division by zero, undefined behavior (C99 6.5.5p5, C++98 5.6p4)");
+				zcc_errors.inc_error();
+				};
 			return false;
 			}
 #if 0
@@ -5205,7 +5208,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, func_
 	return false;
 }
 
-static bool eval_mod_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_mod_expression(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_C99_mult_operator_expression<'%'>(src));
 
@@ -5214,12 +5217,15 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, func_
 		{
 		if 		(literal_converts_to_bool(*src.data<2>(),is_true) && !is_true)
 			{
-			src.flags |= parse_tree::INVALID;
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" division by zero, undefined behavior (C99 6.5.5p5, C++98 5.6p4)");
-			zcc_errors.inc_error();
+			if (hard_error)
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" division by zero, undefined behavior (C99 6.5.5p5, C++98 5.6p4)");
+				zcc_errors.inc_error();
+				}
 			return false;
 			}
 #if 0
@@ -5300,7 +5306,7 @@ static void C_mult_expression_easy_syntax_check(parse_tree& src,const type_syste
 			return;
 			}
 		src.type_code.set_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
-		eval_mod_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
+		eval_mod_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 		}
 	else{	// require arithmetic type
 		if (parse_tree::INVALID & src.flags)
@@ -5343,7 +5349,7 @@ static void C_mult_expression_easy_syntax_check(parse_tree& src,const type_syste
 		if (C99_MULT_SUBTYPE_MULT==src.subtype)
 			eval_mult_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 		else
-			eval_div_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);			
+			eval_div_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);			
 		}
 }
 
@@ -5391,7 +5397,7 @@ static void CPP_mult_expression_easy_syntax_check(parse_tree& src,const type_sys
 			return;
 			}
 		src.type_code.set_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
-		eval_mod_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+		eval_mod_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 		}
 	else{	// require arithmetic type
 		if (parse_tree::INVALID & src.flags)
@@ -5434,7 +5440,7 @@ static void CPP_mult_expression_easy_syntax_check(parse_tree& src,const type_sys
 		if (C99_MULT_SUBTYPE_MULT==src.subtype)
 			eval_mult_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 		else
-			eval_div_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+			eval_div_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 		}
 }
 
@@ -5490,6 +5496,179 @@ static void locate_CPP_mult_expression(parse_tree& src, size_t& i, const type_sy
 		//! \todo handle operator overloading
 		CPP_mult_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
+
+#if 0
+static bool terse_C99_augment_add_expression(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	if (is_C99_unary_operator_expression<'+'>(src.data<0>()[i]) || is_C99_unary_operator_expression<'-'>(src.data<0>()[i]))
+		{
+		if (1<=i && (PARSE_ADD_EXPRESSION & src.data<0>()[i-1].flags))
+			{
+			merge_binary_infix_arguments(src,i,PARSE_STRICT_ADD_EXPRESSION);
+			assert(is_C99_add_operator_expression(src.data<0>()[i]));
+			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
+			assert(is_C99_add_operator_expression(src.data<0>()[i]));
+			return true;
+			}
+		else{	// run syntax-checks against unary + or unary -
+			C_unary_plusminus_easy_syntax_check(src.data<0>()[i],types);
+			}
+		}
+	return false;
+}
+
+static bool terse_CPP_augment_add_expression(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	if (is_C99_unary_operator_expression<'+'>(src.data<0>()[i]) || is_C99_unary_operator_expression<'-'>(src.data<0>()[i]))
+		{
+		if (1<=i && (PARSE_ADD_EXPRESSION & src.data<0>()[i-1].flags))
+			{
+			merge_binary_infix_arguments(src,i,PARSE_STRICT_ADD_EXPRESSION);
+			assert(is_C99_add_operator_expression(src.data<0>()[i]));
+			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
+			assert(is_C99_add_operator_expression(src.data<0>()[i]));
+			return true;
+			}
+		else{	// run syntax-checks against unary + or unary -
+			CPP_unary_plusminus_easy_syntax_check(src.data<0>()[i],types);
+			}
+		}
+	return false;
+}
+
+static bool terse_locate_add_expression(parse_tree& src, size_t& i)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
+	assert(src.data<0>()[i].is_atomic());
+
+	const size_t add_subtype 	= (token_is_char<'+'>(src.data<0>()[i].index_tokens[0].token)) ? C99_ADD_SUBTYPE_PLUS
+								: (token_is_char<'-'>(src.data<0>()[i].index_tokens[0].token)) ? C99_ADD_SUBTYPE_MINUS : 0;
+	if (add_subtype)
+		{
+		if (1>i || 2>src.size<0>()-i) return false;
+		if (	(PARSE_ADD_EXPRESSION & src.data<0>()[i-1].flags)
+			&&	(PARSE_MULT_EXPRESSION & src.data<0>()[i+1].flags))
+			{
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_ADD_EXPRESSION);
+			assert(is_C99_add_operator_expression(src.data<0>()[i]));
+			src.c_array<0>()[i].subtype = add_subtype;
+			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
+			assert(is_C99_add_operator_expression(src.data<0>()[i]));
+			return true;
+			}
+		}
+	return false;
+}
+
+static bool eval_add_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	assert(is_C99_add_operator_expression<'+'>(src));
+
+	if (	 converts_to_integer(src.data<1>()->type_code)
+		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
+		&&	 converts_to_integer(src.data<2>()->type_code)
+		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+		{
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+		const type_spec old_type = src.type_code;
+		intlike_literal_to_VM(res_int,*src.data<1>());
+		intlike_literal_to_VM(rhs_int,*src.data<2>());
+		res_int += rhs_int;
+
+		//! \todo flag failures to reduce as RAM-stalled
+		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+		src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
+		src.eval_to_arg<1>(0);
+		src.type_code = old_type;
+		return true;
+		}
+	return false;
+}
+
+static bool eval_sub_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	assert(is_C99_add_operator_expression<'-'>(src));
+
+	if (	 converts_to_integer(src.data<1>()->type_code)
+		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
+		&&	 converts_to_integer(src.data<2>()->type_code)
+		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+		{
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+		const type_spec old_type = src.type_code;
+		intlike_literal_to_VM(res_int,*src.data<1>());
+		intlike_literal_to_VM(rhs_int,*src.data<2>());
+		res_int -= rhs_int;
+
+		//! \todo flag failures to reduce as RAM-stalled
+		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+		src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
+		src.eval_to_arg<1>(0);
+		src.type_code = old_type;
+		return true;
+		}
+	return false;
+}
+
+static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	assert(is_C99_add_operator_expression(src));
+}
+
+static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	assert(is_C99_add_operator_expression(src));
+}
+
+static void locate_C99_add_expression(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+
+	if (terse_C99_augment_add_expression(src,i,types))
+		{
+		C_add_expression_easy_syntax_check(src.c_array<0>()[i],types);
+		return;
+		}
+
+	if (   (PARSE_OBVIOUS & src.data<0>()[i].flags)
+		|| !src.data<0>()[i].is_atomic())
+		return;
+
+	if (terse_locate_add_expression(src,i)) C_add_expression_easy_syntax_check(src.c_array<0>()[i],types);
+}
+
+static void locate_CPP_add_expression(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+
+	if (terse_CPP_augment_add_expression(src,i,types))
+		{
+		//! \todo handle operator overloading
+		CPP_add_expression_easy_syntax_check(src.c_array<0>()[i],types);
+		return;
+		}
+
+	if (   (PARSE_OBVIOUS & src.data<0>()[i].flags)
+		|| !src.data<0>()[i].is_atomic())
+		return;
+
+	if (terse_locate_add_expression(src,i))
+		//! \todo handle operator overloading
+		CPP_add_expression_easy_syntax_check(src.c_array<0>()[i],types);
+}
+#endif
 
 static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* standard)
 {
@@ -5548,7 +5727,7 @@ static bool terse_locate_shift_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_shift(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_shift(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(converts_to_integerlike(src.data<1>()->type_code));
 	assert(converts_to_integerlike(src.data<2>()->type_code));
@@ -5628,7 +5807,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, func_traits<bo
 					}
 #endif
 				res_int <<= rhs_int.to_uint();
-				if (int_has_trapped(src,res_int)) return false;
+				if (int_has_trapped(src,res_int,hard_error)) return false;
 				}
 			else	// if (C99_SHIFT_SUBTYPE_RIGHT==src.subtype)
 				res_int >>= rhs_int.to_uint();
@@ -5652,7 +5831,7 @@ static void C_shift_expression_easy_syntax_check(parse_tree& src,const type_syst
 	if (binary_infix_failed_integer_arguments(src,"(C99 6.5.7p2)")) return;
 	src.type_code.base_type_index = default_promote_type(src.data<1>()->type_code.base_type_index);
 	assert(converts_to_integerlike(src.type_code.base_type_index));
-	if (eval_shift(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
+	if (eval_shift(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
 }
 
 static void CPP_shift_expression_easy_syntax_check(parse_tree& src,const type_system& types)
@@ -5662,7 +5841,7 @@ static void CPP_shift_expression_easy_syntax_check(parse_tree& src,const type_sy
 	if (binary_infix_failed_integer_arguments(src,"(C++98 5.8p1)")) return;
 	src.type_code.base_type_index = default_promote_type(src.data<1>()->type_code.base_type_index);
 	assert(converts_to_integerlike(src.type_code.base_type_index));
-	if (eval_shift(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
+	if (eval_shift(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
 }
 
 /*
@@ -6330,7 +6509,7 @@ static bool terse_locate_CPP_bitwise_AND(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_bitwise_AND(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(converts_to_integerlike(src.data<1>()->type_code));
 	assert(converts_to_integerlike(src.data<2>()->type_code));
@@ -6379,7 +6558,7 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types, func_tra
 		res_int &= rhs_int;
 
 		// check for trap representation for signed types
-		if (int_has_trapped(src,res_int)) return false;
+		if (int_has_trapped(src,res_int,hard_error)) return false;
 
 		if 		(res_int==lhs_int)
 			{	// lhs & rhs = lhs; conserve type
@@ -6413,7 +6592,7 @@ static void C_bitwise_AND_easy_syntax_check(parse_tree& src,const type_system& t
 	if (binary_infix_failed_integer_arguments(src,"(C99 6.5.10p2)")) return;
 	src.type_code.base_type_index = default_promote_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
 	assert(converts_to_integerlike(src.type_code.base_type_index));
-	if (eval_bitwise_AND(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
+	if (eval_bitwise_AND(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
 }
 
 static void CPP_bitwise_AND_easy_syntax_check(parse_tree& src,const type_system& types)
@@ -6423,7 +6602,7 @@ static void CPP_bitwise_AND_easy_syntax_check(parse_tree& src,const type_system&
 	if (binary_infix_failed_integer_arguments(src,"(C++98 5.11p1)")) return;
 	src.type_code.base_type_index = default_promote_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
 	assert(converts_to_integerlike(src.type_code.base_type_index));
-	if (eval_bitwise_AND(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
+	if (eval_bitwise_AND(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
 }
 
 /*
@@ -6506,7 +6685,7 @@ static bool terse_locate_CPP_bitwise_XOR(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(converts_to_integerlike(src.data<1>()->type_code));
 	assert(converts_to_integerlike(src.data<2>()->type_code));
@@ -6549,7 +6728,7 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, func_tra
 		res_int ^= rhs_int;
 //		res_int.mask_to(target_machine->C_bit(machine_type));	// shouldn't need this
 
-		if (int_has_trapped(src,res_int)) return false;
+		if (int_has_trapped(src,res_int,hard_error)) return false;
 
 		//! \todo flag failures to reduce as RAM-stalled
 		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
@@ -6570,7 +6749,7 @@ static void C_bitwise_XOR_easy_syntax_check(parse_tree& src,const type_system& t
 	if (binary_infix_failed_integer_arguments(src,"(C99 6.5.11p2)")) return;
 	src.type_code.base_type_index = default_promote_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
 	assert(converts_to_integerlike(src.type_code.base_type_index));
-	if (eval_bitwise_XOR(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
+	if (eval_bitwise_XOR(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
 }
 
 static void CPP_bitwise_XOR_easy_syntax_check(parse_tree& src,const type_system& types)
@@ -6580,7 +6759,7 @@ static void CPP_bitwise_XOR_easy_syntax_check(parse_tree& src,const type_system&
 	if (binary_infix_failed_integer_arguments(src,"(C++98 5.12p1)")) return;
 	src.type_code.base_type_index = default_promote_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
 	assert(converts_to_integerlike(src.type_code.base_type_index));
-	if (eval_bitwise_XOR(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
+	if (eval_bitwise_XOR(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
 }
 
 /*
@@ -6663,7 +6842,7 @@ static bool terse_locate_CPP_bitwise_OR(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_bitwise_OR(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(converts_to_integerlike(src.data<1>()->type_code));
 	assert(converts_to_integerlike(src.data<2>()->type_code));
@@ -6704,6 +6883,7 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, func_trai
 
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int(lhs_int);
 		res_int |= rhs_int;
+//		res_int.mask_to(target_machine->C_bit(machine_type));	// shouldn't need this
 		if 		(res_int==lhs_int)
 			{	// lhs | rhs = lhs; conserve type
 			src.eval_to_arg<1>(0);
@@ -6717,6 +6897,8 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, func_trai
 			return true;
 			}
 		else{
+			if (int_has_trapped(src,res_int,hard_error)) return false;
+
 			//! \todo flag failures to reduce as RAM-stalled
 			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
 			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
@@ -6736,7 +6918,7 @@ static void C_bitwise_OR_easy_syntax_check(parse_tree& src,const type_system& ty
 	if (binary_infix_failed_integer_arguments(src,"(C99 6.5.12p2)")) return;
 	src.type_code.base_type_index = arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index);
 	assert(converts_to_integerlike(src.type_code.base_type_index));
-	if (eval_bitwise_OR(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
+	if (eval_bitwise_OR(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
 }
 
 static void CPP_bitwise_OR_easy_syntax_check(parse_tree& src,const type_system& types)
@@ -6746,7 +6928,7 @@ static void CPP_bitwise_OR_easy_syntax_check(parse_tree& src,const type_system& 
 	if (binary_infix_failed_integer_arguments(src,"(C++98 5.13p1)")) return;
 	src.type_code.base_type_index = arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index);
 	assert(converts_to_integerlike(src.type_code.base_type_index));
-	if (eval_bitwise_OR(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
+	if (eval_bitwise_OR(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
 }
 
 /*
@@ -8002,7 +8184,7 @@ static bool eval_bitwise_compl(	parse_tree& src, const type_system& types,
 	if (is_bitwise_complement_expression(src))
 		{
 		EvalParseTree(*src.c_array<2>(),types);
-		if (eval_bitwise_compl(src,types,is_bitwise_complement_expression,intlike_literal_to_VM)) return true;
+		if (eval_bitwise_compl(src,types,true,is_bitwise_complement_expression,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
@@ -8040,7 +8222,7 @@ static bool eval_mult_expression(parse_tree& src,const type_system& types,
 		{
 		EvalParseTree(*src.c_array<1>(),types);
 		EvalParseTree(*src.c_array<2>(),types);
-		if (eval_mod_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		if (eval_mult_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
@@ -8050,11 +8232,11 @@ static bool eval_div_expression(parse_tree& src,const type_system& types,
 								func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
 								func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
-	if (is_C99_mult_operator_expression<'*'>(src))
+	if (is_C99_mult_operator_expression<'/'>(src))
 		{
 		EvalParseTree(*src.c_array<1>(),types);
 		EvalParseTree(*src.c_array<2>(),types);
-		if (eval_mod_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		if (eval_div_expression(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
@@ -8068,7 +8250,7 @@ static bool eval_mod_expression(parse_tree& src,const type_system& types,
 		{
 		EvalParseTree(*src.c_array<1>(),types);
 		EvalParseTree(*src.c_array<2>(),types);
-		if (eval_mod_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		if (eval_mod_expression(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
@@ -8082,7 +8264,7 @@ static bool eval_shift(parse_tree& src,const type_system& types,
 		{
 		EvalParseTree(*src.c_array<1>(),types);
 		EvalParseTree(*src.c_array<2>(),types);
-		if (eval_shift(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		if (eval_shift(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
@@ -8125,7 +8307,7 @@ static bool eval_bitwise_AND(parse_tree& src,const type_system& types,
 		{
 		EvalParseTree(*src.c_array<1>(),types);
 		EvalParseTree(*src.c_array<2>(),types);
-		if (eval_bitwise_AND(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		if (eval_bitwise_AND(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
@@ -8140,7 +8322,7 @@ static bool eval_bitwise_XOR(parse_tree& src,const type_system& types,
 		{
 		EvalParseTree(*src.c_array<1>(),types);
 		EvalParseTree(*src.c_array<2>(),types);
-		if (eval_bitwise_XOR(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		if (eval_bitwise_XOR(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
@@ -8155,7 +8337,7 @@ static bool eval_bitwise_OR(parse_tree& src,const type_system& types,
 		{
 		EvalParseTree(*src.c_array<1>(),types);
 		EvalParseTree(*src.c_array<2>(),types);
-		if (eval_bitwise_OR(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		if (eval_bitwise_OR(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
