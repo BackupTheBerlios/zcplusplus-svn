@@ -4527,6 +4527,7 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool ha
 
 		if (int_has_trapped(src,src_int,hard_error)) return false;
 
+		//! \todo need *fully* working signed-int framework before patching in here
 		//! \todo flag failures to reduce as RAM-stalled
 		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
 		if (!VM_to_token(src_int,old_type.base_type_index,new_token)) return false;
@@ -5756,14 +5757,13 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 			return true;
 			}
 		};
-	if (	C_TYPE::INTEGERLIKE!=src.data<2>()->type_code.base_type_index
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
-		{
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
-		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((old_type.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
-		intlike_literal_to_VM(rhs_int,*src.data<2>());
 
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+	if (intlike_literal_to_VM(rhs_int,*src.data<2>()))
+		{
+		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((old_type.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
 		const bool undefined_behavior = target_machine->C_bit(machine_type)<=rhs_int;
+
 		if (undefined_behavior)
 			{
 			src.flags |= parse_tree::INVALID;
@@ -5773,7 +5773,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 			INFORM(" : RHS is at least as large as bits of LHS; undefined behavior (C99 6.5.7p3/C++98 5.8p1)");
 			zcc_errors.inc_error();
 			};
-		if (literal_converts_to_bool(*src.data<2>(),is_true))
+		if (literal_converts_to_bool(*src.data<1>(),is_true))
 			{
 			if (!is_true)
 				{	// 0 << __ or 0 >> __: zero out (note that we can do this even if we invoked undefined behavior)
@@ -5787,12 +5787,10 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 				}
 			};
 		if (undefined_behavior) return false;
-		if (	C_TYPE::INTEGERLIKE!=src.data<1>()->type_code.base_type_index
-			&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
-			{
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
-			intlike_literal_to_VM(res_int,*src.data<1>());
 
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
+		if (intlike_literal_to_VM(res_int,*src.data<1>()))
+			{
 			// note that incoming negative signed integers are not handled by this code path
 			if (C99_SHIFT_SUBTYPE_LEFT==src.subtype)
 				{
@@ -6179,7 +6177,7 @@ static bool terse_locate_CPP_equality_expression(parse_tree& src, size_t& i)
 }
 
 static bool eval_equality_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
-{	// handle:
+{	
 	BOOST_STATIC_ASSERT(1==C99_EQUALITY_SUBTYPE_NEQ-C99_EQUALITY_SUBTYPE_EQ);
 	assert(C99_EQUALITY_SUBTYPE_EQ<=src.subtype && C99_EQUALITY_SUBTYPE_NEQ>=src.subtype);
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
@@ -6555,16 +6553,11 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 			}
 		return true;
 		};
-	if (	C_TYPE::INTEGERLIKE!=src.data<1>()->type_code.base_type_index
-		&& 	C_TYPE::INTEGERLIKE!=src.data<2>()->type_code.base_type_index
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
-		{
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
-		intlike_literal_to_VM(lhs_int,*src.data<1>());
-		intlike_literal_to_VM(rhs_int,*src.data<2>());
 
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+	if (intlike_literal_to_VM(lhs_int,*src.data<1>()) && intlike_literal_to_VM(rhs_int,*src.data<2>()))
+		{
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int(lhs_int);
 		res_int &= rhs_int;
 
@@ -6730,16 +6723,12 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 			return true;
 			}
 		};
-	if (	C_TYPE::INTEGERLIKE!=src.data<1>()->type_code.base_type_index
-		&& 	C_TYPE::INTEGERLIKE!=src.data<2>()->type_code.base_type_index
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+	if (intlike_literal_to_VM(lhs_int,*src.data<1>()) && intlike_literal_to_VM(rhs_int,*src.data<2>()))
 		{
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
 		const type_spec old_type = src.type_code;
-		intlike_literal_to_VM(lhs_int,*src.data<1>());
-		intlike_literal_to_VM(rhs_int,*src.data<2>());
 
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int(lhs_int);
 		res_int ^= rhs_int;
@@ -6893,16 +6882,12 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 			return true;
 			}
 		};
-	if (	C_TYPE::INTEGERLIKE!=src.data<1>()->type_code.base_type_index
-		&& 	C_TYPE::INTEGERLIKE!=src.data<2>()->type_code.base_type_index
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+	if (intlike_literal_to_VM(lhs_int,*src.data<1>()) && intlike_literal_to_VM(rhs_int,*src.data<2>()))
 		{
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
 		const type_spec old_type = src.type_code;
-		intlike_literal_to_VM(lhs_int,*src.data<1>());
-		intlike_literal_to_VM(rhs_int,*src.data<2>());
 
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int(lhs_int);
 		res_int |= rhs_int;
