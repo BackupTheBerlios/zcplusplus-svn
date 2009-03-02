@@ -2910,18 +2910,20 @@ bool convert_to(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest,const C_PPIntCore&
 	return true;
 }
 
-static void C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
+static bool C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
 {
-	assert(src.is_atomic());
-	assert(PARSE_PRIMARY_EXPRESSION & src.flags);
-	assert(C_TYPE::INTEGERLIKE!=src.type_code.base_type_index);
+	if (	!src.is_atomic()
+		||	!(PARSE_PRIMARY_EXPRESSION & src.flags)
+		||	C_TYPE::INTEGERLIKE==src.type_code.base_type_index)
+		return false;
+
 	if (C_TESTFLAG_CHAR_LITERAL & src.index_tokens[0].flags)
 		{
 		dest = EvalCharacterLiteral(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
-		return;
+		return true;
 		}	
 
-	assert(C_TESTFLAG_INTEGER & src.index_tokens[0].flags);
+	if (!C_TESTFLAG_INTEGER & src.index_tokens[0].flags) return false;
 	C_PPIntCore tmp;
 #ifdef NDEBUG
 	C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,tmp);
@@ -2930,23 +2932,26 @@ static void C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 	assert(C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,tmp));
 	assert(convert_to(dest,tmp));
 #endif
+	return true;
 }
 
-static void CPP_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
+static bool CPP_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
 {
-	assert(src.is_atomic());
-	// intercept true, false
-	if 		(token_is_string<4>(src.index_tokens[0].token,"true"))
+	if (src.is_atomic())
 		{
-		dest = 1;
-		return;
-		}
-	else if (token_is_string<5>(src.index_tokens[0].token,"false"))
-		{
-		dest.clear();
-		return;
+		// intercept true, false
+		if 		(token_is_string<4>(src.index_tokens[0].token,"true"))
+			{
+			dest = 1;
+			return true;
+			}
+		else if (token_is_string<5>(src.index_tokens[0].token,"false"))
+			{
+			dest.clear();
+			return true;
+			};
 		};
-	C99_intlike_literal_to_VM(dest,src);
+	return C99_intlike_literal_to_VM(dest,src);
 }
 
 static void _label_one_literal(parse_tree& src,const type_system& types)
@@ -4506,7 +4511,7 @@ static bool terse_locate_CPP_bitwise_complement(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool hard_error,func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_complement_expression,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool hard_error,func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_complement_expression,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_bitwise_complement_expression(src));
 	assert(converts_to_integerlike(src.data<2>()->type_code));
@@ -4664,7 +4669,7 @@ static bool eval_unary_plus(parse_tree& src, const type_system& types)
 	return false;
 }
 
-static bool eval_unary_minus(parse_tree& src, const type_system& types,func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_unary_minus(parse_tree& src, const type_system& types,func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_C99_unary_operator_expression<'-'>(src));
 	bool is_true = false;
@@ -5100,7 +5105,7 @@ static bool terse_locate_mult_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_mult_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_mult_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_C99_mult_operator_expression<'*'>(src));
 
@@ -5157,7 +5162,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, func
 	return false;
 }
 
-static bool eval_div_expression(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_div_expression(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_C99_mult_operator_expression<'/'>(src));
 
@@ -5208,7 +5213,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 	return false;
 }
 
-static bool eval_mod_expression(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_mod_expression(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_C99_mult_operator_expression<'%'>(src));
 
@@ -5566,7 +5571,7 @@ static bool terse_locate_add_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_add_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_add_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_C99_add_operator_expression<'+'>(src));
 
@@ -5593,7 +5598,7 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, func_
 	return false;
 }
 
-static bool eval_sub_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_sub_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_C99_add_operator_expression<'-'>(src));
 
@@ -5727,7 +5732,7 @@ static bool terse_locate_shift_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_shift(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_shift(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(converts_to_integerlike(src.data<1>()->type_code));
 	assert(converts_to_integerlike(src.data<2>()->type_code));
@@ -5914,7 +5919,7 @@ static bool terse_locate_relation_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_relation_expression(parse_tree& src, const type_system& types,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_relation_expression(parse_tree& src, const type_system& types,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	BOOST_STATIC_ASSERT(1==C99_RELATION_SUBTYPE_GT-C99_RELATION_SUBTYPE_LT);
 	BOOST_STATIC_ASSERT(1==C99_RELATION_SUBTYPE_LTE-C99_RELATION_SUBTYPE_GT);
@@ -6173,7 +6178,7 @@ static bool terse_locate_CPP_equality_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_equality_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_equality_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {	// handle:
 	BOOST_STATIC_ASSERT(1==C99_EQUALITY_SUBTYPE_NEQ-C99_EQUALITY_SUBTYPE_EQ);
 	assert(C99_EQUALITY_SUBTYPE_EQ<=src.subtype && C99_EQUALITY_SUBTYPE_NEQ>=src.subtype);
@@ -6515,7 +6520,7 @@ static bool terse_locate_CPP_bitwise_AND(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(converts_to_integerlike(src.data<1>()->type_code));
 	assert(converts_to_integerlike(src.data<2>()->type_code));
@@ -6697,7 +6702,7 @@ static bool terse_locate_CPP_bitwise_XOR(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(converts_to_integerlike(src.data<1>()->type_code));
 	assert(converts_to_integerlike(src.data<2>()->type_code));
@@ -6860,7 +6865,7 @@ static bool terse_locate_CPP_bitwise_OR(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(converts_to_integerlike(src.data<1>()->type_code));
 	assert(converts_to_integerlike(src.data<2>()->type_code));
@@ -8203,7 +8208,7 @@ static bool eval_logical_NOT(parse_tree& src, const type_system& types,
 static bool eval_bitwise_compl(	parse_tree& src, const type_system& types,
 								func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 								func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_complement_expression,
-								func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+								func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	if (is_bitwise_complement_expression(src))
 		{
@@ -8227,7 +8232,7 @@ static bool eval_unary_plus(parse_tree& src, const type_system& types,
 static bool eval_unary_minus(parse_tree& src, const type_system& types,
 							 func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							 func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,
-							 func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+							 func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	if (is_C99_unary_operator_expression<'-'>(src))
 		{
@@ -8240,7 +8245,7 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,
 static bool eval_mult_expression(parse_tree& src,const type_system& types,
 								func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 								func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
-								func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+								func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	if (is_C99_mult_operator_expression<'*'>(src))
 		{
@@ -8254,7 +8259,7 @@ static bool eval_mult_expression(parse_tree& src,const type_system& types,
 static bool eval_div_expression(parse_tree& src,const type_system& types,
 								func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 								func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
-								func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+								func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	if (is_C99_mult_operator_expression<'/'>(src))
 		{
@@ -8268,7 +8273,7 @@ static bool eval_div_expression(parse_tree& src,const type_system& types,
 static bool eval_mod_expression(parse_tree& src,const type_system& types,
 								func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 								func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
-								func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+								func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	if (is_C99_mult_operator_expression<'%'>(src))
 		{
@@ -8282,7 +8287,7 @@ static bool eval_mod_expression(parse_tree& src,const type_system& types,
 static bool eval_shift(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
-							func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+							func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	if (is_C99_shift_expression(src))
 		{
@@ -8295,7 +8300,7 @@ static bool eval_shift(parse_tree& src,const type_system& types,
 
 static bool eval_relation_expression(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
-							func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+							func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	if (is_C99_relation_expression(src))
 		{
@@ -8310,7 +8315,7 @@ static bool eval_equality_expression(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&)>::function_ref_type is_equality_expression,
 							func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
-							func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+							func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	if (is_equality_expression(src))
 		{
@@ -8325,7 +8330,7 @@ static bool eval_bitwise_AND(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_AND_expression,
 							func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
-							func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+							func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	if (is_bitwise_AND_expression(src))
 		{
@@ -8340,7 +8345,7 @@ static bool eval_bitwise_XOR(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_XOR_expression,
 							func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
-							func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+							func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	if (is_bitwise_XOR_expression(src))
 		{
@@ -8355,7 +8360,7 @@ static bool eval_bitwise_OR(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_OR_expression,
 							func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
-							func_traits<void (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+							func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	if (is_bitwise_OR_expression(src))
 		{
