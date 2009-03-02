@@ -78,6 +78,11 @@ struct _unsigned_fixed_charint
 		_x[n/CHAR_BIT] &= ~(((unsigned char)(1U))<<(n%CHAR_BIT));
 		}
 
+	bool test(size_t n) const
+		{
+		assert(N>n/CHAR_BIT);
+		return _x[n/CHAR_BIT] & (((unsigned char)(1U))<<(n%CHAR_BIT));
+		}
 	template<size_t n> bool test() const
 		{
 		ZAIMONI_STATIC_ASSERT(N>n/CHAR_BIT);
