@@ -2874,6 +2874,242 @@ static size_t _count_identifiers(const parse_tree& src)
 	return count_id;
 }
 
+static bool is_naked_parentheses_pair(const parse_tree& src)
+{
+	return		robust_token_is_char<'('>(src.index_tokens[0].token)
+			&&	robust_token_is_char<')'>(src.index_tokens[1].token)
+			&&	src.empty<1>() && src.empty<2>();
+}
+
+static bool is_array_deref(const parse_tree& src)
+{
+	return		robust_token_is_char<'['>(src.index_tokens[0].token)
+			&&	robust_token_is_char<']'>(src.index_tokens[1].token)
+			&&	1==src.size<0>() && (PARSE_EXPRESSION & src.data<0>()->flags)			// content of [ ]
+			&&	1==src.size<1>() && (PARSE_POSTFIX_EXPRESSION & src.data<1>()->flags)	// prefix arg of [ ]
+			&&	src.empty<2>();
+}
+
+#define C99_UNARY_SUBTYPE_PLUS 1
+#define C99_UNARY_SUBTYPE_NEG 2
+#define C99_UNARY_SUBTYPE_DEREF 3
+#define C99_UNARY_SUBTYPE_ADDRESSOF 4
+#define C99_UNARY_SUBTYPE_NOT 5
+#define C99_UNARY_SUBTYPE_COMPL 6
+
+template<char c> static bool is_C99_unary_operator_expression(const parse_tree& src)
+{
+	return		robust_token_is_char<c>(src.index_tokens[0].token)
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	src.empty<1>()
+			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
+}
+
+static bool is_CPP_logical_NOT_expression(const parse_tree& src)
+{
+	return		(robust_token_is_char<'!'>(src.index_tokens[0].token) || robust_token_is_string<3>(src.index_tokens[0].token,"not"))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	src.empty<1>()
+			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
+}
+
+static bool is_CPP_bitwise_complement_expression(const parse_tree& src)
+{
+	return		(robust_token_is_char<'~'>(src.index_tokens[0].token) || robust_token_is_string<5>(src.index_tokens[0].token,"compl"))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	src.empty<1>()
+			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
+}
+
+#define C99_MULT_SUBTYPE_DIV 1
+#define C99_MULT_SUBTYPE_MOD 2
+#define C99_MULT_SUBTYPE_MULT 3
+
+BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_DEREF==C99_MULT_SUBTYPE_MULT);
+
+static bool is_C99_mult_operator_expression(const parse_tree& src)
+{
+	return		(robust_token_is_char<'/'>(src.index_tokens[0].token) || robust_token_is_char<'%'>(src.index_tokens[0].token) || robust_token_is_char<'*'>(src.index_tokens[0].token))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_MULT_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_PM_EXPRESSION & src.data<2>()->flags);
+}
+
+template<char c> static bool is_C99_mult_operator_expression(const parse_tree& src)
+{
+	return		robust_token_is_char<c>(src.index_tokens[0].token)
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_MULT_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_PM_EXPRESSION & src.data<2>()->flags);
+}
+
+#if 0
+#define C99_ADD_SUBTYPE_PLUS 1
+#define C99_ADD_SUBTYPE_MINUS 2
+
+BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_PLUS==C99_ADD_SUBTYPE_PLUS);
+BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_NEG==C99_ADD_SUBTYPE_MINUS);
+
+static bool is_C99_add_operator_expression(const parse_tree& src)
+{
+	return		(robust_token_is_char<'+'>(src.index_tokens[0].token) || robust_token_is_char<'-'>(src.index_tokens[0].token))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_ADD_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_MULT_EXPRESSION & src.data<2>()->flags);
+}
+#endif
+
+#define C99_SHIFT_SUBTYPE_LEFT 1
+#define C99_SHIFT_SUBTYPE_RIGHT 2
+static bool is_C99_shift_expression(const parse_tree& src)
+{
+	return		(robust_token_is_string<2>(src.index_tokens[0].token,"<<") || robust_token_is_string<2>(src.index_tokens[0].token,">>"))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_SHIFT_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_ADD_EXPRESSION & src.data<2>()->flags);
+}
+
+#define C99_RELATION_SUBTYPE_LT 1
+#define C99_RELATION_SUBTYPE_GT 2
+#define C99_RELATION_SUBTYPE_LTE 3
+#define C99_RELATION_SUBTYPE_GTE 4
+
+static bool is_C99_relation_expression(const parse_tree& src)
+{
+	return		(robust_token_is_char<'<'>(src.index_tokens[0].token) || robust_token_is_char<'>'>(src.index_tokens[0].token) || robust_token_is_string<2>(src.index_tokens[0].token,"<=") || robust_token_is_string<2>(src.index_tokens[0].token,">="))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_RELATIONAL_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_SHIFT_EXPRESSION & src.data<2>()->flags);
+}
+
+#define C99_EQUALITY_SUBTYPE_EQ 1
+#define C99_EQUALITY_SUBTYPE_NEQ 2
+static bool is_C99_equality_expression(const parse_tree& src)
+{
+	return		(robust_token_is_string<2>(src.index_tokens[0].token,"==") || robust_token_is_string<2>(src.index_tokens[0].token,"!="))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_EQUALITY_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_RELATIONAL_EXPRESSION & src.data<2>()->flags);
+}
+
+static bool is_CPP_equality_expression(const parse_tree& src)
+{
+	return		(robust_token_is_string<2>(src.index_tokens[0].token,"==") || robust_token_is_string<2>(src.index_tokens[0].token,"!=") || robust_token_is_string<6>(src.index_tokens[0].token,"not_eq"))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_EQUALITY_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_RELATIONAL_EXPRESSION & src.data<2>()->flags);
+}
+
+static bool is_C99_bitwise_AND_expression(const parse_tree& src)
+{
+	return (	robust_token_is_char<'&'>(src.index_tokens[0].token)
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_BITAND_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_EQUALITY_EXPRESSION & src.data<2>()->flags));
+}
+
+static bool is_CPP_bitwise_AND_expression(const parse_tree& src)
+{
+	return (	(robust_token_is_char<'&'>(src.index_tokens[0].token) || robust_token_is_string<6>(src.index_tokens[0].token,"bitand"))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_BITAND_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_EQUALITY_EXPRESSION & src.data<2>()->flags));
+}
+
+static bool is_C99_bitwise_XOR_expression(const parse_tree& src)
+{
+	return (	robust_token_is_char<'^'>(src.index_tokens[0].token)
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_BITXOR_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_BITAND_EXPRESSION & src.data<2>()->flags));
+}
+
+static bool is_CPP_bitwise_XOR_expression(const parse_tree& src)
+{
+	return (	(robust_token_is_char<'^'>(src.index_tokens[0].token) || robust_token_is_string<3>(src.index_tokens[0].token,"xor"))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_BITXOR_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_BITAND_EXPRESSION & src.data<2>()->flags));
+}
+
+static bool is_C99_bitwise_OR_expression(const parse_tree& src)
+{
+	return (	robust_token_is_char<'|'>(src.index_tokens[0].token)
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_BITOR_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_BITXOR_EXPRESSION & src.data<2>()->flags));
+}
+
+static bool is_CPP_bitwise_OR_expression(const parse_tree& src)
+{
+	return (	(robust_token_is_char<'|'>(src.index_tokens[0].token) || robust_token_is_string<5>(src.index_tokens[0].token,"bitor"))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_BITOR_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_BITXOR_EXPRESSION & src.data<2>()->flags));
+}
+
+static bool is_C99_logical_AND_expression(const parse_tree& src)
+{
+	return (	robust_token_is_string<2>(src.index_tokens[0].token,"&&")
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_LOGICAND_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_BITOR_EXPRESSION & src.data<2>()->flags));
+}
+
+static bool is_CPP_logical_AND_expression(const parse_tree& src)
+{
+	return (	(robust_token_is_string<2>(src.index_tokens[0].token,"&&") || robust_token_is_string<3>(src.index_tokens[0].token,"and"))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_LOGICAND_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_BITOR_EXPRESSION & src.data<2>()->flags));
+}
+
+static bool is_C99_logical_OR_expression(const parse_tree& src)
+{
+	return (	robust_token_is_string<2>(src.index_tokens[0].token,"||")
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_LOGICOR_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_LOGICAND_EXPRESSION & src.data<2>()->flags));
+}
+
+static bool is_CPP_logical_OR_expression(const parse_tree& src)
+{
+	return (	(robust_token_is_string<2>(src.index_tokens[0].token,"||") || robust_token_is_string<2>(src.index_tokens[0].token,"or"))
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_LOGICOR_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_LOGICAND_EXPRESSION & src.data<2>()->flags));
+}
+
+
+static bool is_C99_conditional_operator_expression(const parse_tree& src)
+{
+	return		robust_token_is_char<'?'>(src.index_tokens[0].token)
+			&&	robust_token_is_char<':'>(src.index_tokens[1].token)
+			&&	1==src.size<0>() && (PARSE_EXPRESSION & src.data<2>()->flags)
+			&&	1==src.size<1>() && (PARSE_LOGICOR_EXPRESSION & src.data<2>()->flags)
+			&&	1==src.size<2>() && (PARSE_CONDITIONAL_EXPRESSION & src.data<2>()->flags);		
+}
+
 bool convert_to(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest,const C_PPIntCore& src)
 {
 	assert(8==src.radix || 10==src.radix || 16==src.radix);
@@ -2910,12 +3146,11 @@ bool convert_to(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest,const C_PPIntCore&
 	return true;
 }
 
-static bool C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
+static bool _C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
 {
-	if (	!src.is_atomic()
-		||	!(PARSE_PRIMARY_EXPRESSION & src.flags)
-		||	C_TYPE::INTEGERLIKE==src.type_code.base_type_index)
-		return false;
+	assert(src.is_atomic());
+	assert(PARSE_PRIMARY_EXPRESSION & src.flags);
+	assert(C_TYPE::INTEGERLIKE!=src.type_code.base_type_index);
 
 	if (C_TESTFLAG_CHAR_LITERAL & src.index_tokens[0].flags)
 		{
@@ -2935,23 +3170,98 @@ static bool C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 	return true;
 }
 
+static bool _CPP_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
+{
+	assert(src.is_atomic());
+	// intercept true, false
+	if 		(token_is_string<4>(src.index_tokens[0].token,"true"))
+		{
+		dest = 1;
+		return true;
+		}
+	else if (token_is_string<5>(src.index_tokens[0].token,"false"))
+		{
+		dest.clear();
+		return true;
+		};
+	return false;
+}
+
+static bool C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
+{
+	const parse_tree* src_image = &src;
+	bool is_add_inv = false;
+	while(is_C99_unary_operator_expression<'-'>(*src_image) && converts_to_integer(src_image->type_code))
+		{
+		src_image = src.data<2>();
+		assert(NULL!=src_image);
+		is_add_inv = !is_add_inv;
+		}
+
+	if (	!src_image->is_atomic()
+		||	!(PARSE_PRIMARY_EXPRESSION & src_image->flags)
+		||	C_TYPE::INTEGERLIKE==src_image->type_code.base_type_index)
+		return false;	
+
+	if (!_C99_intlike_literal_to_VM(dest,*src_image)) return false;
+	if (is_add_inv)
+		{
+		const size_t promoted_type = default_promote_type(src.type_code.base_type_index);
+		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((promoted_type-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		if (0==(promoted_type-C_TYPE::INT)%2)
+			{
+			target_machine->signed_additive_inverse(dest,machine_type);
+			}
+		else{
+			assert(dest<=target_machine->unsigned_max(machine_type));
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(target_machine->unsigned_max(machine_type));
+			tmp -= dest;
+			tmp += 1;
+			tmp.mask_to(target_machine->C_bit(machine_type));
+			dest = tmp;
+			}
+		}
+	return true;
+}
+
 static bool CPP_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
 {
-	if (src.is_atomic())
+	const parse_tree* src_image = &src;
+	bool is_add_inv = false;
+	while(is_C99_unary_operator_expression<'-'>(*src_image) && converts_to_integer(src_image->type_code))
 		{
-		// intercept true, false
-		if 		(token_is_string<4>(src.index_tokens[0].token,"true"))
+		src_image = src.data<2>();
+		assert(NULL!=src_image);
+		is_add_inv = !is_add_inv;
+		}
+
+	if (!src_image->is_atomic()) return false;
+	if (!_CPP_intlike_literal_to_VM(dest,*src_image))
+		{
+		if (	!(PARSE_PRIMARY_EXPRESSION & src_image->flags)
+			||	C_TYPE::INTEGERLIKE==src_image->type_code.base_type_index)
+			return false;	
+
+		if (!_C99_intlike_literal_to_VM(dest,*src_image)) return false;
+		}
+	if (is_add_inv)
+		{
+		const size_t promoted_type = default_promote_type(src.type_code.base_type_index);
+		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((promoted_type-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		if (0==(promoted_type-C_TYPE::INT)%2)
 			{
-			dest = 1;
-			return true;
+			target_machine->signed_additive_inverse(dest,machine_type);
 			}
-		else if (token_is_string<5>(src.index_tokens[0].token,"false"))
-			{
-			dest.clear();
-			return true;
-			};
-		};
-	return C99_intlike_literal_to_VM(dest,src);
+		else{
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(target_machine->unsigned_max(machine_type));
+			assert(dest<=tmp);
+			tmp -= dest;
+			tmp += 1;
+			tmp.mask_to(target_machine->C_bit(machine_type));
+			dest = tmp;
+			}
+		}
+	return true;
 }
 
 static void _label_one_literal(parse_tree& src,const type_system& types)
@@ -3346,244 +3656,6 @@ static bool _match_pairs(parse_tree& src)
 		}
 	while(src.size<0>() > ++i);
 	return starting_errors==zcc_errors.err_count();
-}
-
-static bool
-is_naked_parentheses_pair(const parse_tree& src)
-{
-	return		robust_token_is_char<'('>(src.index_tokens[0].token)
-			&&	robust_token_is_char<')'>(src.index_tokens[1].token)
-			&&	src.empty<1>() && src.empty<2>();
-}
-
-static bool
-is_array_deref(const parse_tree& src)
-{
-	return		robust_token_is_char<'['>(src.index_tokens[0].token)
-			&&	robust_token_is_char<']'>(src.index_tokens[1].token)
-			&&	1==src.size<0>() && (PARSE_EXPRESSION & src.data<0>()->flags)			// content of [ ]
-			&&	1==src.size<1>() && (PARSE_POSTFIX_EXPRESSION & src.data<1>()->flags)	// prefix arg of [ ]
-			&&	src.empty<2>();
-}
-
-#define C99_UNARY_SUBTYPE_PLUS 1
-#define C99_UNARY_SUBTYPE_NEG 2
-#define C99_UNARY_SUBTYPE_DEREF 3
-#define C99_UNARY_SUBTYPE_ADDRESSOF 4
-#define C99_UNARY_SUBTYPE_NOT 5
-#define C99_UNARY_SUBTYPE_COMPL 6
-
-template<char c> static bool is_C99_unary_operator_expression(const parse_tree& src)
-{
-	return		robust_token_is_char<c>(src.index_tokens[0].token)
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	src.empty<1>()
-			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
-}
-
-static bool is_CPP_logical_NOT_expression(const parse_tree& src)
-{
-	return		(robust_token_is_char<'!'>(src.index_tokens[0].token) || robust_token_is_string<3>(src.index_tokens[0].token,"not"))
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	src.empty<1>()
-			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
-}
-
-static bool is_CPP_bitwise_complement_expression(const parse_tree& src)
-{
-	return		(robust_token_is_char<'~'>(src.index_tokens[0].token) || robust_token_is_string<5>(src.index_tokens[0].token,"compl"))
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	src.empty<1>()
-			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
-}
-
-#define C99_MULT_SUBTYPE_DIV 1
-#define C99_MULT_SUBTYPE_MOD 2
-#define C99_MULT_SUBTYPE_MULT 3
-
-BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_DEREF==C99_MULT_SUBTYPE_MULT);
-
-static bool is_C99_mult_operator_expression(const parse_tree& src)
-{
-	return		(robust_token_is_char<'/'>(src.index_tokens[0].token) || robust_token_is_char<'%'>(src.index_tokens[0].token) || robust_token_is_char<'*'>(src.index_tokens[0].token))
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_MULT_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_PM_EXPRESSION & src.data<2>()->flags);
-}
-
-template<char c> static bool is_C99_mult_operator_expression(const parse_tree& src)
-{
-	return		robust_token_is_char<c>(src.index_tokens[0].token)
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_MULT_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_PM_EXPRESSION & src.data<2>()->flags);
-}
-
-#if 0
-#define C99_ADD_SUBTYPE_PLUS 1
-#define C99_ADD_SUBTYPE_MINUS 2
-
-BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_PLUS==C99_ADD_SUBTYPE_PLUS);
-BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_NEG==C99_ADD_SUBTYPE_MINUS);
-
-static bool is_C99_add_operator_expression(const parse_tree& src)
-{
-	return		(robust_token_is_char<'+'>(src.index_tokens[0].token) || robust_token_is_char<'-'>(src.index_tokens[0].token))
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_ADD_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_MULT_EXPRESSION & src.data<2>()->flags);
-}
-#endif
-
-#define C99_SHIFT_SUBTYPE_LEFT 1
-#define C99_SHIFT_SUBTYPE_RIGHT 2
-static bool is_C99_shift_expression(const parse_tree& src)
-{
-	return		(robust_token_is_string<2>(src.index_tokens[0].token,"<<") || robust_token_is_string<2>(src.index_tokens[0].token,">>"))
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_SHIFT_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_ADD_EXPRESSION & src.data<2>()->flags);
-}
-
-#define C99_RELATION_SUBTYPE_LT 1
-#define C99_RELATION_SUBTYPE_GT 2
-#define C99_RELATION_SUBTYPE_LTE 3
-#define C99_RELATION_SUBTYPE_GTE 4
-
-static bool is_C99_relation_expression(const parse_tree& src)
-{
-	return		(robust_token_is_char<'<'>(src.index_tokens[0].token) || robust_token_is_char<'>'>(src.index_tokens[0].token) || robust_token_is_string<2>(src.index_tokens[0].token,"<=") || robust_token_is_string<2>(src.index_tokens[0].token,">="))
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_RELATIONAL_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_SHIFT_EXPRESSION & src.data<2>()->flags);
-}
-
-#define C99_EQUALITY_SUBTYPE_EQ 1
-#define C99_EQUALITY_SUBTYPE_NEQ 2
-static bool is_C99_equality_expression(const parse_tree& src)
-{
-	return		(robust_token_is_string<2>(src.index_tokens[0].token,"==") || robust_token_is_string<2>(src.index_tokens[0].token,"!="))
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_EQUALITY_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_RELATIONAL_EXPRESSION & src.data<2>()->flags);
-}
-
-static bool is_CPP_equality_expression(const parse_tree& src)
-{
-	return		(robust_token_is_string<2>(src.index_tokens[0].token,"==") || robust_token_is_string<2>(src.index_tokens[0].token,"!=") || robust_token_is_string<6>(src.index_tokens[0].token,"not_eq"))
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_EQUALITY_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_RELATIONAL_EXPRESSION & src.data<2>()->flags);
-}
-
-static bool is_C99_bitwise_AND_expression(const parse_tree& src)
-{
-	return (	robust_token_is_char<'&'>(src.index_tokens[0].token)
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_BITAND_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_EQUALITY_EXPRESSION & src.data<2>()->flags));
-}
-
-static bool is_CPP_bitwise_AND_expression(const parse_tree& src)
-{
-	return (	(robust_token_is_char<'&'>(src.index_tokens[0].token) || robust_token_is_string<6>(src.index_tokens[0].token,"bitand"))
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_BITAND_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_EQUALITY_EXPRESSION & src.data<2>()->flags));
-}
-
-static bool is_C99_bitwise_XOR_expression(const parse_tree& src)
-{
-	return (	robust_token_is_char<'^'>(src.index_tokens[0].token)
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_BITXOR_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_BITAND_EXPRESSION & src.data<2>()->flags));
-}
-
-static bool is_CPP_bitwise_XOR_expression(const parse_tree& src)
-{
-	return (	(robust_token_is_char<'^'>(src.index_tokens[0].token) || robust_token_is_string<3>(src.index_tokens[0].token,"xor"))
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_BITXOR_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_BITAND_EXPRESSION & src.data<2>()->flags));
-}
-
-static bool is_C99_bitwise_OR_expression(const parse_tree& src)
-{
-	return (	robust_token_is_char<'|'>(src.index_tokens[0].token)
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_BITOR_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_BITXOR_EXPRESSION & src.data<2>()->flags));
-}
-
-static bool is_CPP_bitwise_OR_expression(const parse_tree& src)
-{
-	return (	(robust_token_is_char<'|'>(src.index_tokens[0].token) || robust_token_is_string<5>(src.index_tokens[0].token,"bitor"))
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_BITOR_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_BITXOR_EXPRESSION & src.data<2>()->flags));
-}
-
-static bool is_C99_logical_AND_expression(const parse_tree& src)
-{
-	return (	robust_token_is_string<2>(src.index_tokens[0].token,"&&")
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_LOGICAND_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_BITOR_EXPRESSION & src.data<2>()->flags));
-}
-
-static bool is_CPP_logical_AND_expression(const parse_tree& src)
-{
-	return (	(robust_token_is_string<2>(src.index_tokens[0].token,"&&") || robust_token_is_string<3>(src.index_tokens[0].token,"and"))
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_LOGICAND_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_BITOR_EXPRESSION & src.data<2>()->flags));
-}
-
-static bool is_C99_logical_OR_expression(const parse_tree& src)
-{
-	return (	robust_token_is_string<2>(src.index_tokens[0].token,"||")
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_LOGICOR_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_LOGICAND_EXPRESSION & src.data<2>()->flags));
-}
-
-static bool is_CPP_logical_OR_expression(const parse_tree& src)
-{
-	return (	(robust_token_is_string<2>(src.index_tokens[0].token,"||") || robust_token_is_string<2>(src.index_tokens[0].token,"or"))
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_LOGICOR_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_LOGICAND_EXPRESSION & src.data<2>()->flags));
-}
-
-
-static bool is_C99_conditional_operator_expression(const parse_tree& src)
-{
-	return		robust_token_is_char<'?'>(src.index_tokens[0].token)
-			&&	robust_token_is_char<':'>(src.index_tokens[1].token)
-			&&	1==src.size<0>() && (PARSE_EXPRESSION & src.data<2>()->flags)
-			&&	1==src.size<1>() && (PARSE_LOGICOR_EXPRESSION & src.data<2>()->flags)
-			&&	1==src.size<2>() && (PARSE_CONDITIONAL_EXPRESSION & src.data<2>()->flags);		
 }
 
 static bool C99_literal_converts_to_integer(const parse_tree& src)
