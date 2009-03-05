@@ -4506,6 +4506,7 @@ static bool VM_to_token(const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,c
 	const char* suffix = literal_suffix(base_type_index);
 	char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
 	dest.second = literal_flags(base_type_index);
+	dest.second |= C_TESTFLAG_DECIMAL;
 	z_umaxtoa(res,buf,10);
 	assert(!suffix || 3>=strlen(suffix));
 	assert(dest.second);
@@ -5887,16 +5888,20 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 			else	// if (C99_SHIFT_SUBTYPE_RIGHT==src.subtype)
 				res_int >>= rhs_int.to_uint();
 
+			parse_tree tmp;
 			const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+			//! \todo flag failures to reduce as RAM-stalled
+			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+			tmp.clear();
+			tmp.grab_index_token_from<0>(new_token.first,new_token.second);
+			_label_one_literal(tmp,types);
+
 			if (0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1))
 				{	// convert to parsed - literal
 				}
 			else{	// convert to positive literal
-				//! \todo flag failures to reduce as RAM-stalled
-				zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-				if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-				src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
-				src.eval_to_arg<1>(0);
+				src = tmp;
 				src.type_code = old_type;
 				return true;
 				}
@@ -6649,16 +6654,21 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 			return true;
 			}
 		else{
+			parse_tree tmp;
 			const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+			//! \todo flag failures to reduce as RAM-stalled
+			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+			tmp.clear();
+			tmp.grab_index_token_from<0>(new_token.first,new_token.second);
+			tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+			_label_one_literal(tmp,types);
+
 			if (0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1))
 				{	// convert to parsed - literal
 				}
 			else{	// convert to positive literal
-				//! \todo flag failures to reduce as RAM-stalled
-				zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-				if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-				src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
-				src.eval_to_arg<1>(0);
+				src = tmp;
 				src.type_code = old_type;
 				return true;
 				}
@@ -6808,16 +6818,20 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 
 		if (int_has_trapped(src,res_int,hard_error)) return false;
 
+		parse_tree tmp;
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+		//! \todo flag failures to reduce as RAM-stalled
+		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+		tmp.clear();
+		tmp.grab_index_token_from<0>(new_token.first,new_token.second);
+		_label_one_literal(tmp,types);
+
 		if (0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1))
 			{	// convert to parsed - literal
 			}
 		else{	// convert to positive literal
-			//! \todo flag failures to reduce as RAM-stalled
-			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-			src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
-			src.eval_to_arg<1>(0);
+			src = tmp;
 			src.type_code = old_type;
 			return true;
 			}
@@ -6979,16 +6993,20 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 		else{
 			if (int_has_trapped(src,res_int,hard_error)) return false;
 
+			parse_tree tmp;
 			const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+			//! \todo flag failures to reduce as RAM-stalled
+			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+			tmp.clear();
+			tmp.grab_index_token_from<0>(new_token.first,new_token.second);
+			_label_one_literal(tmp,types);
+
 			if (0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1))
 				{	// convert to parsed - literal
 				}
 			else{	// convert to positive literal
-				//! \todo flag failures to reduce as RAM-stalled
-				zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-				if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-				src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
-				src.eval_to_arg<1>(0);
+				src = tmp;
 				src.type_code = old_type;
 				return true;
 				}
