@@ -262,6 +262,16 @@ struct parse_tree
 		control_index_token<dest_idx>(true);
 		src = NULL;
 		}
+	template<size_t dest_idx> void grab_index_token_from_str_literal(const char* const src,zaimoni::lex_flags src_flags)
+		{
+		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>dest_idx);
+		assert(NULL!=src);
+		if (own_index_token<dest_idx>()) free(const_cast<char*>(index_tokens[dest_idx].token.first));
+		index_tokens[dest_idx].token.first = src;
+		index_tokens[dest_idx].token.second = strlen(src);
+		index_tokens[dest_idx].flags = src_flags;
+		control_index_token<dest_idx>(false);
+		}
 private:
 	bool _resize(const size_t arg_idx,size_t n);
 	void _eval_to_arg(size_t arg_idx, size_t i);

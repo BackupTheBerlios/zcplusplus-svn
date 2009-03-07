@@ -5890,6 +5890,8 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 
 			parse_tree tmp;
 			const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+			const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
+			if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
 			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
 			//! \todo flag failures to reduce as RAM-stalled
 			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
@@ -5897,8 +5899,17 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 			tmp.grab_index_token_from<0>(new_token.first,new_token.second);
 			_label_one_literal(tmp,types);
 
-			if (0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1))
+			if (negative_signed_int)
 				{	// convert to parsed - literal
+				src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+				*src.c_array<2>() = tmp;
+				src.DeleteIdx<1>(0);
+				src.core_flag_update();
+				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+				src.subtype = C99_UNARY_SUBTYPE_NEG;
+				assert(is_C99_unary_operator_expression<'-'>(src));
+				src.type_code = old_type;
+				return true;
 				}
 			else{	// convert to positive literal
 				src = tmp;
@@ -6656,6 +6667,8 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 		else{
 			parse_tree tmp;
 			const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+			const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
+			if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
 			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
 			//! \todo flag failures to reduce as RAM-stalled
 			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
@@ -6664,8 +6677,17 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 			tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
 			_label_one_literal(tmp,types);
 
-			if (0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1))
+			if (negative_signed_int)
 				{	// convert to parsed - literal
+				src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+				*src.c_array<2>() = tmp;
+				src.DeleteIdx<1>(0);
+				src.core_flag_update();
+				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+				src.subtype = C99_UNARY_SUBTYPE_NEG;
+				assert(is_C99_unary_operator_expression<'-'>(src));
+				src.type_code = old_type;
+				return true;
 				}
 			else{	// convert to positive literal
 				src = tmp;
@@ -6820,6 +6842,8 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 
 		parse_tree tmp;
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
+		if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
 		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
 		//! \todo flag failures to reduce as RAM-stalled
 		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
@@ -6827,8 +6851,17 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 		tmp.grab_index_token_from<0>(new_token.first,new_token.second);
 		_label_one_literal(tmp,types);
 
-		if (0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1))
+		if (negative_signed_int)
 			{	// convert to parsed - literal
+			src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+			*src.c_array<2>() = tmp;
+			src.DeleteIdx<1>(0);
+			src.core_flag_update();
+			src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+			src.subtype = C99_UNARY_SUBTYPE_NEG;
+			assert(is_C99_unary_operator_expression<'-'>(src));
+			src.type_code = old_type;
+			return true;
 			}
 		else{	// convert to positive literal
 			src = tmp;
@@ -6995,6 +7028,8 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 
 			parse_tree tmp;
 			const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+			const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
+			if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
 			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
 			//! \todo flag failures to reduce as RAM-stalled
 			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
@@ -7002,8 +7037,17 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 			tmp.grab_index_token_from<0>(new_token.first,new_token.second);
 			_label_one_literal(tmp,types);
 
-			if (0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1))
+			if (negative_signed_int)
 				{	// convert to parsed - literal
+				src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+				*src.c_array<2>() = tmp;
+				src.DeleteIdx<1>(0);
+				src.core_flag_update();
+				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+				src.subtype = C99_UNARY_SUBTYPE_NEG;
+				assert(is_C99_unary_operator_expression<'-'>(src));
+				src.type_code = old_type;
+				return true;
 				}
 			else{	// convert to positive literal
 				src = tmp;

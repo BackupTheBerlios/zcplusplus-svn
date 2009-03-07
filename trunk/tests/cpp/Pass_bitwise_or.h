@@ -85,3 +85,8 @@
 #else
 #endif
 
+// spot-check some signed bitwise or; be careful not to generate -0 on one's-complement machines
+#if -3 | -2
+#else
+#error -3 | -2 is false
+#endif
