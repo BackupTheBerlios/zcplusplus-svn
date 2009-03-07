@@ -4588,26 +4588,43 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool ha
 {
 	assert(is_bitwise_complement_expression(src));
 	assert(converts_to_integerlike(src.data<2>()->type_code));
-	if (	C_TYPE::INTEGERLIKE!=src.data<2>()->type_code.base_type_index
-		&& 	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
+	if (intlike_literal_to_VM(res_int,*src.data<2>())) 
 		{
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> src_int;
 		const type_spec old_type = src.type_code;
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((old_type.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
-		intlike_literal_to_VM(src_int,*src.data<2>());
-		src_int.auto_bitwise_complement();
-		src_int.mask_to(target_machine->C_bit(machine_type));
+		intlike_literal_to_VM(res_int,*src.data<2>());
+		res_int.auto_bitwise_complement();
+		res_int.mask_to(target_machine->C_bit(machine_type));
 
-		if (int_has_trapped(src,src_int,hard_error)) return false;
+		if (int_has_trapped(src,res_int,hard_error)) return false;
 
-		//! \todo need *fully* working signed-int framework before patching in here
-		//! \todo flag failures to reduce as RAM-stalled
+		parse_tree tmp;
+		const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
+		if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
 		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-		if (!VM_to_token(src_int,old_type.base_type_index,new_token)) return false;
-		src.c_array<2>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
-		src.eval_to_arg<2>(0);
-		src.type_code = old_type;
-		return true;
+		//! \todo flag failures to reduce as RAM-stalled
+		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+		tmp.clear();
+		tmp.grab_index_token_from<0>(new_token.first,new_token.second);
+		_label_one_literal(tmp,types);
+
+		if (negative_signed_int)
+			{	// convert to parsed - literal
+			src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+			*src.c_array<2>() = tmp;
+			src.core_flag_update();
+			src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+			src.subtype = C99_UNARY_SUBTYPE_NEG;
+			assert(is_C99_unary_operator_expression<'-'>(src));
+			src.type_code = old_type;
+			return true;
+			}
+		else{	// convert to positive literal
+			src = tmp;
+			src.type_code = old_type;
+			return true;
+			}
 		};
 	if (	is_bitwise_complement_expression(*src.data<2>())
 		&&	is_bitwise_complement_expression(*src.data<2>()->data<2>()))

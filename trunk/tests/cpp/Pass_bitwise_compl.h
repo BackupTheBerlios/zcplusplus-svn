@@ -62,3 +62,9 @@
 #else
 #endif
 
+// spot-check -; careful to avoid -0 bitpatterns for sign-magnitude and one's complement
+#if ~-2
+#else
+#error ~-2 is false
+#endif
+
