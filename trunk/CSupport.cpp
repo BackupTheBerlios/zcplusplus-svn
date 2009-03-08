@@ -5214,12 +5214,21 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, func
 			INC_INFORM(src);
 			INFORM(" optimized to valid 0");
 			};
-		//! \todo unfortunately, leading +/- will invalidate this when binary +/- comes up: 1-0*5 should be accepted
-		src.destroy();
-		src.index_tokens[0].token.first = "0";
-		src.index_tokens[0].token.second = 1;
-		src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-		_label_one_literal(src,types);
+		// construct +0 to defuse 1-0*6
+		parse_tree tmp;
+		tmp.clear();
+		tmp.index_tokens[0].token.first = "0";
+		tmp.index_tokens[0].token.second = 1;
+		tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+		_label_one_literal(tmp,types);
+
+		// convert to parsed + literal
+		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+		*src.c_array<2>() = tmp;
+		src.DeleteIdx<1>(0);
+		src.core_flag_update();
+		src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+		src.subtype = C99_UNARY_SUBTYPE_PLUS;
 		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
 			{
 			src.type_code = old_type;
@@ -5227,6 +5236,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, func
 		else{
 			src.type_code.set_type(C_TYPE::LLONG);	// legalize
 			}
+		assert(is_C99_unary_operator_expression<'+'>(src));
 		return true;
 		};
 
@@ -5257,6 +5267,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 {
 	assert(is_C99_mult_operator_expression<'/'>(src));
 
+	const type_spec old_type = src.type_code;
 	bool is_true = false;
 	if (converts_to_integerlike(src.type_code))
 		{
@@ -5273,12 +5284,42 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 				};
 			return false;
 			}
-#if 0
-		else if (/* would like a simple comparison of absolute values to auto-detect zero, possibly after mainline code */)
+		/*! \todo would like a simple comparison of absolute values to auto-detect zero, possibly after mainline code */
+		else if (literal_converts_to_bool(*src.data<1>(),is_true) && !is_true)
 			{
+			if (C_TYPE::INTEGERLIKE==old_type.base_type_index)
+				{
+				message_header(src.index_tokens[0]);
+				INC_INFORM("invalid ");
+				INC_INFORM(src);
+				INFORM(" optimized to valid 0");
+				};
+			// construct +0 to defuse 1-0/6
+			parse_tree tmp;
+			tmp.clear();
+			tmp.index_tokens[0].token.first = "0";
+			tmp.index_tokens[0].token.second = 1;
+			tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+			_label_one_literal(tmp,types);
+
+			// convert to parsed + literal
+			src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+			*src.c_array<2>() = tmp;
+			src.DeleteIdx<1>(0);
+			src.core_flag_update();
+			src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+			src.subtype = C99_UNARY_SUBTYPE_PLUS;
+			if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
+				{
+				src.type_code = old_type;
+				}
+			else{
+				src.type_code.set_type(C_TYPE::LLONG);	// legalize
+				}
+			assert(is_C99_unary_operator_expression<'+'>(src));
+			return true;
 			}
 		//! \todo change target for formal verification; would like to inject a constraint against div-by-integer-zero here
-#endif
 		};
 
 	if (	 converts_to_integer(src.data<1>()->type_code)
@@ -5288,7 +5329,6 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 		{
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
-		const type_spec old_type = src.type_code;
 		intlike_literal_to_VM(res_int,*src.data<1>());
 		intlike_literal_to_VM(rhs_int,*src.data<2>());
 		res_int /= rhs_int;
@@ -5308,6 +5348,7 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 {
 	assert(is_C99_mult_operator_expression<'%'>(src));
 
+	const type_spec old_type = src.type_code;
 	bool is_true = false;
 	if (converts_to_integerlike(src.type_code))
 		{
@@ -5324,12 +5365,42 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 				}
 			return false;
 			}
-#if 0
-		else if (/* would like a simple comparison of (absolute?) values to auto-detect identity-map, possibly after mainline code */)
+		/*! \todo would like a simple comparison of absolute values to auto-detect zero, possibly after mainline code */
+		else if (literal_converts_to_bool(*src.data<1>(),is_true) && !is_true)
 			{
+			if (C_TYPE::INTEGERLIKE==old_type.base_type_index)
+				{
+				message_header(src.index_tokens[0]);
+				INC_INFORM("invalid ");
+				INC_INFORM(src);
+				INFORM(" optimized to valid 0");
+				};
+			// construct +0 to defuse 1-0%6
+			parse_tree tmp;
+			tmp.clear();
+			tmp.index_tokens[0].token.first = "0";
+			tmp.index_tokens[0].token.second = 1;
+			tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+			_label_one_literal(tmp,types);
+
+			// convert to parsed + literal
+			src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+			*src.c_array<2>() = tmp;
+			src.DeleteIdx<1>(0);
+			src.core_flag_update();
+			src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+			src.subtype = C99_UNARY_SUBTYPE_PLUS;
+			if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
+				{
+				src.type_code = old_type;
+				}
+			else{
+				src.type_code.set_type(C_TYPE::LLONG);	// legalize
+				}
+			assert(is_C99_unary_operator_expression<'+'>(src));
+			return true;
 			}
 		//! \todo change target for formal verification; would like to inject a constraint against div-by-integer-zero here
-#endif
 		};
 
 	if (	 converts_to_integer(src.data<1>()->type_code)
@@ -5339,7 +5410,6 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 		{
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
-		const type_spec old_type = src.type_code;
 		intlike_literal_to_VM(res_int,*src.data<1>());
 		intlike_literal_to_VM(rhs_int,*src.data<2>());
 		res_int %= rhs_int;
