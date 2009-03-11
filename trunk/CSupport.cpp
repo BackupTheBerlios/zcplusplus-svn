@@ -5240,15 +5240,26 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, func
 		return true;
 		};
 
-	if (	 converts_to_integer(src.data<1>()->type_code)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
-		&&	 converts_to_integer(src.data<2>()->type_code)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+	const bool lhs_converted = intlike_literal_to_VM(res_int,*src.data<1>());
+	const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
+	if (lhs_converted && 1==res_int)
 		{
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
-		intlike_literal_to_VM(res_int,*src.data<1>());
-		intlike_literal_to_VM(rhs_int,*src.data<2>());
+		src.eval_to_arg<2>(0);
+		src.type_code = old_type;
+		return true;
+		};
+	if (rhs_converted && 1==rhs_int)
+		{
+		src.eval_to_arg<1>(0);
+		src.type_code = old_type;
+		return true;
+		};
+	if (lhs_converted && rhs_converted)
+		{
+		//! \todo: signed integer result has undefined overflow
+		// unsigned case
 		res_int *= rhs_int;	//! \todo what about overflow?
 
 		//! \todo flag failures to reduce as RAM-stalled
@@ -5259,7 +5270,6 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, func
 		src.type_code = old_type;
 		return true;
 		}
-
 	return false;
 }
 
