@@ -102,6 +102,7 @@ public:
 	bool UNICODE_crippled() const {return (signed_int_representation & 64U);};
 	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& unsigned_max(std_int_enum x) const {assert(x); return unsigned_maxima[x-1];};
 	template<std_int_enum x> const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& unsigned_max() const {ZAIMONI_STATIC_ASSERT(x); return unsigned_maxima[x-1];}
+	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& signed_max(std_int_enum x) const {assert(x); return signed_maxima[x-1];};
 	template<std_int_enum x> const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& signed_max() const {ZAIMONI_STATIC_ASSERT(x); return signed_maxima[x-1];}
 };
 
