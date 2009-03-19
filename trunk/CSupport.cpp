@@ -2963,6 +2963,15 @@ static bool is_C99_add_operator_expression(const parse_tree& src)
 			&&	1==src.size<1>() && (PARSE_ADD_EXPRESSION & src.data<1>()->flags)
 			&&	1==src.size<2>() && (PARSE_MULT_EXPRESSION & src.data<2>()->flags);
 }
+
+template<char c> static bool is_C99_add_operator_expression(const parse_tree& src)
+{
+	return		robust_token_is_char<c>(src.index_tokens[0].token)
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_ADD_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_MULT_EXPRESSION & src.data<2>()->flags);
+}
 #endif
 
 #define C99_SHIFT_SUBTYPE_LEFT 1
@@ -5196,7 +5205,7 @@ static bool terse_locate_mult_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_mult_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_mult_expression(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_C99_mult_operator_expression<'*'>(src));
 
@@ -5291,24 +5300,30 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, func
 			if (rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation()) ub += 1;
 			if (ub<lhs_test || ub<rhs_test)
 				{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" signed multiply overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
-				zcc_errors.inc_error();
+				if (hard_error)
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" signed multiply overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
+					zcc_errors.inc_error();
+					}
 				return false;
 				}
 			const bool lhs_lt_rhs = lhs_test<rhs_test;
 			ub /= (lhs_lt_rhs) ? rhs_test : lhs_test;
 			if (ub<(lhs_lt_rhs ? lhs_test : rhs_test))
 				{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" signed multiply overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
-				zcc_errors.inc_error();
+				if (hard_error)
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" signed multiply overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
+					zcc_errors.inc_error();
+					}
 				return false;
 				}
 			lhs_test *= rhs_test;
@@ -5344,9 +5359,8 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, func
 				message_header(src.index_tokens[0]);
 				INC_INFORM(WARN_STR);
 				INC_INFORM(src);
-				INFORM(" unsigned integer multiply using signed integer arguments, target-defined behavior");
+				INFORM(" unsigned integer multiply using signed integer argument(s), target-defined behavior");
 				if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
-				return false;
 				}
 			}
 		// convert to parsed + literal
@@ -5622,7 +5636,7 @@ static void C_mult_expression_easy_syntax_check(parse_tree& src,const type_syste
 			}
 		src.type_code.set_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
 		if (C99_MULT_SUBTYPE_MULT==src.subtype)
-			eval_mult_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
+			eval_mult_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 		else
 			eval_div_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);			
 		}
@@ -5713,7 +5727,7 @@ static void CPP_mult_expression_easy_syntax_check(parse_tree& src,const type_sys
 			}
 		src.type_code.set_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
 		if (C99_MULT_SUBTYPE_MULT==src.subtype)
-			eval_mult_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+			eval_mult_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 		else
 			eval_div_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 		}
@@ -8566,7 +8580,7 @@ static bool eval_mult_expression(parse_tree& src,const type_system& types,
 		{
 		EvalParseTree(*src.c_array<1>(),types);
 		EvalParseTree(*src.c_array<2>(),types);
-		if (eval_mult_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		if (eval_mult_expression(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
