@@ -5279,7 +5279,6 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, func
 			target_machine->signed_additive_inverse(rhs_int,machine_type_rhs);
 			target_machine->signed_additive_inverse(rhs_int,machine_type_old);
 			}
-#if 2
 		const bool lhs_negative = res_int.test(bitcount_old-1);
 		const bool rhs_negative = rhs_int.test(bitcount_old-1);
 		if (0==(promoted_type_old-C_TYPE::INT)%2)
@@ -5369,19 +5368,6 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, func
 		src.type_code = old_type;
 		assert(is_C99_unary_operator_expression<'+'>(src));
 		return true;
-#else
-		//! \todo: signed integer result has undefined overflow
-		// unsigned case
-		res_int *= rhs_int;	//! \todo what about overflow?
-
-		//! \todo flag failures to reduce as RAM-stalled
-		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-		src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
-		src.eval_to_arg<1>(0);
-		src.type_code = old_type;
-		return true;
-#endif
 		}
 	return false;
 }
