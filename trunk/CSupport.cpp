@@ -5456,18 +5456,21 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 		//! \todo change target for formal verification; would like to inject a constraint against div-by-integer-zero here
 		};
 
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+	const bool lhs_converted = intlike_literal_to_VM(res_int,*src.data<1>());
+	const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
+	if (rhs_converted && rhs_int==1)
+		{	// __/1 |-> __
+		src.eval_to_arg<1>(0);
+		src.type_code = old_type;
+		return true;
+		};
 	//! \todo handle signed integer arithmetic
 	// two's complement can overflow: INT_MIN/-1
 	// implementation-defined whether negative results round away or to zero (standard prefers to zero, so default to that)
-	if (	 converts_to_integer(src.data<1>()->type_code)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
-		&&	 converts_to_integer(src.data<2>()->type_code)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+	if (lhs_converted && rhs_converted)
 		{
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
-		intlike_literal_to_VM(res_int,*src.data<1>());
-		intlike_literal_to_VM(rhs_int,*src.data<2>());
 		res_int /= rhs_int;
 
 		//! \todo flag failures to reduce as RAM-stalled
@@ -5540,15 +5543,38 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 		//! \todo change target for formal verification; would like to inject a constraint against div-by-integer-zero here
 		};
 
-	if (	 converts_to_integer(src.data<1>()->type_code)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
-		&&	 converts_to_integer(src.data<2>()->type_code)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+	const bool lhs_converted = intlike_literal_to_VM(res_int,*src.data<1>());
+	const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
+	if (rhs_converted && rhs_int==1)
+		{	// __%1 |-> +0
+		parse_tree tmp;
+		tmp.clear();
+		tmp.index_tokens[0].token.first = "0";
+		tmp.index_tokens[0].token.second = 1;
+		tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+		_label_one_literal(tmp,types);
+
+		// convert to parsed + literal
+		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+		*src.c_array<2>() = tmp;
+		src.DeleteIdx<1>(0);
+		src.core_flag_update();
+		src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+		src.subtype = C99_UNARY_SUBTYPE_PLUS;
+		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
+			{
+			src.type_code = old_type;
+			}
+		else{
+			src.type_code.set_type(C_TYPE::LLONG);	// legalize
+			}
+		assert(is_C99_unary_operator_expression<'+'>(src));
+		return true;
+		};
+	if (lhs_converted && rhs_converted)
 		{
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
-		intlike_literal_to_VM(res_int,*src.data<1>());
-		intlike_literal_to_VM(rhs_int,*src.data<2>());
 		res_int %= rhs_int;
 
 		//! \todo flag failures to reduce as RAM-stalled
