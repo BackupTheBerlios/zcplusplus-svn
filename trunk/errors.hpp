@@ -46,14 +46,18 @@ enum boolean_options {
 #define boolean_option_7 char_is_signed
 #define boolean_option_char_is_signed 7
 #define DEFAULT_char_is_signed false
-	char_is_unsigned
+	char_is_unsigned,
 #define boolean_option_8 char_is_unsigned
 #define boolean_option_char_is_unsigned 8
 #define DEFAULT_char_is_unsigned false
+	int_neg_div_rounds_away_from_zero
+#define boolean_option_9 int_neg_div_rounds_away_from_zero
+#define boolean_option_int_neg_div_rounds_away_from_zero 9
+#define DEFAULT_int_neg_div_rounds_away_from_zero false
 };
 
 #define boolean_option(A) boolean_option_##A
-#define MAX_OPT_BOOL (boolopt::char_is_unsigned+1)
+#define MAX_OPT_BOOL (boolopt::int_neg_div_rounds_away_from_zero+1)
 
 }
 

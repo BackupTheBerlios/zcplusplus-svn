@@ -36,7 +36,8 @@ static const POD_triple<const char*, size_t, const char*> option_map_bool[]
 		{ "--int-twos-complement",	boolopt::int_twos_complement, 	"preprocess for a two's complement integer machine (default)\n"},
 		{ "--int-traps",	boolopt::int_traps, 	"signed int has a trap representation (-0 for sign-magnitude and one's complement, -(2^CHAR_BIT) for two's complement\n"},
 		{ "-fsigned-char",	boolopt::char_is_signed, 	"char acts like signed char\n"},		// GCC compatibility
-		{ "-funsigned-char",	boolopt::char_is_unsigned, 	"char acts like unsigned char (default)\n"}	// GCC compatibility
+		{ "-funsigned-char",	boolopt::char_is_unsigned, 	"char acts like unsigned char (default)\n"},	// GCC compatibility
+		{ "--int-neg-div-rounds-away-from-zero",	boolopt::int_neg_div_rounds_away_from_zero, 	"make -3/-2==-2 contrary to C99 recommendation\n"}	// GCC compatibility
 	};
 
 const bool bool_options_default[MAX_OPT_BOOL]
@@ -48,7 +49,8 @@ const bool bool_options_default[MAX_OPT_BOOL]
 			default_option(boolean_option(5)),
 			default_option(boolean_option(6)),
 			default_option(boolean_option(7)),
-			default_option(boolean_option(8))
+			default_option(boolean_option(8)),
+			default_option(boolean_option(9))
 		};
 
 // exposed in errors.hpp
