@@ -2963,15 +2963,6 @@ static bool is_C99_add_operator_expression(const parse_tree& src)
 			&&	1==src.size<1>() && (PARSE_ADD_EXPRESSION & src.data<1>()->flags)
 			&&	1==src.size<2>() && (PARSE_MULT_EXPRESSION & src.data<2>()->flags);
 }
-
-template<char c> static bool is_C99_add_operator_expression(const parse_tree& src)
-{
-	return		robust_token_is_char<c>(src.index_tokens[0].token)
-			&&	NULL==src.index_tokens[1].token.first
-			&&	src.empty<0>()
-			&&	1==src.size<1>() && (PARSE_ADD_EXPRESSION & src.data<1>()->flags)
-			&&	1==src.size<2>() && (PARSE_MULT_EXPRESSION & src.data<2>()->flags);
-}
 #endif
 
 #define C99_SHIFT_SUBTYPE_LEFT 1
@@ -3200,11 +3191,21 @@ static bool C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 {
 	const parse_tree* src_image = &src;
 	bool is_add_inv = false;
-	while(is_C99_unary_operator_expression<'-'>(*src_image) && converts_to_integer(src_image->type_code))
+	while(converts_to_integer(src_image->type_code))
 		{
-		src_image = src.data<2>();
-		assert(NULL!=src_image);
-		is_add_inv = !is_add_inv;
+		if 		(is_C99_unary_operator_expression<'-'>(*src_image))
+			{
+			is_add_inv = !is_add_inv;
+			src_image = src.data<2>();
+			assert(NULL!=src_image);
+			}
+		else if (is_C99_unary_operator_expression<'+'>(*src_image))
+			{
+			src_image = src.data<2>();
+			assert(NULL!=src_image);
+			}
+		else
+			break;
 		}
 
 	if (	!src_image->is_atomic()
@@ -3237,11 +3238,21 @@ static bool CPP_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 {
 	const parse_tree* src_image = &src;
 	bool is_add_inv = false;
-	while(is_C99_unary_operator_expression<'-'>(*src_image) && converts_to_integer(src_image->type_code))
+	while(converts_to_integer(src_image->type_code))
 		{
-		src_image = src.data<2>();
-		assert(NULL!=src_image);
-		is_add_inv = !is_add_inv;
+		if 		(is_C99_unary_operator_expression<'-'>(*src_image))
+			{
+			is_add_inv = !is_add_inv;
+			src_image = src.data<2>();
+			assert(NULL!=src_image);
+			}
+		else if (is_C99_unary_operator_expression<'+'>(*src_image))
+			{
+			src_image = src.data<2>();
+			assert(NULL!=src_image);
+			}
+		else
+			break;
 		}
 
 	if (!src_image->is_atomic()) return false;
@@ -5445,6 +5456,9 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 		//! \todo change target for formal verification; would like to inject a constraint against div-by-integer-zero here
 		};
 
+	//! \todo handle signed integer arithmetic
+	// two's complement can overflow: INT_MIN/-1
+	// implementation-defined whether negative results round away or to zero (standard prefers to zero, so default to that)
 	if (	 converts_to_integer(src.data<1>()->type_code)
 		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
 		&&	 converts_to_integer(src.data<2>()->type_code)
