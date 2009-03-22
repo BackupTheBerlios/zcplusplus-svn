@@ -5365,7 +5365,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 			}
 		else{	// unsigned integer result: just do it (bitwise cast)
 			res_int *= rhs_int;
-			if (lhs_negative || rhs_negative)
+			if ((lhs_negative && 0==(promoted_type_lhs-C_TYPE::INT)%2) || (rhs_negative && 0==(promoted_type_rhs-C_TYPE::INT)%2))
 				{
 				message_header(src.index_tokens[0]);
 				INC_INFORM(WARN_STR);
