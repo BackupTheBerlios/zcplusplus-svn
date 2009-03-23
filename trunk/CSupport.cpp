@@ -5317,7 +5317,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM(src);
-					INFORM(" signed multiply overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
+					INFORM(" signed * overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
 					zcc_errors.inc_error();
 					}
 				return false;
@@ -5332,7 +5332,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM(src);
-					INFORM(" signed multiply overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
+					INFORM(" signed * overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
 					zcc_errors.inc_error();
 					}
 				return false;
@@ -5370,7 +5370,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 				message_header(src.index_tokens[0]);
 				INC_INFORM(WARN_STR);
 				INC_INFORM(src);
-				INFORM(" unsigned integer multiply using signed integer argument(s), target-defined behavior");
+				INFORM(" unsigned integer * using signed integer argument(s), target-defined behavior");
 				if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
 				}
 			}
@@ -5471,14 +5471,159 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 	// implementation-defined whether negative results round away or to zero (standard prefers to zero, so default to that)
 	if (lhs_converted && rhs_converted)
 		{
-		res_int /= rhs_int;
+		const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
+		const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
+		const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
+		const virtual_machine::std_int_enum machine_type_lhs = (virtual_machine::std_int_enum)((promoted_type_lhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const virtual_machine::std_int_enum machine_type_rhs = (virtual_machine::std_int_enum)((promoted_type_rhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const virtual_machine::std_int_enum machine_type_old = (virtual_machine::std_int_enum)((promoted_type_old-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
+		const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
+		const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
 
-		//! \todo flag failures to reduce as RAM-stalled
+		// handle sign-extension of lhs, rhs
+		if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
+			{
+			target_machine->signed_additive_inverse(res_int,machine_type_lhs);
+			target_machine->signed_additive_inverse(res_int,machine_type_old);
+			}
+		if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
+			{
+			target_machine->signed_additive_inverse(rhs_int,machine_type_rhs);
+			target_machine->signed_additive_inverse(rhs_int,machine_type_old);
+			}
+		const bool lhs_negative = res_int.test(bitcount_old-1);
+		const bool rhs_negative = rhs_int.test(bitcount_old-1);
+		if (0==(promoted_type_old-C_TYPE::INT)%2)
+			{	// signed integer result
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(machine_type_old));
+			if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,machine_type_old);
+			if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+			if (rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation()) ub += 1;
+			if (lhs_test<rhs_test)
+				{
+				if (rhs_negative==lhs_negative || !bool_options[boolopt::int_neg_div_rounds_away_from_zero])
+					{	// 0
+					parse_tree tmp;
+					tmp.clear();
+					tmp.index_tokens[0].token.first = "0";
+					tmp.index_tokens[0].token.second = 1;
+					tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+					_label_one_literal(tmp,types);
+
+					// convert to parsed + literal
+					src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+					*src.c_array<2>() = tmp;
+					src.DeleteIdx<1>(0);
+					src.core_flag_update();
+					src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+					src.subtype = C99_UNARY_SUBTYPE_PLUS;
+					src.type_code = old_type;
+					assert(is_C99_unary_operator_expression<'+'>(src));
+					return true;
+					}
+				else{	// -1
+					parse_tree tmp;
+					tmp.clear();
+					tmp.index_tokens[0].token.first = "1";
+					tmp.index_tokens[0].token.second = 1;
+					tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+					_label_one_literal(tmp,types);
+
+					// convert to parsed - literal
+					src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+					*src.c_array<2>() = tmp;
+					src.DeleteIdx<1>(0);
+					src.core_flag_update();
+					src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+					src.subtype = C99_UNARY_SUBTYPE_NEG;
+					src.type_code = old_type;
+					assert(is_C99_unary_operator_expression<'-'>(src));
+					return true;
+					}
+				}
+
+			bool round_away = false;
+			if (rhs_negative!=lhs_negative && bool_options[boolopt::int_neg_div_rounds_away_from_zero])
+				{
+				unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_mod_test(lhs_test);
+				lhs_mod_test %= rhs_test;
+				round_away = 0!=lhs_mod_test;
+				}
+			lhs_test /= rhs_test;
+			if (rhs_negative!=lhs_negative)
+				{
+				if (round_away) lhs_test += 1;
+				target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+				// convert to parsed - literal
+				zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+				if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+				parse_tree tmp;
+				tmp.clear();
+				tmp.index_tokens[0].token.first = new_token.first;
+				tmp.index_tokens[0].token.second = strlen(new_token.first);
+				tmp.index_tokens[0].flags = new_token.second;
+				_label_one_literal(tmp,types);
+
+				src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+				*src.c_array<2>() = tmp;
+				src.DeleteIdx<1>(0);
+				src.core_flag_update();
+				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+				src.subtype = C99_UNARY_SUBTYPE_NEG;
+				src.type_code = old_type;
+				assert(is_C99_unary_operator_expression<'-'>(src));
+				return true;
+				}
+			if (ub<lhs_test)
+				{
+				assert(virtual_machine::twos_complement==target_machine->C_signed_int_representation());
+				if (hard_error)
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" signed / overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
+					zcc_errors.inc_error();
+					}
+				return false;
+				}
+
+			res_int = lhs_test;
+			}
+		else{	// unsigned result
+			res_int /= rhs_int;
+			if ((lhs_negative && 0==(promoted_type_lhs-C_TYPE::INT)%2) || (rhs_negative && 0==(promoted_type_rhs-C_TYPE::INT)%2))
+				{
+				message_header(src.index_tokens[0]);
+				INC_INFORM(WARN_STR);
+				INC_INFORM(src);
+				INFORM(" unsigned integer / using signed integer argument(s), target-defined behavior");
+				if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
+				}
+			}
+
+		// convert to parsed + literal
 		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
 		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-		src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
-		src.eval_to_arg<1>(0);
+		parse_tree tmp;
+		tmp.clear();
+		tmp.index_tokens[0].token.first = new_token.first;
+		tmp.index_tokens[0].token.second = strlen(new_token.first);
+		tmp.index_tokens[0].flags = new_token.second;
+		_label_one_literal(tmp,types);
+
+		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+		*src.c_array<2>() = tmp;
+		src.DeleteIdx<1>(0);
+		src.core_flag_update();
+		src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+		src.subtype = C99_UNARY_SUBTYPE_PLUS;
 		src.type_code = old_type;
+		assert(is_C99_unary_operator_expression<'+'>(src));
 		return true;
 		}
 	return false;
@@ -5575,14 +5720,101 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 		};
 	if (lhs_converted && rhs_converted)
 		{
-		res_int %= rhs_int;
+		const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
+		const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
+		const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
+		const virtual_machine::std_int_enum machine_type_lhs = (virtual_machine::std_int_enum)((promoted_type_lhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const virtual_machine::std_int_enum machine_type_rhs = (virtual_machine::std_int_enum)((promoted_type_rhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const virtual_machine::std_int_enum machine_type_old = (virtual_machine::std_int_enum)((promoted_type_old-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
+		const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
+		const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
 
-		//! \todo flag failures to reduce as RAM-stalled
+		// handle sign-extension of lhs, rhs
+		if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
+			{
+			target_machine->signed_additive_inverse(res_int,machine_type_lhs);
+			target_machine->signed_additive_inverse(res_int,machine_type_old);
+			}
+		if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
+			{
+			target_machine->signed_additive_inverse(rhs_int,machine_type_rhs);
+			target_machine->signed_additive_inverse(rhs_int,machine_type_old);
+			}
+		const bool lhs_negative = res_int.test(bitcount_old-1);
+		const bool rhs_negative = rhs_int.test(bitcount_old-1);
+		if (0==(promoted_type_old-C_TYPE::INT)%2)
+			{	// signed integer result
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(machine_type_old));
+			if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,machine_type_old);
+			if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+			if (rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation()) ub += 1;
+
+			lhs_test %= rhs_test;
+			if (0!=lhs_test && rhs_negative!=lhs_negative)
+				{
+				if (bool_options[boolopt::int_neg_div_rounds_away_from_zero])
+					{
+					rhs_test -= lhs_test;
+					lhs_test = rhs_test;
+					}
+				else{
+					// convert to parsed - literal
+					zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+					if (!VM_to_token(lhs_test,old_type.base_type_index,new_token)) return false;
+					parse_tree tmp;
+					tmp.clear();
+					tmp.index_tokens[0].token.first = new_token.first;
+					tmp.index_tokens[0].token.second = strlen(new_token.first);
+					tmp.index_tokens[0].flags = new_token.second;
+					_label_one_literal(tmp,types);
+
+					src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+					*src.c_array<2>() = tmp;
+					src.DeleteIdx<1>(0);
+					src.core_flag_update();
+					src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+					src.subtype = C99_UNARY_SUBTYPE_NEG;
+					src.type_code = old_type;
+					assert(is_C99_unary_operator_expression<'-'>(src));
+					return true;
+					}
+				};
+
+			res_int = lhs_test;
+			}
+		else{	// unsigned result
+			res_int %= rhs_int;
+			if ((lhs_negative && 0==(promoted_type_lhs-C_TYPE::INT)%2) || (rhs_negative && 0==(promoted_type_rhs-C_TYPE::INT)%2))
+				{
+				message_header(src.index_tokens[0]);
+				INC_INFORM(WARN_STR);
+				INC_INFORM(src);
+				INFORM(" unsigned integer % using signed integer argument(s), target-defined behavior");
+				if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
+				}
+			}
+
+		// convert to parsed + literal
 		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
 		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-		src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
-		src.eval_to_arg<1>(0);
+		parse_tree tmp;
+		tmp.clear();
+		tmp.index_tokens[0].token.first = new_token.first;
+		tmp.index_tokens[0].token.second = strlen(new_token.first);
+		tmp.index_tokens[0].flags = new_token.second;
+		_label_one_literal(tmp,types);
+
+		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+		*src.c_array<2>() = tmp;
+		src.DeleteIdx<1>(0);
+		src.core_flag_update();
+		src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+		src.subtype = C99_UNARY_SUBTYPE_PLUS;
 		src.type_code = old_type;
+		assert(is_C99_unary_operator_expression<'+'>(src));
 		return true;
 		}
 	return false;
