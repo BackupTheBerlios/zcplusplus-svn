@@ -396,6 +396,35 @@ static const zaimoni::POD_pair<const char*,size_t> limits_h_core[]
 #define LIMITS_LONG_BIT_LINE 24
 #endif
 
+//! \todo option --deathstation, with supporting predefine : do not provide convenient, legal but not required features
+static const zaimoni::POD_pair<const char*,size_t> stddef_h_core[]
+	=	{	DICT_STRUCT("#ifndef __STDDEF_H__"),
+			DICT_STRUCT("#define __STDDEF_H__ 1"),
+			DICT_STRUCT("#pragma ZCC lock __STDDEF_H__"),
+			DICT_STRUCT("typedef "),
+			DICT_STRUCT("typedef "),
+			DICT_STRUCT("typedef "),
+			DICT_STRUCT("#define NULL "),
+//			DICT_STRUCT("#define offsetof"),	// do not provide offsetof as we don't parse structs yet
+			DICT_STRUCT("#pragma ZCC lock NULL offsetof"),	// lock offsetof because it's standard
+			DICT_STRUCT("#ifdef __cplusplus"),
+			DICT_STRUCT("namespace std {"),
+			DICT_STRUCT("typedef "),
+			DICT_STRUCT("typedef "),
+			DICT_STRUCT("typedef "),
+			DICT_STRUCT("}"),
+			DICT_STRUCT("#endif"),
+			DICT_STRUCT("#endif"),
+		};
+
+#define STDDEF_PTRDIFF_T_LINE 3
+#define STDDEF_SIZE_T_LINE 4
+#define STDDEF_WCHAR_T_LINE 5
+#define STDDEF_NULL_LINE 6
+#define STDDEF_CPP_PTRDIFF_T_LINE 10
+#define STDDEF_CPP_SIZE_T_LINE 11
+#define STDDEF_CPP_WCHAR_T_LINE 12
+
 static const zaimoni::POD_pair<const char*,size_t> accept_pragma_leading_tokens[]
 	=	{	DICT_STRUCT("STDC"),		// C99
 			DICT_STRUCT("ZCC"),		// our own
@@ -2020,6 +2049,16 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					hardcoded_header = true;
 					if (0>binary_find("__LIMITS_H__",sizeof("__LIMITS_H__")-1,macros_object))	
 						create_limits_header(IncludeTokenList,look_for);	// not included yet
+					};
+
+				// C,C++: stddef.h is hardcoded
+				// C++: cstddef is hardcoded
+				if (	(!strcmp(look_for,"stddef.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
+					||	(!strcmp(look_for,"cstddef") && Lang::CPlusPlus==lang_code))
+					{	// header is stddef.h
+					hardcoded_header = true;
+					if (0>binary_find("__STDDEF_H__",sizeof("__STDDEF_H__")-1,macros_object))	
+						create_stddef_header(IncludeTokenList,look_for);	// not included yet
 					};
 
 				found_file = !hardcoded_header && find_system_include(look_for, buf);
@@ -3896,6 +3935,9 @@ CPreprocessor::debug_to_stderr(const zaimoni::autovalarray_ptr<zaimoni::Token<ch
 		size_t i = 0;
 		while(i<list_size)
 			{
+			if (0<i && TokenList[i-1]->logical_line.first==TokenList[i]->logical_line.first && !strcmp(TokenList[i-1]->src_filename,TokenList[i]->src_filename) && require_padding(TokenList[i-1]->back(),TokenList[i]->front()))
+				INC_INFORM(' ');
+
 			if (list_size<=i+1 || TokenList[i]->logical_line.first!=TokenList[i+1]->logical_line.first || strcmp(TokenList[i]->src_filename,TokenList[i+1]->src_filename))
 				{
 				INFORM(TokenList[i]->data());
@@ -3929,7 +3971,10 @@ CPreprocessor::debug_to_stderr(const zaimoni::autovalarray_ptr<zaimoni::Token<ch
 				{
 				INC_INFORM(" ");
 				INFORM(macros_object_expansion[i]->data());
-				};
+				}
+			else{
+				INC_INFORM("\n");
+				}
 			++i;
 			}
 		const size_t function_macro_size = macros_function.size();
@@ -3943,7 +3988,10 @@ CPreprocessor::debug_to_stderr(const zaimoni::autovalarray_ptr<zaimoni::Token<ch
 				{
 				INC_INFORM(" ");
 				INFORM(macros_function_expansion[i]->data());
-				};
+				}
+			else{
+				INC_INFORM("\n");
+				}
 			++i;
 			}
 		// put non-default macro locks here when we get to them.
@@ -4859,6 +4907,99 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		INFORM("limits.h header improvised incorrectly (trying to cross-preprocess to target with larger uintmax_t than native)");
 		zcc_errors.inc_error();
 		}
+}
+
+static const char* signed_type_from_machine(const virtual_machine::std_int_enum x)
+{
+	switch(x)
+	{
+	case virtual_machine::std_int_none:	return NULL;
+	case virtual_machine::std_int_char:	return "signed char";
+	case virtual_machine::std_int_short:	return "short";
+	case virtual_machine::std_int_int:	return "int";
+	case virtual_machine::std_int_long:	return "long";
+	case virtual_machine::std_int_long_long:	return "long long";
+	};
+	return NULL;
+}
+
+static const char* unsigned_type_from_machine(const virtual_machine::std_int_enum x)
+{
+	switch(x)
+	{
+	case virtual_machine::std_int_none:	return NULL;
+	case virtual_machine::std_int_char:	return "unsigned char";
+	case virtual_machine::std_int_short:	return "unsigned short";
+	case virtual_machine::std_int_int:	return "unsigned int";
+	case virtual_machine::std_int_long:	return "unsigned long";
+	case virtual_machine::std_int_long_long:	return "unsigned long long";
+	};
+	return NULL;
+}
+
+static const char* NULL_constant_from_machine(const virtual_machine::std_int_enum x)
+{
+	switch(x)
+	{
+	case virtual_machine::std_int_none:	return NULL;
+	case virtual_machine::std_int_char:	return "'\0'";
+	case virtual_machine::std_int_short:	return "0";
+	case virtual_machine::std_int_int:	return "0";
+	case virtual_machine::std_int_long:	return "0L";
+	case virtual_machine::std_int_long_long:	return "0LL";
+	};
+	return NULL;
+}
+
+/*! 
+ * Improvises the C99 stddef.h header from target information.  Can throw std::bad_alloc.
+ * 
+ * \param TokenList : where to improvise to
+ * \param header_name : what header we were requesting.
+ */
+void
+CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name)
+{
+	assert(NULL!=header_name);
+	TokenList.clear();
+	TokenList.resize(STATIC_SIZE(stddef_h_core));
+	zaimoni::Token<char>** tmp = TokenList.c_array();
+	size_t i = STATIC_SIZE(stddef_h_core);
+	do	{
+		--i;
+		tmp[i] = new zaimoni::Token<char>(stddef_h_core[i].first,0,stddef_h_core[i].second,0);
+		tmp[i]->logical_line.first = i+1;
+		tmp[i]->logical_line.second = 0;
+		tmp[i]->original_line = tmp[i]->logical_line;
+		tmp[i]->src_filename = header_name;
+		}
+	while(0<i);
+
+	// C99 17.7p2 : typedefs; C++ versions in namespace std
+	const char* const ptrdiff_str = signed_type_from_machine(target_machine.ptrdiff_t_type());
+	assert(NULL!=ptrdiff_str);
+	tmp[STDDEF_PTRDIFF_T_LINE]->append(0,ptrdiff_str);
+	tmp[STDDEF_PTRDIFF_T_LINE]->append(0," ptrdiff_t;");
+	tmp[STDDEF_CPP_PTRDIFF_T_LINE]->append(0,ptrdiff_str);
+	tmp[STDDEF_CPP_PTRDIFF_T_LINE]->append(0," ptrdiff_t;");
+
+	const char* const size_t_str = unsigned_type_from_machine(target_machine.size_t_type());
+	assert(NULL!=size_t_str);
+	tmp[STDDEF_SIZE_T_LINE]->append(0,size_t_str);
+	tmp[STDDEF_SIZE_T_LINE]->append(0," size_t;");
+	tmp[STDDEF_CPP_SIZE_T_LINE]->append(0,size_t_str);
+	tmp[STDDEF_CPP_SIZE_T_LINE]->append(0," size_t;");
+
+	const char* const wchar_t_str = unsigned_type_from_machine(target_machine.UNICODE_wchar_t());
+	assert(NULL!=wchar_t_str);
+	tmp[STDDEF_WCHAR_T_LINE]->append(0,wchar_t_str);
+	tmp[STDDEF_WCHAR_T_LINE]->append(0," wchar_t;");
+	tmp[STDDEF_CPP_WCHAR_T_LINE]->append(0,wchar_t_str);
+	tmp[STDDEF_CPP_WCHAR_T_LINE]->append(0," wchar_t;");
+
+	// C99 17.7p3 : macros
+	// we assume that ptrdiff_t is the correct size (really should have an explicit void* size)
+	tmp[STDDEF_NULL_LINE]->append(0,NULL_constant_from_machine(target_machine.ptrdiff_t_type()));
 }
 
 /*

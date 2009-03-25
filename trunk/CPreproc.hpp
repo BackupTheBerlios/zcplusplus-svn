@@ -77,6 +77,7 @@ private:
 	bool discard_leading_trailing_concatenate_op(zaimoni::Token<char>& x);
 	void use_line_directive_and_discard(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i);
 	void create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name);
+	void create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name);
 
 	// optimize token list
 	void truncate_illegal_tokens(zaimoni::Token<char>& x,const int directive_type,const size_t critical_offset);
