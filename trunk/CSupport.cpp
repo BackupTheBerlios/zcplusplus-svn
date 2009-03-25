@@ -2948,7 +2948,6 @@ template<char c> static bool is_C99_mult_operator_expression(const parse_tree& s
 			&&	1==src.size<2>() && (PARSE_PM_EXPRESSION & src.data<2>()->flags);
 }
 
-#if 0
 #define C99_ADD_SUBTYPE_PLUS 1
 #define C99_ADD_SUBTYPE_MINUS 2
 
@@ -2963,7 +2962,15 @@ static bool is_C99_add_operator_expression(const parse_tree& src)
 			&&	1==src.size<1>() && (PARSE_ADD_EXPRESSION & src.data<1>()->flags)
 			&&	1==src.size<2>() && (PARSE_MULT_EXPRESSION & src.data<2>()->flags);
 }
-#endif
+
+template<char c> static bool is_C99_add_operator_expression(const parse_tree& src)
+{
+	return		robust_token_is_char<c>(src.index_tokens[0].token)
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	1==src.size<1>() && (PARSE_ADD_EXPRESSION & src.data<1>()->flags)
+			&&	1==src.size<2>() && (PARSE_MULT_EXPRESSION & src.data<2>()->flags);
+}
 
 #define C99_SHIFT_SUBTYPE_LEFT 1
 #define C99_SHIFT_SUBTYPE_RIGHT 2
@@ -4868,7 +4875,7 @@ static void C_unary_plusminus_easy_syntax_check(parse_tree& src,const type_syste
 		}
 	else{	// if (C99_UNARY_SUBTYPE_NEG==src.subtype)
 		if (0<src.data<2>()->data<2>()->type_code.pointer_power_after_array_decay())
-			{
+			{	// fortunately, binary - also doesn't like a pointer as its right-hand argument.
 			src.flags |= parse_tree::INVALID;
 			src.type_code.set_type(0);
 			if (!(parse_tree::INVALID & src.data<2>()->flags))
@@ -4925,7 +4932,7 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 				src.flags |= parse_tree::INVALID;
 				src.type_code.set_type(0);
 				if (!(parse_tree::INVALID & src.data<2>()->flags))
-					{
+					{	// fortunately, binary - also doesn't like a pointer as its right-hand argument
 					src.c_array<2>()->flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -6058,7 +6065,6 @@ static void locate_CPP_mult_expression(parse_tree& src, size_t& i, const type_sy
 		CPP_mult_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
-#if 0
 static bool terse_C99_augment_add_expression(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -6067,14 +6073,14 @@ static bool terse_C99_augment_add_expression(parse_tree& src, size_t& i, const t
 		{
 		if (1<=i && (PARSE_ADD_EXPRESSION & src.data<0>()[i-1].flags))
 			{
-			merge_binary_infix_arguments(src,i,PARSE_STRICT_ADD_EXPRESSION);
+			merge_binary_infix_argument(src,i,PARSE_STRICT_ADD_EXPRESSION);
 			assert(is_C99_add_operator_expression(src.data<0>()[i]));
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_add_operator_expression(src.data<0>()[i]));
 			return true;
 			}
 		else{	// run syntax-checks against unary + or unary -
-			C_unary_plusminus_easy_syntax_check(src.data<0>()[i],types);
+			C_unary_plusminus_easy_syntax_check(src.c_array<0>()[i],types);
 			}
 		}
 	return false;
@@ -6088,14 +6094,14 @@ static bool terse_CPP_augment_add_expression(parse_tree& src, size_t& i, const t
 		{
 		if (1<=i && (PARSE_ADD_EXPRESSION & src.data<0>()[i-1].flags))
 			{
-			merge_binary_infix_arguments(src,i,PARSE_STRICT_ADD_EXPRESSION);
+			merge_binary_infix_argument(src,i,PARSE_STRICT_ADD_EXPRESSION);
 			assert(is_C99_add_operator_expression(src.data<0>()[i]));
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_add_operator_expression(src.data<0>()[i]));
 			return true;
 			}
 		else{	// run syntax-checks against unary + or unary -
-			CPP_unary_plusminus_easy_syntax_check(src.data<0>()[i],types);
+			CPP_unary_plusminus_easy_syntax_check(src.c_array<0>()[i],types);
 			}
 		}
 	return false;
@@ -6181,16 +6187,406 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, func_
 	return false;
 }
 
+// +: either both are arithmetic, or one is raw pointer and one is integer
+// -: either both are arithmetic, or both are compatible raw pointer, or left is raw pointer and right is integer
 static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system& types)
 {
-	assert(is_C99_add_operator_expression(src));
+	assert((C99_ADD_SUBTYPE_PLUS==src.subtype && is_C99_add_operator_expression<'+'>(src)) || (C99_ADD_SUBTYPE_MINUS==src.subtype && is_C99_add_operator_expression<'-'>(src)));
+	BOOST_STATIC_ASSERT(1==C99_ADD_SUBTYPE_MINUS-C99_ADD_SUBTYPE_PLUS);
+	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power_after_array_decay();
+	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power_after_array_decay();	
+
+	// pointers to void are disallowed
+	const bool exact_rhs_voidptr = 1==rhs_pointer && C_TYPE::VOID==src.data<2>()->type_code.base_type_index;
+	if (1==lhs_pointer && C_TYPE::VOID==src.data<1>()->type_code.base_type_index)
+		{
+		if (exact_rhs_voidptr)
+			{
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" uses void* arguments (C99 6.5.6p2,3)");
+			zcc_errors.inc_error();
+			return;
+			}
+		else{
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" uses void* left-hand argument (C99 6.5.6p2,3)");
+			zcc_errors.inc_error();
+			return;
+			}
+		}
+	else if (exact_rhs_voidptr)
+		{
+		src.flags |= parse_tree::INVALID;
+		message_header(src.index_tokens[0]);
+		INC_INFORM(ERR_STR);
+		INC_INFORM(src);
+		INFORM(" uses void* right-hand argument (C99 6.5.6p2,3)");
+		zcc_errors.inc_error();
+		return;
+		}
+
+	switch((0<lhs_pointer)+2*(0<rhs_pointer)+4*(src.subtype-C99_ADD_SUBTYPE_PLUS))
+	{
+#ifndef NDEBUG
+	default: FATAL_CODE("invalid linear combination in C_add_expression_easy_syntax_check",3);
+#endif
+	case 0:	{
+			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
+			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index))
+				{
+				if (rhs_arithmeticlike)
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" has non-arithmetic non-pointer right argument (C99 6.5.6p2)");
+					zcc_errors.inc_error();
+					return;
+					}
+				else{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" has non-arithmetic non-pointer arguments (C99 6.5.6p2)");
+					zcc_errors.inc_error();
+					return;
+					}
+				}
+			else if (!rhs_arithmeticlike)
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has non-arithmetic non-pointer left argument (C99 6.5.6p2)");
+				zcc_errors.inc_error();
+				return;
+				}
+			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
+			break;
+			}
+	case 1:	{	// ptr + integer, hopefully
+			src.type_code = src.data<1>()->type_code;
+			if (!converts_to_integerlike(src.data<2>()->type_code.base_type_index))
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" adds pointer to non-integer (C99 6.5.6p2)");
+				zcc_errors.inc_error();
+				return;
+				}
+			break;
+			}
+	case 2:	{
+			src.type_code = src.data<2>()->type_code;
+			if (!converts_to_integerlike(src.data<1>()->type_code.base_type_index))
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" adds pointer to non-integer (C99 6.5.6p2)");
+				zcc_errors.inc_error();
+				return;
+				}
+			break;
+			}
+	case 3:	{	//	ptr + ptr dies
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" adds two pointers (C99 6.5.6p2)");
+			zcc_errors.inc_error();
+			return;
+			}
+	case 4:	{
+		const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
+			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index))
+				{
+				if (rhs_arithmeticlike)
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" has non-arithmetic non-pointer right argument (C99 6.5.6p3)");
+					zcc_errors.inc_error();
+					return;
+					}
+				else{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" has non-arithmetic non-pointer arguments (C99 6.5.6p3)");
+					zcc_errors.inc_error();
+					return;
+					}
+				}
+			else if (!rhs_arithmeticlike)
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has non-arithmetic non-pointer left argument (C99 6.5.6p3)");
+				zcc_errors.inc_error();
+				return;
+				}
+			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
+			break;
+			}
+	case 5:	{
+			src.type_code = src.data<1>()->type_code;
+			if (!converts_to_integerlike(src.data<2>()->type_code.base_type_index))
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" subtracts non-integer from pointer (C99 6.5.6p3)");
+				zcc_errors.inc_error();
+				return;
+				}
+			break;
+			}
+	case 6:	{	// non-ptr - ptr dies
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" subtracts a non-pointer from a pointer (C99 6.5.6p3)");
+			zcc_errors.inc_error();
+			return;
+			}
+	case 7:	{	// ptr - ptr should be compatible
+				// type is ptrdiff_t
+			const virtual_machine::std_int_enum tmp = target_machine->ptrdiff_t_type();
+			assert(tmp);
+			src.type_code.set_type((virtual_machine::std_int_char==tmp ? C_TYPE::CHAR
+							:	virtual_machine::std_int_short==tmp ? C_TYPE::SHRT
+							:	virtual_machine::std_int_int==tmp ? C_TYPE::INT
+							:	virtual_machine::std_int_long==tmp ? C_TYPE::LONG
+							:	virtual_machine::std_int_long_long==tmp ? C_TYPE::LLONG : 0));
+			assert(0!=src.type_code.base_type_index);
+			break;
+			}
+	}
 }
 
 static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_system& types)
 {
-	assert(is_C99_add_operator_expression(src));
+	assert((C99_ADD_SUBTYPE_PLUS==src.subtype && is_C99_add_operator_expression<'+'>(src)) || (C99_ADD_SUBTYPE_MINUS==src.subtype && is_C99_add_operator_expression<'-'>(src)));
+	BOOST_STATIC_ASSERT(1==C99_ADD_SUBTYPE_MINUS-C99_ADD_SUBTYPE_PLUS);
+	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power_after_array_decay();
+	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power_after_array_decay();	
+
+	// pointers to void are disallowed
+	const bool exact_rhs_voidptr = 1==rhs_pointer && C_TYPE::VOID==src.data<2>()->type_code.base_type_index;
+	if (1==lhs_pointer && C_TYPE::VOID==src.data<1>()->type_code.base_type_index)
+		{
+		if (exact_rhs_voidptr)
+			{
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" uses void* arguments (C++98 5.7p1,2)");
+			zcc_errors.inc_error();
+			return;
+			}
+		else{
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" uses void* left-hand argument (C++98 5.7p1,2)");
+			zcc_errors.inc_error();
+			return;
+			}
+		}
+	else if (exact_rhs_voidptr)
+		{
+		src.flags |= parse_tree::INVALID;
+		message_header(src.index_tokens[0]);
+		INC_INFORM(ERR_STR);
+		INC_INFORM(src);
+		INFORM(" uses void* right-hand argument (C++98 5.7p1,2)");
+		zcc_errors.inc_error();
+		return;
+		}
+
+	switch((0<lhs_pointer)+2*(0<rhs_pointer)+4*(src.subtype-C99_ADD_SUBTYPE_PLUS))
+	{
+#ifndef NDEBUG
+	default: FATAL_CODE("invalid linear combination in CPP_add_expression_easy_syntax_check",3);
+#endif
+	case 0:	{
+			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
+			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index))
+				{
+				if (rhs_arithmeticlike)
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" has non-arithmetic non-pointer right argument (C++98 5.7p1)");
+					zcc_errors.inc_error();
+					return;
+					}
+				else{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" has non-arithmetic non-pointer arguments (C++98 5.7p1)");
+					zcc_errors.inc_error();
+					return;
+					}
+				}
+			else if (!rhs_arithmeticlike)
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has non-arithmetic non-pointer left argument (C++98 5.7p1)");
+				zcc_errors.inc_error();
+				return;
+				}
+			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
+			break;
+			}
+	case 1:	{
+			src.type_code = src.data<1>()->type_code;
+			if (!converts_to_integerlike(src.data<2>()->type_code.base_type_index))
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" adds pointer to non-integer (C++98 5.7p1)");
+				zcc_errors.inc_error();
+				return;
+				}
+			break;
+			}
+	case 2:	{
+			src.type_code = src.data<2>()->type_code;
+			if (!converts_to_integerlike(src.data<1>()->type_code.base_type_index))
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" adds pointer to non-integer (C++98 5.7p1)");
+				zcc_errors.inc_error();
+				return;
+				}
+			break;
+			}
+	case 3:	{	//	ptr + ptr dies
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" adds two pointers (C++98 5.7p1)");
+			zcc_errors.inc_error();
+			return;
+			}
+	case 4:	{
+			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
+			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index))
+				{
+				if (rhs_arithmeticlike)
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" has non-arithmetic non-pointer right argument (C++98 5.7p2)");
+					zcc_errors.inc_error();
+					return;
+					}
+				else{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" has non-arithmetic non-pointer arguments (C++98 5.7p2)");
+					zcc_errors.inc_error();
+					return;
+					}
+				}
+			else if (!rhs_arithmeticlike)
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" has non-arithmetic non-pointer left argument (C++98 5.7p2)");
+				zcc_errors.inc_error();
+				return;
+				}
+			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
+			break;
+			}
+	case 5:	{
+			src.type_code = src.data<1>()->type_code;
+			if (!converts_to_integerlike(src.data<2>()->type_code.base_type_index))
+				{
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" subtracts non-integer from pointer (C++98 5.7p2)");
+				zcc_errors.inc_error();
+				return;
+				}
+			break;
+			}
+	case 6:	{	// non-ptr - ptr dies
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" subtracts a non-pointer from a pointer (C++98 5.7p2)");
+			zcc_errors.inc_error();
+			return;
+			}
+	case 7:	{	// ptr - ptr;
+				// type is ptrdiff_t
+			const virtual_machine::std_int_enum tmp = target_machine->ptrdiff_t_type();
+			assert(tmp);
+			src.type_code.set_type((virtual_machine::std_int_char==tmp ? C_TYPE::CHAR
+								:	virtual_machine::std_int_short==tmp ? C_TYPE::SHRT
+								:	virtual_machine::std_int_int==tmp ? C_TYPE::INT
+								:	virtual_machine::std_int_long==tmp ? C_TYPE::LONG
+								:	virtual_machine::std_int_long_long==tmp ? C_TYPE::LLONG : 0));
+			assert(0!=src.type_code.base_type_index);
+			break;
+			}
+	}
 }
 
+/*
+additive-expression:
+	multiplicative-expression
+	additive-expression + multiplicative-expression
+	additive-expression - multiplicative-expression
+*/
 static void locate_C99_add_expression(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -6209,6 +6605,12 @@ static void locate_C99_add_expression(parse_tree& src, size_t& i, const type_sys
 	if (terse_locate_add_expression(src,i)) C_add_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
+/*
+additive-expression:
+	multiplicative-expression
+	additive-expression + multiplicative-expression
+	additive-expression - multiplicative-expression
+*/
 static void locate_CPP_add_expression(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -6229,7 +6631,6 @@ static void locate_CPP_add_expression(parse_tree& src, size_t& i, const type_sys
 		//! \todo handle operator overloading
 		CPP_add_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
-#endif
 
 static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* standard)
 {
@@ -8353,15 +8754,7 @@ static size_t C99_locate_expressions(parse_tree& src,const size_t parent_identif
 		parse_forward(src,types,locate_C99_postfix_expression);
 		parse_backward(src,types,locate_C99_unary_expression);
 		parse_forward(src,types,locate_C99_mult_expression);
-/*
-additiveexpression:
-	multiplicativeexpression
-	additiveexpression + multiplicativeexpression
-	additiveexpression - multiplicativeexpression
-*/
-#if 0
 		parse_forward(src,types,locate_C99_add_expression);
-#endif
 		parse_forward(src,types,locate_C99_shift_expression);
 		parse_forward(src,types,locate_C99_relation_expression);
 		parse_forward(src,types,locate_C99_equality_expression);
@@ -8446,15 +8839,7 @@ pmexpression:
 */
 #endif
 		parse_forward(src,types,locate_CPP_mult_expression);
-/*
-additive-expression:
-	multiplicative-expression
-	additive-expression + multiplicative-expression
-	additive-expression - multiplicative-expression
-*/
-#if 0
 		parse_forward(src,types,locate_CPP_add_expression);
-#endif
 		parse_forward(src,types,locate_CPP_shift_expression);
 		parse_forward(src,types,locate_CPP_relation_expression);
 		parse_forward(src,types,locate_CPP_equality_expression);
@@ -8885,6 +9270,34 @@ static bool eval_mod_expression(parse_tree& src,const type_system& types,
 	return false;
 }
 
+static bool eval_add_expression(parse_tree& src,const type_system& types,
+							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
+							func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
+							func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	if (is_C99_add_operator_expression<'+'>(src))
+		{
+		EvalParseTree(*src.c_array<1>(),types);
+		EvalParseTree(*src.c_array<2>(),types);
+		if (eval_add_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		}
+	return false;
+}
+
+static bool eval_sub_expression(parse_tree& src,const type_system& types,
+							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
+							func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
+							func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	if (is_C99_add_operator_expression<'-'>(src))
+		{
+		EvalParseTree(*src.c_array<1>(),types);
+		EvalParseTree(*src.c_array<2>(),types);
+		if (eval_sub_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		}
+	return false;
+}
+
 static bool eval_shift(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&,bool&)>::function_ref_type literal_converts_to_bool,
@@ -9053,6 +9466,8 @@ RestartEval:
 	if (eval_mult_expression(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_div_expression(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_mod_expression(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_add_expression(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_sub_expression(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_shift(src,types,C99_EvalParseTree,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_relation_expression(src,types,C99_EvalParseTree,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_equality_expression(src,types,C99_EvalParseTree,is_C99_equality_expression,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) goto RestartEval;
@@ -9079,6 +9494,8 @@ RestartEval:
 	if (eval_mult_expression(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_div_expression(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_mod_expression(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_add_expression(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_sub_expression(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_shift(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_relation_expression(src,types,CPlusPlus_EvalParseTree,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_equality_expression(src,types,CPlusPlus_EvalParseTree,is_CPP_equality_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
