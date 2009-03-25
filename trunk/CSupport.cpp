@@ -4933,6 +4933,7 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 				src.type_code.set_type(0);
 				if (!(parse_tree::INVALID & src.data<2>()->flags))
 					{	// fortunately, binary - also doesn't like a pointer as its right-hand argument
+						//! \todo rework this when binary - overloading implemented, obj-ptr may be a legitimate overload
 					src.c_array<2>()->flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -6137,26 +6138,83 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, func_
 {
 	assert(is_C99_add_operator_expression<'+'>(src));
 
-	if (	 converts_to_integer(src.data<1>()->type_code)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
-		&&	 converts_to_integer(src.data<2>()->type_code)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
-		{
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
-		const type_spec old_type = src.type_code;
-		intlike_literal_to_VM(res_int,*src.data<1>());
-		intlike_literal_to_VM(rhs_int,*src.data<2>());
-		res_int += rhs_int;
+	const type_spec old_type = src.type_code;
+	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power_after_array_decay();
+	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power_after_array_decay();	
+	// void pointers should have been intercepted by now
+	assert(1!=lhs_pointer || C_TYPE::VOID!=src.data<1>()->type_code.base_type_index);
+	assert(1!=rhs_pointer || C_TYPE::VOID!=src.data<2>()->type_code.base_type_index);
 
-		//! \todo flag failures to reduce as RAM-stalled
-		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-		src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
-		src.eval_to_arg<1>(0);
-		src.type_code = old_type;
-		return true;
-		}
+	switch((0<lhs_pointer)+2*(0<rhs_pointer))
+	{
+#ifndef NDEBUG
+	default: FATAL_CODE("hardware/compiler error: invalid linear combination in eval_add_expression",3);
+#endif
+	case 0:	{
+			assert(converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index));
+			assert(converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index));
+			bool is_true = false;
+			if 		(literal_converts_to_bool(*src.data<1>(),is_true) && !is_true)
+				{	// 0 + __ |-> __
+				src.eval_to_arg<2>(0);
+				src.type_code = old_type;
+				return true;
+				}
+			else if (literal_converts_to_bool(*src.data<2>(),is_true) && !is_true)
+				{	// __ + 0 |-> __
+				src.eval_to_arg<1>(0);
+				src.type_code = old_type;
+				return true;
+				};
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+			const bool lhs_converted = intlike_literal_to_VM(res_int,*src.data<1>());
+			const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
+			if (lhs_converted && rhs_converted)
+				{	//! \todo deal with signed integer arithmetic
+				res_int += rhs_int;
+
+				zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+				if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+				parse_tree tmp;
+				tmp.clear();
+				tmp.index_tokens[0].token.first = new_token.first;
+				tmp.index_tokens[0].token.second = strlen(new_token.first);
+				tmp.index_tokens[0].flags = new_token.second;
+				_label_one_literal(tmp,types);
+
+				src = tmp;
+				src.type_code = old_type;
+				return true;
+				}
+			break;
+			}
+	case 1:	{
+			assert(converts_to_integerlike(src.data<2>()->type_code.base_type_index));
+			bool is_true = false;
+			if (literal_converts_to_bool(*src.data<2>(),is_true) && !is_true)
+				{	// __ + 0 |-> __
+				src.eval_to_arg<1>(0);
+				src.type_code = old_type;
+				return true;
+				}
+			break;
+			}
+	case 2:	{
+			assert(converts_to_integerlike(src.data<1>()->type_code.base_type_index));
+			bool is_true = false;
+			if (literal_converts_to_bool(*src.data<1>(),is_true) && !is_true)
+				{	// 0 + __ |-> __
+				src.eval_to_arg<2>(0);
+				src.type_code = old_type;
+				return true;
+				}
+			break;
+			}
+#ifndef NDEBUG
+	case 3:	FATAL_CODE("invalid expression not flagged as invalid expression",3);
+#endif
+	}
 	return false;
 }
 
@@ -6164,26 +6222,80 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, func_
 {
 	assert(is_C99_add_operator_expression<'-'>(src));
 
-	if (	 converts_to_integer(src.data<1>()->type_code)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
-		&&	 converts_to_integer(src.data<2>()->type_code)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
-		{
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
-		const type_spec old_type = src.type_code;
-		intlike_literal_to_VM(res_int,*src.data<1>());
-		intlike_literal_to_VM(rhs_int,*src.data<2>());
-		res_int -= rhs_int;
+	const type_spec old_type = src.type_code;
+	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power_after_array_decay();
+	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power_after_array_decay();	
+	// void pointers should have been intercepted by now
+	assert(1!=lhs_pointer || C_TYPE::VOID!=src.data<1>()->type_code.base_type_index);
+	assert(1!=rhs_pointer || C_TYPE::VOID!=src.data<2>()->type_code.base_type_index);
 
-		//! \todo flag failures to reduce as RAM-stalled
-		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-		src.c_array<1>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
-		src.eval_to_arg<1>(0);
-		src.type_code = old_type;
-		return true;
-		}
+	switch((0<lhs_pointer)+2*(0<rhs_pointer))
+	{
+#ifndef NDEBUG
+	default: FATAL_CODE("hardware/compiler error: invalid linear combination in eval_add_expression",3);
+#endif
+	case 0:	{
+			assert(converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index));
+			assert(converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index));
+			bool is_true = false;
+			if 		(literal_converts_to_bool(*src.data<1>(),is_true) && !is_true)
+				{	// 0 - __ |-> - __
+				src.DeleteIdx<1>(0);
+				src.core_flag_update();
+				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+				src.subtype = C99_UNARY_SUBTYPE_NEG;
+				assert(is_C99_unary_operator_expression<'-'>(src));
+				src.type_code = old_type;				
+				return true;
+				}
+			else if (literal_converts_to_bool(*src.data<2>(),is_true) && !is_true)
+				{	// __ - 0 |-> __
+				src.eval_to_arg<1>(0);
+				src.type_code = old_type;
+				return true;
+				}
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+			const bool lhs_converted = intlike_literal_to_VM(res_int,*src.data<1>());
+			const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
+			if (lhs_converted && rhs_converted)
+				{	//! \todo deal with signed integer arithmetic
+				res_int -= rhs_int;
+
+				zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+				if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
+				parse_tree tmp;
+				tmp.clear();
+				tmp.index_tokens[0].token.first = new_token.first;
+				tmp.index_tokens[0].token.second = strlen(new_token.first);
+				tmp.index_tokens[0].flags = new_token.second;
+				_label_one_literal(tmp,types);
+
+				src = tmp;
+				src.type_code = old_type;
+				return true;
+				}
+			break;
+			}
+	case 1:	{
+			assert(converts_to_integerlike(src.data<2>()->type_code.base_type_index));
+			bool is_true = false;
+			if (literal_converts_to_bool(*src.data<2>(),is_true) && !is_true)
+				{	// __ - 0 |-> __
+				src.eval_to_arg<1>(0);
+				src.type_code = old_type;
+				return true;
+				}
+			break;
+			}
+#ifndef NDEBUG
+	case 2:	FATAL_CODE("invalid expression not flagged as invalid expression",3);
+#endif
+	case 3:	{	//! \todo hyper-optimizing linker: two string literals decay to equal pointers iff they are equal under strcmp
+				//! use this to short-circuit to 0; remember to adjust the preprocessor hacks as well
+			break;
+			}
+	}
 	return false;
 }
 
@@ -6234,7 +6346,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 	switch((0<lhs_pointer)+2*(0<rhs_pointer)+4*(src.subtype-C99_ADD_SUBTYPE_PLUS))
 	{
 #ifndef NDEBUG
-	default: FATAL_CODE("invalid linear combination in C_add_expression_easy_syntax_check",3);
+	default: FATAL_CODE("hardware/compiler error: invalid linear combination in C_add_expression_easy_syntax_check",3);
 #endif
 	case 0:	{
 			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
@@ -6271,6 +6383,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				return;
 				}
 			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
+			eval_add_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
 	case 1:	{	// ptr + integer, hopefully
@@ -6285,6 +6398,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				zcc_errors.inc_error();
 				return;
 				}
+			eval_add_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
 	case 2:	{
@@ -6299,6 +6413,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				zcc_errors.inc_error();
 				return;
 				}
+			eval_add_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
 	case 3:	{	//	ptr + ptr dies
@@ -6311,7 +6426,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 			return;
 			}
 	case 4:	{
-		const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
+			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
 			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index))
 				{
 				if (rhs_arithmeticlike)
@@ -6345,6 +6460,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				return;
 				}
 			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
+			eval_sub_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
 	case 5:	{
@@ -6359,6 +6475,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				zcc_errors.inc_error();
 				return;
 				}
+			eval_sub_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
 	case 6:	{	// non-ptr - ptr dies
@@ -6380,6 +6497,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 							:	virtual_machine::std_int_long==tmp ? C_TYPE::LONG
 							:	virtual_machine::std_int_long_long==tmp ? C_TYPE::LLONG : 0));
 			assert(0!=src.type_code.base_type_index);
+			eval_sub_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
 	}
@@ -6430,7 +6548,7 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 	switch((0<lhs_pointer)+2*(0<rhs_pointer)+4*(src.subtype-C99_ADD_SUBTYPE_PLUS))
 	{
 #ifndef NDEBUG
-	default: FATAL_CODE("invalid linear combination in CPP_add_expression_easy_syntax_check",3);
+	default: FATAL_CODE("hardware/compiler error: invalid linear combination in CPP_add_expression_easy_syntax_check",3);
 #endif
 	case 0:	{
 			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
@@ -6467,6 +6585,7 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 				return;
 				}
 			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
+			eval_add_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 			break;
 			}
 	case 1:	{
@@ -6481,6 +6600,7 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 				zcc_errors.inc_error();
 				return;
 				}
+			eval_add_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 			break;
 			}
 	case 2:	{
@@ -6495,6 +6615,7 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 				zcc_errors.inc_error();
 				return;
 				}
+			eval_add_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 			break;
 			}
 	case 3:	{	//	ptr + ptr dies
@@ -6541,6 +6662,7 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 				return;
 				}
 			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
+			eval_sub_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 			break;
 			}
 	case 5:	{
@@ -6555,6 +6677,7 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 				zcc_errors.inc_error();
 				return;
 				}
+			eval_sub_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 			break;
 			}
 	case 6:	{	// non-ptr - ptr dies
@@ -6576,6 +6699,7 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 								:	virtual_machine::std_int_long==tmp ? C_TYPE::LONG
 								:	virtual_machine::std_int_long_long==tmp ? C_TYPE::LLONG : 0));
 			assert(0!=src.type_code.base_type_index);
+			eval_sub_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 			break;
 			}
 	}
