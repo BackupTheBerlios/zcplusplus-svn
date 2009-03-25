@@ -6066,6 +6066,41 @@ static void locate_CPP_mult_expression(parse_tree& src, size_t& i, const type_sy
 		CPP_mult_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
+static bool C_string_literal_equal_content(const parse_tree& lhs, const parse_tree& rhs,bool& is_equal)
+{
+	if (C_TESTFLAG_STRING_LITERAL==lhs.index_tokens[0].flags && C_TESTFLAG_STRING_LITERAL==rhs.index_tokens[0].flags)
+		{
+		const size_t lhs_len = LengthOfCStringLiteral(lhs.index_tokens[0].token.first);
+		if (LengthOfCStringLiteral(rhs.index_tokens[0].token.first)!=lhs_len)
+			{	// string literals of different length are necessarily different decayed pointers even if they overlap
+			is_equal = false;
+			return true;
+			};
+		size_t i = 0;
+		while(i<lhs_len-1)
+			{
+			char* lhs_lit = NULL;
+			char* rhs_lit = NULL;
+			GetCCharacterLiteralAt(lhs.index_tokens[0].token.first,lhs.index_tokens[0].token.second,i,lhs_lit);
+			GetCCharacterLiteralAt(rhs.index_tokens[0].token.first,rhs.index_tokens[0].token.second,i,rhs_lit);
+			const uintmax_t lhs_val = EvalCharacterLiteral(lhs_lit,strlen(lhs_lit));
+			const uintmax_t rhs_val = EvalCharacterLiteral(rhs_lit,strlen(rhs_lit));
+			free(lhs_lit);
+			free(rhs_lit);
+			if (lhs_val!=rhs_val)
+				{	// different at this place, so different
+				is_equal = false;
+				return true;
+				}
+			++i;
+			}
+		// assume hyper-optimizing linker; the string literals overlap
+		is_equal = true;
+		return true;
+		}
+	return false;
+}
+
 static bool terse_C99_augment_add_expression(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -6291,8 +6326,19 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, func_
 #ifndef NDEBUG
 	case 2:	FATAL_CODE("invalid expression not flagged as invalid expression",3);
 #endif
-	case 3:	{	//! \todo hyper-optimizing linker: two string literals decay to equal pointers iff they are equal under strcmp
-				//! use this to short-circuit to 0; remember to adjust the preprocessor hacks as well
+	case 3:	{	// hyper-optimizing linker: two string literals decay to equal pointers iff they are equal under strcmp
+				// use this to short-circuit to 0; remember to adjust the preprocessor hacks as well
+			bool is_equal = false;
+			if (C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal) && is_equal)
+				{
+				src.destroy();
+				src.index_tokens[0].token.first = "0";
+				src.index_tokens[0].token.second = 1;
+				src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+				_label_one_literal(src,types);
+				src.type_code = old_type;
+				return true;
+				}
 			break;
 			}
 	}
@@ -7284,48 +7330,16 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 	switch(integer_literal_case)
 	{
 	case 0:	{	// string literal == string literal (assume hyper-optimizing linker, this should be true iff the string literals are equal as static arrays of char)
-			if (C_TESTFLAG_STRING_LITERAL==src.data<1>()->index_tokens[0].flags && C_TESTFLAG_STRING_LITERAL==src.data<2>()->index_tokens[0].flags)
+			bool is_equal = false;
+			if (C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal))
 				{
-				const size_t lhs_len = LengthOfCStringLiteral(src.data<1>()->index_tokens[0].token.first);
-				if (LengthOfCStringLiteral(src.data<2>()->index_tokens[0].token.first)!=lhs_len)
-					{	// string literals of different length are necessarily different decayed pointers even if they overlap
-					src.destroy();
-					src.index_tokens[0].token.first = (is_equal_op) ? "0" : "1";
-					src.index_tokens[0].token.second = 1;
-					src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-					_label_one_literal(src,types);
-					return true;
-					};
-				size_t i = 0;
-				while(i<lhs_len-1)
-					{
-					char* lhs_lit = NULL;
-					char* rhs_lit = NULL;
-					GetCCharacterLiteralAt(src.data<1>()->index_tokens[0].token.first,src.data<1>()->index_tokens[0].token.second,i,lhs_lit);
-					GetCCharacterLiteralAt(src.data<2>()->index_tokens[0].token.first,src.data<2>()->index_tokens[0].token.second,i,rhs_lit);
-					const uintmax_t lhs_val = EvalCharacterLiteral(lhs_lit,strlen(lhs_lit));
-					const uintmax_t rhs_val = EvalCharacterLiteral(rhs_lit,strlen(rhs_lit));
-					free(lhs_lit);
-					free(rhs_lit);
-					if (lhs_val!=rhs_val)
-						{	// different at this place, so different
-						src.destroy();
-						src.index_tokens[0].token.first = (is_equal_op) ? "0" : "1";
-						src.index_tokens[0].token.second = 1;
-						src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-						_label_one_literal(src,types);
-						return true;
-						}
-					++i;
-					}
-				// assume hyper-optimizing linker; the string literals overlap
 				src.destroy();
-				src.index_tokens[0].token.first = (is_equal_op) ? "1" : "0";
+				src.index_tokens[0].token.first = (is_equal_op==is_equal) ? "1" : "0";
 				src.index_tokens[0].token.second = 1;
 				src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
 				_label_one_literal(src,types);
 				return true;
-				}
+				};
 			break;
 			}
 	case 1:	{
@@ -7387,9 +7401,8 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 	case 3:	{	// integer literal == integer literal
 			intlike_literal_to_VM(lhs_int,*src.data<1>());
 			intlike_literal_to_VM(rhs_int,*src.data<2>());
-			const char* const result = ((lhs_int==rhs_int)==(is_equal_op)) ? "1" : "0";
 			src.destroy();
-			src.index_tokens[0].token.first = result;
+			src.index_tokens[0].token.first = ((lhs_int==rhs_int)==is_equal_op) ? "1" : "0";
 			src.index_tokens[0].token.second = 1;
 			src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
 			_label_one_literal(src,types);
@@ -9638,6 +9651,25 @@ void C99_CPP_PPHackTree(parse_tree& src,const type_system& types)
 		{	// compact - literal to literal to get past preprocessor
 		src.eval_to_arg<2>(0);
 		return;
+		}
+	if (is_C99_add_operator_expression<'-'>(src))
+		{
+		bool is_equal = false;
+		if (C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal))
+			{
+			assert(!is_equal);	// should have intercepted equal-literal reduction earlier
+			src.destroy();
+#ifndef NDEBUG
+			src.index_tokens[0].token.first = "1";
+#else
+			src.index_tokens[0].token.first = (is_equal) ? "0" : "1";
+#endif
+			src.index_tokens[0].token.second = 1;
+			src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+			_label_one_literal(src,types);
+			src.type_code.set_type(C_TYPE::INT);
+			return;
+			}
 		}
 }
 
