@@ -65,13 +65,13 @@ class CPUInfo
 
 	void _init();
 public:
-	CPUInfo(unsigned short _char_bit, unsigned short _sizeof_short, unsigned short _sizeof_int, unsigned short _sizeof_long, unsigned short _sizeof_long_long, signed_int_rep _signed_int_representation, bool _char_is_signed_char)
+	CPUInfo(unsigned short _char_bit, unsigned short _sizeof_short, unsigned short _sizeof_int, unsigned short _sizeof_long, unsigned short _sizeof_long_long, signed_int_rep _signed_int_representation, bool _char_is_signed_char,std_int_enum _ptrdiff_type)
 	:	char_bit(_char_bit),
 		sizeof_short(_sizeof_short),
 		sizeof_int(_sizeof_int),
 		sizeof_long(_sizeof_long),
 		sizeof_long_long(_sizeof_long_long),
-		signed_int_representation(_signed_int_representation+4*_char_is_signed_char+8*SELECT_TARGET_WCHAR_T(char_bit,sizeof_short,sizeof_int,sizeof_long,sizeof_long_long))
+		signed_int_representation(_signed_int_representation+4*_char_is_signed_char+8*SELECT_TARGET_WCHAR_T(char_bit,sizeof_short,sizeof_int,sizeof_long,sizeof_long_long)+128*_ptrdiff_type)
 		{_init();};
 
 	// assembly/disassembly support
@@ -100,6 +100,9 @@ public:
 	bool char_is_signed_char() const {return (signed_int_representation & 4U);};
 	std_int_enum UNICODE_wchar_t() const {return (std_int_enum)((signed_int_representation>>3) & 7U);};
 	bool UNICODE_crippled() const {return (signed_int_representation & 64U);};
+	// use different functions for ptrdiff_t and size_t to future-proof (e.g., DOS has ptrdiff 2 bytes but can go larger than that in object size in some memory models)
+	std_int_enum ptrdiff_t_type() const {return (std_int_enum)((signed_int_representation>>7) & 7U);};
+	std_int_enum size_t_type() const {return (std_int_enum)((signed_int_representation>>7) & 7U);};
 	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& unsigned_max(std_int_enum x) const {assert(x); return unsigned_maxima[x-1];};
 	template<std_int_enum x> const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& unsigned_max() const {ZAIMONI_STATIC_ASSERT(x); return unsigned_maxima[x-1];}
 	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& signed_max(std_int_enum x) const {assert(x); return signed_maxima[x-1];};
