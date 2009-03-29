@@ -4,6 +4,8 @@
 #include "Zaimoni.STL/cstdio"
 #include "Zaimoni.STL/LexParse/Token.hpp"
 #include "Zaimoni.STL/LexParse/LangConf.hpp"
+#include "errors.hpp"
+#include "errcount.hpp"
 
 using namespace zaimoni;
 
@@ -18,9 +20,7 @@ clean_whitespace(autovalarray_ptr<Token<char>* >& TokenList, size_t v_idx, const
 {
 	assert(TokenList.size()>v_idx);
 	if (strlen(TokenList[v_idx]->data())==strspn(TokenList[v_idx]->data(),lang.WhiteSpace+1))
-	{	// pure whitespace
-		TokenList.DeleteIdx(v_idx);
-	}
+		TokenList.DeleteIdx(v_idx);	// pure whitespace
 }
 
 static void
@@ -37,9 +37,7 @@ clean_linesplice_whitespace(autovalarray_ptr<Token<char>* >& TokenList, size_t v
 			want_to_zap_line = false;
 		}
 		else
-		{
 			TokenList[v_idx]->rtrim(1);
-		}
 	}
 	if (want_to_zap_line) clean_whitespace(TokenList,v_idx,lang);
 }
@@ -84,6 +82,7 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 	else{	// works for C/C++
 		INC_INFORM(filename);
 		INFORM(": warning: did not end in \\n, undefined behavior.  Proceeding as if it was there.");
+		if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
 		}
 	}
 
@@ -123,7 +122,7 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 		while(NULL!=newline_where)
 		{
 			const size_t offset = newline_where-TokenList.back()->data();
-			SUCCEED_OR_DIE(TokenList.InsertNSlotsAt(1,TokenList.size()-1));
+			if (!TokenList.InsertNSlotsAt(1,TokenList.size()-1)) throw std::bad_alloc();
 			TokenList[TokenList.size()-2] = new Token<char>(*TokenList.back(),offset,0);
 			assert('\n'==TokenList.back()->data()[0]);
 			if (3<=TokenList.size()) clean_linesplice_whitespace(TokenList,TokenList.size()-3,lang);
@@ -166,6 +165,69 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 		}
 	}
 #endif
+
+	return true;
+}
+
+// can throw std::bad_alloc.
+bool
+load_raw_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const char* const filename)
+{
+	char* Buffer = NULL;
+#ifndef ZAIMONI_FORCE_ISO
+#	define Buffer_size ArraySize(Buffer)
+#else
+	size_t Buffer_size = 0;
+#endif
+
+	assert(!zaimoni::is_empty_string(filename));
+
+	// XXX should return true for empty files XXX
+#ifndef ZAIMONI_FORCE_ISO
+	if (!GetBinaryFileImage(filename,Buffer)) return false;
+	ConvertBinaryModeToTextMode(Buffer);
+#else
+	if (!GetBinaryFileImage(filename,Buffer,Buffer_size)) return false;
+	ConvertBinaryModeToTextMode(Buffer,Buffer_size);
+#endif
+
+	// if target language needs a warning for not ending in \n, emit one here
+	// but we normalize to that
+	{
+	size_t newline_count = 0;
+	const size_t BufferSizeSub1 = Buffer_size-1;
+	while(newline_count<BufferSizeSub1 && '\n'==Buffer[BufferSizeSub1-newline_count]) ++newline_count;
+	if (0<newline_count)
+		{
+#ifndef ZAIMONI_FORCE_ISO
+		Buffer = REALLOC(Buffer,(ArraySize(Buffer)-newline_count));
+#else
+		Buffer = REALLOC(Buffer,(Buffer_size -= newline_count));
+#endif
+		if (NULL==Buffer) return true;
+		}
+	else{	// works for C/C++
+		INC_INFORM(filename);
+		INFORM(": warning: did not end in \\n, undefined behavior.  Proceeding as if it was there.");
+		if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
+		}
+	}
+
+	char* newline_where = strchr(TokenList.back()->data(),'\n');
+	while(NULL!=newline_where)
+	{
+		const size_t offset = newline_where-TokenList.back()->data();
+		if (!TokenList.InsertNSlotsAt(1,TokenList.size()-1)) throw std::bad_alloc();
+		TokenList[TokenList.size()-2] = new Token<char>(*TokenList.back(),offset,0);
+		assert('\n'==TokenList.back()->data()[0]);
+		TokenList.back()->ltrim(strspn(TokenList.back()->data(),"\n"));
+		if (TokenList.back()->empty())
+		{
+			TokenList.DeleteIdx(TokenList.size()-1);
+			break;
+		}
+		newline_where = strchr(TokenList.back()->data(),'\n');
+	}
 
 	return true;
 }

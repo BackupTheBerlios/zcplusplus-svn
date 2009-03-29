@@ -2145,6 +2145,35 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 }
 
 bool
+CPreprocessor::raw_system_include(const char* const look_for, zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& IncludeTokenList) const
+{
+	char buf[FILENAME_MAX];
+	// raw system include has minimal macro context, so don't worry about legality check
+
+	// C,C++: limits.h is hardcoded
+	// C++: climits is hardcoded
+	if (	(!strcmp(look_for,"limits.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
+		||	(!strcmp(look_for,"climits") && Lang::CPlusPlus==lang_code))
+		{	// header is limits.h
+		create_limits_header(IncludeTokenList,look_for);	// not included yet
+		return true;
+		};
+
+	// C,C++: stddef.h is hardcoded
+	// C++: cstddef is hardcoded
+	if (	(!strcmp(look_for,"stddef.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
+		||	(!strcmp(look_for,"cstddef") && Lang::CPlusPlus==lang_code))
+		{	// header is stddef.h
+		create_stddef_header(IncludeTokenList,look_for);	// not included yet
+		return true;
+		};
+
+	if (find_system_include(look_for, buf))
+		return load_raw_sourcefile(IncludeTokenList,buf);
+	return false;
+}
+
+bool
 CPreprocessor::line_is_preprocessing_directive(zaimoni::Token<char>& x) const
 {
 	// normalize leading %: to # to handle equivalency of these tokens
@@ -2358,7 +2387,7 @@ CPreprocessor::find_local_include(const char* const src, char* const filepath_bu
  * \return true if and only if a filepath was found.
  */
 bool
-CPreprocessor::find_system_include(const char* const src, char* const filepath_buf)
+CPreprocessor::find_system_include(const char* const src, char* const filepath_buf) const
 {
 	char image_filepath[FILENAME_MAX];
 	char test_filepath[FILENAME_MAX];
@@ -4759,7 +4788,7 @@ CPreprocessor::function_macro_concatenate_novars(zaimoni::Token<char>& x, const 
  * \param header_name : what header we were requesting.
  */
 void
-CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name)
+CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const
 {
 	// currently, worst-case platform we support has a 64-bit two's-complenent long long
 	char buf[2+(VM_MAX_BIT_PLATFORM/3)] = " ";	// 2 for: leading space, trailing null-termination
@@ -4958,7 +4987,7 @@ static const char* NULL_constant_from_machine(const virtual_machine::std_int_enu
  * \param header_name : what header we were requesting.
  */
 void
-CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name)
+CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const
 {
 	assert(NULL!=header_name);
 	TokenList.clear();

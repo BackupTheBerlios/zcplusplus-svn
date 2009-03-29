@@ -14,6 +14,7 @@ class LangConf;
 }	// end namespace zaimoni
 
 bool load_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const char* const filename, zaimoni::LangConf& lang);
+bool load_raw_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const char* const filename);
 
 #endif
 

@@ -35,6 +35,9 @@ public:
 	// That's what zaimoni::LangConf::lex_line is for.
 	bool preprocess(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList);
 
+	// unpreprocessed system include.
+	bool raw_system_include(const char* const look_for, zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& IncludeTokenList) const;
+
 	void set_debug(bool _debug_mode) {debug_mode = _debug_mode;};
 	static const char* echo_valid_lang(const char* const x);
 	void stringize(zaimoni::autovalarray_ptr<char>& stringized_actual,const zaimoni::Token<char>* const & src);
@@ -60,7 +63,7 @@ private:
 
 	// #include path handling
 	bool find_local_include(const char* const src, char* const filepath_buf, const char* const local_root);
-	bool find_system_include(const char* const src, char* const filepath_buf);
+	bool find_system_include(const char* const src, char* const filepath_buf) const;
 
 	// alter token list
 	void weak_tokenize(const zaimoni::Token<char>& x,zaimoni::autovalarray_ptr<weak_token>& weaktoken_list) const;
@@ -76,8 +79,8 @@ private:
 	void discard_duplicate_define(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i, const size_t critical_offset, const size_t first_token_len);
 	bool discard_leading_trailing_concatenate_op(zaimoni::Token<char>& x);
 	void use_line_directive_and_discard(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i);
-	void create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name);
-	void create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name);
+	void create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const;
+	void create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const;
 
 	// optimize token list
 	void truncate_illegal_tokens(zaimoni::Token<char>& x,const int directive_type,const size_t critical_offset);
