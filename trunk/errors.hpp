@@ -63,16 +63,21 @@ enum boolean_options {
 
 namespace stringopt {
 enum string_options {
-	lang = 0
+	lang = 0,
 #define string_option_0 lang
 #define string_option_lang 0
 #define DEFAULT_lang NULL
-#define HANDLER_lang NULL
+#define HANDLER_lang interpret_stringopt_lang
+	system_include
+#define string_option_1 system_include
+#define string_option_system_include 1
+#define DEFAULT_system_include NULL
+#define HANDLER_system_include interpret_stringopt_system_include
 
 };
 
 #define string_option(A) string_option_##A
-#define MAX_OPT_STRING (stringopt::lang+1)
+#define MAX_OPT_STRING (stringopt::system_include+1)
 
 }
 

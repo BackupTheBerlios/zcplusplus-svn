@@ -18,7 +18,6 @@
 #include "Zaimoni.STL/Pure.C/format_util.h"
 
 error_counter<size_t> zcc_errors(100,"FATAL: too many preprocessing errors");
-static const char* system_include_to_pull = NULL;
 
 #ifndef NDEBUG
 bool debug_tracer = false;
@@ -70,12 +69,15 @@ bool bool_options[MAX_OPT_BOOL]
 typedef bool string_opt_handler(const char* const);
 
 static const POD_triple<const char*, size_t, const char*> option_map_string[]
-	=	{	{ "-x",	stringopt::lang, "language override\n"}		// GCC compatibility
+	=	{	{ "-x",	stringopt::lang, "language override\n"},		// GCC compatibility
+			{ "--system-include",	stringopt::system_include, "unpreprocessed #include<...> to stdout\n"}
 		};
 
 // exposed in errors.hpp
 const char* string_options[MAX_OPT_STRING]
-	= {default_option(string_option(0))};
+	= 	{	default_option(string_option(0)),
+			default_option(string_option(1))
+		};
 
 
 static const POD_triple<const char*, size_t, const char*> option_map_int[]
@@ -98,9 +100,11 @@ int recognize_bool_opt(const char* const x)
 int recognize_string_opt(const char* const x)
 {
 	if (zaimoni::is_empty_string(x)) return -1;
-	const size_t x_len = strlen(x);
 	size_t j = STATIC_SIZE(option_map_string);
-	do if (!strncmp(option_map_string[--j].first,x,x_len)) return j;
+	do	{
+		--j;
+		if (!strncmp(option_map_string[j].first,x,strlen(option_map_string[j].first))) return j;
+		}
 	while(0<j);
 	return -1;
 }
@@ -108,9 +112,11 @@ int recognize_string_opt(const char* const x)
 int recognize_int_opt(const char* const x)
 {
 	if (zaimoni::is_empty_string(x)) return -1;
-	const size_t x_len = strlen(x);
 	size_t j = STATIC_SIZE(option_map_int);
-	do if (!strncmp(option_map_int[--j].first,x,x_len)) return j;
+	do	{
+		--j;
+		if (!strncmp(option_map_int[j].first,x,strlen(option_map_int[j].first))) return j;
+		}
 	while(0<j);
 	return -1;
 }
@@ -157,10 +163,25 @@ void guess_lang_from_filename(const char* const x)
 		}
 }
 
-static string_opt_handler* option_handler_string[MAX_OPT_STRING]
-	=	{default_handler(string_option(0))};
+/*! 
+ * just pass through the proposed header name with only minimal reality checking
+ * 
+ * \param x system header name to check
+ * 
+ * \return bool (always true)
+ */
+bool interpret_stringopt_system_include(const char* x)
+{
+	string_options[stringopt::system_include] = x;
+	return true;
+}
 
-bool interpret_intopt_error_ub(const char* x)
+static string_opt_handler* option_handler_string[MAX_OPT_STRING]
+	=	{	default_handler(string_option(0)),
+			default_handler(string_option(1))
+		};
+
+static bool interpret_intopt_error_ub(const char* x)
 {
 	uintmax_t tmp = z_atoumax(x,10);
 	if (0>=tmp || INT_MAX<tmp) return false;
@@ -184,8 +205,9 @@ const char* const * const default_local_paths = NULL;
 const char* const * const default_system_paths = NULL;
 #endif
 
-void process_options(size_t argc, char* argv[])
+bool process_options(const size_t argc, char* argv[])
 {
+	size_t last_arg_used_in_option = 0;
 	size_t i = 0;
 	while(argc-1 > ++i)
 		{
@@ -194,6 +216,7 @@ void process_options(size_t argc, char* argv[])
 			{	// handle directly
 			const size_t j = option_map_bool[index].second;
 			bool_options[j] = !bool_options_default[j];
+			last_arg_used_in_option = i;
 			continue;
 			}
 		index = recognize_string_opt(argv[i]);
@@ -207,13 +230,13 @@ void process_options(size_t argc, char* argv[])
 				char* opt_target = NULL;
 				if (!strcmp(argv[i],option_map_string[index].first))
 					{
-					if (argc-2 > i)
-						opt_target = argv[++i];
+					if (argc-1 > i) opt_target = argv[++i];
 					}
 				else{
 					opt_target = argv[i]+strlen(option_map_string[index].first);
 					if ('=' == *opt_target) ++opt_target;
 					}
+				last_arg_used_in_option = i;
 				if (NULL!=opt_target && (option_handler_string[option_map_string[index].second])(opt_target)) continue;
 				INC_INFORM("Bad syntax: option ");
 				INFORM(option_map_string[index].first);
@@ -223,27 +246,31 @@ void process_options(size_t argc, char* argv[])
 		index = recognize_int_opt(argv[i]);
 		if (0<=index)
 			{
-			if (MAX_OPT_INT>option_map_string[index].second)
+			if (MAX_OPT_INT>option_map_int[index].second)
 				{
 				char* opt_target = NULL;
-				if (!strcmp(argv[i],option_map_string[index].first))
+				if (!strcmp(argv[i],option_map_int[index].first))
 					{
-					if (argc-2 > i)
-						opt_target = argv[++i];
+					if (argc-1 > i) opt_target = argv[++i];
 					}
 				else{
 					opt_target = argv[i]+strlen(option_map_int[index].first);
 					if ('=' == *opt_target) ++opt_target;
 					}
+				last_arg_used_in_option = i;
 				if (NULL!=opt_target && (option_handler_int[option_map_int[index].second])(opt_target)) continue;
 				INC_INFORM("Bad syntax: option ");
-				INFORM(option_map_string[index].first);
+				INFORM(option_map_int[index].first);
 				continue;
 				}
+			};
+		if (argc-1>i)
+			{
+			INC_INFORM("Unrecognized option ");
+			INFORM(argv[i]);
 			}
-		INC_INFORM("Unrecognized option ");
-		INFORM(argv[i]);
 		}
+	return 1<argc && argc-1==last_arg_used_in_option;
 }
 
 void help(void)
@@ -275,7 +302,6 @@ void help(void)
 		C_STRING_TO_STDOUT(option_map_int[i].third);
 		}
 	while(STATIC_SIZE(option_map_int) > ++i);
-	exit(EXIT_SUCCESS);
 }
 
 int
@@ -284,11 +310,15 @@ main(int argc, char* argv[])
 #ifndef ZAIMONI_FORCE_ISO
 	AppRunning = 1;	/* using custom memory manager, cancel non-ANSI mode for M$ Windows */
 #endif
-	if (2>argc) help();
+	if (2>argc)
+		{
+		help();
+		return EXIT_SUCCESS;
+		}
 
 	bootstrap_filesystem(argv[0]);
-	process_options(argc,argv);
-	guess_lang_from_filename(argv[argc-1]);
+	const bool last_arg_used_in_option = process_options(argc,argv);
+	if (!last_arg_used_in_option) guess_lang_from_filename(argv[argc-1]);
 
 	// platform-specific goo
 	// for now, go with Intel
@@ -345,17 +375,18 @@ main(int argc, char* argv[])
 
 		//! \todo option --system-include=___ which simply dumps whatever system include was found to stdout
 		// we want this to inspect the autogenerated headers, but it might be more generally useful
-		if (NULL!=system_include_to_pull)
+		if (NULL!=string_options[stringopt::system_include])
 			{
-			if (!cpp.raw_system_include(system_include_to_pull, TokenList))
+			if (!cpp.raw_system_include(string_options[stringopt::system_include], TokenList))
 				{
 				INC_INFORM("no system include found for #include<");
-				INC_INFORM(system_include_to_pull);
+				INC_INFORM(string_options[stringopt::system_include]);
 				INFORM(">");
 				return EXIT_FAILURE;
 				}
 			}
 		else{
+			if (last_arg_used_in_option) FATAL("file not last argument provided");
 			if (!load_sourcefile(TokenList,register_string(argv[argc-1]),lexer_from_string(string_options[stringopt::lang]))) FATAL("target file not loaded");
 			if (!TokenList.empty())
 				{
