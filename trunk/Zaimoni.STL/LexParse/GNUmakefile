@@ -4,8 +4,8 @@
 .SUFFIXES:
 .SUFFIXES: .cpp .a .o
 
-include ../makeconf.inc
-include ../GNUdep.inc
+include ../POSIX.inc
+include ../POSIX.dep
 
 CXXFLAGS := -Os -Wall -Wextra -finline -Winline -Wdisabled-optimization --param max-inline-insns-single=500 -c -pipe -DNDEBUG
 

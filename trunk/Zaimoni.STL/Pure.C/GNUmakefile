@@ -4,7 +4,7 @@
 .SUFFIXES:
 .SUFFIXES: .c .a .o
 
-include ../makeconf.inc
+include ../POSIX.inc
 
 CFLAGS := -Os -Wall -Wextra -finline -Winline -Wdisabled-optimization --param max-inline-insns-single=500 -pipe -DNDEBUG
 

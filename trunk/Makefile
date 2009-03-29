@@ -1,9 +1,9 @@
-# GNU makefile for MingW32 C++
+# POSIX makefile
 
 .SUFFIXES:
 .SUFFIXES: .cpp .o .exe
 
-include makeconf.inc
+include POSIX.inc
 
 # GNU targets we know about
 all: z_cpp.exe
@@ -16,7 +16,7 @@ z_cpp.exe : CPreproc.o CSupport.o type_system.o ParseTree.o unsigned_aux.o z_cpp
 	strip --preserve-dates --strip-unneeded z_cpp.exe
 
 # dependencies
-include makeconf.dep
+include POSIX.dep
 
 # inference rules
 # defines
