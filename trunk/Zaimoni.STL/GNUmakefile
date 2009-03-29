@@ -1,5 +1,5 @@
-# overall makefile for Zaimoni.STL
-# does assume make sets $(MAKE)
+# POSIX makefile for Zaimoni.STL
+# POSIX requires make sets $(MAKE)
 # pure.C must be done first because of Compiler.h dependency on auto_int.h
 
 # GNU targets we know about

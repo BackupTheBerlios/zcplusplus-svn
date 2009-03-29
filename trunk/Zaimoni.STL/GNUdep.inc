@@ -2,34 +2,33 @@
 
 # non-chained includes
 # Logging.h
-Logging_h := Logging.h Compiler.h flat_alg.h
+Logging_h = Logging.h Compiler.h flat_alg.h
 
 # POD.hpp
-POD_hpp := POD.hpp boost_core.hpp
+POD_hpp = POD.hpp boost_core.hpp
 
 # polymorphic.hpp
-polymorphic_hpp := polymorphic.hpp boost_core.hpp
+polymorphic_hpp = polymorphic.hpp boost_core.hpp
 
 # OS/console.hpp
-console_hpp := console.hpp ../custom_scoped_ptr.hpp
+console_hpp = console.hpp ../custom_scoped_ptr.hpp
 
 # chained includes
 # MetaRAM.hpp
-MetaRAM_hpp := MetaRAM.hpp flat_alg.h $(polymorphic_hpp)
+MetaRAM_hpp = MetaRAM.hpp flat_alg.h $(polymorphic_hpp)
 
 # cstdio
-cstdio := cstdio $(MetaRAM_hpp) $(Logging_h)
+cstdio = cstdio $(MetaRAM_hpp) $(Logging_h)
 
 # MetaRAM2.hpp
-MetaRAM2_hpp := MetaRAM2.hpp $(MetaRAM_hpp) $(Logging_h) z_memory.h
+MetaRAM2_hpp = MetaRAM2.hpp $(MetaRAM_hpp) $(Logging_h) z_memory.h
 
 # metatype/c_array.hpp
-c_array_hpp := c_array.hpp $(addprefix ../, $(Logging_h)) ../boost_core.hpp $(addprefix ../, $(MetaRAM_hpp)) ../algorithm ../logic_lt.hpp operator.hpp
+c_array_hpp = c_array.hpp $(addprefix ../, $(Logging_h)) ../boost_core.hpp $(addprefix ../, $(MetaRAM_hpp)) ../algorithm ../logic_lt.hpp operator.hpp
 
 # expand this
 # AutoPtr.hpp
-AutoPtr_hpp := AutoPtr.hpp $(MetaRAM2_hpp) $(addprefix metatype/, $(c_array_hpp))
+AutoPtr_hpp = AutoPtr.hpp $(MetaRAM2_hpp) $(addprefix metatype/, $(c_array_hpp))
 
 # LangConf.cpp
-LangConf_hpp := LangConf.hpp std.h $(addprefix ../, $(AutoPtr_hpp)) $(addprefix ../, $(POD_hpp))
-
+LangConf_hpp = LangConf.hpp std.h $(addprefix ../, $(AutoPtr_hpp)) $(addprefix ../, $(POD_hpp))
