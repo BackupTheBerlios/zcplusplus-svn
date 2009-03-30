@@ -1,6 +1,6 @@
 # POSIX makefile for Zaimoni.STL
 # POSIX requires make sets $(MAKE)
-# pure.C must be done first because of Compiler.h dependency on auto_int.h
+# pure.C must be done first: Pure.C/auto_int.h is a generated file
 
 # GNU targets we know about
 all:

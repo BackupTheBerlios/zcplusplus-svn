@@ -16,7 +16,7 @@ union ptr_char
 union long_char
 {
 	signed long first;
-	char test[sizeof(const char*)];
+	char test[sizeof(signed long)];
 };
 
 static void write_to_stdout(unsigned int i)
@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
 		{
 		STRING_LITERAL_TO_STDOUT("\n#define ZAIMONI_LITTLE_ENDIAN 1");
 		}
-	else if ('\1'==test_int_structure.test[sizeof(signed long)])
+	else if ('\1'==test_int_structure.test[sizeof(signed long)-1])
 		{
 		STRING_LITERAL_TO_STDOUT("\n#define ZAIMONI_BIG_ENDIAN 1");
 		}
