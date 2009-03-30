@@ -92,6 +92,10 @@ public:
 																	(std_int_short==x) ? C_char_bit()*C_sizeof_short() : 
 																	(std_int_int==x) ? C_char_bit()*C_sizeof_int() : 
 																	(std_int_long==x) ? C_char_bit()*C_sizeof_long() : C_char_bit()*C_sizeof_long_long() ;};
+	template<std_int_enum x> unsigned short C_bit() const {ZAIMONI_STATIC_ASSERT(x); return	(std_int_char==x) ? C_char_bit() : 
+																	(std_int_short==x) ? C_char_bit()*C_sizeof_short() : 
+																	(std_int_int==x) ? C_char_bit()*C_sizeof_int() : 
+																	(std_int_long==x) ? C_char_bit()*C_sizeof_long() : C_char_bit()*C_sizeof_long_long() ;}
 
 	signed_int_rep C_signed_int_representation() const {return (signed_int_rep)(signed_int_representation & 3U);};
 	bool trap_int(const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,std_int_enum machine_type) const;

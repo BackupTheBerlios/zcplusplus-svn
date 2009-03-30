@@ -209,7 +209,7 @@ bool process_options(const size_t argc, char* argv[])
 {
 	size_t last_arg_used_in_option = 0;
 	size_t i = 0;
-	while(argc-1 > ++i)
+	while(argc > ++i)
 		{
 		int index = recognize_bool_opt(argv[i]);
 		if (0<=index)
@@ -270,7 +270,7 @@ bool process_options(const size_t argc, char* argv[])
 			INFORM(argv[i]);
 			}
 		}
-	return 1<argc && argc-1==last_arg_used_in_option;
+	return argc-1==last_arg_used_in_option;
 }
 
 void help(void)

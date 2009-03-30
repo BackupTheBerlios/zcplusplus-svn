@@ -353,15 +353,13 @@ static const zaimoni::POD_pair<const char*,size_t> limits_h_core[]
 			DICT_STRUCT("#define LLONG_MIN"),
 			DICT_STRUCT("#define LLONG_MAX"),
 			DICT_STRUCT("#define ULLONG_MAX"),
-#if 0
 // LONG_BIT and WORD_BIT do not require POSIX library features to make sense, and do not appear version-sensitive
 // _XOPEN_SOURCE implies _POSIX_C_SOURCE
 // _POSIX_SOURCE is the POSIX 1 equivalent of _POSIX_C_SOURCE in POSIX 2/3.  ZCC supports this in spite of POSIX 3.
-			DICT_STRUCT("#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE)");
+			DICT_STRUCT("#if defined(_POSIX_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE)"),
 			DICT_STRUCT("#define WORD_BIT"),
 			DICT_STRUCT("#define LONG_BIT"),
-			DICT_STRUCT("#endif");
-#endif
+			DICT_STRUCT("#endif"),
 			DICT_STRUCT("#pragma ZCC lock CHAR_BIT SCHAR_MIN SCHAR_MAX"),
 			DICT_STRUCT("#pragma ZCC lock UCHAR_MAX CHAR_MIN CHAR_MAX"),
 			DICT_STRUCT("#pragma ZCC lock MB_LEN_MAX SHRT_MIN SHRT_MAX"),
@@ -391,10 +389,8 @@ static const zaimoni::POD_pair<const char*,size_t> limits_h_core[]
 #define LIMITS_LLONG_MIN_LINE 19
 #define LIMITS_LLONG_MAX_LINE 20
 #define LIMITS_ULLONG_MAX_LINE 21
-#if 0
 #define LIMITS_WORD_BIT_LINE 23
 #define LIMITS_LONG_BIT_LINE 24
-#endif
 
 //! \todo option --deathstation, with supporting predefine : do not provide convenient, legal but not required features
 static const zaimoni::POD_pair<const char*,size_t> stddef_h_core[]
@@ -4929,6 +4925,9 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	else
 		limits_ok = false;
 
+	// handle POSIX; should be no question of representability for reasonable machines
+	tmp[LIMITS_WORD_BIT_LINE]->append(0,z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_int>(),buf+1,10)-1);
+	tmp[LIMITS_LONG_BIT_LINE]->append(0,z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_long>(),buf+1,10)-1);
 
 	if (!limits_ok)
 		{
