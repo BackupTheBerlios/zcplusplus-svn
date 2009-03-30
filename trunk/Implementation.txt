@@ -38,7 +38,7 @@ Include paths searched
    (eventually to be controllable by command-line options).  These files 
    do not correpond to a physical file, but are still legal by C99 6.10.2 p2 
    (the "implementation defined place" searched is not in the file system).  
-   Affected files: limits.h/climits
+   Affected files: limits.h/climits, stddef.h/cstddef, stdint.h/cstdint
 ====
 Standards compliance notes:
 * In C++ mode, ZCC follow C++0x regarding what universal-character-encodings are legal.  C++98 is more permissive.
@@ -52,7 +52,10 @@ that include no standard headers whatsoever.  In this case, C++0x prohibits whil
 ** iso646.h/ciso646
 ** limits.h/climits
 *** not even remotely POSIX-compliant.  As most of the POSIX extensions here have to do with POSIX C library features, this will not be fixed quickly.
+*** we do have WORD_BIT and LONG_BIT from POSIX.
 ** stdbool.h/cstdbool
+** stddef.h/cstddef
+*** offsetof macro is missing.  This won't matter until the compilers know what a struct is.
 * cstdint/stdint.h: When this is implemented, C++0x will be considered to be authoritative for the behavior of stdint.h in C++, not C99.  Thus, a number of macros are 
 unconditionally defined per C++0x, rather than invoking undefined behavior by requiring the definition of a macro reserved to the C99 standard/C++ implementation 
 as C99 requires.
