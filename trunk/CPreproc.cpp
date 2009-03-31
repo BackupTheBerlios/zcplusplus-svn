@@ -422,15 +422,17 @@ static const zaimoni::POD_pair<const char*,size_t> stddef_h_core[]
 #define STDDEF_CPP_WCHAR_T_LINE 12
 
 static const zaimoni::POD_pair<const char*,size_t> accept_pragma_leading_tokens[]
-	=	{	DICT_STRUCT("STDC"),		// C99
+	=	{	DICT_STRUCT("STDC"),	// C99
 			DICT_STRUCT("ZCC"),		// our own
-			DICT_STRUCT("GCC")		// we also pay attention to GCC pragmas
+			DICT_STRUCT("GCC"),		// we also pay attention to GCC pragmas
+			DICT_STRUCT("message")	// #pragma message("...")
 		};
 
 // yes, enum would be better style
 // #define PRAGMA_LEADING_STDC 0
 #define PRAGMA_LEADING_ZCC 1
 // #define PRAGMA_LEADING_GCC 2
+#define PRAGMA_MESSAGE 3
 
 static const zaimoni::POD_pair<const char*,size_t> pragma_ZCC_keywords[]
 	=	{	DICT_STRUCT("lock"),
@@ -2208,7 +2210,43 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, zaimoni::auto
 									}
 			}
 			}
-		};
+		return;
+		}
+	else if (PRAGMA_MESSAGE==valid_pragma_class)
+		{
+		if (	4==pretokenized.size()
+			&&	1==pretokenized[1].second && '('==x[pretokenized[1].first]
+			&&	1==pretokenized[3].second && ')'==x[pretokenized[3].first]
+			&&	C_TESTFLAG_STRING_LITERAL==pretokenized[2].third)
+			{
+			// hmm...do we need to unescape anything...
+			const bool wide_str = 'L'==x[pretokenized[2].first];
+			if (0<std::count(x+pretokenized[2].first,x+pretokenized[2].first+pretokenized[2].second,'\\'))
+				{	// no escapes
+				if (wide_str) return; //! \bug this should do a proper unescape to UNICODE, then use a wrapper library to push the UNICODE to whatever wide-char support there is
+
+				//! \todo change target, this only handles target CHAR_BIT<=host CHAR_BIT
+				const size_t tmp_len = lang.UnescapeStringLength(x+pretokenized[2].first,pretokenized[2].second);
+				char* tmp = zaimoni::_new_buffer<char>(ZAIMONI_LEN_WITH_NULL(tmp_len));
+				if (NULL!=tmp)
+					{
+					lang.UnescapeString(tmp,x+pretokenized[2].first,pretokenized[2].second);
+					INFORM(tmp,tmp_len);
+					zaimoni::_flush(tmp);
+					return;
+					}
+				};
+			// no escapes, or formatting failed: do something
+			if (wide_str)
+				{
+				INFORM(x+pretokenized[2].first+2,pretokenized[2].second-3);
+				}
+			else{
+				INFORM(x+pretokenized[2].first+1,pretokenized[2].second-2);
+				}
+			}
+		return;
+		}
 	//! \bug: should syntax-check current STDC pragmas in C-mode
 	//! \todo: fix return value situation when enabling code-generation affecting pragmas
 }
