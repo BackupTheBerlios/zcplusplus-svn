@@ -4793,6 +4793,7 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,func_trai
 	bool is_true = false;
 	if (literal_converts_to_bool(*src.data<2>(),is_true) && !is_true && (1==(src.type_code.base_type_index-C_TYPE::INT)%2 || virtual_machine::twos_complement==target_machine->C_signed_int_representation() || bool_options[boolopt::int_traps]))
 		{	// -0=0 most of the time (except for trap-signed-int machines using sign/magnitude or one's-complement integers
+			// deal with unary - not being allowed to actually return -0 on these machines later
 		const type_spec old_type = src.type_code;
 		src.destroy();
 		src.index_tokens[0].token.first = "0";
@@ -9206,19 +9207,8 @@ bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const za
 static void eval_string_literal_deref(parse_tree& src,const type_system& types,const zaimoni::POD_pair<const char*,size_t>& str_lit,const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& tmp, bool is_negative,bool index_src_is_char)
 {
 	const size_t strict_ub = LengthOfCStringLiteral(str_lit.first,str_lit.second);
-	if (is_negative && 0==tmp)
-		{
-		if (bool_options[boolopt::int_traps] && virtual_machine::twos_complement!=target_machine->C_signed_int_representation())
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM((bool_options[boolopt::pedantic]) ? ERR_STR : WARN_STR);
-			INC_INFORM("undefined behavior: ");
-			INC_INFORM(src);
-			INFORM(" : -0 trap representation would have been used, pretending it is 0 instead");
-			if (bool_options[boolopt::pedantic]) zcc_errors.inc_error();
-			}
-		is_negative = false;
-		}
+	// C99 6.2.6.2p3 -0 is not actually allowed to generate the bitpattern -0, so no trapping
+	if (is_negative && 0==tmp) is_negative = false;
 	if (is_negative)
 		{
 		message_header(src.index_tokens[0]);
