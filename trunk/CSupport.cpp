@@ -2773,13 +2773,29 @@ static uintmax_t EvalCharacterLiteral(const char* src, size_t src_len)
 	return tmp;
 }
 
-bool
-CCharLiteralIsNUL(const char* x,size_t x_len)
+bool CCharLiteralIsFalse(const char* x,size_t x_len)
 {
 	assert(NULL!=x);
 	assert(0<x_len);
 	assert(IsLegalCCharacterLiteral(x,x_len));
-	return 0==EvalCharacterLiteral(x,x_len);
+	const uintmax_t result = EvalCharacterLiteral(x,x_len);
+	if (0==result) return true;
+	switch(target_machine->C_signed_int_representation())
+	{
+	default: return false;
+	case virtual_machine::ones_complement:		{
+												unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
+												if (VM_MAX_BIT_PLATFORM>target_machine->C_char_bit()) tmp.set(target_machine->C_char_bit());
+												tmp -= 1;
+												return tmp==result;
+												}
+	case virtual_machine::sign_and_magnitude:	{
+												unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
+												tmp.set(target_machine->C_char_bit()-1);
+												return tmp==result;
+												}
+	};
+	return false;
 }
 
 // not sure if we need this bit, but it matches the standards
@@ -4188,8 +4204,7 @@ static bool _C99_literal_converts_to_bool(const parse_tree& src, bool& is_true)
 		}
 	if (C_TESTFLAG_CHAR_LITERAL==src.index_tokens[0].flags)
 		{
-		// negative zeros on one's complement or sign-and-magnitude machines do not equal zero, so we're fine
-		is_true = !CCharLiteralIsNUL(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
+		is_true = !CCharLiteralIsFalse(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
 		return true;
 		};
 	if (!(C_TESTFLAG_PP_NUMERAL & src.index_tokens[0].flags)) return false;

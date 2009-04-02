@@ -166,7 +166,7 @@ bool IsLegalCString(const char* src, size_t src_len);
 bool IsLegalCCharacterLiteral(const char* src, size_t src_len);
 bool LocateCCharacterLiteralAt(const char* const src, size_t src_len, size_t target_idx, size_t& char_offset, size_t& char_len);
 void GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, char*& tmp);
-bool CCharLiteralIsNUL(const char* x,size_t x_len);
+bool CCharLiteralIsFalse(const char* x,size_t x_len);
 bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const zaimoni::lex_flags flags);
 
 // call before use

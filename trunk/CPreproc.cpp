@@ -3317,8 +3317,7 @@ CPreprocessor::if_elif_control_is_zero(const zaimoni::Token<char>& x, const zaim
 			//! \test Pass_if_zero.h
 			//! \test Pass_if_nonzero.hpp 
 			//! \test Pass_if_nonzero.h
-		is_zero = CCharLiteralIsNUL(x.data()+lexed_token.first,lexed_token.second);
-		// negative zeros on one's complement or sign-and-magnitude machines do not equal zero, so we're fine
+		is_zero = CCharLiteralIsFalse(x.data()+lexed_token.first,lexed_token.second);
 		return true;
 		};
 
