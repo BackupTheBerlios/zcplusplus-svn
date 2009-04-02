@@ -90,7 +90,7 @@ void _unsigned_sum(unsigned char* LHS, size_t LHS_len, uintmax_t RHS)
 		tmp >>= CHAR_BIT;
 		RHS >>= CHAR_BIT;
 		}
-	while(LHS_len > ++i && RHS);
+	while(LHS_len > ++i && (RHS || tmp));
 #else
 	bool carry = false;
 	do	{

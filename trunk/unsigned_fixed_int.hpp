@@ -196,6 +196,16 @@ _unsigned_fixed_charint<N>::operator*=(const _unsigned_fixed_charint<N>& RHS)
 }
 
 template<size_t N>
+_unsigned_fixed_charint<N>
+operator/(_unsigned_fixed_charint<N> LHS,const _unsigned_fixed_charint<N>& RHS)
+{
+	_unsigned_fixed_charint<N> quotient;
+	LHS.div_op(RHS,quotient);
+	return quotient;
+}
+
+
+template<size_t N>
 _unsigned_fixed_charint<N>&
 _unsigned_fixed_charint<N>::operator/=(const _unsigned_fixed_charint<N>& RHS)
 {
@@ -267,6 +277,25 @@ bool operator>=(const _unsigned_fixed_charint<N>& LHS, uintmax_t RHS) {return 0<
 
 template<size_t N> inline
 bool operator>=(const uintmax_t LHS, const _unsigned_fixed_charint<N>& RHS) {return 0>=unsigned_cmp(RHS._x,N,LHS);}
+
+template<size_t N>
+char* z_ucharint_toa(_unsigned_fixed_charint<N> target,char* const buf,unsigned int radix)
+{
+	char* ret = buf;
+	const _unsigned_fixed_charint<N> radix_copy(radix);
+	_unsigned_fixed_charint<N> power_up(1);
+	while(power_up<=target/radix_copy) power_up *= radix_copy;
+	do	{
+		unsigned char tmp = (unsigned char)((target/power_up).to_uint());
+		tmp += (10>tmp) ? (unsigned char)('0') : (unsigned char)('A')-10U;	// ahem...assumes ASCII linear A-Z
+		*ret++ = tmp;
+		target %= power_up;
+		power_up /= radix_copy;
+		}
+	while(0<power_up);
+	*ret = '\0';
+	return buf;
+}
 
 template<size_t N>
 class unsigned_fixed_int : public _unsigned_fixed_charint<((N-1)/CHAR_BIT)+1>

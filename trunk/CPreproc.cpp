@@ -335,22 +335,22 @@ static const zaimoni::POD_pair<const char*,size_t> limits_h_core[]
 			DICT_STRUCT("#define __LIMITS_H__ 1"),
 			DICT_STRUCT("#pragma ZCC lock __LIMITS_H__"),
 			DICT_STRUCT("#define CHAR_BIT"),
-			DICT_STRUCT("#define SCHAR_MIN"),
+			DICT_STRUCT("#define SCHAR_MIN -"),
 			DICT_STRUCT("#define SCHAR_MAX"),
 			DICT_STRUCT("#define UCHAR_MAX"),
 			DICT_STRUCT("#define CHAR_MIN"),
 			DICT_STRUCT("#define CHAR_MAX"),
 			DICT_STRUCT("#define MB_LEN_MAX"),
-			DICT_STRUCT("#define SHRT_MIN"),
+			DICT_STRUCT("#define SHRT_MIN -"),
 			DICT_STRUCT("#define SHRT_MAX"),
 			DICT_STRUCT("#define USHRT_MAX"),
-			DICT_STRUCT("#define INT_MIN"),
+			DICT_STRUCT("#define INT_MIN -"),
 			DICT_STRUCT("#define INT_MAX"),
 			DICT_STRUCT("#define UINT_MAX"),
-			DICT_STRUCT("#define LONG_MIN"),
+			DICT_STRUCT("#define LONG_MIN -"),
 			DICT_STRUCT("#define LONG_MAX"),
 			DICT_STRUCT("#define ULONG_MAX"),
-			DICT_STRUCT("#define LLONG_MIN"),
+			DICT_STRUCT("#define LLONG_MIN -"),
 			DICT_STRUCT("#define LLONG_MAX"),
 			DICT_STRUCT("#define ULLONG_MAX"),
 // LONG_BIT and WORD_BIT do not require POSIX library features to make sense, and do not appear version-sensitive
@@ -4826,7 +4826,6 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// currently, worst-case platform we support has a 64-bit two's-complenent long long
 	char buf[2+(VM_MAX_BIT_PLATFORM/3)] = " ";	// 2 for: leading space, trailing null-termination
 												// (VM_MAX_BIT_PLATFORM/3) for: digits (using octal rather than decimal count because that's easy to do at compile-time)
-	bool limits_ok = true;
 	assert(NULL!=header_name);
 	TokenList.clear();
 	TokenList.resize(STATIC_SIZE(limits_h_core));
@@ -4849,129 +4848,97 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	tmp[LIMITS_CHAR_BIT_LINE]->append(0,z_umaxtoa(target_machine.C_char_bit(),buf+1,10)-1);
 
 	// set up the negative signs
-	tmp[LIMITS_SCHAR_MIN_LINE]->append(0," -");
 	tmp[LIMITS_CHAR_MIN_LINE]->append(0,(target_machine.char_is_signed_char()) ? " -" : " 0");	// char is unsigned: 0
-	tmp[LIMITS_SHRT_MIN_LINE]->append(0," -");
-	tmp[LIMITS_INT_MIN_LINE]->append(0," -");
-	tmp[LIMITS_LONG_MIN_LINE]->append(0," -");
-	tmp[LIMITS_LLONG_MIN_LINE]->append(0," -");
 
-	// character limits
-	if (target_machine.unsigned_max<virtual_machine::std_int_char>().representable_as_uint())
-		{	// unsigned character limits
-		tmp[LIMITS_UCHAR_MAX_LINE]->append(0,z_umaxtoa(target_machine.unsigned_max<virtual_machine::std_int_char>().to_uint(),buf+1,10)-1);
-		tmp[LIMITS_UCHAR_MAX_LINE]->append(0,"U");	// C99 5.2.4.2.1 p1 : requires unsigned int
-		if (!target_machine.char_is_signed_char())
-			{
-			tmp[LIMITS_CHAR_MAX_LINE]->append(0,buf);
-			tmp[LIMITS_CHAR_MAX_LINE]->append(0,"U");	// C99 5.2.4.2.1 p1 : requires unsigned int
-			}
-		// signed character limits
-		const uintmax_t s_max = target_machine.signed_max<virtual_machine::std_int_char>().to_uint();
-		tmp[LIMITS_SCHAR_MAX_LINE]->append(0,z_umaxtoa(s_max,buf+1,10)-1);
-		if (target_machine.char_is_signed_char()) tmp[LIMITS_CHAR_MAX_LINE]->append(0,buf);
-		if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
-			{
-			tmp[LIMITS_SCHAR_MIN_LINE]->append(0,z_umaxtoa(s_max+1U,buf+1,10));
-			}
-		else{
-			tmp[LIMITS_SCHAR_MIN_LINE]->append(0,buf+1);
-			}
-		if (target_machine.char_is_signed_char()) tmp[LIMITS_CHAR_MIN_LINE]->append(0,buf+1);
+	// unsigned character limits
+	tmp[LIMITS_UCHAR_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_char>(),buf+1,10)-1);
+	tmp[LIMITS_UCHAR_MAX_LINE]->append(0,"U");	// C99 5.2.4.2.1 p1 : requires unsigned int
+	if (!target_machine.char_is_signed_char())
+		{
+		tmp[LIMITS_CHAR_MAX_LINE]->append(0,buf);
+		tmp[LIMITS_CHAR_MAX_LINE]->append(0,"U");	// C99 5.2.4.2.1 p1 : requires unsigned int
 		}
-	else
-		limits_ok = false;
+	// signed character limits
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> s_max(target_machine.signed_max<virtual_machine::std_int_char>());
+	tmp[LIMITS_SCHAR_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
+	if (target_machine.char_is_signed_char()) tmp[LIMITS_CHAR_MAX_LINE]->append(0,buf);
+	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
+		{
+		s_max += 1;
+		tmp[LIMITS_SCHAR_MIN_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10));
+		}
+	else{
+		tmp[LIMITS_SCHAR_MIN_LINE]->append(0,buf+1);
+		}
+	if (target_machine.char_is_signed_char()) tmp[LIMITS_CHAR_MIN_LINE]->append(0,buf+1);
 
-	// short limits
-	if (target_machine.unsigned_max<virtual_machine::std_int_short>().representable_as_uint())
-		{	// unsigned short limits
-		tmp[LIMITS_USHRT_MAX_LINE]->append(0,z_umaxtoa(target_machine.unsigned_max<virtual_machine::std_int_short>().to_uint(),buf+1,10)-1);
-		tmp[LIMITS_USHRT_MAX_LINE]->append(0,"U");	// C99 5.2.4.2.1 p1 : requires unsigned int
-		// signed short limits
-		const uintmax_t s_max = target_machine.signed_max<virtual_machine::std_int_short>().to_uint();
-		tmp[LIMITS_SHRT_MAX_LINE]->append(0,z_umaxtoa(s_max,buf+1,10)-1);
-		if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
-			{
-			tmp[LIMITS_SHRT_MIN_LINE]->append(0,z_umaxtoa(s_max+1U,buf+1,10));
-			}
-		else{
-			tmp[LIMITS_SHRT_MIN_LINE]->append(0,buf+1);
-			}
+	// unsigned short limits
+	tmp[LIMITS_USHRT_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_short>(),buf+1,10)-1);
+	tmp[LIMITS_USHRT_MAX_LINE]->append(0,"U");	// C99 5.2.4.2.1 p1 : requires unsigned int
+	// signed short limits
+	s_max = target_machine.signed_max<virtual_machine::std_int_short>();
+	tmp[LIMITS_SHRT_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
+	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
+		{
+		s_max += 1;
+		tmp[LIMITS_SHRT_MIN_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10));
 		}
-	else
-		limits_ok = false;
+	else{
+		tmp[LIMITS_SHRT_MIN_LINE]->append(0,buf+1);
+		}
 
-	// int limits
-	if (target_machine.unsigned_max<virtual_machine::std_int_int>().representable_as_uint())
-		{	// unsigned int limits
-		tmp[LIMITS_UINT_MAX_LINE]->append(0,z_umaxtoa(target_machine.unsigned_max<virtual_machine::std_int_int>().to_uint(),buf+1,10)-1);
-		tmp[LIMITS_UINT_MAX_LINE]->append(0,"U");	// C99 5.2.4.2.1 p1 : requires unsigned int
-		// signed int limits
-		const uintmax_t s_max = target_machine.signed_max<virtual_machine::std_int_int>().to_uint();
-		tmp[LIMITS_INT_MAX_LINE]->append(0,z_umaxtoa(s_max,buf+1,10)-1);
-		if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
-			{
-			tmp[LIMITS_INT_MIN_LINE]->append(0,z_umaxtoa(s_max+1U,buf+1,10));
-			}
-		else{
-			tmp[LIMITS_INT_MIN_LINE]->append(0,buf+1);
-			}
+	// unsigned int limits
+	tmp[LIMITS_UINT_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_int>(),buf+1,10)-1);
+	tmp[LIMITS_UINT_MAX_LINE]->append(0,"U");	// C99 5.2.4.2.1 p1 : requires unsigned int
+	// signed int limits
+	s_max = target_machine.signed_max<virtual_machine::std_int_int>();
+	tmp[LIMITS_INT_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
+	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
+		{
+		s_max += 1;
+		tmp[LIMITS_INT_MIN_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10));
 		}
-	else
-		limits_ok = false;
+	else{
+		tmp[LIMITS_INT_MIN_LINE]->append(0,buf+1);
+		}
 
-	// long limits
-	if (target_machine.unsigned_max<virtual_machine::std_int_long>().representable_as_uint())
-		{	// unsigned long limits
-		tmp[LIMITS_ULONG_MAX_LINE]->append(0,z_umaxtoa(target_machine.unsigned_max<virtual_machine::std_int_long>().to_uint(),buf+1,10)-1);
-		tmp[LIMITS_ULONG_MAX_LINE]->append(0,"UL");
-		// signed long limits
-		const uintmax_t s_max = target_machine.signed_max<virtual_machine::std_int_long>().to_uint();
-		tmp[LIMITS_LONG_MAX_LINE]->append(0,z_umaxtoa(s_max,buf+1,10)-1);
-		tmp[LIMITS_LONG_MAX_LINE]->append(0,"L");
-		if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
-			{
-			tmp[LIMITS_LONG_MIN_LINE]->append(0,z_umaxtoa(s_max+1U,buf+1,10));
-			}
-		else{
-			tmp[LIMITS_LONG_MIN_LINE]->append(0,buf+1);
-			}
-		tmp[LIMITS_LONG_MIN_LINE]->append(0,"L");
+	// unsigned long limits
+	tmp[LIMITS_ULONG_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_long>(),buf+1,10)-1);
+	tmp[LIMITS_ULONG_MAX_LINE]->append(0,"UL");
+	// signed long limits
+	s_max = target_machine.signed_max<virtual_machine::std_int_long>();
+	tmp[LIMITS_LONG_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
+	tmp[LIMITS_LONG_MAX_LINE]->append(0,"L");
+	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
+		{
+		s_max += 1;
+		tmp[LIMITS_LONG_MIN_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10));
 		}
-	else
-		limits_ok = false;
+	else{
+		tmp[LIMITS_LONG_MIN_LINE]->append(0,buf+1);
+		}
+	tmp[LIMITS_LONG_MIN_LINE]->append(0,"L");
 
-	// long long limits
-	if (target_machine.unsigned_max<virtual_machine::std_int_long_long>().representable_as_uint())
-		{	// unsigned long long limits
-		tmp[LIMITS_ULLONG_MAX_LINE]->append(0,z_umaxtoa(target_machine.unsigned_max<virtual_machine::std_int_long_long>().to_uint(),buf+1,10)-1);
-		tmp[LIMITS_ULLONG_MAX_LINE]->append(0,"ULL");
-		// signed long long limits
-		const uintmax_t s_max = target_machine.signed_max<virtual_machine::std_int_long_long>().to_uint();
-		tmp[LIMITS_LLONG_MAX_LINE]->append(0,z_umaxtoa(s_max,buf+1,10)-1);
-		tmp[LIMITS_LLONG_MAX_LINE]->append(0,"LL");
-		if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
-			{
-			tmp[LIMITS_LLONG_MIN_LINE]->append(0,z_umaxtoa(s_max+1U,buf+1,10));
-			}
-		else{
-			tmp[LIMITS_LLONG_MIN_LINE]->append(0,buf+1);
-			}
-		tmp[LIMITS_LLONG_MIN_LINE]->append(0,"LL");
+	// unsigned long long limits
+	tmp[LIMITS_ULLONG_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_long_long>(),buf+1,10)-1);
+	tmp[LIMITS_ULLONG_MAX_LINE]->append(0,"ULL");
+	// signed long long limits
+	s_max = target_machine.signed_max<virtual_machine::std_int_long_long>();
+	tmp[LIMITS_LLONG_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
+	tmp[LIMITS_LLONG_MAX_LINE]->append(0,"LL");
+	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
+		{
+		s_max += 1;
+		tmp[LIMITS_LLONG_MIN_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10));
 		}
-	else
-		limits_ok = false;
+	else{
+		tmp[LIMITS_LLONG_MIN_LINE]->append(0,buf+1);
+		}
+	tmp[LIMITS_LLONG_MIN_LINE]->append(0,"LL");
 
 	// handle POSIX; should be no question of representability for reasonable machines
 	tmp[LIMITS_WORD_BIT_LINE]->append(0,z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_int>(),buf+1,10)-1);
 	tmp[LIMITS_LONG_BIT_LINE]->append(0,z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_long>(),buf+1,10)-1);
-
-	if (!limits_ok)
-		{
-		INC_INFORM(ERR_STR);
-		INFORM("limits.h header improvised incorrectly (trying to cross-preprocess to target with larger uintmax_t than native)");
-		zcc_errors.inc_error();
-		}
 }
 
 static const char* signed_type_from_machine(const virtual_machine::std_int_enum x)
