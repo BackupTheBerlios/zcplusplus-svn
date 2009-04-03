@@ -393,19 +393,21 @@ static const zaimoni::POD_pair<const char*,size_t> limits_h_core[]
 #define LIMITS_LONG_BIT_LINE 24
 
 //! \todo option --deathstation, with supporting predefine : do not provide convenient, legal but not required features
+// NOTE: wchar_t is a reserved keyword in C++, do not typedef it!
 static const zaimoni::POD_pair<const char*,size_t> stddef_h_core[]
 	=	{	DICT_STRUCT("#ifndef __STDDEF_H__"),
 			DICT_STRUCT("#define __STDDEF_H__ 1"),
 			DICT_STRUCT("#pragma ZCC lock __STDDEF_H__"),
 			DICT_STRUCT("typedef "),
 			DICT_STRUCT("typedef "),
+			DICT_STRUCT("#ifndef __cplusplus "),
 			DICT_STRUCT("typedef "),
+			DICT_STRUCT("#endif"),
 			DICT_STRUCT("#define NULL "),
 //			DICT_STRUCT("#define offsetof"),	// do not provide offsetof as we don't parse structs yet
 			DICT_STRUCT("#pragma ZCC lock NULL offsetof"),	// lock offsetof because it's standard
 			DICT_STRUCT("#ifdef __cplusplus"),
 			DICT_STRUCT("namespace std {"),
-			DICT_STRUCT("typedef "),
 			DICT_STRUCT("typedef "),
 			DICT_STRUCT("typedef "),
 			DICT_STRUCT("}"),
@@ -415,11 +417,10 @@ static const zaimoni::POD_pair<const char*,size_t> stddef_h_core[]
 
 #define STDDEF_PTRDIFF_T_LINE 3
 #define STDDEF_SIZE_T_LINE 4
-#define STDDEF_WCHAR_T_LINE 5
-#define STDDEF_NULL_LINE 6
-#define STDDEF_CPP_PTRDIFF_T_LINE 10
-#define STDDEF_CPP_SIZE_T_LINE 11
-#define STDDEF_CPP_WCHAR_T_LINE 12
+#define STDDEF_WCHAR_T_LINE 6
+#define STDDEF_NULL_LINE 8
+#define STDDEF_CPP_PTRDIFF_T_LINE 12
+#define STDDEF_CPP_SIZE_T_LINE 13
 
 static const zaimoni::POD_pair<const char*,size_t> accept_pragma_leading_tokens[]
 	=	{	DICT_STRUCT("STDC"),	// C99
@@ -5026,8 +5027,6 @@ CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	assert(NULL!=wchar_t_str);
 	tmp[STDDEF_WCHAR_T_LINE]->append(0,wchar_t_str);
 	tmp[STDDEF_WCHAR_T_LINE]->append(0," wchar_t;");
-	tmp[STDDEF_CPP_WCHAR_T_LINE]->append(0,wchar_t_str);
-	tmp[STDDEF_CPP_WCHAR_T_LINE]->append(0," wchar_t;");
 
 	// C99 17.7p3 : macros
 	// we assume that ptrdiff_t is the correct size (really should have an explicit void* size)
