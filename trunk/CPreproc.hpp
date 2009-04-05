@@ -79,9 +79,12 @@ private:
 	void discard_duplicate_define(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i, const size_t critical_offset, const size_t first_token_len);
 	bool discard_leading_trailing_concatenate_op(zaimoni::Token<char>& x);
 	void use_line_directive_and_discard(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i);
+	// moved to CPreproc_autogen.cpp
 	void create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const;
 	void create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const;
+	void create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const;
 
+	// resume CPreproc.cpp
 	// optimize token list
 	void truncate_illegal_tokens(zaimoni::Token<char>& x,const int directive_type,const size_t critical_offset);
 	int context_free_defined(const char* const x, size_t x_len) const;

@@ -1966,6 +1966,16 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						create_stddef_header(IncludeTokenList,look_for);	// not included yet
 					};
 
+				// C,C++: stdint.h is hardcoded
+				// C++: cstdint is hardcoded
+				if (	(!strcmp(look_for,"stdint.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
+					||	(!strcmp(look_for,"cstdint") && Lang::CPlusPlus==lang_code))
+					{	// header is stdint.h
+					hardcoded_header = true;
+					if (0>binary_find("__STDINT_H__",sizeof("__STDINT_H__")-1,macros_object))	
+						create_stdint_header(IncludeTokenList,look_for);	// not included yet
+					};
+
 				found_file = !hardcoded_header && find_system_include(look_for, buf);
 				if (found_file)
 					{	// filepath known; inhale and set up cache
@@ -2070,6 +2080,15 @@ CPreprocessor::raw_system_include(const char* const look_for, zaimoni::autovalar
 		||	(!strcmp(look_for,"cstddef") && Lang::CPlusPlus==lang_code))
 		{	// header is stddef.h
 		create_stddef_header(IncludeTokenList,look_for);	// not included yet
+		return true;
+		};
+
+	// C,C++: stddef.h is hardcoded
+	// C++: cstddef is hardcoded
+	if (	(!strcmp(look_for,"stdint.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
+		||	(!strcmp(look_for,"cstdint") && Lang::CPlusPlus==lang_code))
+		{	// header is stddef.h
+		create_stdint_header(IncludeTokenList,look_for);	// not included yet
 		return true;
 		};
 
