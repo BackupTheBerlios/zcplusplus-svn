@@ -386,6 +386,36 @@ static const char* unsigned_type_from_machine(const virtual_machine::std_int_enu
 }
 
 //! \bug balancing feature envy vs minimal interface
+static const char* signed_suffix_from_machine(const virtual_machine::std_int_enum x)
+{
+	switch(x)
+	{
+	case virtual_machine::std_int_none:	return NULL;
+	case virtual_machine::std_int_char:	return NULL;
+	case virtual_machine::std_int_short:	return NULL;
+	case virtual_machine::std_int_int:	return NULL;
+	case virtual_machine::std_int_long:	return "L";
+	case virtual_machine::std_int_long_long:	return "LL";
+	};
+	return NULL;
+}
+
+//! \bug balancing feature envy vs minimal interface
+static const char* unsigned_suffix_from_machine(const virtual_machine::std_int_enum x)
+{
+	switch(x)
+	{
+	case virtual_machine::std_int_none:	return NULL;
+	case virtual_machine::std_int_char:	return "U";
+	case virtual_machine::std_int_short:	return "U";
+	case virtual_machine::std_int_int:	return "U";
+	case virtual_machine::std_int_long:	return "UL";
+	case virtual_machine::std_int_long_long:	return "ULL";
+	};
+	return NULL;
+}
+
+//! \bug balancing feature envy vs minimal interface
 static const char* NULL_constant_from_machine(const virtual_machine::std_int_enum x)
 {
 	switch(x)
@@ -471,12 +501,76 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	do	{
 		--i;
 		tmp[i] = new zaimoni::Token<char>(stdint_h_core[i].first,0,stdint_h_core[i].second,0);
-		tmp[i]->logical_line.first = i+1;
-		tmp[i]->logical_line.second = 0;
-		tmp[i]->original_line = tmp[i]->logical_line;
-		tmp[i]->src_filename = header_name;
 		}
 	while(0<i);
+
+	// set up some result strings
+	char signed_max_metabuf[virtual_machine::std_int_long_long*(2+(VM_MAX_BIT_PLATFORM/3)+2)] = "";
+	char* signed_max_buf[virtual_machine::std_int_long_long] = {signed_max_metabuf, signed_max_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
+	*signed_max_buf[0] = ' ';
+	*signed_max_buf[1] = ' ';
+	*signed_max_buf[2] = ' ';
+	*signed_max_buf[3] = ' ';
+	*signed_max_buf[4] = ' ';
+	z_ucharint_toa(target_machine.signed_max<virtual_machine::std_int_char>(),signed_max_buf[virtual_machine::std_int_char-1]+1,10);
+	z_ucharint_toa(target_machine.signed_max<virtual_machine::std_int_short>(),signed_max_buf[virtual_machine::std_int_short-1]+1,10);
+	z_ucharint_toa(target_machine.signed_max<virtual_machine::std_int_int>(),signed_max_buf[virtual_machine::std_int_int-1]+1,10);
+	z_ucharint_toa(target_machine.signed_max<virtual_machine::std_int_long>(),signed_max_buf[virtual_machine::std_int_long-1]+1,10);
+	z_ucharint_toa(target_machine.signed_max<virtual_machine::std_int_long_long>(),signed_max_buf[virtual_machine::std_int_long_long-1]+1,10);
+	strcat(signed_max_buf[virtual_machine::std_int_long-1],"L");
+	strcat(signed_max_buf[virtual_machine::std_int_long_long-1],"LL");
+
+	char unsigned_max_metabuf[virtual_machine::std_int_long_long*(2+(VM_MAX_BIT_PLATFORM/3)+3)] = "";
+	char* unsigned_max_buf[virtual_machine::std_int_long_long] = {unsigned_max_metabuf, unsigned_max_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
+	*unsigned_max_buf[0] = ' ';
+	*unsigned_max_buf[1] = ' ';
+	*unsigned_max_buf[2] = ' ';
+	*unsigned_max_buf[3] = ' ';
+	*unsigned_max_buf[4] = ' ';
+	z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_char>(),unsigned_max_buf[virtual_machine::std_int_char-1]+1,10);
+	z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_short>(),unsigned_max_buf[virtual_machine::std_int_short-1]+1,10);
+	z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_int>(),unsigned_max_buf[virtual_machine::std_int_int-1]+1,10);
+	z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_long>(),unsigned_max_buf[virtual_machine::std_int_long-1]+1,10);
+	z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_long_long>(),unsigned_max_buf[virtual_machine::std_int_long_long-1]+1,10);
+	strcat(unsigned_max_buf[virtual_machine::std_int_char-1],"U");
+	strcat(unsigned_max_buf[virtual_machine::std_int_short-1],"U");
+	strcat(unsigned_max_buf[virtual_machine::std_int_int-1],"U");
+	strcat(unsigned_max_buf[virtual_machine::std_int_long-1],"UL");
+	strcat(unsigned_max_buf[virtual_machine::std_int_long_long-1],"ULL");
+
+	const bool target_is_twos_complement = virtual_machine::twos_complement==target_machine.C_signed_int_representation();
+	char signed_min_metabuf[virtual_machine::std_int_long_long*(2+(VM_MAX_BIT_PLATFORM/3)+2)] = "";
+	char* signed_min_buf[virtual_machine::std_int_long_long] = {signed_min_metabuf, signed_min_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp_VM;
+	if (target_is_twos_complement)
+		{
+		*signed_min_buf[0] = ' ';
+		*signed_min_buf[1] = ' ';
+		*signed_min_buf[2] = ' ';
+		*signed_min_buf[3] = ' ';
+		*signed_min_buf[4] = ' ';
+		tmp_VM = target_machine.signed_max<virtual_machine::std_int_char>();
+		tmp_VM += 1;
+		z_ucharint_toa(tmp_VM,signed_min_buf[virtual_machine::std_int_char-1]+1,10);
+		tmp_VM = target_machine.signed_max<virtual_machine::std_int_short>();
+		tmp_VM += 1;
+		z_ucharint_toa(tmp_VM,signed_min_buf[virtual_machine::std_int_short-1]+1,10);
+		tmp_VM = target_machine.signed_max<virtual_machine::std_int_int>();
+		tmp_VM += 1;
+		z_ucharint_toa(tmp_VM,signed_min_buf[virtual_machine::std_int_int-1]+1,10);
+		tmp_VM = target_machine.signed_max<virtual_machine::std_int_long>();
+		tmp_VM += 1;
+		z_ucharint_toa(tmp_VM,signed_min_buf[virtual_machine::std_int_long-1]+1,10);
+		tmp_VM = target_machine.signed_max<virtual_machine::std_int_long_long>();
+		tmp_VM += 1;
+		z_ucharint_toa(tmp_VM,signed_min_buf[virtual_machine::std_int_long_long-1]+1,10);
+		strcat(signed_min_buf[virtual_machine::std_int_long-1],"L");
+		strcat(signed_min_buf[virtual_machine::std_int_long_long-1],"LL");
+		}
+	else{
+		BOOST_STATIC_ASSERT(sizeof(signed_min_metabuf)==sizeof(signed_max_metabuf));
+		memmove(signed_min_metabuf,signed_max_metabuf,sizeof(signed_max_metabuf));
+		}
 
 	// we assume ptrdiff_t is closely related to intptr_t and uintptr_t (doesn't work too well on 16-bit DOS)
 	const virtual_machine::std_int_enum ptrtype = target_machine.ptrdiff_t_type();
@@ -491,44 +585,26 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	tmp[STDINT_CPP_UINTPTR_LINE]->append(0,ptr_unsigned_type);
 	tmp[STDINT_CPP_UINTPTR_LINE]->append(0," uintptr_t;");
 
-	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> s_max(target_machine.signed_max(ptrtype));
-	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
-	tmp[STDINT_PTRDIFF_T_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,buf);
-	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
-		{
-		s_max += 1;
-		tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10));
-		}
-	else{
-		tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,buf+1);
-		}
-	tmp[STDINT_PTRDIFF_T_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,buf+1);
+	// intptr_t limits
+	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[ptrtype-1]);
+	tmp[STDINT_PTRDIFF_T_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[ptrtype-1]);
+	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[ptrtype-1]+1);
+	tmp[STDINT_PTRDIFF_T_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[ptrtype-1]+1);
 
-	// unsigned int limits
-	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,z_ucharint_toa(target_machine.unsigned_max(ptrtype),buf+1,10)-1);
-	tmp[STDINT_SIZE_T_MAX_LINE]->append(0,buf);
-	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"U");
+	// uintptr_t limits
+	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[ptrtype-1]);
 
-	// catch intmax_t, uintmax_t limits
-	s_max = target_machine.signed_max<virtual_machine::std_int_long_long>();
-	tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
-	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
-		{
-		s_max += 1;
-		tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10));
-		}
-	else{
-		tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,buf+1);
-		}
-	tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_long_long>(),buf+1,10)-1);
-	tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"U");
+	// intmax_t limits
+	tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[virtual_machine::std_int_long_long-1]);
+	tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[virtual_machine::std_int_long_long-1]+1);
 
-	// catch wchar_t limits
-	tmp[STDINT_WCHAR_T_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,z_ucharint_toa(target_machine.unsigned_max(target_machine.UNICODE_wchar_t()),buf+1,10)-1);
-	tmp[STDINT_WCHAR_T_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"U");
+	// uintmax_t limits
+	tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[virtual_machine::std_int_long_long-1]);
+
+	// wchar_t limits
+	tmp[STDINT_WCHAR_T_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,unsigned_max_buf[target_machine.UNICODE_wchar_t()-1]);
 
 	// two's complement controls whether the exact-width int types even exist
-	const bool target_is_twos_complement = virtual_machine::twos_complement==target_machine.C_signed_int_representation();
 	const unsigned short type_bits[virtual_machine::std_int_long_long] = {target_machine.C_bit(virtual_machine::std_int_char),target_machine.C_bit(virtual_machine::std_int_short),target_machine.C_bit(virtual_machine::std_int_int),target_machine.C_bit(virtual_machine::std_int_long),target_machine.C_bit(virtual_machine::std_int_long_long)};
 	const bool suppress[virtual_machine::std_int_long_long-1] = {type_bits[virtual_machine::std_int_char-1]==type_bits[virtual_machine::std_int_short-1],type_bits[virtual_machine::std_int_short-1]==type_bits[virtual_machine::std_int_int-1],type_bits[virtual_machine::std_int_int-1]==type_bits[virtual_machine::std_int_long-1],type_bits[virtual_machine::std_int_long-1]==type_bits[virtual_machine::std_int_long_long-1]};
 
@@ -539,7 +615,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UINT_OFFSET]->append(0,buf+1);
 	tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UINT_OFFSET]->append(0,"_t;");
 	tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,buf+1);
-	tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX ");
+	tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX");
 	if (target_is_twos_complement)
 		{
 		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_INT_OFFSET]->append(0,buf+1);
@@ -549,16 +625,13 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,buf+1);
 		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,"_MIN -");
 		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,buf+1);
-		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX ");
+		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX");
 		};
-	tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_int>(),buf+1,10)-1);
-	tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"U");
+	tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[virtual_machine::std_int_int-1]);
 	if (target_is_twos_complement)
 		{
-		s_max = target_machine.signed_max<virtual_machine::std_int_int>();
-		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10));
-		s_max += 1;
-		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10));
+		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[virtual_machine::std_int_int-1]);
+		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[virtual_machine::std_int_int-1]+1);
 		};
 
 	// char-based types
@@ -569,7 +642,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET]->append(0,buf+1);
 		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET]->append(0,"_t;");
 		tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,buf+1);
-		tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX ");
+		tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX");
 		if (target_is_twos_complement)
 			{
 			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SCHAR_OFFSET]->append(0,buf+1);
@@ -579,16 +652,13 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,buf+1);
 			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,"_MIN -");
 			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX ");
+			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX");
 			};
-		tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_char>(),buf+1,10)-1);
-		tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"U");
+		tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[virtual_machine::std_int_char-1]);
 		if (target_is_twos_complement)
 			{
-			s_max = target_machine.signed_max<virtual_machine::std_int_char>();
-			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10));
-			s_max += 1;
-			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10));
+			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[virtual_machine::std_int_char-1]);
+			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[virtual_machine::std_int_char-1]+1);
 			};
 		}
 
@@ -600,7 +670,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET]->append(0,buf+1);
 		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET]->append(0,"_t;");
 		tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,buf+1);
-		tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX ");
+		tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX");
 		if (target_is_twos_complement)
 			{
 			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SHRT_OFFSET]->append(0,buf+1);
@@ -610,16 +680,13 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,buf+1);
 			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,"_MIN -");
 			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX ");
+			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX");
 			};
-		tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_short>(),buf+1,10)-1);
-		tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"U");
+		tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[virtual_machine::std_int_short-1]);
 		if (target_is_twos_complement)
 			{
-			s_max = target_machine.signed_max<virtual_machine::std_int_short>();
-			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10));
-			s_max += 1;
-			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10));
+			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[virtual_machine::std_int_short-1]);
+			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[virtual_machine::std_int_short-1]+1);
 			};
 		}
 
@@ -631,7 +698,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET]->append(0,buf+1);
 		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET]->append(0,"_t;");
 		tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,buf+1);
-		tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX ");
+		tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX");
 		if (target_is_twos_complement)
 			{
 			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LONG_OFFSET]->append(0,buf+1);
@@ -641,16 +708,13 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,buf+1);
 			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,"_MIN -");
 			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX ");
+			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX");
 			};
-		tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_long>(),buf+1,10)-1);
-		tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"U");
+		tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[virtual_machine::std_int_long-1]);
 		if (target_is_twos_complement)
 			{
-			s_max = target_machine.signed_max<virtual_machine::std_int_long>();
-			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10));
-			s_max += 1;
-			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10));
+			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[virtual_machine::std_int_long-1]);
+			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[virtual_machine::std_int_long-1]+1);
 			};
 		}
 
@@ -662,7 +726,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET]->append(0,buf+1);
 		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET]->append(0,"_t;");
 		tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,buf+1);
-		tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX ");
+		tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX");
 		if (target_is_twos_complement)
 			{
 			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LLONG_OFFSET]->append(0,buf+1);
@@ -672,16 +736,13 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,buf+1);
 			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,"_MIN -");
 			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX ");
+			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX");
 			};
-		tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_long_long>(),buf+1,10)-1);
-		tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"U");
+		tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[virtual_machine::std_int_long_long-1]);
 		if (target_is_twos_complement)
 			{
-			s_max = target_machine.signed_max<virtual_machine::std_int_long_long>();
-			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10));
-			s_max += 1;
-			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,z_ucharint_toa(s_max,buf+1,10));
+			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[virtual_machine::std_int_long_long-1]);
+			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[virtual_machine::std_int_long_long-1]+1);
 			};
 		}
 
@@ -736,64 +797,174 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		}
 
 	// limits macros cleanup
+	char lock_buf[sizeof("#pragma ZCC lock INT_LEAST_MIN INT_LEAST_MAX UINT_LEAST_MAX INT_FAST_MIN INT_FAST_MAX UINT_FAST_MAX INT_C UINT_C")+8*2] = "#pragma ZCC lock ";	// should be dependent on base 10 logarithm of VM_MAX_BIT_PLATFORM: fix auto_int.h
 	if (suppress[virtual_machine::std_int_long_long-2])
 		{
 		TokenList.DeleteIdx(STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET);
-		--inject_CPP_index;
-		--inject_C_index;
-		}
-	if (!target_is_twos_complement || suppress[virtual_machine::std_int_long_long-2])
-		{
 		TokenList.DeleteIdx(STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
 		TokenList.DeleteIdx(STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
-		inject_CPP_index -= 2;
-		inject_C_index -= 2;
+		inject_CPP_index -= 3;
+		inject_C_index -= 3;
 		}
-	if (!target_is_twos_complement || suppress[virtual_machine::std_int_long-2])
-		{
-		TokenList.DeleteIdx(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET);
-		--inject_CPP_index;
-		--inject_C_index;
-		}
+	else{
+		memset(lock_buf+sizeof("#pragma ZCC lock "),0,sizeof(lock_buf)-sizeof("#pragma ZCC lock "));
+		strcpy(lock_buf+sizeof("#pragma ZCC lock ")-1,"UINT");
+		strcat(lock_buf,z_umaxtoa(type_bits[virtual_machine::std_int_long_long-1],buf+1,10));
+		if (target_is_twos_complement)
+			{
+			strcat(lock_buf,"_MAX INT");
+			strcat(lock_buf,buf+1);
+			strcat(lock_buf,"_MIN INT");
+			strcat(lock_buf,buf+1);
+			};
+		strcat(lock_buf,"_MAX");
+		zaimoni::Token<char>* tmp2 = new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0);
+		if (!TokenList.InsertSlotAt(STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,tmp2))
+			{
+			delete tmp2;
+			throw std::bad_alloc();
+			};
+		++inject_CPP_index;
+		if (!target_is_twos_complement)
+			{
+			TokenList.DeleteIdx(STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
+			TokenList.DeleteIdx(STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
+			inject_CPP_index -= 2;
+			inject_C_index -= 2;
+			};
+		};
 	if (suppress[virtual_machine::std_int_long-2])
 		{
+		TokenList.DeleteIdx(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET);
 		TokenList.DeleteIdx(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
 		TokenList.DeleteIdx(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
-		inject_CPP_index -= 2;
-		inject_C_index -= 2;
+		inject_CPP_index -= 3;
+		inject_C_index -= 3;
 		}
+	else{
+		memset(lock_buf+sizeof("#pragma ZCC lock "),0,sizeof(lock_buf)-sizeof("#pragma ZCC lock "));
+		strcpy(lock_buf+sizeof("#pragma ZCC lock ")-1,"UINT");
+		strcat(lock_buf,z_umaxtoa(type_bits[virtual_machine::std_int_long-1],buf+1,10));
+		if (target_is_twos_complement)
+			{
+			strcat(lock_buf,"_MAX INT");
+			strcat(lock_buf,buf+1);
+			strcat(lock_buf,"_MIN INT");
+			strcat(lock_buf,buf+1);
+			};
+		strcat(lock_buf,"_MAX");
+		zaimoni::Token<char>* tmp2 = new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0);
+		if (!TokenList.InsertSlotAt(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,tmp2))
+			{
+			delete tmp2;
+			throw std::bad_alloc();
+			};
+		++inject_CPP_index;
+		if (!target_is_twos_complement)
+			{
+			strcat(lock_buf,"_MAX");
+			TokenList.InsertSlotAt(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0));
+			TokenList.DeleteIdx(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
+			TokenList.DeleteIdx(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
+			inject_CPP_index -= 2;
+			inject_C_index -= 2;
+			};
+		};
+
+	memset(lock_buf+sizeof("#pragma ZCC lock "),0,sizeof(lock_buf)-sizeof("#pragma ZCC lock "));
+	strcpy(lock_buf+sizeof("#pragma ZCC lock ")-1,"UINT");
+	strcat(lock_buf,z_umaxtoa(type_bits[virtual_machine::std_int_int-1],buf+1,10));
+	if (target_is_twos_complement)
+		{
+		strcat(lock_buf,"_MAX INT");
+		strcat(lock_buf,buf+1);
+		strcat(lock_buf,"_MIN INT");
+		strcat(lock_buf,buf+1);
+		};
+	strcat(lock_buf,"_MAX");
+	zaimoni::Token<char>* tmp2 = new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0);
+	if (!TokenList.InsertSlotAt(STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,tmp2))
+		{
+		delete tmp2;
+		throw std::bad_alloc();
+		};
+	++inject_CPP_index;
 	if (!target_is_twos_complement)
 		{
 		TokenList.DeleteIdx(STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
 		TokenList.DeleteIdx(STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
 		inject_CPP_index -= 2;
 		inject_C_index -= 2;
-		}
+		};
 	if (suppress[virtual_machine::std_int_short-1])
 		{
 		TokenList.DeleteIdx(STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET);
-		--inject_CPP_index;
-		--inject_C_index;
-		}
-	if (!target_is_twos_complement || suppress[virtual_machine::std_int_short-1])
-		{
 		TokenList.DeleteIdx(STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
 		TokenList.DeleteIdx(STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
-		inject_CPP_index -= 2;
-		inject_C_index -= 2;
+		inject_CPP_index -= 3;
+		inject_C_index -= 3;
+		}
+	else{
+		memset(lock_buf+sizeof("#pragma ZCC lock "),0,sizeof(lock_buf)-sizeof("#pragma ZCC lock "));
+		strcpy(lock_buf+sizeof("#pragma ZCC lock ")-1,"UINT");
+		strcat(lock_buf,z_umaxtoa(type_bits[virtual_machine::std_int_short-1],buf+1,10));
+		if (target_is_twos_complement)
+			{
+			strcat(lock_buf,"_MAX INT");
+			strcat(lock_buf,buf+1);
+			strcat(lock_buf,"_MIN INT");
+			strcat(lock_buf,buf+1);
+			};
+		strcat(lock_buf,"_MAX");
+		zaimoni::Token<char>* tmp2 = new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0);
+		if (!TokenList.InsertSlotAt(STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,tmp2))
+			{
+			delete tmp2;
+			throw std::bad_alloc();
+			};
+		++inject_CPP_index;
+		if (!target_is_twos_complement)
+			{
+			TokenList.DeleteIdx(STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
+			TokenList.DeleteIdx(STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
+			inject_CPP_index -= 2;
+			inject_C_index -= 2;
+			}
 		}
 	if (suppress[virtual_machine::std_int_char-1])
 		{
 		TokenList.DeleteIdx(STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET);
-		--inject_CPP_index;
-		--inject_C_index;
-		}
-	if (!target_is_twos_complement || suppress[virtual_machine::std_int_char-1])
-		{
 		TokenList.DeleteIdx(STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
 		TokenList.DeleteIdx(STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
-		inject_CPP_index -= 2;
-		inject_C_index -= 2;
+		inject_CPP_index -= 3;
+		inject_C_index -= 3;
+		}
+	else{
+		memset(lock_buf+sizeof("#pragma ZCC lock "),0,sizeof(lock_buf)-sizeof("#pragma ZCC lock "));
+		strcpy(lock_buf+sizeof("#pragma ZCC lock ")-1,"UINT");
+		strcat(lock_buf,z_umaxtoa(type_bits[virtual_machine::std_int_char-1],buf+1,10));
+		if (target_is_twos_complement)
+			{
+			strcat(lock_buf,"_MAX INT");
+			strcat(lock_buf,buf+1);
+			strcat(lock_buf,"_MIN INT");
+			strcat(lock_buf,buf+1);
+			};
+		strcat(lock_buf,"_MAX");
+		zaimoni::Token<char>* tmp2 = new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0);
+		if (!TokenList.InsertSlotAt(STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,tmp2))
+			{
+			delete tmp2;
+			throw std::bad_alloc();
+			};
+		++inject_CPP_index;
+		if (!target_is_twos_complement)
+			{
+			TokenList.DeleteIdx(STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
+			TokenList.DeleteIdx(STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
+			inject_CPP_index -= 2;
+			inject_C_index -= 2;
+			}
 		}
 
 	// C typedef cleanup
@@ -856,7 +1027,200 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// span...start with *8_t and go up to long long bits
 	// * C99 requires *8_t types
 	// * we don't want to provide types that don't exist
-	// * absolute minimum CHAR_BIT is 7, otherwise basic source isn't representable
-//	const unsigned short bitspan_types = type_bits[virtual_machine::std_int_long_long-1]-7;
+	// * absolute minimum CHAR_BIT is 7, otherwise basic source isn't representable.
+	// C++ typedefs in namespace std
+	char typedef_buf[sizeof("typedef unsigned long long uint_least_t;")+2] = "typedef ";	// should be dependent on base 10 logarithm of VM_MAX_BIT_PLATFORM: fix auto_int.h
+	const unsigned short bitspan_types = type_bits[virtual_machine::std_int_long_long-1]-7;
+	assert(USHRT_MAX/13>=bitspan_types);
+	i = 4*bitspan_types;
+	TokenList.InsertNSlotsAt(i,inject_CPP_index);
+	tmp = TokenList.c_array()+inject_CPP_index;
+	do	{
+		const int target_bits = --i/4+8;
+		assert(target_bits<=target_machine.C_bit(virtual_machine::std_int_long_long));
+		const virtual_machine::std_int_enum fast_type 	= target_bits<=type_bits[virtual_machine::std_int_int-1] ? virtual_machine::std_int_int
+														: target_bits<=type_bits[virtual_machine::std_int_long-1] ? virtual_machine::std_int_long
+														: virtual_machine::std_int_long_long;
+		const virtual_machine::std_int_enum least_type 	= (!suppress[virtual_machine::std_int_char-1] && target_bits<=type_bits[virtual_machine::std_int_char-1]) ? virtual_machine::std_int_char
+														: (!suppress[virtual_machine::std_int_short-1] && target_bits<=type_bits[virtual_machine::std_int_short-1]) ? virtual_machine::std_int_short
+														: target_bits<=type_bits[virtual_machine::std_int_int-1] ? virtual_machine::std_int_int
+														: target_bits<=type_bits[virtual_machine::std_int_long-1] ? virtual_machine::std_int_long
+														: virtual_machine::std_int_long_long;
+		// uint_least
+		memset(typedef_buf+sizeof("typedef "),0,sizeof(typedef_buf)-sizeof("typedef "));
+		strcpy(typedef_buf+sizeof("typedef ")-1,unsigned_type_from_machine(least_type));
+		strcat(typedef_buf," uint_least");
+		strcat(typedef_buf,z_umaxtoa(target_bits,buf+1,10));
+		strcat(typedef_buf,"_t;");
+		tmp[i--] = new zaimoni::Token<char>(typedef_buf,0,strlen(typedef_buf),0);
+		// int_least
+		memset(typedef_buf+sizeof("typedef "),0,sizeof(typedef_buf)-sizeof("typedef "));
+		strcpy(typedef_buf+sizeof("typedef ")-1,signed_type_from_machine(least_type));
+		strcat(typedef_buf," int_least");
+		strcat(typedef_buf,buf+1);
+		strcat(typedef_buf,"_t;");
+		tmp[i--] = new zaimoni::Token<char>(typedef_buf,0,strlen(typedef_buf),0);
+		// uint_fast
+		memset(typedef_buf+sizeof("typedef "),0,sizeof(typedef_buf)-sizeof("typedef "));
+		strcpy(typedef_buf+sizeof("typedef ")-1,unsigned_type_from_machine(fast_type));
+		strcat(typedef_buf," uint_fast");
+		strcat(typedef_buf,buf+1);
+		strcat(typedef_buf,"_t;");
+		tmp[i--] = new zaimoni::Token<char>(typedef_buf,0,strlen(typedef_buf),0);
+		// int_fast
+		memset(typedef_buf+sizeof("typedef "),0,sizeof(typedef_buf)-sizeof("typedef "));
+		strcpy(typedef_buf+sizeof("typedef ")-1,signed_type_from_machine(fast_type));
+		strcat(typedef_buf," int_fast");
+		strcat(typedef_buf,buf+1);
+		strcat(typedef_buf,"_t;");
+		tmp[i] = new zaimoni::Token<char>(typedef_buf,0,strlen(typedef_buf),0);
+		}
+	while(0<i);
+
+	char define_buf[sizeof("#define UINT_LEAST_MAX")+2+VM_MAX_BIT_PLATFORM/3+4] = "#define ";	// should be dependent on base 10 logarithm of VM_MAX_BIT_PLATFORM: fix auto_int.h
+	i = 13*bitspan_types;
+	TokenList.InsertNSlotsAt(i,inject_C_index);
+	tmp = TokenList.c_array()+inject_C_index;
+	do	{
+		const int target_bits = --i/13+8;
+		assert(target_bits<=target_machine.C_bit(virtual_machine::std_int_long_long));
+		const virtual_machine::std_int_enum fast_type 	= target_bits<=type_bits[virtual_machine::std_int_int-1] ? virtual_machine::std_int_int
+														: target_bits<=type_bits[virtual_machine::std_int_long-1] ? virtual_machine::std_int_long
+														: virtual_machine::std_int_long_long;
+		const virtual_machine::std_int_enum least_type 	= (!suppress[virtual_machine::std_int_char-1] && target_bits<=type_bits[virtual_machine::std_int_char-1]) ? virtual_machine::std_int_char
+														: (!suppress[virtual_machine::std_int_short-1] && target_bits<=type_bits[virtual_machine::std_int_short-1]) ? virtual_machine::std_int_short
+														: target_bits<=type_bits[virtual_machine::std_int_int-1] ? virtual_machine::std_int_int
+														: target_bits<=type_bits[virtual_machine::std_int_long-1] ? virtual_machine::std_int_long
+														: virtual_machine::std_int_long_long;
+		// #pragma ZCC lock INT_LEAST_MIN INT_LEAST_MAX UINT_LEAST_MAX INT_FAST_MIN INT_FAST_MAX UINT_FAST_MAX INT_C UINT_C
+		memset(lock_buf+sizeof("#pragma ZCC lock "),0,sizeof(lock_buf)-sizeof("#pragma ZCC lock "));
+		strcpy(lock_buf+sizeof("#pragma ZCC lock ")-1,"INT_LEAST");
+		strcat(lock_buf,z_umaxtoa(target_bits,buf+1,10));
+		strcat(lock_buf,"_MIN INT_LEAST");
+		strcat(lock_buf,buf+1);
+		strcat(lock_buf,"_MAX UINT_LEAST");
+		strcat(lock_buf,buf+1);
+		strcat(lock_buf,"_MAX INT_FAST");
+		strcat(lock_buf,buf+1);
+		strcat(lock_buf,"_MIN INT_FAST");
+		strcat(lock_buf,buf+1);
+		strcat(lock_buf,"_MAX UINT_FAST");
+		strcat(lock_buf,buf+1);
+		strcat(lock_buf,"_MAX INT");
+		strcat(lock_buf,buf+1);
+		strcat(lock_buf,"_C UINT");
+		strcat(lock_buf,buf+1);
+		strcat(lock_buf,"_C");
+		tmp[i--] = new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0);
+		// UINT_C
+		memset(define_buf+sizeof("#define "),0,sizeof(define_buf)-sizeof("#define "));
+		strcpy(define_buf+sizeof("#define ")-1,"UINT");
+		strcat(define_buf,buf+1);
+		strcat(define_buf,"_C(A) A");
+		const char* int_suffix = unsigned_suffix_from_machine(least_type);
+		if (NULL!=int_suffix)
+			{
+			strcat(define_buf,"##");
+			strcat(define_buf,int_suffix);
+			};
+		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
+		// INT_C
+		memset(define_buf+sizeof("#define "),0,sizeof(define_buf)-sizeof("#define "));
+		strcpy(define_buf+sizeof("#define ")-1,"INT");
+		strcat(define_buf,buf+1);
+		strcat(define_buf,"_C(A) A");
+		int_suffix = signed_suffix_from_machine(least_type);
+		if (NULL!=int_suffix)
+			{
+			strcat(define_buf,"##");
+			strcat(define_buf,int_suffix);
+			};
+		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
+		// UINT_FAST_MAX
+		memset(define_buf+sizeof("#define "),0,sizeof(define_buf)-sizeof("#define "));
+		strcpy(define_buf+sizeof("#define ")-1,"UINT_FAST");
+		strcat(define_buf,buf+1);
+		strcat(define_buf,"_MAX");
+		strcat(define_buf,unsigned_max_buf[fast_type-1]);
+		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
+		// INT_FAST_MAX
+		memset(define_buf+sizeof("#define "),0,sizeof(define_buf)-sizeof("#define "));
+		strcpy(define_buf+sizeof("#define ")-1,"INT_FAST");
+		strcat(define_buf,buf+1);
+		strcat(define_buf,"_MAX");
+		strcat(define_buf,signed_max_buf[fast_type-1]);
+		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
+		// INT_FAST_MIN
+		memset(define_buf+sizeof("#define "),0,sizeof(define_buf)-sizeof("#define "));
+		strcpy(define_buf+sizeof("#define ")-1,"INT_FAST");
+		strcat(define_buf,buf+1);
+		strcat(define_buf,"_MIN -");
+		strcat(define_buf,signed_min_buf[fast_type-1]+1);
+		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
+		// UINT_LEAST_MAX
+		memset(define_buf+sizeof("#define "),0,sizeof(define_buf)-sizeof("#define "));
+		strcpy(define_buf+sizeof("#define ")-1,"UINT_LEAST");
+		strcat(define_buf,buf+1);
+		strcat(define_buf,"_MAX");
+		strcat(define_buf,unsigned_max_buf[least_type-1]);
+		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
+		// INT_LEAST_MAX
+		memset(define_buf+sizeof("#define "),0,sizeof(define_buf)-sizeof("#define "));
+		strcpy(define_buf+sizeof("#define ")-1,"INT_LEAST");
+		strcat(define_buf,buf+1);
+		strcat(define_buf,"_MAX");
+		strcat(define_buf,signed_max_buf[least_type-1]);
+		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
+		// INT_LEAST_MIN
+		memset(define_buf+sizeof("#define "),0,sizeof(define_buf)-sizeof("#define "));
+		strcpy(define_buf+sizeof("#define ")-1,"INT_LEAST");
+		strcat(define_buf,buf+1);
+		strcat(define_buf,"_MIN -");
+		strcat(define_buf,signed_min_buf[least_type-1]+1);
+		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
+		// uint_least
+		memset(typedef_buf+sizeof("typedef "),0,sizeof(typedef_buf)-sizeof("typedef "));
+		strcpy(typedef_buf+sizeof("typedef ")-1,unsigned_type_from_machine(least_type));
+		strcat(typedef_buf," uint_least");
+		strcat(typedef_buf,buf+1);
+		strcat(typedef_buf,"_t;");
+		tmp[i--] = new zaimoni::Token<char>(typedef_buf,0,strlen(typedef_buf),0);
+		// int_least
+		memset(typedef_buf+sizeof("typedef "),0,sizeof(typedef_buf)-sizeof("typedef "));
+		strcpy(typedef_buf+sizeof("typedef ")-1,signed_type_from_machine(least_type));
+		strcat(typedef_buf," int_least");
+		strcat(typedef_buf,buf+1);
+		strcat(typedef_buf,"_t;");
+		tmp[i--] = new zaimoni::Token<char>(typedef_buf,0,strlen(typedef_buf),0);
+		// uint_fast
+		memset(typedef_buf+sizeof("typedef "),0,sizeof(typedef_buf)-sizeof("typedef "));
+		strcpy(typedef_buf+sizeof("typedef ")-1,unsigned_type_from_machine(fast_type));
+		strcat(typedef_buf," uint_fast");
+		strcat(typedef_buf,buf+1);
+		strcat(typedef_buf,"_t;");
+		tmp[i--] = new zaimoni::Token<char>(typedef_buf,0,strlen(typedef_buf),0);
+		// int_fast
+		memset(typedef_buf+sizeof("typedef "),0,sizeof(typedef_buf)-sizeof("typedef "));
+		strcpy(typedef_buf+sizeof("typedef ")-1,signed_type_from_machine(fast_type));
+		strcat(typedef_buf," int_fast");
+		strcat(typedef_buf,buf+1);
+		strcat(typedef_buf,"_t;");
+		tmp[i] = new zaimoni::Token<char>(typedef_buf,0,strlen(typedef_buf),0);
+		}
+	while(0<i);
+
+	// final normalization
+	i = TokenList.size();
+	tmp = TokenList.c_array();
+	do	{
+		--i;
+		assert(NULL!=tmp[i]);
+		tmp[i]->logical_line.first = i+1;
+		tmp[i]->logical_line.second = 0;
+		tmp[i]->original_line = tmp[i]->logical_line;
+		tmp[i]->src_filename = header_name;
+		}
+	while(0<i);
+
 }
 

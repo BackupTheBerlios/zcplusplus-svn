@@ -56,9 +56,12 @@ that include no standard headers whatsoever.  In this case, C++0x prohibits whil
 ** stdbool.h/cstdbool
 ** stddef.h/cstddef
 *** offsetof macro is missing.  This won't matter until the compilers know what a struct is.
-* cstdint/stdint.h: When this is implemented, C++0x will be considered to be authoritative for the behavior of stdint.h in C++, not C99.  Thus, a number of macros are 
+* cstdint/stdint.h:
+** C++0x is considered to be authoritative for the behavior of stdint.h in C++, not C99.  Thus, a number of macros are 
 unconditionally defined per C++0x, rather than invoking undefined behavior by requiring the definition of a macro reserved to the C99 standard/C++ implementation 
 as C99 requires.
+** we currently assume that intptr_t and ptrdiff_t are the same type (this is not true for all platforms)
 * We do not currently handle cross-preprocessing to a machine with a different CHAR_BIT size, or with a CHAR_BIT size other than 8.
+* We do not currently handle preprocessing for a target with padding bits.
 * We do not currently handle cross-preprocessing to a machine with a larger uintmax_t than ours.
 ** limits.h/climits will not autogenerate properly.
