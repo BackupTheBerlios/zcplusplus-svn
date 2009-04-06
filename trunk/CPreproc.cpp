@@ -1313,6 +1313,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 				if (1 == ++if_depth)
 					{
 					if_where = i;
+					else_where = 0;
 					// front-load syntax checking
 					// only report errors once
 					if (!(TokenList[i]->flags & INVALID_DIRECTIVE_FLAG) && 0==include_where)
@@ -1363,6 +1364,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						{	// trigger conditional preprocessing here
 						assert(TokenList[if_where]->flags & PREPROCESSING_DIRECTIVE_FLAG);
 						assert(0==else_where || (TokenList[else_where-1]->flags & PREPROCESSING_DIRECTIVE_FLAG));
+						assert(0==else_where || (if_where<=else_where && else_where<=i));
 						if (TokenList[if_where]->flags & INVALID_DIRECTIVE_FLAG)
 							{	// already tagged as invalid
 							message_header(*TokenList[if_where]);
@@ -1465,8 +1467,6 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								continue;
 								}
 							};
-						// ...
-						else_where = 0;
 						}
 					}
 				else if (1==if_depth && 0==else_where)
