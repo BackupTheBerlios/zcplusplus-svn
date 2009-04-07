@@ -4,6 +4,7 @@
 
 #include "CPreproc.hpp"
 #include "CPUInfo.hpp"
+#include "errors.hpp"
 #include "Zaimoni.STL/POD.hpp"
 #include "Zaimoni.STL/LexParse/Token.hpp"
 #include "Zaimoni.STL/pure.C/format_util.h"
@@ -32,7 +33,7 @@ static const zaimoni::POD_pair<const char*,size_t> limits_h_core[]
 			DICT_STRUCT("#define LONG_MIN -"),
 			DICT_STRUCT("#define LONG_MAX"),
 			DICT_STRUCT("#define ULONG_MAX"),
-			DICT_STRUCT("#define LLONG_MIN -"),
+			DICT_STRUCT("#define LLONG_MIN "),
 			DICT_STRUCT("#define LLONG_MAX"),
 			DICT_STRUCT("#define ULLONG_MAX"),
 // LONG_BIT and WORD_BIT do not require POSIX library features to make sense, and do not appear version-sensitive
@@ -276,7 +277,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> s_max(target_machine.signed_max<virtual_machine::std_int_char>());
 	tmp[LIMITS_SCHAR_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
 	if (target_machine.char_is_signed_char()) tmp[LIMITS_CHAR_MAX_LINE]->append(0,buf);
-	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
+	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
 		{
 		s_max += 1;
 		tmp[LIMITS_SCHAR_MIN_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10));
@@ -292,7 +293,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// signed short limits
 	s_max = target_machine.signed_max<virtual_machine::std_int_short>();
 	tmp[LIMITS_SHRT_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
-	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
+	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
 		{
 		s_max += 1;
 		tmp[LIMITS_SHRT_MIN_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10));
@@ -307,7 +308,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// signed int limits
 	s_max = target_machine.signed_max<virtual_machine::std_int_int>();
 	tmp[LIMITS_INT_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
-	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
+	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
 		{
 		s_max += 1;
 		tmp[LIMITS_INT_MIN_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10));
@@ -323,7 +324,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	s_max = target_machine.signed_max<virtual_machine::std_int_long>();
 	tmp[LIMITS_LONG_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
 	tmp[LIMITS_LONG_MAX_LINE]->append(0,"L");
-	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
+	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
 		{
 		s_max += 1;
 		tmp[LIMITS_LONG_MIN_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10));
@@ -340,13 +341,14 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	s_max = target_machine.signed_max<virtual_machine::std_int_long_long>();
 	tmp[LIMITS_LLONG_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
 	tmp[LIMITS_LLONG_MAX_LINE]->append(0,"LL");
-	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation())
+	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
 		{
 		tmp[LIMITS_LLONG_MIN_LINE]->append(0,"(-1-");
 		tmp[LIMITS_LLONG_MIN_LINE]->append(0,buf+1);
 		tmp[LIMITS_LLONG_MIN_LINE]->append(0,"LL)");
 		}
 	else{
+		tmp[LIMITS_LLONG_MIN_LINE]->append(0,"-");
 		tmp[LIMITS_LLONG_MIN_LINE]->append(0,buf+1);
 		tmp[LIMITS_LLONG_MIN_LINE]->append(0,"LL");
 		}
@@ -543,7 +545,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	char signed_min_metabuf[virtual_machine::std_int_long_long*(2+(VM_MAX_BIT_PLATFORM/3)+4)] = "";
 	char* signed_min_buf[virtual_machine::std_int_long_long] = {signed_min_metabuf, signed_min_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp_VM;
-	if (target_is_twos_complement)
+	if (target_is_twos_complement && !bool_options[boolopt::int_traps])
 		{
 		*signed_min_buf[0] = '-';
 		*signed_min_buf[1] = '-';
@@ -1083,7 +1085,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		}
 	while(0<i);
 
-	char define_buf[sizeof("#define UINT_LEAST_MAX")+2+VM_MAX_BIT_PLATFORM/3+4] = "#define ";	// should be dependent on base 10 logarithm of VM_MAX_BIT_PLATFORM: fix auto_int.h
+	char define_buf[sizeof("#define UINT_LEAST_MAX")+2+VM_MAX_BIT_PLATFORM/3+5] = "#define ";	// should be dependent on base 10 logarithm of VM_MAX_BIT_PLATFORM: fix auto_int.h
 	i = 13*bitspan_types;
 	TokenList.InsertNSlotsAt(i,inject_C_index);
 	tmp = TokenList.c_array()+inject_C_index;
