@@ -6250,8 +6250,121 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, func_
 			const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
 			if (lhs_converted && rhs_converted)
 				{	//! \todo deal with signed integer arithmetic
-				res_int += rhs_int;
+				const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
+				const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
+				const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
+				const virtual_machine::std_int_enum machine_type_lhs = (virtual_machine::std_int_enum)((promoted_type_lhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
+				const virtual_machine::std_int_enum machine_type_rhs = (virtual_machine::std_int_enum)((promoted_type_rhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
+				const virtual_machine::std_int_enum machine_type_old = (virtual_machine::std_int_enum)((promoted_type_old-C_TYPE::INT)/2+virtual_machine::std_int_int);
+				const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
+				const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
+				const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
 
+				// handle sign-extension of lhs, rhs
+				if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
+					{
+					target_machine->signed_additive_inverse(res_int,machine_type_lhs);
+					target_machine->signed_additive_inverse(res_int,machine_type_old);
+					}
+				if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
+					{
+					target_machine->signed_additive_inverse(rhs_int,machine_type_rhs);
+					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
+					}
+				const bool lhs_negative = res_int.test(bitcount_old-1);
+				const bool rhs_negative = rhs_int.test(bitcount_old-1);
+				if (0==(promoted_type_old-C_TYPE::INT)%2)
+					{	// signed integer result
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(machine_type_old));
+					bool result_is_negative = false;
+					if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,machine_type_old);
+					if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+					if (rhs_negative!=lhs_negative)
+						{	// cancellation...safe
+						switch(cmp(lhs_test,rhs_test))
+						{
+						case -1:{
+								result_is_negative = rhs_negative;
+								rhs_test -= lhs_test;
+								lhs_test = rhs_test;
+								break;
+								}
+						case 0:	{
+								lhs_test.clear();
+								break;
+								}
+						case 1:	{
+								result_is_negative = lhs_negative;
+								lhs_test -= rhs_test;
+								break;
+								}
+						};
+						}
+					else{	// augmentation: bounds-check
+						result_is_negative = lhs_negative;
+						if (result_is_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation() && !bool_options[boolopt::int_traps])
+							ub += 1;
+						if (ub<lhs_test || ub<rhs_test || (ub -= lhs_test)<rhs_test)
+							{
+							src.flags |= parse_tree::INVALID;
+							message_header(src.index_tokens[0]);
+							INC_INFORM(ERR_STR);
+							INC_INFORM(src);
+							INFORM(" signed + overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
+							zcc_errors.inc_error();
+							return false;
+							};
+						lhs_test += rhs_test;
+						}
+
+					if (result_is_negative)
+						{
+						// convert to parsed - literal
+						zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+						if (!VM_to_token(lhs_test,old_type.base_type_index,new_token)) return false;
+						parse_tree tmp;
+						tmp.clear();
+						tmp.index_tokens[0].token.first = new_token.first;
+						tmp.index_tokens[0].token.second = strlen(new_token.first);
+						tmp.index_tokens[0].flags = new_token.second;
+						_label_one_literal(tmp,types);
+
+						src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+						*src.c_array<2>() = tmp;
+						src.DeleteIdx<1>(0);
+						src.core_flag_update();
+						src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+						src.subtype = C99_UNARY_SUBTYPE_NEG;
+						src.type_code = old_type;
+						assert(is_C99_unary_operator_expression<'-'>(src));
+						return true;
+						};
+					res_int = lhs_test;
+					}
+				else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+					if (virtual_machine::twos_complement!=target_machine->C_signed_int_representation())
+						{
+						if (lhs_negative) 
+							{
+							unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
+							target_machine->signed_additive_inverse(res_int,machine_type_old);
+							tmp -= res_int;
+							res_int = tmp;
+							};
+						if (rhs_negative)
+							{
+							unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
+							target_machine->signed_additive_inverse(rhs_int,machine_type_old);
+							tmp -= rhs_int;
+							rhs_int = tmp;
+							};
+						};
+					res_int += rhs_int;
+					}
+
+				// convert to parsed + literal
 				zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
 				if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 				parse_tree tmp;
@@ -6261,8 +6374,14 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, func_
 				tmp.index_tokens[0].flags = new_token.second;
 				_label_one_literal(tmp,types);
 
-				src = tmp;
+				src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+				*src.c_array<2>() = tmp;
+				src.DeleteIdx<1>(0);
+				src.core_flag_update();
+				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+				src.subtype = C99_UNARY_SUBTYPE_PLUS;
 				src.type_code = old_type;
+				assert(is_C99_unary_operator_expression<'+'>(src));
 				return true;
 				}
 			break;
@@ -6338,8 +6457,121 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, func_
 			const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
 			if (lhs_converted && rhs_converted)
 				{	//! \todo deal with signed integer arithmetic
-				res_int -= rhs_int;
+				const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
+				const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
+				const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
+				const virtual_machine::std_int_enum machine_type_lhs = (virtual_machine::std_int_enum)((promoted_type_lhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
+				const virtual_machine::std_int_enum machine_type_rhs = (virtual_machine::std_int_enum)((promoted_type_rhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
+				const virtual_machine::std_int_enum machine_type_old = (virtual_machine::std_int_enum)((promoted_type_old-C_TYPE::INT)/2+virtual_machine::std_int_int);
+				const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
+				const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
+				const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
 
+				// handle sign-extension of lhs, rhs
+				if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
+					{
+					target_machine->signed_additive_inverse(res_int,machine_type_lhs);
+					target_machine->signed_additive_inverse(res_int,machine_type_old);
+					}
+				if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
+					{
+					target_machine->signed_additive_inverse(rhs_int,machine_type_rhs);
+					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
+					}
+				const bool lhs_negative = res_int.test(bitcount_old-1);
+				const bool rhs_negative = rhs_int.test(bitcount_old-1);
+				if (0==(promoted_type_old-C_TYPE::INT)%2)
+					{	// signed integer result
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(machine_type_old));
+					bool result_is_negative = false;
+					if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,machine_type_old);
+					if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+					if (rhs_negative==lhs_negative)
+						{	// cancellation: safe
+						switch(cmp(lhs_test,rhs_test))
+						{
+						case -1:{
+								result_is_negative = !lhs_negative;
+								rhs_test -= lhs_test;
+								lhs_test = rhs_test;
+								break;
+								}
+						case 0:	{
+								lhs_test.clear();
+								break;
+								}
+						case 1:	{
+								result_is_negative = lhs_negative;
+								lhs_test -= rhs_test;
+								break;
+								}
+						};
+						}
+					else{	// augmentation: need bounds check
+						result_is_negative = lhs_negative;
+						if (result_is_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation() && !bool_options[boolopt::int_traps])
+							ub += 1;
+						if (ub<lhs_test || ub<rhs_test || (ub -= lhs_test)<rhs_test)
+							{
+							src.flags |= parse_tree::INVALID;
+							message_header(src.index_tokens[0]);
+							INC_INFORM(ERR_STR);
+							INC_INFORM(src);
+							INFORM(" signed - overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
+							zcc_errors.inc_error();
+							return false;
+							};
+						lhs_test += rhs_test;
+						}
+
+					if (result_is_negative)
+						{
+						// convert to parsed - literal
+						zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+						if (!VM_to_token(lhs_test,old_type.base_type_index,new_token)) return false;
+						parse_tree tmp;
+						tmp.clear();
+						tmp.index_tokens[0].token.first = new_token.first;
+						tmp.index_tokens[0].token.second = strlen(new_token.first);
+						tmp.index_tokens[0].flags = new_token.second;
+						_label_one_literal(tmp,types);
+
+						src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+						*src.c_array<2>() = tmp;
+						src.DeleteIdx<1>(0);
+						src.core_flag_update();
+						src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+						src.subtype = C99_UNARY_SUBTYPE_NEG;
+						src.type_code = old_type;
+						assert(is_C99_unary_operator_expression<'-'>(src));
+						return true;
+						};
+					res_int = lhs_test;
+					}
+				else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+					if (virtual_machine::twos_complement!=target_machine->C_signed_int_representation())
+						{
+						if (lhs_negative) 
+							{
+							unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
+							target_machine->signed_additive_inverse(res_int,machine_type_old);
+							tmp -= res_int;
+							res_int = tmp;
+							};
+						if (rhs_negative)
+							{
+							unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
+							target_machine->signed_additive_inverse(rhs_int,machine_type_old);
+							tmp -= rhs_int;
+							rhs_int = tmp;
+							};
+						};
+					res_int -= rhs_int;
+					}
+
+				// convert to parsed + literal
 				zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
 				if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 				parse_tree tmp;
@@ -6349,8 +6581,14 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, func_
 				tmp.index_tokens[0].flags = new_token.second;
 				_label_one_literal(tmp,types);
 
-				src = tmp;
+				src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+				*src.c_array<2>() = tmp;
+				src.DeleteIdx<1>(0);
+				src.core_flag_update();
+				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+				src.subtype = C99_UNARY_SUBTYPE_PLUS;
 				src.type_code = old_type;
+				assert(is_C99_unary_operator_expression<'+'>(src));
 				return true;
 				}
 			break;
