@@ -1752,7 +1752,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 			TokenList.DeleteIdx(include_where);
 			zcc_errors.inc_error();
 			i = include_where;
-			goto RestartAfterInclude;
+			if (i<TokenList.size()) goto RestartAfterInclude;
+			return;
 			}
 		// already preprocessed, fortunately
 		bool local_include = false;
@@ -1768,7 +1769,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						TokenList.DeleteIdx(include_where);
 						zcc_errors.inc_error();
 						i = include_where;
-						goto RestartAfterInclude;
+						if (i<TokenList.size()) goto RestartAfterInclude;
+						return;
 						};
 					local_include = true;
 					break;
@@ -1782,7 +1784,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						TokenList.DeleteIdx(include_where);
 						zcc_errors.inc_error();
 						i = include_where;
-						goto RestartAfterInclude;
+						if (i<TokenList.size()) goto RestartAfterInclude;
+						return;
 						};
 					break;
 					}
@@ -1793,7 +1796,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					TokenList.DeleteIdx(include_where);
 					zcc_errors.inc_error();
 					i = include_where;
-					goto RestartAfterInclude;
+					if (i<TokenList.size()) goto RestartAfterInclude;
+					return;
 					}
 		};
 		// iterate through search path until something found matching
@@ -1819,7 +1823,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 				TokenList.DeleteIdx(include_where);
 				zcc_errors.inc_error();
 				i = include_where;
-				goto RestartAfterInclude;
+				if (i<TokenList.size()) goto RestartAfterInclude;
+				return;
 				}
 			}
 		else{	// #include <...> prohibits interior >
@@ -1831,7 +1836,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 				TokenList.DeleteIdx(include_where);
 				zcc_errors.inc_error();
 				i = include_where;
-				goto RestartAfterInclude;
+				if (i<TokenList.size()) goto RestartAfterInclude;
+				return;
 				}
 			}
 
@@ -1844,7 +1850,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 				{	// don't error again....
 				TokenList.DeleteIdx(include_where);
 				i = include_where;
-				goto RestartAfterInclude;
+				if (i<TokenList.size()) goto RestartAfterInclude;
+				return;
 				}
 			assert(NULL!=include_file_index[have_file_index].second);
 			const errr cache_index = binary_find(include_file_index[have_file_index].second, strlen(include_file_index[have_file_index].second),include_file_cache);
@@ -2025,7 +2032,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					TokenList.DeleteIdx(include_where);
 					zcc_errors.inc_error();
 					i = include_where;
-					goto RestartAfterInclude;
+					if (i<TokenList.size()) goto RestartAfterInclude;
+					return;
 					}
 				}
 			}
@@ -2055,7 +2063,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 		// XXX fallthrough hack XXX
 		TokenList.DeleteIdx(include_where);
 		i = include_where;
-		goto RestartAfterInclude;
+		if (i<TokenList.size()) goto RestartAfterInclude;
+//		return;
 		}
 }
 
