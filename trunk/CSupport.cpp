@@ -5387,16 +5387,25 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 				}
 			res_int = lhs_test;
 			}
-		else{	// unsigned integer result: just do it (bitwise cast)
-			res_int *= rhs_int;
-			if ((lhs_negative && 0==(promoted_type_lhs-C_TYPE::INT)%2) || (rhs_negative && 0==(promoted_type_rhs-C_TYPE::INT)%2))
+		else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+			if (virtual_machine::twos_complement!=target_machine->C_signed_int_representation())
 				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(WARN_STR);
-				INC_INFORM(src);
-				INFORM(" unsigned integer * using signed integer argument(s), target-defined behavior");
-				if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
-				}
+				if (lhs_negative) 
+					{
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
+					target_machine->signed_additive_inverse(res_int,machine_type_old);
+					tmp -= res_int;
+					res_int = tmp;
+					};
+				if (rhs_negative)
+					{
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
+					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
+					tmp -= rhs_int;
+					rhs_int = tmp;
+					};
+				};
+			res_int *= rhs_int;
 			}
 		// convert to parsed + literal
 		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
@@ -5618,16 +5627,25 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 
 			res_int = lhs_test;
 			}
-		else{	// unsigned result
-			res_int /= rhs_int;
-			if ((lhs_negative && 0==(promoted_type_lhs-C_TYPE::INT)%2) || (rhs_negative && 0==(promoted_type_rhs-C_TYPE::INT)%2))
+		else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+			if (virtual_machine::twos_complement!=target_machine->C_signed_int_representation())
 				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(WARN_STR);
-				INC_INFORM(src);
-				INFORM(" unsigned integer / using signed integer argument(s), target-defined behavior");
-				if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
-				}
+				if (lhs_negative) 
+					{
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
+					target_machine->signed_additive_inverse(res_int,machine_type_old);
+					tmp -= res_int;
+					res_int = tmp;
+					};
+				if (rhs_negative)
+					{
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
+					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
+					tmp -= rhs_int;
+					rhs_int = tmp;
+					};
+				};
+			res_int /= rhs_int;
 			}
 
 		// convert to parsed + literal
@@ -5809,16 +5827,25 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 
 			res_int = lhs_test;
 			}
-		else{	// unsigned result
-			res_int %= rhs_int;
-			if ((lhs_negative && 0==(promoted_type_lhs-C_TYPE::INT)%2) || (rhs_negative && 0==(promoted_type_rhs-C_TYPE::INT)%2))
+		else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+			if (virtual_machine::twos_complement!=target_machine->C_signed_int_representation())
 				{
-				message_header(src.index_tokens[0]);
-				INC_INFORM(WARN_STR);
-				INC_INFORM(src);
-				INFORM(" unsigned integer % using signed integer argument(s), target-defined behavior");
-				if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
-				}
+				if (lhs_negative) 
+					{
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
+					target_machine->signed_additive_inverse(res_int,machine_type_old);
+					tmp -= res_int;
+					res_int = tmp;
+					};
+				if (rhs_negative)
+					{
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
+					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
+					tmp -= rhs_int;
+					rhs_int = tmp;
+					};
+				};
+			res_int %= rhs_int;
 			}
 
 		// convert to parsed + literal
