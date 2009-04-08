@@ -363,7 +363,6 @@ static const char* signed_type_from_machine(const virtual_machine::std_int_enum 
 {
 	switch(x)
 	{
-	case virtual_machine::std_int_none:	return NULL;
 	case virtual_machine::std_int_char:	return "signed char";
 	case virtual_machine::std_int_short:	return "short";
 	case virtual_machine::std_int_int:	return "int";
@@ -378,7 +377,6 @@ static const char* unsigned_type_from_machine(const virtual_machine::std_int_enu
 {
 	switch(x)
 	{
-	case virtual_machine::std_int_none:	return NULL;
 	case virtual_machine::std_int_char:	return "unsigned char";
 	case virtual_machine::std_int_short:	return "unsigned short";
 	case virtual_machine::std_int_int:	return "unsigned int";
@@ -393,7 +391,6 @@ static const char* signed_suffix_from_machine(const virtual_machine::std_int_enu
 {
 	switch(x)
 	{
-	case virtual_machine::std_int_none:	return NULL;
 	case virtual_machine::std_int_char:	return NULL;
 	case virtual_machine::std_int_short:	return NULL;
 	case virtual_machine::std_int_int:	return NULL;
@@ -408,7 +405,6 @@ static const char* unsigned_suffix_from_machine(const virtual_machine::std_int_e
 {
 	switch(x)
 	{
-	case virtual_machine::std_int_none:	return NULL;
 	case virtual_machine::std_int_char:	return "U";
 	case virtual_machine::std_int_short:	return "U";
 	case virtual_machine::std_int_int:	return "U";
@@ -423,7 +419,6 @@ static const char* NULL_constant_from_machine(const virtual_machine::std_int_enu
 {
 	switch(x)
 	{
-	case virtual_machine::std_int_none:	return NULL;
 	case virtual_machine::std_int_char:	return "'\0'";
 	case virtual_machine::std_int_short:	return "0";
 	case virtual_machine::std_int_int:	return "0";
@@ -508,8 +503,8 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	while(0<i);
 
 	// set up some result strings
-	char signed_max_metabuf[virtual_machine::std_int_long_long*(2+(VM_MAX_BIT_PLATFORM/3)+4)] = "";
-	char* signed_max_buf[virtual_machine::std_int_long_long] = {signed_max_metabuf, signed_max_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
+	char signed_max_metabuf[virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+4)] = "";
+	char* signed_max_buf[virtual_machine::std_int_enum_max] = {signed_max_metabuf, signed_max_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
 	*signed_max_buf[0] = ' ';
 	*signed_max_buf[1] = ' ';
 	*signed_max_buf[2] = ' ';
@@ -523,8 +518,8 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	strcat(signed_max_buf[virtual_machine::std_int_long-1],"L");
 	strcat(signed_max_buf[virtual_machine::std_int_long_long-1],"LL");
 
-	char unsigned_max_metabuf[virtual_machine::std_int_long_long*(2+(VM_MAX_BIT_PLATFORM/3)+3)] = "";
-	char* unsigned_max_buf[virtual_machine::std_int_long_long] = {unsigned_max_metabuf, unsigned_max_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
+	char unsigned_max_metabuf[virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+3)] = "";
+	char* unsigned_max_buf[virtual_machine::std_int_enum_max] = {unsigned_max_metabuf, unsigned_max_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
 	*unsigned_max_buf[0] = ' ';
 	*unsigned_max_buf[1] = ' ';
 	*unsigned_max_buf[2] = ' ';
@@ -542,8 +537,8 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	strcat(unsigned_max_buf[virtual_machine::std_int_long_long-1],"ULL");
 
 	const bool target_is_twos_complement = virtual_machine::twos_complement==target_machine.C_signed_int_representation();
-	char signed_min_metabuf[virtual_machine::std_int_long_long*(2+(VM_MAX_BIT_PLATFORM/3)+4)] = "";
-	char* signed_min_buf[virtual_machine::std_int_long_long] = {signed_min_metabuf, signed_min_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
+	char signed_min_metabuf[virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+4)] = "";
+	char* signed_min_buf[virtual_machine::std_int_enum_max] = {signed_min_metabuf, signed_min_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp_VM;
 	if (target_is_twos_complement && !bool_options[boolopt::int_traps])
 		{
@@ -616,8 +611,8 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	tmp[STDINT_WCHAR_T_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,unsigned_max_buf[target_machine.UNICODE_wchar_t()-1]);
 
 	// two's complement controls whether the exact-width int types even exist
-	const unsigned short type_bits[virtual_machine::std_int_long_long] = {target_machine.C_bit(virtual_machine::std_int_char),target_machine.C_bit(virtual_machine::std_int_short),target_machine.C_bit(virtual_machine::std_int_int),target_machine.C_bit(virtual_machine::std_int_long),target_machine.C_bit(virtual_machine::std_int_long_long)};
-	const bool suppress[virtual_machine::std_int_long_long-1] = {type_bits[virtual_machine::std_int_char-1]==type_bits[virtual_machine::std_int_short-1],type_bits[virtual_machine::std_int_short-1]==type_bits[virtual_machine::std_int_int-1],type_bits[virtual_machine::std_int_int-1]==type_bits[virtual_machine::std_int_long-1],type_bits[virtual_machine::std_int_long-1]==type_bits[virtual_machine::std_int_long_long-1]};
+	const unsigned short type_bits[virtual_machine::std_int_enum_max] = {target_machine.C_bit(virtual_machine::std_int_char),target_machine.C_bit(virtual_machine::std_int_short),target_machine.C_bit(virtual_machine::std_int_int),target_machine.C_bit(virtual_machine::std_int_long),target_machine.C_bit(virtual_machine::std_int_long_long)};
+	const bool suppress[virtual_machine::std_int_enum_max-1] = {type_bits[virtual_machine::std_int_char-1]==type_bits[virtual_machine::std_int_short-1],type_bits[virtual_machine::std_int_short-1]==type_bits[virtual_machine::std_int_int-1],type_bits[virtual_machine::std_int_int-1]==type_bits[virtual_machine::std_int_long-1],type_bits[virtual_machine::std_int_long-1]==type_bits[virtual_machine::std_int_long_long-1]};
 
 	// uint___t and UINT___MAX will exist no matter what; almost everything else has suppresssion conditions
 	// int

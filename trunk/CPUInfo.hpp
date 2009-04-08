@@ -17,12 +17,16 @@ enum signed_int_rep			// signed int representation; cf. C99 6.2.6.2 p2
 
 enum std_int_enum
 	{
-	std_int_none = 0,
-	std_int_char,
+	std_int_char = 1,
 	std_int_short,
 	std_int_int,
 	std_int_long,
 	std_int_long_long
+	};
+
+enum maxima
+	{
+	std_int_enum_max = std_int_long_long
 	};
 
 // adjust this upwards as needed
@@ -53,8 +57,8 @@ class CPUInfo
 	CPUInfo(const CPUInfo& src);		// disable copy-construction
 	void operator=(const CPUInfo& src);
 
-	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> unsigned_maxima[std_int_long_long];
-	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> signed_maxima[std_int_long_long];
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> unsigned_maxima[std_int_enum_max];
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> signed_maxima[std_int_enum_max];
 
 	const unsigned short char_bit;
 	const unsigned short sizeof_short;
@@ -88,11 +92,11 @@ public:
 	unsigned short C_sizeof_int() const {return sizeof_int;};
 	unsigned short C_sizeof_long() const {return sizeof_long;};
 	unsigned short C_sizeof_long_long() const {return sizeof_long_long;};
-	unsigned short C_bit(std_int_enum x) const {assert(x); return	(std_int_char==x) ? C_char_bit() : 
-																	(std_int_short==x) ? C_char_bit()*C_sizeof_short() : 
-																	(std_int_int==x) ? C_char_bit()*C_sizeof_int() : 
-																	(std_int_long==x) ? C_char_bit()*C_sizeof_long() : C_char_bit()*C_sizeof_long_long() ;};
-	template<std_int_enum x> unsigned short C_bit() const {ZAIMONI_STATIC_ASSERT(x); return	(std_int_char==x) ? C_char_bit() : 
+	unsigned short C_bit(std_int_enum x) const {return	(std_int_char==x) ? C_char_bit() : 
+														(std_int_short==x) ? C_char_bit()*C_sizeof_short() : 
+														(std_int_int==x) ? C_char_bit()*C_sizeof_int() : 
+														(std_int_long==x) ? C_char_bit()*C_sizeof_long() : C_char_bit()*C_sizeof_long_long() ;};
+	template<std_int_enum x> unsigned short C_bit() const {return	(std_int_char==x) ? C_char_bit() : 
 																	(std_int_short==x) ? C_char_bit()*C_sizeof_short() : 
 																	(std_int_int==x) ? C_char_bit()*C_sizeof_int() : 
 																	(std_int_long==x) ? C_char_bit()*C_sizeof_long() : C_char_bit()*C_sizeof_long_long() ;}
@@ -107,10 +111,10 @@ public:
 	// use different functions for ptrdiff_t and size_t to future-proof (e.g., DOS has ptrdiff 2 bytes but can go larger than that in object size in some memory models)
 	std_int_enum ptrdiff_t_type() const {return (std_int_enum)((signed_int_representation>>7) & 7U);};
 	std_int_enum size_t_type() const {return (std_int_enum)((signed_int_representation>>7) & 7U);};
-	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& unsigned_max(std_int_enum x) const {assert(x); return unsigned_maxima[x-1];};
-	template<std_int_enum x> const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& unsigned_max() const {ZAIMONI_STATIC_ASSERT(x); return unsigned_maxima[x-1];}
-	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& signed_max(std_int_enum x) const {assert(x); return signed_maxima[x-1];};
-	template<std_int_enum x> const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& signed_max() const {ZAIMONI_STATIC_ASSERT(x); return signed_maxima[x-1];}
+	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& unsigned_max(std_int_enum x) const {return unsigned_maxima[x-1];};
+	template<std_int_enum x> const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& unsigned_max() const {return unsigned_maxima[x-1];}
+	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& signed_max(std_int_enum x) const {return signed_maxima[x-1];};
+	template<std_int_enum x> const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& signed_max() const {return signed_maxima[x-1];}
 };
 
 #undef SELECT_TARGET_WCHAR_T
