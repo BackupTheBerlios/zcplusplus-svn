@@ -5331,9 +5331,10 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(machine_type_old));
+			const bool tweak_ub = rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation();
 			if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,machine_type_old);
 			if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,machine_type_old);
-			if (rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation()) ub += 1;
+			if (tweak_ub) ub += 1;
 			if (ub<lhs_test || ub<rhs_test)
 				{
 				if (hard_error)
@@ -5364,7 +5365,9 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 				}
 			lhs_test *= rhs_test;
 			if (rhs_negative!=lhs_negative)
-				{
+				{	// valid result, but not representable: do not reduce (errors out spuriously)
+				if (tweak_ub && target_machine->signed_max(machine_type_old)<lhs_test) return false;
+
 				target_machine->signed_additive_inverse(lhs_test,machine_type_old);
 				// convert to parsed - literal
 				zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
@@ -6316,8 +6319,8 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, func_
 						}
 					else{	// augmentation: bounds-check
 						result_is_negative = lhs_negative;
-						if (result_is_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation() && !bool_options[boolopt::int_traps])
-							ub += 1;
+						const bool tweak_ub = result_is_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation() && !bool_options[boolopt::int_traps];
+						if (tweak_ub) ub += 1;
 						if (ub<lhs_test || ub<rhs_test || (ub -= lhs_test)<rhs_test)
 							{
 							src.flags |= parse_tree::INVALID;
@@ -6329,6 +6332,8 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, func_
 							return false;
 							};
 						lhs_test += rhs_test;
+						// if we can't render it, do not reduce
+						if (tweak_ub && target_machine->signed_max(machine_type_old)<lhs_test) return false;
 						}
 
 					if (result_is_negative)
@@ -6525,8 +6530,8 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, func_
 						}
 					else{	// augmentation: need bounds check
 						result_is_negative = lhs_negative;
-						if (result_is_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation() && !bool_options[boolopt::int_traps])
-							ub += 1;
+						const bool tweak_ub = result_is_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation() && !bool_options[boolopt::int_traps];
+						if (tweak_ub) ub += 1;
 						if (ub<lhs_test || ub<rhs_test || (ub -= lhs_test)<rhs_test)
 							{
 							src.flags |= parse_tree::INVALID;
@@ -6538,6 +6543,8 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, func_
 							return false;
 							};
 						lhs_test += rhs_test;
+						// if we can't render it, do not reduce
+						if (tweak_ub && target_machine->signed_max(machine_type_old)<lhs_test) return false;
 						}
 
 					if (result_is_negative)
