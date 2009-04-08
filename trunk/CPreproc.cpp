@@ -853,22 +853,22 @@ RestartAfterInclude:
 								size_t critical_offset = valid_directives[directive_type].second+1;
 								if (TokenList[i]->size()>critical_offset)
 									{
-									size_t intra_WS = strspn(TokenList[i]->data()+critical_offset,lang.WhiteSpace+1);
+									const size_t intra_WS = strspn(TokenList[i]->data()+critical_offset,lang.WhiteSpace+1);
 									if (0==intra_WS)
 										{	//! \todo really should be a bit more clever about this
 										TokenList[i]->replace_once(critical_offset,0,' ');
 										}
 									else{
-										if (TokenList[i]->size()<=critical_offset+intra_WS)
+										if (TokenList[i]->size()-critical_offset<=intra_WS)
 											{
-											TokenList[i]->rtrim(intra_WS);
 											if (PP::PRAGMA==directive_type)
 												{
 												TokenList.DeleteIdx(i);	// empty pragma is legal, but Z.C++ says it has no effect
 												if (0==i) goto Restart;
 												--i;
 												continue;
-												}
+												};
+											TokenList[i]->rtrim(intra_WS);
 											}
 										else if (1<intra_WS)
 											TokenList[i]->replace_once(std::nothrow,critical_offset,intra_WS,' ');
@@ -953,20 +953,19 @@ RestartAfterInclude:
 						--i;
 						continue;
 						};
-					if (0==include_where && 0==restart_full_scan)
+					if (	0==include_where && 0==restart_full_scan
+						&&	pragma_locked_macro(TokenList[i]->data()+critical_offset,first_token_len,locked_macros))
 						{	// here so we don't recalculate the above
-						if (pragma_locked_macro(TokenList[i]->data()+critical_offset,first_token_len,locked_macros))
-							{	//! \bug need test case
-							discard_locked_macro(TokenList,i,directive_type);
-							if (0==i) goto Restart;
-							--i;
-							continue;
-							}
+						//! \bug need test case
+						discard_locked_macro(TokenList,i,directive_type);
+						if (0==i) goto Restart;
+						--i;
+						continue;
 						}
 					if (PP::DEFINE==directive_type && TokenList[i]->size()>critical_offset+first_token_len)
 						{	// standardize silently
 						const size_t intra_WS = strspn(TokenList[i]->data()+critical_offset+first_token_len,lang.WhiteSpace+1);
-						if (TokenList[i]->size()<=critical_offset+first_token_len+intra_WS)
+						if (TokenList[i]->size()-(critical_offset+first_token_len)<=intra_WS)
 							TokenList[i]->rtrim(intra_WS);	// normalize -- null-def object-like macro
 						else if (1<intra_WS)
 							TokenList[i]->replace_once(std::nothrow,critical_offset+first_token_len,intra_WS,' ');
@@ -986,8 +985,7 @@ RestartAfterInclude:
 						continue;
 						};
 					first_token_len = lang.UnfilteredNextToken(TokenList[i]->data()+critical_offset,first_token_flags);
-					const errr valid_pragma_class = linear_find_lencached(TokenList[i]->data()+critical_offset, first_token_len, accept_pragma_leading_tokens, STATIC_SIZE(accept_pragma_leading_tokens));
-					if (0>valid_pragma_class)
+					if (0>linear_find_lencached(TokenList[i]->data()+critical_offset, first_token_len, accept_pragma_leading_tokens, STATIC_SIZE(accept_pragma_leading_tokens)))
 						{
 						TokenList.DeleteIdx(i);	// ignore the pragma
 						if (0==i) goto Restart;
@@ -995,23 +993,19 @@ RestartAfterInclude:
 						continue;
 						};
 					}
-				if (PP::INCLUDE==directive_type)
-					{	// note that we have an include, but postpone inclusion
-						// probably not ISO; trying to conserve memory
-					if (0==include_where)
-						{
-						if (0==restart_full_scan)
-							intradirective_preprocess(*TokenList[i], sizeof("#include ")-1,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion_pre_eval);
-						include_where = i+1;
-						};
+				if (PP::INCLUDE==directive_type && 0==include_where)
+					{	// we have an include; postpone inclusion
+						// don't think memory conservation is ISO
+					if (0==restart_full_scan)
+						intradirective_preprocess(*TokenList[i], sizeof("#include ")-1,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion_pre_eval);
+					include_where = i+1;
 					};
 				if (0==include_where && 0==restart_full_scan)
 					{
 					if (PP::LINE==directive_type)
 						{
-						//! \todo need test case (but need to distinguish error from the other one that'll happen)
 						if (C99_VA_ARGS_flinch(*TokenList[i],sizeof("#line ")-1))
-							{
+							{	//! \todo need test case (but need to distinguish error from the other one that'll happen)
 							message_header(*TokenList[i]);
 							INFORM("discarding #line directive");
 							TokenList.DeleteIdx(i);
@@ -1132,7 +1126,6 @@ ObjectLikeMacroEmptyString:
 								}
 
 							// DO NOT check for context free errors here; could legitimately want to deep-stringize every invocation of the macro
-
 							const size_t object_macro_insertion_index = BINARY_SEARCH_DECODE_INSERTION_POINT(object_macro_index);
 							if (   !macros_object.InsertNSlotsAt(1,object_macro_insertion_index)
 								|| !macros_object_expansion.InsertNSlotsAt(1,object_macro_insertion_index)
@@ -1165,7 +1158,7 @@ ObjectLikeMacroEmptyString:
 							}
 						else if ('('==TokenList[i]->data()[critical_offset+first_token_len])
 							{	// function-like
-							size_t argspan = function_macro_argument_span(TokenList[i]->data()+critical_offset+first_token_len);
+							const size_t argspan = function_macro_argument_span(TokenList[i]->data()+critical_offset+first_token_len);
 							if (0==argspan)
 								{
 								message_header(*TokenList[i]);
@@ -1184,7 +1177,7 @@ ObjectLikeMacroEmptyString:
 								if (0==i) goto Restart;
 								--i;
 								continue;
-								}
+								};
 							zaimoni::Token<char> arglist(*TokenList[i],critical_offset+first_token_len,argspan,0);
 							normalize_macro_expansion(arglist,*TokenList[i],critical_offset,first_token_len);	// should be no string literals here, so should be no errors here
 							if (0<=function_macro_index && strcmp(arglist.data(),macros_function_arglist[function_macro_index]->data()))
@@ -1193,14 +1186,14 @@ ObjectLikeMacroEmptyString:
 								if (0==i) goto Restart;
 								--i;
 								continue;
-								}
-							if (TokenList[i]->size()>critical_offset+first_token_len+argspan)
+								};
+							if (TokenList[i]->size()-(critical_offset+first_token_len)>argspan)
 								{
 								const size_t skip_ws = strspn(TokenList[i]->data()+critical_offset+first_token_len+argspan,lang.WhiteSpace+1);
-								if (TokenList[i]->size()<=critical_offset+first_token_len+argspan+skip_ws)
+								if (TokenList[i]->size()-(critical_offset+first_token_len+argspan)<=skip_ws)
 									TokenList[i]->rtrim(skip_ws);
-								}
-							if (TokenList[i]->size()<=critical_offset+first_token_len+argspan)
+								};
+							if (TokenList[i]->size()-(critical_offset+first_token_len)<=argspan)
 								{	// empty expansion
 FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 									{	//! \test Error_define_dup9.hpp
@@ -1261,7 +1254,6 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								}
 
 							// DO NOT check for context free errors here; could legitimately want to deep-stringize every invocation of the macro
-
 							const size_t function_macro_insertion_index = BINARY_SEARCH_DECODE_INSERTION_POINT(function_macro_index);
 							if (   !macros_function.InsertNSlotsAt(1,function_macro_insertion_index)
 								|| !macros_function_arglist.InsertNSlotsAt(1,function_macro_insertion_index)
@@ -1346,10 +1338,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						else{
 							if (!ifdef_ifndef_syntax_ok(*TokenList[i],macros_object,macros_function))
 								TokenList[i]->flags |= INVALID_DIRECTIVE_FLAG;
-#ifndef NDEBUG
 							else
 								assert(PP::IF==UNPACK_DIRECTIVE(TokenList[i]->flags));
-#endif
 							}
 						}
 					if (0==restart_full_scan)
@@ -1413,48 +1403,44 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								if (include_where>=i+1) include_where = 0;			// failsafing
 								--i;
 								continue;
-								}
-							else{
-								if (PP::ELSE==else_directive)
-									{
-									TokenList.DeleteIdx(i);
-//									TokenList.DeleteNSlotsAt((else_where-1)-if_where+1,if_where);
-									TokenList.DeleteNSlotsAt(else_where-if_where,if_where);
-									i = if_where;
-									if (0==i) goto Restart;
-									if (restart_full_scan>=i+1) restart_full_scan = 0;	// very possible
-									if (include_where>=i+1) include_where = 0;			// failsafing
-									--i;
-									continue;
-									}
-								else{
-									if (TokenList[else_where-1]->flags & INVALID_DIRECTIVE_FLAG)
-										{	//! \test Error8.hpp : #elif no control expression, critical
-										message_header(*TokenList[else_where-1]);
-										INFORM("Ignoring all lines from invalid #elif to matching #endif");
-										TokenList.DeleteNSlotsAt(i-if_where+1,if_where);
-										i = if_where;
-										if (0==i) goto Restart;
-										if (restart_full_scan>=i+1) restart_full_scan = 0;	// very possible
-										if (include_where>=i+1) include_where = 0;			// failsafing
-										--i;
-										continue;
-										};
-									//! \todo do full reduction here to make errors read #elif rather than #if
-									// recurse it
-									TokenList[else_where-1]->c_array()[2] = '#';
-									TokenList[else_where-1]->ltrim(2);
-									PACK_DIRECTIVE(TokenList[else_where-1]->flags,PP::IF);
-//									TokenList.DeleteNSlotsAt((else_where-1)-if_where+1,if_where);
-									TokenList.DeleteNSlotsAt(else_where-if_where+2,if_where);
-									i = if_where;
-									if (0==i) goto Restart;
-									if (restart_full_scan>=i+1) restart_full_scan = 0;	// very possible
-									if (include_where>=i+1) include_where = 0;			// failsafing
-									--i;
-									continue;
-									}
-								}
+								};
+							if (PP::ELSE==else_directive)
+								{
+								TokenList.DeleteIdx(i);
+//								TokenList.DeleteNSlotsAt((else_where-1)-if_where+1,if_where);
+								TokenList.DeleteNSlotsAt(else_where-if_where,if_where);
+								i = if_where;
+								if (0==i) goto Restart;
+								if (restart_full_scan>=i+1) restart_full_scan = 0;	// very possible
+								if (include_where>=i+1) include_where = 0;			// failsafing
+								--i;
+								continue;
+								};
+							if (TokenList[else_where-1]->flags & INVALID_DIRECTIVE_FLAG)
+								{	//! \test Error8.hpp : #elif no control expression, critical
+								message_header(*TokenList[else_where-1]);
+								INFORM("Ignoring all lines from invalid #elif to matching #endif");
+								TokenList.DeleteNSlotsAt(i-if_where+1,if_where);
+								i = if_where;
+								if (0==i) goto Restart;
+								if (restart_full_scan>=i+1) restart_full_scan = 0;	// very possible
+								if (include_where>=i+1) include_where = 0;			// failsafing
+								--i;
+								continue;
+								};
+							//! \todo do full reduction here to make errors read #elif rather than #if
+							// recurse it
+							TokenList[else_where-1]->c_array()[2] = '#';
+							TokenList[else_where-1]->ltrim(2);
+							PACK_DIRECTIVE(TokenList[else_where-1]->flags,PP::IF);
+//							TokenList.DeleteNSlotsAt((else_where-1)-if_where+1,if_where);
+							TokenList.DeleteNSlotsAt(else_where-if_where+2,if_where);
+							i = if_where;
+							if (0==i) goto Restart;
+							if (restart_full_scan>=i+1) restart_full_scan = 0;	// very possible
+							if (include_where>=i+1) include_where = 0;			// failsafing
+							--i;
+							continue;
 							};
 						const bool if_1 = !strcmp(TokenList[if_where]->data(),"#if 1");
 						if (if_1)
@@ -1469,23 +1455,21 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								if (include_where>=i+1) include_where = 0;			// failsafing
 								--i;
 								continue;
-								}
-							else{
-								if (PP::ELIF==else_directive && (TokenList[else_where-1]->flags & INVALID_DIRECTIVE_FLAG))
-									{	//! \test Error9.hpp : #elif no control expression, non-critical
-									message_header(*TokenList[else_where-1]);
-									INFORM("Continuing as expression for invalid #elif not needed.");
-									};
-//								TokenList.DeleteNSlotsAt(i-(else_where-1)+1,else_where-1);
-								TokenList.DeleteNSlotsAt(i-else_where+2,else_where-1);
-								TokenList.DeleteIdx(if_where);
-								i = if_where;
-								if (0==i) goto Restart;
-								if (restart_full_scan>=i+1) restart_full_scan = 0;	// very possible
-								if (include_where>=i+1) include_where = 0;			// failsafing
-								--i;
-								continue;
-								}
+								};
+							if (PP::ELIF==else_directive && (TokenList[else_where-1]->flags & INVALID_DIRECTIVE_FLAG))
+								{	//! \test Error9.hpp : #elif no control expression, non-critical
+								message_header(*TokenList[else_where-1]);
+								INFORM("Continuing as expression for invalid #elif not needed.");
+								};
+//							TokenList.DeleteNSlotsAt(i-(else_where-1)+1,else_where-1);
+							TokenList.DeleteNSlotsAt(i-else_where+2,else_where-1);
+							TokenList.DeleteIdx(if_where);
+							i = if_where;
+							if (0==i) goto Restart;
+							if (restart_full_scan>=i+1) restart_full_scan = 0;	// very possible
+							if (include_where>=i+1) include_where = 0;			// failsafing
+							--i;
+							continue;
 							};
 						}
 					}
@@ -1529,7 +1513,6 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					{
 					if (!strcmp(TokenList[i]->data(),"_Pragma"))
 						{	// could be pragma operator; syntax _Pragma ( C-string )
-							// need to be able to downcast wide-strings to narrow-strings (other direction is easy)
 						while(TokenList.size()>i+1 && !tokenize_line(TokenList,i+1));
 						if (        TokenList.size()<=i+1
 							||   1!=TokenList[i+1]->size()
@@ -1847,19 +1830,17 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 				return;
 				}
 			}
-		else{	// #include <...> prohibits interior >
-			if (strchr(look_for,'>'))
-				{	//! \test Error_include_multiterminated1.hpp
-				message_header(*TokenList[include_where]);
-				INC_INFORM(ERR_STR);
-				INFORM("#include <...> contains >; discarding and continuing (C99 6.10.2p2/C++98 16.2p2)");
-				TokenList.DeleteIdx(include_where);
-				zcc_errors.inc_error();
-				i = include_where;
-				if (i<TokenList.size()) goto RestartAfterInclude;
-				return;
-				}
-			}
+		else if (strchr(look_for,'>')) // #include <...> prohibits interior >
+			{	//! \test Error_include_multiterminated1.hpp
+			message_header(*TokenList[include_where]);
+			INC_INFORM(ERR_STR);
+			INFORM("#include <...> contains >; discarding and continuing (C99 6.10.2p2/C++98 16.2p2)");
+			TokenList.DeleteIdx(include_where);
+			zcc_errors.inc_error();
+			i = include_where;
+			if (i<TokenList.size()) goto RestartAfterInclude;
+			return;
+			};
 
 		errr have_file_index = binary_find(look_for, filename_len, include_file_index);
 		// system includes use their handle for information.
@@ -2216,12 +2197,11 @@ CPreprocessor::tokenize_line(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& 
 		return 0;
 		};
 
-	if ('#'==TokenList[i]->front())
-		return 1;	// Well...not really (it's a preprocessing directive), but we don't want to damage it here
+	// Not really (it's a preprocessing directive), but we don't want to damage it here
+	if ('#'==TokenList[i]->front()) return 1;
 
-	if (!TokenList[i]->flags)
-		//! \test Error_naked_VA_ARGS.hpp
-		C99_VA_ARGS_flinch(*TokenList[i],0);
+	//! \test Error_naked_VA_ARGS.hpp
+	if (!TokenList[i]->flags) C99_VA_ARGS_flinch(*TokenList[i],0);
 
 	zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> > pretokenized;
 	lang.line_lex(TokenList[i]->data(),TokenList[i]->size(),pretokenized);
@@ -2267,7 +2247,7 @@ CPreprocessor::tokenize_line(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& 
 		complete_string_character_literal(*TokenListAlt[lb]);
 		memmove(TokenList.c_array()+i,TokenListAlt.data(),TokenListAlt.size()*sizeof(*TokenListAlt.data()));
 #ifdef ZAIMONI_NULL_REALLY_IS_ZERO
-		memset(TokenListAlt.c_array(),0,TokenListAlt.size()*sizeof(*TokenListAlt.data()));	//! \todo set this up to react properly to exotic platforms where the binary representation of NULL is not 0
+		memset(TokenListAlt.c_array(),0,TokenListAlt.size()*sizeof(*TokenListAlt.data()));
 #else
 		std::fill(TokenListAlt.begin(),TokenListAlt.end(),NULL);
 #endif
@@ -2416,8 +2396,7 @@ CPreprocessor::find_system_include(const char* const src, char* const filepath_b
 	// \todo more robust multi-language architecture
 	//! \test Pass13.hpp
 	size_t i = (Lang::C==lang_code) ? START_CPP_ONLY_PATHS : 0;
-	do	{
-		if (fixed_system_include_exists[i])
+	do	if (fixed_system_include_exists[i])
 			{
 			size_t target_length = strlen(fixed_system_include_search[i]);
 			assert(FILENAME_MAX>target_length);
@@ -2438,11 +2417,9 @@ CPreprocessor::find_system_include(const char* const src, char* const filepath_b
 				return true;
 				}
 			}
-		}
 	while(STATIC_SIZE(fixed_system_include_search) > ++i);
 
-	//! \test Error_include_nonexistent1.hpp
-	return false;
+	return false;	//! \test Error_include_nonexistent1.hpp
 }
 
 /*! 
@@ -2519,7 +2496,7 @@ CPreprocessor::ifdef_ifndef_syntax_ok(zaimoni::Token<char>& x, const zaimoni::au
 	if (x.size()>critical_offset+token_len)
 		{
 		const size_t skip_ws = strspn(x.data()+critical_offset+token_len,lang.WhiteSpace+1);
-		if (x.size()>critical_offset+token_len+skip_ws)
+		if (x.size()-(critical_offset+token_len)>skip_ws)
 			{	//! bug need two test cases
 			message_header(x);
 			INC_INFORM(ERR_STR);
