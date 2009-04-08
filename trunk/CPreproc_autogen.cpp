@@ -836,6 +836,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			throw std::bad_alloc();
 			};
 		++inject_CPP_index;
+		++inject_C_index;
 		if (!target_is_twos_complement)
 			{
 			TokenList.DeleteIdx(STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
@@ -871,6 +872,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			throw std::bad_alloc();
 			};
 		++inject_CPP_index;
+		++inject_C_index;
 		if (!target_is_twos_complement)
 			{
 			strcat(lock_buf,"_MAX");
@@ -900,6 +902,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		throw std::bad_alloc();
 		};
 	++inject_CPP_index;
+	++inject_C_index;
 	if (!target_is_twos_complement)
 		{
 		TokenList.DeleteIdx(STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
@@ -934,6 +937,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			throw std::bad_alloc();
 			};
 		++inject_CPP_index;
+		++inject_C_index;
 		if (!target_is_twos_complement)
 			{
 			TokenList.DeleteIdx(STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
@@ -969,6 +973,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			throw std::bad_alloc();
 			};
 		++inject_CPP_index;
+		++inject_C_index;
 		if (!target_is_twos_complement)
 			{
 			TokenList.DeleteIdx(STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
