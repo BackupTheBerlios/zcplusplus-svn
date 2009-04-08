@@ -599,6 +599,9 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[ptrtype-1]);
 	tmp[STDINT_PTRDIFF_T_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[ptrtype-1]);
 
+	// assume size_t is same as uintptr_t
+	tmp[STDINT_SIZE_T_MAX_LINE]->append(0,unsigned_max_buf[ptrtype-1]);
+
 	// uintptr_t limits
 	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[ptrtype-1]);
 

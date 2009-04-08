@@ -526,6 +526,7 @@ static errr find_directive(const char* const Text, const zaimoni::LangConf& lang
 
 static void message_header(const zaimoni::Token<char>& src)
 {
+	assert(NULL!=src.src_filename);
 	INC_INFORM(src.src_filename);
 	INC_INFORM(':');
 	INC_INFORM(src.logical_line.first);
@@ -534,6 +535,7 @@ static void message_header(const zaimoni::Token<char>& src)
 
 static void message_header2(const zaimoni::Token<char>& src,size_t where)
 {
+	assert(NULL!=src.src_filename);
 	INC_INFORM(src.src_filename);
 	INC_INFORM(':');
 	INC_INFORM(src.logical_line.first);
@@ -3449,16 +3451,23 @@ CPreprocessor::dynamic_macro_replace_once(zaimoni::Token<char>& x, size_t& criti
 {
 	assert(x.size()>critical_offset);
 	assert(x.size()>=critical_offset+token_len);
+	assert(macros_object.size()==macros_object_expansion.size());
+	assert(macros_function.size()==macros_function_expansion.size());
 	const errr object_macro_index = binary_find(x.data()+critical_offset,token_len,macros_object);
 	const errr function_macro_index = binary_find(x.data()+critical_offset,token_len,macros_function);
 	assert(0>object_macro_index || 0>function_macro_index);
 	if (0<=object_macro_index)
 		{
+		if (NULL==macros_object_expansion[object_macro_index])
+			{
+			_macro_replace(x,critical_offset,token_len,"");
+			return true;
+			};
 		if (nonrecursive_macro_replacement_list(macros_object_expansion[object_macro_index]->data()))
 			{
 			_macro_replace(x,critical_offset,token_len,macros_object_expansion[object_macro_index]->data());
 			return true;
-			}
+			};
 		size_t test_critical_offset = 0;
 		zaimoni::Token<char> Test(x);
 		Test.rtrim(Test.size()-(critical_offset+token_len));
@@ -3522,11 +3531,16 @@ CPreprocessor::dynamic_macro_replace_once(zaimoni::Token<char>& x, size_t& criti
 			zcc_errors.inc_error();
 			return false;
 			}
+		if (NULL==macros_function_expansion[object_macro_index])
+			{
+			_macro_replace(x,critical_offset,token_len+arg_span,"");
+			return true;
+			};
 		if (nonrecursive_macro_replacement_list(macros_function_expansion[function_macro_index]->data()))
 			{
 			_macro_replace(x,critical_offset,token_len+arg_span,macros_function_expansion[function_macro_index]->data());
 			return true;
-			}
+			};
 
 		zaimoni::autovalarray_ptr<zaimoni::Token<char>*> formal_arguments;
 		zaimoni::autovalarray_ptr<zaimoni::Token<char>*> actual_arguments;
