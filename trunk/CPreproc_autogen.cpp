@@ -467,6 +467,17 @@ CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	tmp[STDDEF_NULL_LINE]->append(NULL_constant_from_machine(target_machine.ptrdiff_t_type()));
 }
 
+static void new_token_at(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& dest,size_t i,const char* const src)
+{
+	assert(NULL!=src);
+	zaimoni::Token<char>* tmp = new zaimoni::Token<char>(src,0,strlen(src),0);
+	if (!dest.InsertSlotAt(i,tmp))
+		{
+		delete tmp;
+		throw std::bad_alloc();
+		};
+}
+
 /*! 
  * Improvises the C99 stdint.h header from target information.  Can throw std::bad_alloc.
  * This is not the most memory-efficient implementation possible.
@@ -775,12 +786,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			strcat(lock_buf,buf+1);
 			};
 		strcat(lock_buf,"_MAX");
-		zaimoni::Token<char>* tmp2 = new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0);
-		if (!TokenList.InsertSlotAt(STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,tmp2))
-			{
-			delete tmp2;
-			throw std::bad_alloc();
-			};
+		new_token_at(TokenList,STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
 		++inject_CPP_index;
 		++inject_C_index;
 		if (!target_is_twos_complement)
@@ -811,18 +817,11 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			strcat(lock_buf,buf+1);
 			};
 		strcat(lock_buf,"_MAX");
-		zaimoni::Token<char>* tmp2 = new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0);
-		if (!TokenList.InsertSlotAt(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,tmp2))
-			{
-			delete tmp2;
-			throw std::bad_alloc();
-			};
+		new_token_at(TokenList,STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
 		++inject_CPP_index;
 		++inject_C_index;
 		if (!target_is_twos_complement)
 			{
-			strcat(lock_buf,"_MAX");
-			TokenList.InsertSlotAt(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0));
 			TokenList.DeleteIdx(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
 			TokenList.DeleteIdx(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
 			inject_CPP_index -= 2;
@@ -841,12 +840,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		strcat(lock_buf,buf+1);
 		};
 	strcat(lock_buf,"_MAX");
-	zaimoni::Token<char>* tmp2 = new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0);
-	if (!TokenList.InsertSlotAt(STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,tmp2))
-		{
-		delete tmp2;
-		throw std::bad_alloc();
-		};
+	new_token_at(TokenList,STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
 	++inject_CPP_index;
 	++inject_C_index;
 	if (!target_is_twos_complement)
@@ -876,12 +870,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			strcat(lock_buf,buf+1);
 			};
 		strcat(lock_buf,"_MAX");
-		zaimoni::Token<char>* tmp2 = new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0);
-		if (!TokenList.InsertSlotAt(STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,tmp2))
-			{
-			delete tmp2;
-			throw std::bad_alloc();
-			};
+		new_token_at(TokenList,STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
 		++inject_CPP_index;
 		++inject_C_index;
 		if (!target_is_twos_complement)
@@ -912,12 +901,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			strcat(lock_buf,buf+1);
 			};
 		strcat(lock_buf,"_MAX");
-		zaimoni::Token<char>* tmp2 = new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0);
-		if (!TokenList.InsertSlotAt(STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,tmp2))
-			{
-			delete tmp2;
-			throw std::bad_alloc();
-			};
+		new_token_at(TokenList,STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
 		++inject_CPP_index;
 		++inject_C_index;
 		if (!target_is_twos_complement)
