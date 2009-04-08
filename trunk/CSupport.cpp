@@ -943,6 +943,7 @@ const char* const system_headers[]
 
 static void message_header(const weak_token& src)
 {
+	assert(NULL!=src.src_filename);
 	INC_INFORM(src.src_filename);
 	INC_INFORM(':');
 	INC_INFORM(src.logical_line.first);
@@ -4649,6 +4650,7 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool ha
 		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 		tmp.clear();
 		tmp.grab_index_token_from<0>(new_token.first,new_token.second);
+		tmp.grab_index_token_location_from<0,0>(src);
 		_label_one_literal(tmp,types);
 
 		if (negative_signed_int)
@@ -5264,6 +5266,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 		tmp.index_tokens[0].token.first = "0";
 		tmp.index_tokens[0].token.second = 1;
 		tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+		tmp.grab_index_token_location_from<0,0>(src);
 		_label_one_literal(tmp,types);
 
 		// convert to parsed + literal
@@ -5373,6 +5376,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 				tmp.index_tokens[0].token.first = new_token.first;
 				tmp.index_tokens[0].token.second = strlen(new_token.first);
 				tmp.index_tokens[0].flags = new_token.second;
+				tmp.grab_index_token_location_from<0,0>(src);
 				_label_one_literal(tmp,types);
 
 				src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
@@ -5415,6 +5419,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 		tmp.index_tokens[0].token.first = new_token.first;
 		tmp.index_tokens[0].token.second = strlen(new_token.first);
 		tmp.index_tokens[0].flags = new_token.second;
+		tmp.grab_index_token_location_from<0,0>(src);
 		_label_one_literal(tmp,types);
 
 		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
@@ -5467,6 +5472,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 			tmp.index_tokens[0].token.first = "0";
 			tmp.index_tokens[0].token.second = 1;
 			tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+			tmp.grab_index_token_location_from<0,0>(src);
 			_label_one_literal(tmp,types);
 
 			// convert to parsed + literal
@@ -5544,6 +5550,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 					tmp.index_tokens[0].token.first = "0";
 					tmp.index_tokens[0].token.second = 1;
 					tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+					tmp.grab_index_token_location_from<0,0>(src);
 					_label_one_literal(tmp,types);
 
 					// convert to parsed + literal
@@ -5563,6 +5570,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 					tmp.index_tokens[0].token.first = "1";
 					tmp.index_tokens[0].token.second = 1;
 					tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+					tmp.grab_index_token_location_from<0,0>(src);
 					_label_one_literal(tmp,types);
 
 					// convert to parsed - literal
@@ -5598,6 +5606,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 				tmp.index_tokens[0].token.first = new_token.first;
 				tmp.index_tokens[0].token.second = strlen(new_token.first);
 				tmp.index_tokens[0].flags = new_token.second;
+				tmp.grab_index_token_location_from<0,0>(src);
 				_label_one_literal(tmp,types);
 
 				src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
@@ -5656,6 +5665,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 		tmp.index_tokens[0].token.first = new_token.first;
 		tmp.index_tokens[0].token.second = strlen(new_token.first);
 		tmp.index_tokens[0].flags = new_token.second;
+		tmp.grab_index_token_location_from<0,0>(src);
 		_label_one_literal(tmp,types);
 
 		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
@@ -5708,6 +5718,7 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 			tmp.index_tokens[0].token.first = "0";
 			tmp.index_tokens[0].token.second = 1;
 			tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+			tmp.grab_index_token_location_from<0,0>(src);
 			_label_one_literal(tmp,types);
 
 			// convert to parsed + literal
@@ -5741,6 +5752,7 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 		tmp.index_tokens[0].token.first = "0";
 		tmp.index_tokens[0].token.second = 1;
 		tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+		tmp.grab_index_token_location_from<0,0>(src);
 		_label_one_literal(tmp,types);
 
 		// convert to parsed + literal
@@ -5811,6 +5823,7 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 					tmp.index_tokens[0].token.first = new_token.first;
 					tmp.index_tokens[0].token.second = strlen(new_token.first);
 					tmp.index_tokens[0].flags = new_token.second;
+					tmp.grab_index_token_location_from<0,0>(src);
 					_label_one_literal(tmp,types);
 
 					src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
@@ -5856,6 +5869,7 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 		tmp.index_tokens[0].token.first = new_token.first;
 		tmp.index_tokens[0].token.second = strlen(new_token.first);
 		tmp.index_tokens[0].flags = new_token.second;
+		tmp.grab_index_token_location_from<0,0>(src);
 		_label_one_literal(tmp,types);
 
 		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
@@ -6329,6 +6343,7 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, func_
 						tmp.index_tokens[0].token.first = new_token.first;
 						tmp.index_tokens[0].token.second = strlen(new_token.first);
 						tmp.index_tokens[0].flags = new_token.second;
+						tmp.grab_index_token_location_from<0,0>(src);
 						_label_one_literal(tmp,types);
 
 						src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
@@ -6372,6 +6387,7 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, func_
 				tmp.index_tokens[0].token.first = new_token.first;
 				tmp.index_tokens[0].token.second = strlen(new_token.first);
 				tmp.index_tokens[0].flags = new_token.second;
+				tmp.grab_index_token_location_from<0,0>(src);
 				_label_one_literal(tmp,types);
 
 				src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
@@ -6536,6 +6552,7 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, func_
 						tmp.index_tokens[0].token.first = new_token.first;
 						tmp.index_tokens[0].token.second = strlen(new_token.first);
 						tmp.index_tokens[0].flags = new_token.second;
+						tmp.grab_index_token_location_from<0,0>(src);
 						_label_one_literal(tmp,types);
 
 						src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
@@ -6579,6 +6596,7 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, func_
 				tmp.index_tokens[0].token.first = new_token.first;
 				tmp.index_tokens[0].token.second = strlen(new_token.first);
 				tmp.index_tokens[0].flags = new_token.second;
+				tmp.grab_index_token_location_from<0,0>(src);
 				_label_one_literal(tmp,types);
 
 				src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
@@ -7231,6 +7249,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 			tmp.clear();
 			tmp.grab_index_token_from<0>(new_token.first,new_token.second);
+			tmp.grab_index_token_location_from<0,0>(src);
 			_label_one_literal(tmp,types);
 
 			if (negative_signed_int)
@@ -7976,6 +7995,7 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 			tmp.clear();
 			tmp.grab_index_token_from<0>(new_token.first,new_token.second);
 			tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+			tmp.grab_index_token_location_from<0,0>(src);
 			_label_one_literal(tmp,types);
 
 			if (negative_signed_int)
@@ -8150,6 +8170,7 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 		tmp.clear();
 		tmp.grab_index_token_from<0>(new_token.first,new_token.second);
+		tmp.grab_index_token_location_from<0,0>(src);
 		_label_one_literal(tmp,types);
 
 		if (negative_signed_int)
@@ -8336,6 +8357,7 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 			tmp.clear();
 			tmp.grab_index_token_from<0>(new_token.first,new_token.second);
+			tmp.grab_index_token_location_from<0,0>(src);
 			_label_one_literal(tmp,types);
 
 			if (negative_signed_int)
