@@ -63,6 +63,8 @@ public:
 	bool append(const std::nothrow_t& tracer, size_t postfix, const MetaToken<T>& src);
 	bool append(const std::nothrow_t& tracer, size_t postfix, const char* const src);
 	bool append(const std::nothrow_t& tracer, const char* const src);
+	bool append(const std::nothrow_t& tracer, const char* const src, const char* const src2);
+
 	void intradelete(size_t offset, size_t len);
 	bool replace_once(const std::nothrow_t& tracer, size_t offset, size_t len, const char* const value, const size_t srcsize);
 	bool replace_once(const std::nothrow_t& tracer, size_t offset, size_t len, const char* const value) {return replace_once(tracer,offset,len,value,(NULL==value) ? 0 : strlen(value));};
@@ -72,6 +74,7 @@ public:
 	void append(size_t postfix, const MetaToken<T>& src) {if (!append(std::nothrow,postfix,src)) throw std::bad_alloc();};
 	void append(size_t postfix, const char* const src) {if (!append(std::nothrow,postfix,src)) throw std::bad_alloc();};
 	void append(const char* const src) {if (!append(std::nothrow,src)) throw std::bad_alloc();};
+	void append(const char* const src, const char* const src2) {if (!append(std::nothrow,src,src2)) throw std::bad_alloc();};
 	void replace_once(size_t offset, size_t len, const char* const value, const size_t src_size) {if (!replace_once(std::nothrow,offset,len,value,src_size)) throw std::bad_alloc();};
 	void replace_once(size_t offset, size_t len, const char* const value) {if (!replace_once(std::nothrow,offset,len,value)) throw std::bad_alloc();};
 	void replace_once(size_t offset, size_t len, char value) {if (!replace_once(std::nothrow,offset,len,value)) throw std::bad_alloc();};
@@ -265,6 +268,25 @@ MetaToken<T>::append(const std::nothrow_t& tracer, const char* const src)
 	const size_t newsize = oldsize+srcsize;
 	if (!_token.Resize(newsize)) return false;
 	_value_copy_buffer(_token.c_array()+oldsize,src,srcsize);	
+	return true;
+}
+
+template<class T>
+bool
+MetaToken<T>::append(const std::nothrow_t& tracer, const char* const src, const char* const src2)
+{
+	assert(NULL!=src);
+	assert(NULL!=src2);
+	const size_t srcsize = strlen(src);
+	if (0==srcsize) return append(tracer,src2);
+	const size_t src2size = strlen(src2);
+	if (0==src2size) return append(tracer,src);
+
+	const size_t oldsize = _token.size();
+	const size_t newsize = oldsize+srcsize+src2size;
+	if (!_token.Resize(newsize)) return false;
+	_value_copy_buffer(_token.c_array()+oldsize,src,srcsize);	
+	_value_copy_buffer(_token.c_array()+oldsize+srcsize,src2,src2size);
 	return true;
 }
 
