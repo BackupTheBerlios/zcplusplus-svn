@@ -3321,91 +3321,89 @@ static void _label_one_literal(parse_tree& src,const type_system& types)
 			src.type_code.traits |= type_spec::lvalue;	// C99 unclear; C++98 states lvalueness of string literals explicitly
 			src.type_code.base_type_index = C_TYPE::CHAR;
 			src.type_code.static_array_size = LengthOfCStringLiteral(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
+			return;
 			}
 		else if (C_TESTFLAG_CHAR_LITERAL==src.index_tokens[0].flags)
 			{
 			src.type_code.base_type_index = C_TYPE::CHAR;
 			src.type_code.static_array_size = 0;
+			return;
+			};
+		assert(C_TESTFLAG_PP_NUMERAL & src.index_tokens[0].flags);
+		C_REALITY_CHECK_PP_NUMERAL_FLAGS(src.index_tokens[0].flags);
+		src.type_code.static_array_size = 0;
+		if (C_TESTFLAG_INTEGER & src.index_tokens[0].flags)
+			{
+			src.type_code.base_type_index = C_TYPE::INTEGERLIKE;
+			C_PPIntCore parse_tmp;
+#ifdef NDEBUG
+			C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,parse_tmp);
+#else
+			assert(C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,parse_tmp));
+#endif
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp;
+			const unsigned char type_hint = parse_tmp.hinted_type;
+			const bool no_signed = 1==type_hint%2;
+			const bool no_unsigned = !no_signed && 10==parse_tmp.radix;
+			if (convert_to(tmp,parse_tmp))
+				{	// failover to IntegerLike if won't convert
+				size_t i = 0;
+				do	switch(types.int_priority[i])
+					{
+					case C_TYPE::INT:	{
+										if (no_signed || C_PPIntCore::L<=type_hint) continue;
+										if (tmp>target_machine->signed_max<virtual_machine::std_int_int>()) continue;
+										src.type_code.base_type_index = C_TYPE::INT;
+										return;
+										}
+					case C_TYPE::UINT:	{
+										if (no_unsigned || C_PPIntCore::L<=type_hint) continue;
+										if (tmp>target_machine->unsigned_max<virtual_machine::std_int_int>()) continue;
+										src.type_code.base_type_index = C_TYPE::UINT;
+										return;
+										}
+					case C_TYPE::LONG:	{
+										if (no_signed || C_PPIntCore::LL<=type_hint) continue;
+										if (tmp>target_machine->signed_max<virtual_machine::std_int_long>()) continue;
+										src.type_code.base_type_index = C_TYPE::LONG;
+										return;
+										}
+					case C_TYPE::ULONG:	{
+										if (no_unsigned || C_PPIntCore::LL<=type_hint) continue;
+										if (tmp>target_machine->unsigned_max<virtual_machine::std_int_long>()) continue;
+										src.type_code.base_type_index = C_TYPE::ULONG;
+										return;
+										}
+					case C_TYPE::LLONG:	{
+										if (no_signed) continue;
+										if (tmp>target_machine->signed_max<virtual_machine::std_int_long_long>()) continue;
+										src.type_code.base_type_index = C_TYPE::LLONG;
+										return;
+										}
+					case C_TYPE::ULLONG:{
+										if (no_unsigned) continue;
+										if (tmp>target_machine->unsigned_max<virtual_machine::std_int_long_long>()) continue;
+										src.type_code.base_type_index = C_TYPE::ULLONG;
+										return;
+										}
+					}
+				while(types.int_priority_size > ++i);
+				};
+			assert(C_TYPE::INTEGERLIKE==src.type_code.base_type_index);
+			// integer literal has no useful type to represent it
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INC_INFORM(" cannot be represented as ");
+			INC_INFORM(no_unsigned ? "signed long long" : "unsigned long long");
+			INFORM(" (C99 6.4.4.1p5/C++0x 2.13.1p3)");
+			zcc_errors.inc_error();
 			}
 		else{
-			assert(C_TESTFLAG_PP_NUMERAL & src.index_tokens[0].flags);
-			C_REALITY_CHECK_PP_NUMERAL_FLAGS(src.index_tokens[0].flags);
-			src.type_code.static_array_size = 0;
-			if (C_TESTFLAG_INTEGER & src.index_tokens[0].flags)
-				{
-				src.type_code.base_type_index = C_TYPE::INTEGERLIKE;
-				C_PPIntCore parse_tmp;
-#ifdef NDEBUG
-				C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,parse_tmp);
-#else
-				assert(C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,parse_tmp));
-#endif
-				unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp;
-				const unsigned char type_hint = parse_tmp.hinted_type;
-				const bool no_signed = 1==type_hint%2;
-				const bool no_unsigned = !no_signed && 10==parse_tmp.radix;
-				if (convert_to(tmp,parse_tmp))
-					{	// failover to IntegerLike if won't convert
-					size_t i = 0;
-					do	switch(types.int_priority[i])
-						{
-						case C_TYPE::INT:	{
-											if (no_signed || C_PPIntCore::L<=type_hint) continue;
-											if (tmp>target_machine->signed_max<virtual_machine::std_int_int>()) continue;
-											src.type_code.base_type_index = C_TYPE::INT;
-											goto KnowType;
-											}
-						case C_TYPE::UINT:	{
-											if (no_unsigned || C_PPIntCore::L<=type_hint) continue;
-											if (tmp>target_machine->unsigned_max<virtual_machine::std_int_int>()) continue;
-											src.type_code.base_type_index = C_TYPE::UINT;
-											goto KnowType;
-											}
-						case C_TYPE::LONG:	{
-											if (no_signed || C_PPIntCore::LL<=type_hint) continue;
-											if (tmp>target_machine->signed_max<virtual_machine::std_int_long>()) continue;
-											src.type_code.base_type_index = C_TYPE::LONG;
-											goto KnowType;
-											}
-						case C_TYPE::ULONG:	{
-											if (no_unsigned || C_PPIntCore::LL<=type_hint) continue;
-											if (tmp>target_machine->unsigned_max<virtual_machine::std_int_long>()) continue;
-											src.type_code.base_type_index = C_TYPE::ULONG;
-											goto KnowType;
-											}
-						case C_TYPE::LLONG:	{
-											if (no_signed) continue;
-											if (tmp>target_machine->signed_max<virtual_machine::std_int_long_long>()) continue;
-											src.type_code.base_type_index = C_TYPE::LLONG;
-											goto KnowType;
-											}
-						case C_TYPE::ULLONG:{
-											if (no_unsigned) continue;
-											if (tmp>target_machine->unsigned_max<virtual_machine::std_int_long_long>()) continue;
-											src.type_code.base_type_index = C_TYPE::ULLONG;
-											goto KnowType;
-											}
-						}
-					while(types.int_priority_size > ++i);
-					}
-KnowType:		;				
-				if (C_TYPE::INTEGERLIKE==src.type_code.base_type_index)
-					{	// integer literal has no useful type to represent it
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INC_INFORM(" cannot be represented as ");
-					INC_INFORM(no_unsigned ? "signed long long" : "unsigned long long");
-					INFORM(" (C99 6.4.4.1p5/C++0x 2.13.1p3)");
-					zcc_errors.inc_error();
-					}
-				}
-			else{
-				//! \todo --do-what-i-mean should check for floating-point numerals that convert exactly to integers
-				src.type_code.base_type_index = 	(C_TESTFLAG_L & src.index_tokens[0].flags) ? C_TYPE::LDOUBLE : 
-													(C_TESTFLAG_F & src.index_tokens[0].flags) ? C_TYPE::FLOAT : C_TYPE::DOUBLE;
-				}
+			//! \todo --do-what-i-mean should check for floating-point numerals that convert exactly to integers
+			src.type_code.base_type_index = 	(C_TESTFLAG_L & src.index_tokens[0].flags) ? C_TYPE::LDOUBLE : 
+												(C_TESTFLAG_F & src.index_tokens[0].flags) ? C_TYPE::FLOAT : C_TYPE::DOUBLE;
 			}
 		}
 }
