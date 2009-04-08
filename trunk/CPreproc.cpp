@@ -454,10 +454,9 @@ static bool _flush_token_gaps(zaimoni::Token<char>& x, zaimoni::autovalarray_ptr
 		{
 		size_t i = pretokenized.size()-1;
 		bool old_atomic = 1==pretokenized[i].second && strchr(lang.AtomicSymbols,x.data()[pretokenized[i].first]);
-		bool new_atomic = false;
 		do	{
 			--i;
-			new_atomic = 1==pretokenized[i].second && strchr(lang.AtomicSymbols,x.data()[pretokenized[i].first]);
+			const bool new_atomic = 1==pretokenized[i].second && strchr(lang.AtomicSymbols,x.data()[pretokenized[i].first]);
 			if (new_atomic || old_atomic)
 				{
 				if (pretokenized[i+1].first>pretokenized[i].first+pretokenized[i].second)
@@ -468,15 +467,13 @@ static bool _flush_token_gaps(zaimoni::Token<char>& x, zaimoni::autovalarray_ptr
 					acted = true;
 					}
 				}
-			else{
-				if (pretokenized[i+1].first-1>pretokenized[i].first+pretokenized[i].second)
-					{
-					const size_t delta = pretokenized[i+1].first-(pretokenized[i].first+pretokenized[i].second)-1;
-					x.replace_once(std::nothrow,pretokenized[i].first+pretokenized[i].second,delta+1,' ');
-					STL_translate_first(-delta,pretokenized.begin()+i+1,pretokenized.end());	// unsigned modulo arithmetic makes this work
-					acted = true;
-					}
-				}
+			else if (pretokenized[i+1].first-1>pretokenized[i].first+pretokenized[i].second)
+				{
+				const size_t delta = pretokenized[i+1].first-(pretokenized[i].first+pretokenized[i].second)-1;
+				x.replace_once(std::nothrow,pretokenized[i].first+pretokenized[i].second,delta+1,' ');
+				STL_translate_first(-delta,pretokenized.begin()+i+1,pretokenized.end());	// unsigned modulo arithmetic makes this work
+				acted = true;
+				};
 			old_atomic = new_atomic;
 			}
 		while(0<i);
@@ -553,7 +550,8 @@ CPreprocessor::detailed_UNICODE_syntax(zaimoni::Token<char>& x)
 		{
 		const size_t tail = x.size()-(UNICODE_escape-x.data());
 		if (10U>tail)
-			{	//! \bug need testcase
+			{	//! \test UNICODE.C99/Error_AstralTruncate.h
+				//! \test UNICODE.C99/Error_AstralTruncate.hpp
 			message_header(x);
 			INC_INFORM(ERR_STR);
 			INFORM("C99 6.4.3p1/C++98 2.2p2: astral UNICODE escape prematurely terminated by end of line");
@@ -561,13 +559,15 @@ CPreprocessor::detailed_UNICODE_syntax(zaimoni::Token<char>& x)
 			break;
 			}
 		if (!zaimoni::and_range_n(IsHexadecimalDigit,UNICODE_escape+2,8))
-			{	//! \bug need testcase
+			{	//! \test UNICODE.C99/Error_AstralNonhex.h
+				//! \test UNICODE.C99/Error_AstralNonhex.hpp
 			message_header(x);
 			INC_INFORM(ERR_STR);
 			INFORM("C99 6.4.3p1/C++98 2.2p2: astral UNICODE escape contains non-hexadecimal digits");
 			zcc_errors.inc_error();
 			}
-		assert(4==std::count(UNICODE_escape+2,UNICODE_escape+6,'0'));	// should have caught this in pre-filtration
+		else
+			assert(4>std::count(UNICODE_escape+2,UNICODE_escape+6,'0'));	// should have caught this in pre-filtration
 		UNICODE_escape = (12U<=tail) ? strstr(UNICODE_escape+10,"\\U") : NULL;
 		};
 	UNICODE_escape = strstr(x.data(),"\\u");
@@ -575,7 +575,10 @@ CPreprocessor::detailed_UNICODE_syntax(zaimoni::Token<char>& x)
 		{
 		const size_t tail = x.size()-(UNICODE_escape-x.data());
 		if (6U>tail)
-			{	//! \bug need testcase
+			{	//! \test UNICODE.C99/Error_Truncate.h
+				//! \test UNICODE.C99/Error_Truncate.hpp
+				//! \test UNICODE.C99/Error_Truncate2.h
+				//! \test UNICODE.C99/Error_Truncate2.hpp
 			message_header(x);
 			INC_INFORM(ERR_STR);
 			INFORM("UNICODE escape prematurely terminated by end of line (C99 6.4.3p1/C++0x 2.2p2)");
@@ -583,28 +586,41 @@ CPreprocessor::detailed_UNICODE_syntax(zaimoni::Token<char>& x)
 			break;
 			}
 		if (!zaimoni::and_range_n(IsHexadecimalDigit,UNICODE_escape+2,4))
-			{	//! \bug need testcase
+			{	//! \test UNICODE.C99/Error_Nonhex.h
+				//! \test UNICODE.C99/Error_Nonhex.hpp
+				//! \test UNICODE.C99/Error_Nonhex2.h
+				//! \test UNICODE.C99/Error_Nonhex2.hpp
 			message_header(x);
 			INC_INFORM(ERR_STR);
 			INFORM("UNICODE escape contains non-hexadecimal digits (C99 6.4.3p1/C++0x 2.2p2)");
 			zcc_errors.inc_error();
 			}
 		else if ('D'==UNICODE_escape[2] && strchr(list_hexadecimal_digits+8,UNICODE_escape[3]))
-			{	//! \bug need testcase
+			{	//! \test UNICODE.C99/Error_SZone.h
+				//! \test UNICODE.C99/Error_SZone.hpp
+				//! \test UNICODE.C99/Error_SZone2.h
+				//! \test UNICODE.C99/Error_SZone2.hpp
 			message_header(x);
 			INC_INFORM(ERR_STR);
 			INFORM("UNICODE escape is in S-zone (D800-DFFF), reserved for UTF-16 (C99 6.4.3p1/C++0x 2.2p2)");
 			zcc_errors.inc_error();
 			}
 		else if (2==std::count(UNICODE_escape+2,UNICODE_escape+4,'0'))
-			{
-			const unsigned char tmp = (unsigned char)(16*InterpretHexadecimalDigit(UNICODE_escape[4]+InterpretHexadecimalDigit(UNICODE_escape[5])));
+			{	//! \todo fix assumption that CHAR_BIT==8
+			const unsigned char tmp = (unsigned char)(16*InterpretHexadecimalDigit(UNICODE_escape[4])+InterpretHexadecimalDigit(UNICODE_escape[5]));
 			bool down_convert = true;
 			assert(160U>tmp);	// should have caught this already
 			// C++98 is "anything goes", but don't worry about that for now
 			// C99 and C++0x agree that these are bad
 			if ((unsigned char)(32U)>tmp || ((unsigned char)('\x7F')<=tmp && (unsigned char)('\x9F')>=tmp))
-				{	//! \bug need testcase
+				{	//! \test UNICODE.C99/Error_CTRL_low.h
+					//! \test UNICODE.C99/Error_CTRL_low.hpp
+					//! \test UNICODE.C99/Error_CTRL_low2.h
+					//! \test UNICODE.C99/Error_CTRL_low2.hpp
+					//! \test UNICODE.C99/Error_CTRL_high.h
+					//! \test UNICODE.C99/Error_CTRL_high.hpp
+					//! \test UNICODE.C99/Error_CTRL_high2.h
+					//! \test UNICODE.C99/Error_CTRL_high2.hpp
 				message_header(x);
 				INC_INFORM(ERR_STR);
 				INFORM("UNICODE escape is in a control character range (C99 6.4.3p1/C++0x 2.2p2)");
@@ -613,6 +629,8 @@ CPreprocessor::detailed_UNICODE_syntax(zaimoni::Token<char>& x)
 				}
 			else if (Lang::C==lang_code)
 				{	// C rejects anything escapeish, or in the source character set
+					//! \test UNICODE.C99/Error_Source.h
+					//! \test UNICODE.C99/Error_Source2.hpp
 				if ('$'!=tmp && '@'!=tmp && '`'!=tmp)	//! \todo deal with ASCII dependence
 					{	//! \bug need testcase
 					message_header(x);

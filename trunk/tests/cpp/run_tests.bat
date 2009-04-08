@@ -15,6 +15,10 @@
 @echo ====
 @for %%f in (Error*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (UNICODE.C99\Error*.hpp) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (UNICODE.C99\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (UNICODE.C99\Error*.h) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (UNICODE.C99\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
 
 @echo Checking ZCC warnings on ISO-accepted code
 @echo ====
