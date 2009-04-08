@@ -779,9 +779,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	char lock_buf[sizeof("#pragma ZCC lock INT_LEAST_MIN INT_LEAST_MAX UINT_LEAST_MAX INT_FAST_MIN INT_FAST_MAX UINT_FAST_MAX INT_C UINT_C")+8*2] = "#pragma ZCC lock ";	// should be dependent on base 10 logarithm of VM_MAX_BIT_PLATFORM: fix auto_int.h
 	if (suppress[virtual_machine::std_int_long_long-2])
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET);
-		TokenList.DeleteIdx(STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
-		TokenList.DeleteIdx(STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
+		TokenList.DeleteNSlotsAt(3,STDINT_EXACT_LLONG_LIMITS_LINEORIGIN);
 		inject_CPP_index -= 3;
 		inject_C_index -= 3;
 		}
@@ -801,17 +799,14 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		++inject_C_index;
 		if (!target_is_twos_complement)
 			{
-			TokenList.DeleteIdx(STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
-			TokenList.DeleteIdx(STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
+			TokenList.DeleteNSlotsAt(2,STDINT_EXACT_LLONG_LIMITS_LINEORIGIN);
 			inject_CPP_index -= 2;
 			inject_C_index -= 2;
 			};
 		};
 	if (suppress[virtual_machine::std_int_long-2])
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET);
-		TokenList.DeleteIdx(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
-		TokenList.DeleteIdx(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
+		TokenList.DeleteNSlotsAt(3,STDINT_EXACT_LONG_LIMITS_LINEORIGIN);
 		inject_CPP_index -= 3;
 		inject_C_index -= 3;
 		}
@@ -831,8 +826,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		++inject_C_index;
 		if (!target_is_twos_complement)
 			{
-			TokenList.DeleteIdx(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
-			TokenList.DeleteIdx(STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
+			TokenList.DeleteNSlotsAt(2,STDINT_EXACT_LONG_LIMITS_LINEORIGIN);
 			inject_CPP_index -= 2;
 			inject_C_index -= 2;
 			};
@@ -853,16 +847,13 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	++inject_C_index;
 	if (!target_is_twos_complement)
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
-		TokenList.DeleteIdx(STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
+		TokenList.DeleteNSlotsAt(2,STDINT_EXACT_INT_LIMITS_LINEORIGIN);
 		inject_CPP_index -= 2;
 		inject_C_index -= 2;
 		};
 	if (suppress[virtual_machine::std_int_short-1])
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET);
-		TokenList.DeleteIdx(STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
-		TokenList.DeleteIdx(STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
+		TokenList.DeleteNSlotsAt(3,STDINT_EXACT_SHRT_LIMITS_LINEORIGIN);
 		inject_CPP_index -= 3;
 		inject_C_index -= 3;
 		}
@@ -882,17 +873,14 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		++inject_C_index;
 		if (!target_is_twos_complement)
 			{
-			TokenList.DeleteIdx(STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
-			TokenList.DeleteIdx(STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
+			TokenList.DeleteNSlotsAt(2,STDINT_EXACT_SHRT_LIMITS_LINEORIGIN);
 			inject_CPP_index -= 2;
 			inject_C_index -= 2;
 			}
 		}
 	if (suppress[virtual_machine::std_int_char-1])
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET);
-		TokenList.DeleteIdx(STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
-		TokenList.DeleteIdx(STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
+		TokenList.DeleteNSlotsAt(3,STDINT_EXACT_CHAR_LIMITS_LINEORIGIN);
 		inject_CPP_index -= 3;
 		inject_C_index -= 3;
 		}
@@ -912,8 +900,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		++inject_C_index;
 		if (!target_is_twos_complement)
 			{
-			TokenList.DeleteIdx(STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET);
-			TokenList.DeleteIdx(STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET);
+			TokenList.DeleteNSlotsAt(2,STDINT_EXACT_CHAR_LIMITS_LINEORIGIN);
 			inject_CPP_index -= 2;
 			inject_C_index -= 2;
 			}
