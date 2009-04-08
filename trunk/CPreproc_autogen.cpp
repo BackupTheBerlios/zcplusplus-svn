@@ -258,104 +258,104 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// initialize the limits from target_machine
 	// no stdlib, so no real multibyte character support
 	// \todo make this react to a compiler option
-	tmp[LIMITS_MB_LEN_MAX_LINE]->append(0," 1");
+	tmp[LIMITS_MB_LEN_MAX_LINE]->append(" 1");
 	// charbits
-	tmp[LIMITS_CHAR_BIT_LINE]->append(0,z_umaxtoa(target_machine.C_char_bit(),buf+1,10)-1);
+	tmp[LIMITS_CHAR_BIT_LINE]->append(z_umaxtoa(target_machine.C_char_bit(),buf+1,10)-1);
 
 	// set up the negative signs
-	tmp[LIMITS_CHAR_MIN_LINE]->append(0,(target_machine.char_is_signed_char()) ? " -" : " 0");	// char is unsigned: 0
+	tmp[LIMITS_CHAR_MIN_LINE]->append((target_machine.char_is_signed_char()) ? " -" : " 0");	// char is unsigned: 0
 
 	// unsigned character limits
-	tmp[LIMITS_UCHAR_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_char>(),buf+1,10)-1);
+	tmp[LIMITS_UCHAR_MAX_LINE]->append(z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_char>(),buf+1,10)-1);
 	tmp[LIMITS_UCHAR_MAX_LINE]->append('U');	// C99 5.2.4.2.1 p1 : requires unsigned int
 	if (!target_machine.char_is_signed_char())
 		{
-		tmp[LIMITS_CHAR_MAX_LINE]->append(0,buf);
+		tmp[LIMITS_CHAR_MAX_LINE]->append(buf);
 		tmp[LIMITS_CHAR_MAX_LINE]->append('U');	// C99 5.2.4.2.1 p1 : requires unsigned int
 		}
 	// signed character limits
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> s_max(target_machine.signed_max<virtual_machine::std_int_char>());
-	tmp[LIMITS_SCHAR_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
-	if (target_machine.char_is_signed_char()) tmp[LIMITS_CHAR_MAX_LINE]->append(0,buf);
+	tmp[LIMITS_SCHAR_MAX_LINE]->append(z_ucharint_toa(s_max,buf+1,10)-1);
+	if (target_machine.char_is_signed_char()) tmp[LIMITS_CHAR_MAX_LINE]->append(buf);
 	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
 		{
 		s_max += 1;
-		tmp[LIMITS_SCHAR_MIN_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10));
+		tmp[LIMITS_SCHAR_MIN_LINE]->append(z_ucharint_toa(s_max,buf+1,10));
 		}
 	else{
-		tmp[LIMITS_SCHAR_MIN_LINE]->append(0,buf+1);
+		tmp[LIMITS_SCHAR_MIN_LINE]->append(buf+1);
 		}
-	if (target_machine.char_is_signed_char()) tmp[LIMITS_CHAR_MIN_LINE]->append(0,buf+1);
+	if (target_machine.char_is_signed_char()) tmp[LIMITS_CHAR_MIN_LINE]->append(buf+1);
 
 	// unsigned short limits
-	tmp[LIMITS_USHRT_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_short>(),buf+1,10)-1);
+	tmp[LIMITS_USHRT_MAX_LINE]->append(z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_short>(),buf+1,10)-1);
 	tmp[LIMITS_USHRT_MAX_LINE]->append('U');	// C99 5.2.4.2.1 p1 : requires unsigned int
 	// signed short limits
 	s_max = target_machine.signed_max<virtual_machine::std_int_short>();
-	tmp[LIMITS_SHRT_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
+	tmp[LIMITS_SHRT_MAX_LINE]->append(z_ucharint_toa(s_max,buf+1,10)-1);
 	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
 		{
 		s_max += 1;
-		tmp[LIMITS_SHRT_MIN_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10));
+		tmp[LIMITS_SHRT_MIN_LINE]->append(z_ucharint_toa(s_max,buf+1,10));
 		}
 	else{
-		tmp[LIMITS_SHRT_MIN_LINE]->append(0,buf+1);
+		tmp[LIMITS_SHRT_MIN_LINE]->append(buf+1);
 		}
 
 	// unsigned int limits
-	tmp[LIMITS_UINT_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_int>(),buf+1,10)-1);
+	tmp[LIMITS_UINT_MAX_LINE]->append(z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_int>(),buf+1,10)-1);
 	tmp[LIMITS_UINT_MAX_LINE]->append('U');	// C99 5.2.4.2.1 p1 : requires unsigned int
 	// signed int limits
 	s_max = target_machine.signed_max<virtual_machine::std_int_int>();
-	tmp[LIMITS_INT_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
+	tmp[LIMITS_INT_MAX_LINE]->append(z_ucharint_toa(s_max,buf+1,10)-1);
 	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
 		{
 		s_max += 1;
-		tmp[LIMITS_INT_MIN_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10));
+		tmp[LIMITS_INT_MIN_LINE]->append(z_ucharint_toa(s_max,buf+1,10));
 		}
 	else{
-		tmp[LIMITS_INT_MIN_LINE]->append(0,buf+1);
+		tmp[LIMITS_INT_MIN_LINE]->append(buf+1);
 		}
 
 	// unsigned long limits
-	tmp[LIMITS_ULONG_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_long>(),buf+1,10)-1);
-	tmp[LIMITS_ULONG_MAX_LINE]->append(0,"UL");
+	tmp[LIMITS_ULONG_MAX_LINE]->append(z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_long>(),buf+1,10)-1);
+	tmp[LIMITS_ULONG_MAX_LINE]->append("UL");
 	// signed long limits
 	s_max = target_machine.signed_max<virtual_machine::std_int_long>();
-	tmp[LIMITS_LONG_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
+	tmp[LIMITS_LONG_MAX_LINE]->append(z_ucharint_toa(s_max,buf+1,10)-1);
 	tmp[LIMITS_LONG_MAX_LINE]->append('L');
 	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
 		{
 		s_max += 1;
-		tmp[LIMITS_LONG_MIN_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10));
+		tmp[LIMITS_LONG_MIN_LINE]->append(z_ucharint_toa(s_max,buf+1,10));
 		}
 	else{
-		tmp[LIMITS_LONG_MIN_LINE]->append(0,buf+1);
+		tmp[LIMITS_LONG_MIN_LINE]->append(buf+1);
 		}
 	tmp[LIMITS_LONG_MIN_LINE]->append('L');
 
 	// unsigned long long limits
-	tmp[LIMITS_ULLONG_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_long_long>(),buf+1,10)-1);
-	tmp[LIMITS_ULLONG_MAX_LINE]->append(0,"ULL");
+	tmp[LIMITS_ULLONG_MAX_LINE]->append(z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_long_long>(),buf+1,10)-1);
+	tmp[LIMITS_ULLONG_MAX_LINE]->append("ULL");
 	// signed long long limits
 	s_max = target_machine.signed_max<virtual_machine::std_int_long_long>();
-	tmp[LIMITS_LLONG_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
-	tmp[LIMITS_LLONG_MAX_LINE]->append(0,"LL");
+	tmp[LIMITS_LLONG_MAX_LINE]->append(z_ucharint_toa(s_max,buf+1,10)-1);
+	tmp[LIMITS_LLONG_MAX_LINE]->append("LL");
 	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
 		{
-		tmp[LIMITS_LLONG_MIN_LINE]->append(0,"(-1-");
-		tmp[LIMITS_LLONG_MIN_LINE]->append(0,buf+1);
-		tmp[LIMITS_LLONG_MIN_LINE]->append(0,"LL)");
+		tmp[LIMITS_LLONG_MIN_LINE]->append("(-1-");
+		tmp[LIMITS_LLONG_MIN_LINE]->append(buf+1);
+		tmp[LIMITS_LLONG_MIN_LINE]->append("LL)");
 		}
 	else{
 		tmp[LIMITS_LLONG_MIN_LINE]->append('-');
-		tmp[LIMITS_LLONG_MIN_LINE]->append(0,buf+1);
-		tmp[LIMITS_LLONG_MIN_LINE]->append(0,"LL");
+		tmp[LIMITS_LLONG_MIN_LINE]->append(buf+1);
+		tmp[LIMITS_LLONG_MIN_LINE]->append("LL");
 		}
 
 	// handle POSIX; should be no question of representability for reasonable machines
-	tmp[LIMITS_WORD_BIT_LINE]->append(0,z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_int>(),buf+1,10)-1);
-	tmp[LIMITS_LONG_BIT_LINE]->append(0,z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_long>(),buf+1,10)-1);
+	tmp[LIMITS_WORD_BIT_LINE]->append(z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_int>(),buf+1,10)-1);
+	tmp[LIMITS_LONG_BIT_LINE]->append(z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_long>(),buf+1,10)-1);
 }
 
 //! \bug balancing feature envy vs minimal interface
@@ -455,26 +455,26 @@ CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// C99 17.7p2 : typedefs; C++ versions in namespace std
 	const char* const ptrdiff_str = signed_type_from_machine(target_machine.ptrdiff_t_type());
 	assert(NULL!=ptrdiff_str);
-	tmp[STDDEF_PTRDIFF_T_LINE]->append(0,ptrdiff_str);
-	tmp[STDDEF_PTRDIFF_T_LINE]->append(0," ptrdiff_t;");
-	tmp[STDDEF_CPP_PTRDIFF_T_LINE]->append(0,ptrdiff_str);
-	tmp[STDDEF_CPP_PTRDIFF_T_LINE]->append(0," ptrdiff_t;");
+	tmp[STDDEF_PTRDIFF_T_LINE]->append(ptrdiff_str);
+	tmp[STDDEF_PTRDIFF_T_LINE]->append(" ptrdiff_t;");
+	tmp[STDDEF_CPP_PTRDIFF_T_LINE]->append(ptrdiff_str);
+	tmp[STDDEF_CPP_PTRDIFF_T_LINE]->append(" ptrdiff_t;");
 
 	const char* const size_t_str = unsigned_type_from_machine(target_machine.size_t_type());
 	assert(NULL!=size_t_str);
-	tmp[STDDEF_SIZE_T_LINE]->append(0,size_t_str);
-	tmp[STDDEF_SIZE_T_LINE]->append(0," size_t;");
-	tmp[STDDEF_CPP_SIZE_T_LINE]->append(0,size_t_str);
-	tmp[STDDEF_CPP_SIZE_T_LINE]->append(0," size_t;");
+	tmp[STDDEF_SIZE_T_LINE]->append(size_t_str);
+	tmp[STDDEF_SIZE_T_LINE]->append(" size_t;");
+	tmp[STDDEF_CPP_SIZE_T_LINE]->append(size_t_str);
+	tmp[STDDEF_CPP_SIZE_T_LINE]->append(" size_t;");
 
 	const char* const wchar_t_str = unsigned_type_from_machine(target_machine.UNICODE_wchar_t());
 	assert(NULL!=wchar_t_str);
-	tmp[STDDEF_WCHAR_T_LINE]->append(0,wchar_t_str);
-	tmp[STDDEF_WCHAR_T_LINE]->append(0," wchar_t;");
+	tmp[STDDEF_WCHAR_T_LINE]->append(wchar_t_str);
+	tmp[STDDEF_WCHAR_T_LINE]->append(" wchar_t;");
 
 	// C99 17.7p3 : macros
 	// we assume that ptrdiff_t is the correct size (really should have an explicit void* size)
-	tmp[STDDEF_NULL_LINE]->append(0,NULL_constant_from_machine(target_machine.ptrdiff_t_type()));
+	tmp[STDDEF_NULL_LINE]->append(NULL_constant_from_machine(target_machine.ptrdiff_t_type()));
 }
 
 /*! 
@@ -578,37 +578,37 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// we assume ptrdiff_t is closely related to intptr_t and uintptr_t (doesn't work too well on 16-bit DOS)
 	const virtual_machine::std_int_enum ptrtype = target_machine.ptrdiff_t_type();
 	const char* const ptr_signed_type = signed_type_from_machine(ptrtype);
-	tmp[STDINT_INTPTR_LINE]->append(0,ptr_signed_type);
-	tmp[STDINT_INTPTR_LINE]->append(0," intptr_t;");
-	tmp[STDINT_CPP_INTPTR_LINE]->append(0,ptr_signed_type);
-	tmp[STDINT_CPP_INTPTR_LINE]->append(0," intptr_t;");
+	tmp[STDINT_INTPTR_LINE]->append(ptr_signed_type);
+	tmp[STDINT_INTPTR_LINE]->append(" intptr_t;");
+	tmp[STDINT_CPP_INTPTR_LINE]->append(ptr_signed_type);
+	tmp[STDINT_CPP_INTPTR_LINE]->append(" intptr_t;");
 	const char* const ptr_unsigned_type = unsigned_type_from_machine(ptrtype);
-	tmp[STDINT_UINTPTR_LINE]->append(0,ptr_unsigned_type);
-	tmp[STDINT_UINTPTR_LINE]->append(0," uintptr_t;");
-	tmp[STDINT_CPP_UINTPTR_LINE]->append(0,ptr_unsigned_type);
-	tmp[STDINT_CPP_UINTPTR_LINE]->append(0," uintptr_t;");
+	tmp[STDINT_UINTPTR_LINE]->append(ptr_unsigned_type);
+	tmp[STDINT_UINTPTR_LINE]->append(" uintptr_t;");
+	tmp[STDINT_CPP_UINTPTR_LINE]->append(ptr_unsigned_type);
+	tmp[STDINT_CPP_UINTPTR_LINE]->append(" uintptr_t;");
 
 	// intptr_t limits
-	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[ptrtype-1]);
-	tmp[STDINT_PTRDIFF_T_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[ptrtype-1]);
-	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[ptrtype-1]);
-	tmp[STDINT_PTRDIFF_T_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[ptrtype-1]);
+	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(signed_max_buf[ptrtype-1]);
+	tmp[STDINT_PTRDIFF_T_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(signed_max_buf[ptrtype-1]);
+	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(signed_min_buf[ptrtype-1]);
+	tmp[STDINT_PTRDIFF_T_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(signed_min_buf[ptrtype-1]);
 
 	// assume size_t is same as uintptr_t
-	tmp[STDINT_SIZE_T_MAX_LINE]->append(0,unsigned_max_buf[ptrtype-1]);
+	tmp[STDINT_SIZE_T_MAX_LINE]->append(unsigned_max_buf[ptrtype-1]);
 
 	// uintptr_t limits
-	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[ptrtype-1]);
+	tmp[STDINT_INTPTR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(unsigned_max_buf[ptrtype-1]);
 
 	// intmax_t limits
-	tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[virtual_machine::std_int_long_long-1]);
-	tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[virtual_machine::std_int_long_long-1]);
+	tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(signed_max_buf[virtual_machine::std_int_long_long-1]);
+	tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(signed_min_buf[virtual_machine::std_int_long_long-1]);
 
 	// uintmax_t limits
-	tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[virtual_machine::std_int_long_long-1]);
+	tmp[STDINT_INTMAX_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(unsigned_max_buf[virtual_machine::std_int_long_long-1]);
 
 	// wchar_t limits
-	tmp[STDINT_WCHAR_T_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,unsigned_max_buf[target_machine.UNICODE_wchar_t()-1]);
+	tmp[STDINT_WCHAR_T_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(unsigned_max_buf[target_machine.UNICODE_wchar_t()-1]);
 
 	// two's complement controls whether the exact-width int types even exist
 	const unsigned short type_bits[virtual_machine::std_int_enum_max] = {target_machine.C_bit(virtual_machine::std_int_char),target_machine.C_bit(virtual_machine::std_int_short),target_machine.C_bit(virtual_machine::std_int_int),target_machine.C_bit(virtual_machine::std_int_long),target_machine.C_bit(virtual_machine::std_int_long_long)};
@@ -616,139 +616,139 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 
 	// uint___t and UINT___MAX will exist no matter what; almost everything else has suppresssion conditions
 	// int
-	tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_UINT_OFFSET]->append(0,z_umaxtoa(type_bits[virtual_machine::std_int_int-1],buf+1,10));
-	tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_UINT_OFFSET]->append(0,"_t;");
-	tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UINT_OFFSET]->append(0,buf+1);
-	tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UINT_OFFSET]->append(0,"_t;");
-	tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,buf+1);
-	tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX");
+	tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_UINT_OFFSET]->append(z_umaxtoa(type_bits[virtual_machine::std_int_int-1],buf+1,10));
+	tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_UINT_OFFSET]->append("_t;");
+	tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UINT_OFFSET]->append(buf+1);
+	tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UINT_OFFSET]->append("_t;");
+	tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(buf+1);
+	tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append("_MAX");
 	if (target_is_twos_complement)
 		{
-		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_INT_OFFSET]->append(0,buf+1);
-		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_INT_OFFSET]->append(0,"_t;");
-		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_INT_OFFSET]->append(0,buf+1);
-		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_INT_OFFSET]->append(0,"_t;");
-		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,buf+1);
-		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,"_MIN ");
-		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,buf+1);
-		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX");
+		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_INT_OFFSET]->append(buf+1);
+		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_INT_OFFSET]->append("_t;");
+		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_INT_OFFSET]->append(buf+1);
+		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_INT_OFFSET]->append("_t;");
+		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(buf+1);
+		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append("_MIN ");
+		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(buf+1);
+		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append("_MAX");
 		};
-	tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[virtual_machine::std_int_int-1]);
+	tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(unsigned_max_buf[virtual_machine::std_int_int-1]);
 	if (target_is_twos_complement)
 		{
-		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[virtual_machine::std_int_int-1]);
-		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[virtual_machine::std_int_int-1]);
+		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(signed_max_buf[virtual_machine::std_int_int-1]);
+		tmp[STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(signed_min_buf[virtual_machine::std_int_int-1]);
 		};
 
 	// char-based types
 	if (!suppress[virtual_machine::std_int_char-1])
 		{
-		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET]->append(0,z_umaxtoa(type_bits[virtual_machine::std_int_char-1],buf+1,10));
-		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET]->append(0,"_t;");
-		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET]->append(0,buf+1);
-		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET]->append(0,"_t;");
-		tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,buf+1);
-		tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX");
+		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET]->append(z_umaxtoa(type_bits[virtual_machine::std_int_char-1],buf+1,10));
+		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET]->append("_t;");
+		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET]->append(buf+1);
+		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET]->append("_t;");
+		tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(buf+1);
+		tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append("_MAX");
 		if (target_is_twos_complement)
 			{
-			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SCHAR_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SCHAR_OFFSET]->append(0,"_t;");
-			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_SCHAR_OFFSET]->append(0,buf+1);
-			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_SCHAR_OFFSET]->append(0,"_t;");
-			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,"_MIN ");
-			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX");
+			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SCHAR_OFFSET]->append(buf+1);
+			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SCHAR_OFFSET]->append("_t;");
+			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_SCHAR_OFFSET]->append(buf+1);
+			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_SCHAR_OFFSET]->append("_t;");
+			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(buf+1);
+			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append("_MIN ");
+			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(buf+1);
+			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append("_MAX");
 			};
-		tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[virtual_machine::std_int_char-1]);
+		tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(unsigned_max_buf[virtual_machine::std_int_char-1]);
 		if (target_is_twos_complement)
 			{
-			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[virtual_machine::std_int_char-1]);
-			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[virtual_machine::std_int_char-1]);
+			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(signed_max_buf[virtual_machine::std_int_char-1]);
+			tmp[STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(signed_min_buf[virtual_machine::std_int_char-1]);
 			};
 		}
 
 	// short-based types
 	if (!suppress[virtual_machine::std_int_short-1])
 		{
-		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET]->append(0,z_umaxtoa(type_bits[virtual_machine::std_int_short-1],buf+1,10));
-		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET]->append(0,"_t;");
-		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET]->append(0,buf+1);
-		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET]->append(0,"_t;");
-		tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,buf+1);
-		tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX");
+		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET]->append(z_umaxtoa(type_bits[virtual_machine::std_int_short-1],buf+1,10));
+		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET]->append("_t;");
+		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET]->append(buf+1);
+		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET]->append("_t;");
+		tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(buf+1);
+		tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append("_MAX");
 		if (target_is_twos_complement)
 			{
-			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SHRT_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SHRT_OFFSET]->append(0,"_t;");
-			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_SHRT_OFFSET]->append(0,buf+1);
-			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_SHRT_OFFSET]->append(0,"_t;");
-			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,"_MIN ");
-			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX");
+			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SHRT_OFFSET]->append(buf+1);
+			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SHRT_OFFSET]->append("_t;");
+			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_SHRT_OFFSET]->append(buf+1);
+			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_SHRT_OFFSET]->append("_t;");
+			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(buf+1);
+			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append("_MIN ");
+			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(buf+1);
+			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append("_MAX");
 			};
-		tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[virtual_machine::std_int_short-1]);
+		tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(unsigned_max_buf[virtual_machine::std_int_short-1]);
 		if (target_is_twos_complement)
 			{
-			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[virtual_machine::std_int_short-1]);
-			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[virtual_machine::std_int_short-1]);
+			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(signed_max_buf[virtual_machine::std_int_short-1]);
+			tmp[STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(signed_min_buf[virtual_machine::std_int_short-1]);
 			};
 		}
 
 	// long-based types
 	if (!suppress[virtual_machine::std_int_long-2])
 		{
-		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET]->append(0,z_umaxtoa(type_bits[virtual_machine::std_int_long-1],buf+1,10));
-		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET]->append(0,"_t;");
-		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET]->append(0,buf+1);
-		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET]->append(0,"_t;");
-		tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,buf+1);
-		tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX");
+		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET]->append(z_umaxtoa(type_bits[virtual_machine::std_int_long-1],buf+1,10));
+		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET]->append("_t;");
+		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET]->append(buf+1);
+		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET]->append("_t;");
+		tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(buf+1);
+		tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append("_MAX");
 		if (target_is_twos_complement)
 			{
-			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LONG_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LONG_OFFSET]->append(0,"_t;");
-			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_LONG_OFFSET]->append(0,buf+1);
-			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_LONG_OFFSET]->append(0,"_t;");
-			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,"_MIN ");
-			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX");
+			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LONG_OFFSET]->append(buf+1);
+			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LONG_OFFSET]->append("_t;");
+			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_LONG_OFFSET]->append(buf+1);
+			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_LONG_OFFSET]->append("_t;");
+			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(buf+1);
+			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append("_MIN ");
+			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(buf+1);
+			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append("_MAX");
 			};
-		tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[virtual_machine::std_int_long-1]);
+		tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(unsigned_max_buf[virtual_machine::std_int_long-1]);
 		if (target_is_twos_complement)
 			{
-			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[virtual_machine::std_int_long-1]);
-			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[virtual_machine::std_int_long-1]);
+			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(signed_max_buf[virtual_machine::std_int_long-1]);
+			tmp[STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(signed_min_buf[virtual_machine::std_int_long-1]);
 			};
 		}
 
 	// long-long-based types
 	if (!suppress[virtual_machine::std_int_long_long-2])
 		{
-		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET]->append(0,z_umaxtoa(type_bits[virtual_machine::std_int_long_long-1],buf+1,10));
-		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET]->append(0,"_t;");
-		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET]->append(0,buf+1);
-		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET]->append(0,"_t;");
-		tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,buf+1);
-		tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,"_MAX");
+		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET]->append(z_umaxtoa(type_bits[virtual_machine::std_int_long_long-1],buf+1,10));
+		tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET]->append("_t;");
+		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET]->append(buf+1);
+		tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET]->append("_t;");
+		tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(buf+1);
+		tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append("_MAX");
 		if (target_is_twos_complement)
 			{
-			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LLONG_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LLONG_OFFSET]->append(0,"_t;");
-			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_LLONG_OFFSET]->append(0,buf+1);
-			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_LLONG_OFFSET]->append(0,"_t;");
-			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,"_MIN ");
-			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,buf+1);
-			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,"_MAX");
+			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LLONG_OFFSET]->append(buf+1);
+			tmp[STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LLONG_OFFSET]->append("_t;");
+			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_LLONG_OFFSET]->append(buf+1);
+			tmp[STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_LLONG_OFFSET]->append("_t;");
+			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(buf+1);
+			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append("_MIN ");
+			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(buf+1);
+			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append("_MAX");
 			};
-		tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(0,unsigned_max_buf[virtual_machine::std_int_long_long-1]);
+		tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET]->append(unsigned_max_buf[virtual_machine::std_int_long_long-1]);
 		if (target_is_twos_complement)
 			{
-			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(0,signed_max_buf[virtual_machine::std_int_long_long-1]);
-			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(0,signed_min_buf[virtual_machine::std_int_long_long-1]);
+			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMAX_OFFSET]->append(signed_max_buf[virtual_machine::std_int_long_long-1]);
+			tmp[STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_SMIN_OFFSET]->append(signed_min_buf[virtual_machine::std_int_long_long-1]);
 			};
 		}
 
