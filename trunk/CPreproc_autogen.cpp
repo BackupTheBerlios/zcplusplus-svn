@@ -267,11 +267,11 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 
 	// unsigned character limits
 	tmp[LIMITS_UCHAR_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_char>(),buf+1,10)-1);
-	tmp[LIMITS_UCHAR_MAX_LINE]->append(0,"U");	// C99 5.2.4.2.1 p1 : requires unsigned int
+	tmp[LIMITS_UCHAR_MAX_LINE]->append('U');	// C99 5.2.4.2.1 p1 : requires unsigned int
 	if (!target_machine.char_is_signed_char())
 		{
 		tmp[LIMITS_CHAR_MAX_LINE]->append(0,buf);
-		tmp[LIMITS_CHAR_MAX_LINE]->append(0,"U");	// C99 5.2.4.2.1 p1 : requires unsigned int
+		tmp[LIMITS_CHAR_MAX_LINE]->append('U');	// C99 5.2.4.2.1 p1 : requires unsigned int
 		}
 	// signed character limits
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> s_max(target_machine.signed_max<virtual_machine::std_int_char>());
@@ -289,7 +289,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 
 	// unsigned short limits
 	tmp[LIMITS_USHRT_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_short>(),buf+1,10)-1);
-	tmp[LIMITS_USHRT_MAX_LINE]->append(0,"U");	// C99 5.2.4.2.1 p1 : requires unsigned int
+	tmp[LIMITS_USHRT_MAX_LINE]->append('U');	// C99 5.2.4.2.1 p1 : requires unsigned int
 	// signed short limits
 	s_max = target_machine.signed_max<virtual_machine::std_int_short>();
 	tmp[LIMITS_SHRT_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
@@ -304,7 +304,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 
 	// unsigned int limits
 	tmp[LIMITS_UINT_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_int>(),buf+1,10)-1);
-	tmp[LIMITS_UINT_MAX_LINE]->append(0,"U");	// C99 5.2.4.2.1 p1 : requires unsigned int
+	tmp[LIMITS_UINT_MAX_LINE]->append('U');	// C99 5.2.4.2.1 p1 : requires unsigned int
 	// signed int limits
 	s_max = target_machine.signed_max<virtual_machine::std_int_int>();
 	tmp[LIMITS_INT_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
@@ -323,7 +323,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// signed long limits
 	s_max = target_machine.signed_max<virtual_machine::std_int_long>();
 	tmp[LIMITS_LONG_MAX_LINE]->append(0,z_ucharint_toa(s_max,buf+1,10)-1);
-	tmp[LIMITS_LONG_MAX_LINE]->append(0,"L");
+	tmp[LIMITS_LONG_MAX_LINE]->append('L');
 	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
 		{
 		s_max += 1;
@@ -332,7 +332,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	else{
 		tmp[LIMITS_LONG_MIN_LINE]->append(0,buf+1);
 		}
-	tmp[LIMITS_LONG_MIN_LINE]->append(0,"L");
+	tmp[LIMITS_LONG_MIN_LINE]->append('L');
 
 	// unsigned long long limits
 	tmp[LIMITS_ULLONG_MAX_LINE]->append(0,z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_long_long>(),buf+1,10)-1);
@@ -348,7 +348,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		tmp[LIMITS_LLONG_MIN_LINE]->append(0,"LL)");
 		}
 	else{
-		tmp[LIMITS_LLONG_MIN_LINE]->append(0,"-");
+		tmp[LIMITS_LLONG_MIN_LINE]->append('-');
 		tmp[LIMITS_LLONG_MIN_LINE]->append(0,buf+1);
 		tmp[LIMITS_LLONG_MIN_LINE]->append(0,"LL");
 		}
