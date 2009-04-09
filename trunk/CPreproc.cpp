@@ -2465,8 +2465,8 @@ CPreprocessor::ifdef_ifndef_syntax_ok(zaimoni::Token<char>& x, const zaimoni::au
 	assert(!strncmp(x.data()+1,valid_directives[if_directive].first,valid_directives[if_directive].second));
 	zaimoni::lex_flags token_flags;
 
-	//! \test Error_no_arg_ifdef.hpp : #ifdef no control expression
-	//! \test Error_no_arg_ifndef.hpp : #ifndef no control expression
+	//! \test ifdef.C99/Error_noarg.hpp
+	//! \test ifdef.C99/Error_noarg2.hpp
 	if (!strcmp(x.data()+1,valid_directives[if_directive].first))
 		{
 		message_header(x);
@@ -2479,12 +2479,16 @@ CPreprocessor::ifdef_ifndef_syntax_ok(zaimoni::Token<char>& x, const zaimoni::au
 		};
 
 	const size_t critical_offset = valid_directives[if_directive].second+2;
+	assert(x.size()>critical_offset);
 	//! \todo : let this slide as a warning with new --do-what-i-mean option
 	C99_VA_ARGS_flinch(x,critical_offset);	// __VA_ARGS__ is known to be undefined, result would be well-defined anyway
 
 	const size_t token_len = lang.UnfilteredNextToken(x.data()+critical_offset,token_flags);
 	if (C_TESTFLAG_IDENTIFIER!=token_flags)
-		{	//! bug need 2 test cases
+		{	//! \test ifdef.C99/Error_nonidentifer.h
+			//! \test ifdef.C99/Error_nonidentifer.hpp
+			//! \test ifdef.C99/Error_nonidentifer2.h
+			//! \test ifdef.C99/Error_nonidentifer2.hpp
 		message_header(x);
 		INC_INFORM(ERR_STR);
 		INC_INFORM("#");
@@ -2492,12 +2496,15 @@ CPreprocessor::ifdef_ifndef_syntax_ok(zaimoni::Token<char>& x, const zaimoni::au
 		INFORM(" is not applied to an identifier. (C99 6.10p1/C++98 16p1)");
 		zcc_errors.inc_error();
 		return false;
-		}
-	if (x.size()>critical_offset+token_len)
+		};
+	if (x.size()-critical_offset>token_len)
 		{
 		const size_t skip_ws = strspn(x.data()+critical_offset+token_len,lang.WhiteSpace+1);
 		if (x.size()-(critical_offset+token_len)>skip_ws)
-			{	//! bug need two test cases
+			{	//! \test ifdef.C99/Error_extra.h
+				//! \test ifdef.C99/Error_extra.hpp
+				//! \test ifdef.C99/Error_extra2.h
+				//! \test ifdef.C99/Error_extra2.hpp
 			message_header(x);
 			INC_INFORM(ERR_STR);
 			INC_INFORM("#");
@@ -2509,23 +2516,23 @@ CPreprocessor::ifdef_ifndef_syntax_ok(zaimoni::Token<char>& x, const zaimoni::au
 		x.rtrim(skip_ws);
 		};
 
+	//! \test Pass_macro_STDC.h
+	//! \test Pass_macro_STDC.hpp
 	switch(context_free_defined(x.data()+critical_offset,token_len))
 	{
 	case 1:		{	// found it
-					//! \bug need test case
 				x.replace_once(std::nothrow,0,x.size(),(PP::IFDEF==if_directive) ? "#if 1" : "#if 0");
 				PACK_DIRECTIVE(x.flags,PP::IF);
 				return true;
 				}
 	case -1:	{	// hard-locked, not defined : ergo, undefined
-					//! \bug need test case
 				x.replace_once(std::nothrow,0,x.size(),(PP::IFDEF==if_directive) ? "#if 0" : "#if 1");
 				PACK_DIRECTIVE(x.flags,PP::IF);
 				return true;
 				}
 	};
 
-	//! \test the standard library macro-defined test cases
+	// exercised heavily by the standard library include tests
 	if (macro_is_defined(x.data()+critical_offset, token_len,macros_object,macros_function))
 		{	// found it
 		x.replace_once(std::nothrow,0,x.size(),(PP::IFDEF==if_directive) ? "#if 1" : "#if 0");
@@ -2986,27 +2993,25 @@ CPreprocessor::if_elif_syntax_ok(zaimoni::Token<char>& x, const zaimoni::autoval
 					lang.line_lex(x.data()+critical_offset,x.size()-critical_offset,pretokenized);
 					STL_translate_first(critical_offset,pretokenized);	// coordinate fixup
 					continue;
-					}
-				else{	//! \test Error_defined_nonidentifier.hpp (#if)
-						//! \test Error_defined_excess_tokens.hpp (#if)
-					message_header(x);
-					INC_INFORM(ERR_STR);
-					INC_INFORM("malformed defined operator application  (C99 6.10.1p1/C++98 16.1p1)");
-					INC_INFORM(x.data()+pretokenized[i].first,pretokenized[i+3].second+(pretokenized[i+3].first-pretokenized[i].first));
-					zcc_errors.inc_error();
-					bad_control = true;
-					continue;
-					}
-				}
-			else{	//! \test Error_defined_malformed2.hpp (#if)
+					};
+				//! \test Error_defined_nonidentifier.hpp (#if)
+				//! \test Error_defined_excess_tokens.hpp (#if)
 				message_header(x);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("malformed defined operator application  (C99 6.10.1p1/C++98 16.1p1)");
-				INC_INFORM(x.data()+pretokenized[i].first,pretokenized[i+1].second+(pretokenized[i+1].first-pretokenized[i].first));
+				INC_INFORM(x.data()+pretokenized[i].first,pretokenized[i+3].second+(pretokenized[i+3].first-pretokenized[i].first));
 				zcc_errors.inc_error();
 				bad_control = true;
 				continue;
-				}
+				};
+			//! \test Error_defined_malformed2.hpp (#if)
+			message_header(x);
+			INC_INFORM(ERR_STR);
+			INC_INFORM("malformed defined operator application  (C99 6.10.1p1/C++98 16.1p1)");
+			INC_INFORM(x.data()+pretokenized[i].first,pretokenized[i+1].second+(pretokenized[i+1].first-pretokenized[i].first));
+			zcc_errors.inc_error();
+			bad_control = true;
+			continue;
 			}
 		}
 	while(pretokenized.size() > ++i);
@@ -3621,22 +3626,22 @@ static bool _concatenate_single(zaimoni::Token<char>& x,const zaimoni::POD_tripl
 			x.replace_once(offset,pretokenized[2].first-offset,' ');
 			};
 		return false;
-		}
-	else{	// splice it
-			//! \test Pass_define_concatenate1.hpp
-			//! \test Pass_define_concatenate2.hpp
-		x.replace_once(pretokenized[0].first,(pretokenized[2].first-pretokenized[0].first)+pretokenized[2].second,new_token.data());
-		return true;
-		}
+		};
+	// splice it
+	//! \test Pass_define_concatenate1.hpp
+	//! \test Pass_define_concatenate2.hpp
+	x.replace_once(pretokenized[0].first,(pretokenized[2].first-pretokenized[0].first)+pretokenized[2].second,new_token.data());
+	return true;
 }
 
 static void remove_ws_from_token(zaimoni::Token<char>& x, const zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >& pretokenized)
 {
 	// truncate everything past last token
 	x.rtrim(x.size()-(pretokenized.back().first+pretokenized.back().second));
-	if (2<=pretokenized.size())
+	size_t i = pretokenized.size();
+	if (2<=i)
 		{
-		size_t i = pretokenized.size()-1;
+		--i;
 		do	{
 			--i;
 			if (   pretokenized[i].first<pretokenized[i+1].first
@@ -3806,7 +3811,7 @@ CPreprocessor::normalize_macro_expansion(zaimoni::Token<char>& x, const zaimoni:
 		const size_t token_len = lang.UnfilteredNextToken(x.data()+offset,token_flags);
 		offset += token_len;
 		if (x.size()<=offset)
-		{
+			{
 			if 		(C_TESTFLAG_STRING_LITERAL==token_flags)
 				{	//! \test Error_define_unterminated3.hpp
 					//! \test Error_define_unterminated4.hpp
@@ -3842,9 +3847,9 @@ CPreprocessor::normalize_macro_expansion(zaimoni::Token<char>& x, const zaimoni:
 					}
 				}
 			return;
-		}
+			}
 		const size_t skip_ws = strspn(x.data()+offset,lang.WhiteSpace+1);
-		if (x.size()<=offset+skip_ws)
+		if (x.size()-offset<=skip_ws)
 			{	//! \test Pass_define_dup5.hpp
 			x.rtrim(skip_ws);
 			return;
@@ -4282,7 +4287,7 @@ CPreprocessor::truncate_illegal_tokens(zaimoni::Token<char>& x,const int directi
 	if (x.size()>critical_offset)
 		{
 		const size_t skip_ws2 = strspn(x.data()+critical_offset,lang.WhiteSpace+1);
-		if (x.size()>critical_offset+skip_ws2)
+		if (x.size()-critical_offset>skip_ws2)
 			{
 			message_header(x);
 			INC_INFORM(ERR_STR);
@@ -4365,13 +4370,12 @@ CPreprocessor::function_macro_argument_span(const char* const x) const
 				identifier_next = false;
 				any_identifier = true;
 				continue;
-				}
-			else{	//! \test Error_define_arglist8.hpp
-				INC_INFORM("Missing comma in function-like macro argument list before placeholder ");
-				INC_INFORM(x+span,token_len);
-				INFORM(".");
-				return 0;
-				}
+				};
+			//! \test Error_define_arglist8.hpp
+			INC_INFORM("Missing comma in function-like macro argument list before placeholder ");
+			INC_INFORM(x+span,token_len);
+			INFORM(".");
+			return 0;
 			}
 		else if (C_TESTFLAG_NONATOMIC_PP_OP_PUNC==scratch_flags && 3==token_len && !strncmp(x+span,"...",3))
 			{
@@ -4381,13 +4385,12 @@ CPreprocessor::function_macro_argument_span(const char* const x) const
 				identifier_next = false;
 				any_ellipsis = true;
 				continue;
-				}
-			else{	//! \test Error_define_arglist3.hpp
-					//! \test Error_define_arglist4.hpp
-				INFORM("Missing comma in function-like macro argument list before ...");
-				return 0;
-				}
-			}
+				};
+			//! \test Error_define_arglist3.hpp
+			//! \test Error_define_arglist4.hpp
+			INFORM("Missing comma in function-like macro argument list before ...");
+			return 0;
+			};
 		//! \test Error_define_arglist2.hpp
 		INC_INFORM("Unexpected token ");
 		INC_INFORM(x+span,token_len);
@@ -4410,10 +4413,7 @@ CPreprocessor::defined_span(const zaimoni::Token<char>& x, const size_t logical_
 	if (x.size()<=offset) return 0;
 	const bool paren_delimited = ('('==x.data()[offset]);
 	if (0==skip_ws && !paren_delimited) return 0;
-	if (paren_delimited)
-	{
-		if (x.size()<= ++offset) return 0;
-	}
+	if (paren_delimited && x.size()<= ++offset) return 0;
 
 	zaimoni::lex_flags scratch_flags;
 	const size_t token_len = lang.UnfilteredNextToken(x.data()+offset,scratch_flags);
