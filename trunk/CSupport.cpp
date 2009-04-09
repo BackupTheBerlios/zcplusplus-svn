@@ -6227,7 +6227,7 @@ static bool terse_locate_add_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
-static bool eval_add_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_add_expression(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_C99_add_operator_expression<'+'>(src));
 
@@ -6323,12 +6323,15 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, func_
 						if (tweak_ub) ub += 1;
 						if (ub<lhs_test || ub<rhs_test || (ub -= lhs_test)<rhs_test)
 							{
-							src.flags |= parse_tree::INVALID;
-							message_header(src.index_tokens[0]);
-							INC_INFORM(ERR_STR);
-							INC_INFORM(src);
-							INFORM(" signed + overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
-							zcc_errors.inc_error();
+							if (hard_error)
+								{
+								src.flags |= parse_tree::INVALID;
+								message_header(src.index_tokens[0]);
+								INC_INFORM(ERR_STR);
+								INC_INFORM(src);
+								INFORM(" signed + overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
+								zcc_errors.inc_error();
+								};
 							return false;
 							};
 						lhs_test += rhs_test;
@@ -6434,7 +6437,7 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, func_
 	return false;
 }
 
-static bool eval_sub_expression(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+static bool eval_sub_expression(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_C99_add_operator_expression<'-'>(src));
 
@@ -6534,12 +6537,15 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, func_
 						if (tweak_ub) ub += 1;
 						if (ub<lhs_test || ub<rhs_test || (ub -= lhs_test)<rhs_test)
 							{
-							src.flags |= parse_tree::INVALID;
-							message_header(src.index_tokens[0]);
-							INC_INFORM(ERR_STR);
-							INC_INFORM(src);
-							INFORM(" signed - overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
-							zcc_errors.inc_error();
+							if (hard_error)
+								{
+								src.flags |= parse_tree::INVALID;
+								message_header(src.index_tokens[0]);
+								INC_INFORM(ERR_STR);
+								INC_INFORM(src);
+								INFORM(" signed - overflow, undefined behavior (C99 6.5p5, C++98 5p5)");
+								zcc_errors.inc_error();
+								}
 							return false;
 							};
 						lhs_test += rhs_test;
@@ -6733,7 +6739,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				return;
 				}
 			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
-			eval_add_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
+			eval_add_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
 	case 1:	{	// ptr + integer, hopefully
@@ -6748,7 +6754,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				zcc_errors.inc_error();
 				return;
 				}
-			eval_add_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
+			eval_add_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
 	case 2:	{
@@ -6763,7 +6769,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				zcc_errors.inc_error();
 				return;
 				}
-			eval_add_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
+			eval_add_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
 	case 3:	{	//	ptr + ptr dies
@@ -6810,7 +6816,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				return;
 				}
 			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
-			eval_sub_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
+			eval_sub_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
 	case 5:	{
@@ -6825,7 +6831,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				zcc_errors.inc_error();
 				return;
 				}
-			eval_sub_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
+			eval_sub_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
 	case 6:	{	// non-ptr - ptr dies
@@ -6847,7 +6853,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 							:	virtual_machine::std_int_long==tmp ? C_TYPE::LONG
 							:	virtual_machine::std_int_long_long==tmp ? C_TYPE::LLONG : 0));
 			assert(0!=src.type_code.base_type_index);
-			eval_sub_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
+			eval_sub_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
 	}
@@ -6935,7 +6941,7 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 				return;
 				}
 			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
-			eval_add_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+			eval_add_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 			break;
 			}
 	case 1:	{
@@ -6950,7 +6956,7 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 				zcc_errors.inc_error();
 				return;
 				}
-			eval_add_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+			eval_add_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 			break;
 			}
 	case 2:	{
@@ -6965,7 +6971,7 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 				zcc_errors.inc_error();
 				return;
 				}
-			eval_add_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+			eval_add_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 			break;
 			}
 	case 3:	{	//	ptr + ptr dies
@@ -7012,7 +7018,7 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 				return;
 				}
 			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
-			eval_sub_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+			eval_sub_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 			break;
 			}
 	case 5:	{
@@ -7027,7 +7033,7 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 				zcc_errors.inc_error();
 				return;
 				}
-			eval_sub_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+			eval_sub_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 			break;
 			}
 	case 6:	{	// non-ptr - ptr dies
@@ -7049,7 +7055,7 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 								:	virtual_machine::std_int_long==tmp ? C_TYPE::LONG
 								:	virtual_machine::std_int_long_long==tmp ? C_TYPE::LLONG : 0));
 			assert(0!=src.type_code.base_type_index);
-			eval_sub_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
+			eval_sub_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 			break;
 			}
 	}
@@ -9713,7 +9719,7 @@ static bool eval_add_expression(parse_tree& src,const type_system& types,
 		{
 		EvalParseTree(*src.c_array<1>(),types);
 		EvalParseTree(*src.c_array<2>(),types);
-		if (eval_add_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		if (eval_add_expression(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
@@ -9727,7 +9733,7 @@ static bool eval_sub_expression(parse_tree& src,const type_system& types,
 		{
 		EvalParseTree(*src.c_array<1>(),types);
 		EvalParseTree(*src.c_array<2>(),types);
-		if (eval_sub_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
+		if (eval_sub_expression(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
