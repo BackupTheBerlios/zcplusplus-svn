@@ -58,6 +58,7 @@ public:
 	void trim(size_t prefix,size_t postfix);	// remove characters from both sides
 	void ltrim(size_t prefix);	// remove characters from left
 	void rtrim(size_t postfix);	// remove characters from right
+	void lslice(size_t new_len);// leave behind this many characters on left
 	void reset() {_token.reset();};	// no content afterwards
 
 	bool append(const std::nothrow_t& tracer, T src) {return _token.InsertSlotAt(_token.size(),src);};
@@ -215,6 +216,18 @@ MetaToken<T>::rtrim(size_t postfix)
 		_token.reset();
 	else{
 		_token.Shrink(_token.size()-postfix);
+		};
+}
+
+template<class T>
+void
+MetaToken<T>::lslice(size_t new_len)
+{
+	if (_token.size()<=new_len) return;
+	if (0==new_len)
+		_token.reset();
+	else{
+		_token.Shrink(new_len);
 		};
 }
 

@@ -447,7 +447,7 @@ static bool _flush_token_gaps(zaimoni::Token<char>& x, zaimoni::autovalarray_ptr
 	bool acted = false;
 	if (x.size()>pretokenized.back().first+pretokenized.back().second)
 		{
-		x.rtrim(x.size()-(pretokenized.back().first+pretokenized.back().second));
+		x.lslice(pretokenized.back().first+pretokenized.back().second);
 		acted = true;
 		};
 	if (1<pretokenized.size())
@@ -3470,7 +3470,7 @@ CPreprocessor::dynamic_macro_replace_once(zaimoni::Token<char>& x, size_t& criti
 			};
 		size_t test_critical_offset = 0;
 		zaimoni::Token<char> Test(x);
-		Test.rtrim(Test.size()-(critical_offset+token_len));
+		Test.lslice(critical_offset+token_len);
 		Test.ltrim(critical_offset);
 		_macro_replace(Test,test_critical_offset,token_len,macros_object_expansion[object_macro_index]->data());
 		predefined_macro_replacement(Test,0);
@@ -3637,7 +3637,7 @@ static bool _concatenate_single(zaimoni::Token<char>& x,const zaimoni::POD_tripl
 static void remove_ws_from_token(zaimoni::Token<char>& x, const zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >& pretokenized)
 {
 	// truncate everything past last token
-	x.rtrim(x.size()-(pretokenized.back().first+pretokenized.back().second));
+	x.lslice(pretokenized.back().first+pretokenized.back().second);
 	size_t i = pretokenized.size();
 	if (2<=i)
 		{
@@ -4153,7 +4153,7 @@ CPreprocessor::discard_leading_trailing_concatenate_op(zaimoni::Token<char>& x)
 			return true;
 			}
 		pretokenized.DeleteIdx(pretokenized.size()-1);
-		x.rtrim(x.size()-(pretokenized.back().first+pretokenized.back().second));
+		x.lslice(pretokenized.back().first+pretokenized.back().second);
 		}
 
 	if (detect_C_concatenation_op(x.data()+pretokenized.front().first,pretokenized.front().second))
@@ -4296,7 +4296,7 @@ CPreprocessor::truncate_illegal_tokens(zaimoni::Token<char>& x,const int directi
 			INFORM(" is trailed by illegal preprocessing tokens; discarding them. (C99 6.10p1/C++98 16p1)");
 			zcc_errors.inc_error();
 			}
-		x.rtrim(x.size()-critical_offset);
+		x.lslice(critical_offset);
 		}
 }
 
