@@ -56,8 +56,9 @@ protected:
 		};
 public:
 	void trim(size_t prefix,size_t postfix);	// remove characters from both sides
-	void ltrim(size_t prefix);					// remove characters from left
-	void rtrim(size_t postfix);					// remove characters from right
+	void ltrim(size_t prefix);	// remove characters from left
+	void rtrim(size_t postfix);	// remove characters from right
+	void reset() {_token.reset();};	// no content afterwards
 
 	bool append(const std::nothrow_t& tracer, T src) {return _token.InsertSlotAt(_token.size(),src);};
 	bool append(const std::nothrow_t& tracer, size_t postfix, const MetaToken<T>& src);

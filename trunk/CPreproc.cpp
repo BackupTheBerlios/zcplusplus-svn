@@ -4149,7 +4149,7 @@ CPreprocessor::discard_leading_trailing_concatenate_op(zaimoni::Token<char>& x)
 		zcc_errors.inc_error();
 		if (1==pretokenized.size())
 			{
-			x.ltrim(x.size());
+			x.reset();
 			return true;
 			}
 		pretokenized.DeleteIdx(pretokenized.size()-1);
@@ -4164,7 +4164,7 @@ CPreprocessor::discard_leading_trailing_concatenate_op(zaimoni::Token<char>& x)
 		zcc_errors.inc_error();
 		if (1==pretokenized.size())
 			{
-			x.ltrim(x.size());
+			x.reset();
 			return true;
 			}
 		x.ltrim(pretokenized[1].first);
@@ -4610,7 +4610,7 @@ CPreprocessor::flush_bad_stringize(zaimoni::Token<char>& x, const zaimoni::Token
 			zcc_errors.inc_error();
 			if (1==pretokenized.size())
 				{
-				x.ltrim(x.size());
+				x.reset();
 				return true;
 				};
 			pretokenized.DeleteIdx(pretokenized.size()-1);
