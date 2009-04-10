@@ -400,7 +400,7 @@ static void _flush_duplicated_ws(zaimoni::Token<char>& x, const zaimoni::LangCon
 			{
 			if (skip_ws>=x.size()-offset2)
 				{
-				x.rtrim(skip_ws);
+				x.lslice(offset2);
 				return;
 				};
 			if (strchr(lang.AtomicSymbols,x.data()[offset2-1]) || strchr(lang.AtomicSymbols,x.data()[offset2+skip_ws]))
@@ -422,14 +422,11 @@ STL_translate_first(IntType origin, Iterator iter, const Iterator iter_end)
 }
 
 template<class IntType,class T>
-void
-STL_translate_first(IntType origin, T& target)
+inline void
+STL_translate_first(IntType origin, T& x)
 {
-	assert(!target.empty());
-	typename T::iterator const iter_end = target.end();
-	typename T::iterator iter = target.begin();
-	do	iter->first += origin;
-	while(iter_end!= ++iter);
+	assert(!x.empty());
+	STL_translate_first(origin,x.begin(),x.end());
 }
 
 template<class IntType,class Iterator>
@@ -703,9 +700,7 @@ CPreprocessor::preprocess(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& Tok
 	{	// do detailed UNICODE error trapping here: S-zone [\uD800-\uDFFF], sub-\u00A0 processing (latter is language-sensitive), syntax
 	const zaimoni::autovalarray_ptr<zaimoni::Token<char>* >::iterator iter_end = TokenList.end();
 	zaimoni::autovalarray_ptr<zaimoni::Token<char>* >::iterator iter = TokenList.begin();
-	if (iter!=iter_end)
-		do	detailed_UNICODE_syntax(**iter);
-		while(++iter!=iter_end);
+	while(iter!=iter_end) detailed_UNICODE_syntax(**iter++);
 	}
 
 	_preprocess(TokenList, locked_macros, macros_object, macros_object_expansion, macros_object_expansion_pre_eval, macros_function, macros_function_arglist, macros_function_expansion, macros_function_expansion_pre_eval, include_file_index, include_file_cache, min_types);
@@ -824,15 +819,12 @@ RestartAfterInclude:
 				}
 			}	// end scoping brace
 			const errr directive_type = find_directive(TokenList[i]->data()+1,lang);
-			if (0==if_depth)
+			if (0>directive_type && 0==if_depth)
 				{	//! \test Warn_unrecognized_directive.hpp : naked unrecognized directive
-				if (-1==directive_type)
-					{
-					delete_unrecognized_directive(TokenList,i);
-					if (0==i) goto Restart;
-					--i;
-					continue;
-					}
+				delete_unrecognized_directive(TokenList,i);
+				if (0==i) goto Restart;
+				--i;
+				continue;
 				};
 
 			// stripping trailing spaces damages incomplete string and character literals.
@@ -858,23 +850,21 @@ RestartAfterInclude:
 										{	//! \todo really should be a bit more clever about this
 										TokenList[i]->replace_once(critical_offset,0,' ');
 										}
-									else{
-										if (TokenList[i]->size()-critical_offset<=intra_WS)
+									else if (TokenList[i]->size()-critical_offset<=intra_WS)
+										{
+										if (PP::PRAGMA==directive_type)
 											{
-											if (PP::PRAGMA==directive_type)
-												{
-												TokenList.DeleteIdx(i);	// empty pragma is legal, but Z.C++ says it has no effect
-												if (0==i) goto Restart;
-												--i;
-												continue;
-												};
-											TokenList[i]->rtrim(intra_WS);
-											}
-										else if (1<intra_WS)
-											TokenList[i]->replace_once(std::nothrow,critical_offset,intra_WS,' ');
-										else
-											TokenList[i]->c_array()[critical_offset] = ' ';
-										};
+											TokenList.DeleteIdx(i);	// empty pragma is legal, but Z.C++ says it has no effect
+											if (0==i) goto Restart;
+											--i;
+											continue;
+											};
+										TokenList[i]->rtrim(intra_WS);
+										}
+									else if (1<intra_WS)
+										TokenList[i]->replace_once(std::nothrow,critical_offset,intra_WS,' ');
+									else
+										TokenList[i]->c_array()[critical_offset] = ' ';
 									}
 								PACK_DIRECTIVE(TokenList[i]->flags,directive_type);
 								assert(TokenList[i]->size()>=valid_directives[directive_type].second+1);
@@ -1362,10 +1352,9 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						//! test Error_else_with_tokens.hpp : #else with tokens
 						//! test Error_endif_with_tokens.hpp : #endif with tokens
 						truncate_illegal_tokens(*TokenList[i],directive_type,valid_directives[directive_type].second+1);
-					else{
-						if (!(TokenList[i]->flags & INVALID_DIRECTIVE_FLAG) && !if_elif_syntax_ok(*TokenList[i],macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion_pre_eval,min_types))
-							TokenList[i]->flags |= INVALID_DIRECTIVE_FLAG;
-						}
+					else if (	!(TokenList[i]->flags & INVALID_DIRECTIVE_FLAG)
+							 && !if_elif_syntax_ok(*TokenList[i],macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion_pre_eval,min_types))
+						TokenList[i]->flags |= INVALID_DIRECTIVE_FLAG;
 					};
 
 				if (PP::ENDIF==directive_type)
@@ -1391,8 +1380,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						// inject reductions here
 						const unsigned int else_directive = (0==else_where) ? PP_INVALID : UNPACK_DIRECTIVE(TokenList[else_where-1]->flags);
 						assert(0==else_where || PP::ELSE==else_directive || PP::ELIF==else_directive);
-						const bool if_0 = !strcmp(TokenList[if_where]->data(),"#if 0");
-						if (if_0)
+						if (!strcmp(TokenList[if_where]->data(),"#if 0"))
 							{
 							if (0==else_where)
 								{
@@ -1442,8 +1430,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 							--i;
 							continue;
 							};
-						const bool if_1 = !strcmp(TokenList[if_where]->data(),"#if 1");
-						if (if_1)
+						if (!strcmp(TokenList[if_where]->data(),"#if 1"))
 							{
 							if (0==else_where)
 								{
@@ -2229,13 +2216,11 @@ CPreprocessor::tokenize_line(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& 
 			if (pretokenized[lb].second<=pretokenized[ub].second)
 				{	// first token not longer
 				TokenListAlt[lb] = new zaimoni::Token<char>(tmp,pretokenized[lb].first,pretokenized[lb].second,pretokenized[lb].third);
-				complete_string_character_literal(*TokenListAlt[lb]);
-				++lb;
+				complete_string_character_literal(*TokenListAlt[lb++]);
 				}
 			else{	// second token longer
 				TokenListAlt[ub] = new zaimoni::Token<char>(tmp,pretokenized[ub].first,pretokenized[ub].second,pretokenized[ub].third);
-				complete_string_character_literal(*TokenListAlt[ub]);
-				--ub;
+				complete_string_character_literal(*TokenListAlt[ub--]);
 				}
 			}
 		}
@@ -2255,37 +2240,31 @@ CPreprocessor::tokenize_line(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& 
 	return pretokenized.size();
 }
 
+static void _complete_string_character_literal(zaimoni::Token<char>& x,const char delim, const char* const end_error)
+{
+	if (delim!=x.back())
+		{
+		message_header2(x,x.original_line.second);
+		INC_INFORM(ERR_STR);
+		INC_INFORM("unterminated");
+		if ('L'==x.front()) INC_INFORM(" wide");
+		INFORM(end_error);
+		zcc_errors.inc_error();
+		x.append(delim);
+		}
+}
+
 void
 CPreprocessor::complete_string_character_literal(zaimoni::Token<char>& x)
 {
 	if (C_TESTFLAG_STRING_LITERAL==x.flags)
-		{
-		if ('"'!=x.back())
-			{	//! \test Error_unterminated1.hpp
-				//! \test Error_unterminated2.hpp
-			message_header2(x,x.original_line.second);
-			INC_INFORM(ERR_STR);
-			INC_INFORM("unterminated");
-			if ('L'==x.front()) INC_INFORM(" wide");
-			INFORM(" string literal.  Terminating. (C99 6.4.5p1/C++98 2.13.4)");
-			zcc_errors.inc_error();
-			x.append('"');
-			}
-		}
+		//! \test Error_unterminated1.hpp
+		//! \test Error_unterminated2.hpp
+		_complete_string_character_literal(x,'"'," string literal.  Terminating. (C99 6.4.5p1/C++98 2.13.4)");
 	else if (C_TESTFLAG_CHAR_LITERAL==x.flags)
-		{
-		if ('\''!=x.back())
-			{	//! \test Error_unterminated3.hpp
-				//! \test Error_unterminated4.hpp
-			message_header2(x,x.original_line.second);
-			INC_INFORM(ERR_STR);
-			INC_INFORM("unterminated");
-			if ('L'==x.front()) INC_INFORM(" wide");
-			INFORM(" character literal.  Terminating. (C99 6.4.4.4p1/C++98 2.13.2)");
-			zcc_errors.inc_error();
-			x.append('\'');
-			}
-		};
+		//! \test Error_unterminated3.hpp
+		//! \test Error_unterminated4.hpp
+		_complete_string_character_literal(x,'\''," character literal.  Terminating. (C99 6.4.4.4p1/C++98 2.13.2)");
 }
 
 /*! 
@@ -2548,12 +2527,10 @@ CPreprocessor::ifdef_ifndef_syntax_ok(zaimoni::Token<char>& x, const zaimoni::au
 
 static zaimoni::POD_pair<size_t,size_t> balanced_character_count(const char* const x, const zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >& pretokenized,const char l_match,const char r_match)
 {
-	zaimoni::POD_pair<size_t,size_t> paren_depth;
+	zaimoni::POD_pair<size_t,size_t> paren_depth = {0,0};
 	const zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >::const_iterator iter_end = pretokenized.end();
 	zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >::const_iterator iter = pretokenized.begin();
 	assert(NULL!=x);
-	paren_depth.first = 0;
-	paren_depth.second = 0;
 	if (iter!=iter_end)
 		do	if (1==iter->second)
 				{
@@ -3349,12 +3326,12 @@ void
 CPreprocessor::_macro_replace(zaimoni::Token<char>& x, size_t& critical_offset, const size_t token_len,const char* const macro_value) const
 {
 	assert(x.size()>critical_offset);
-	assert(x.size()>=critical_offset+token_len);
+	assert(x.size()-critical_offset>=token_len);
 	assert(0<token_len);
 
 	if (zaimoni::is_empty_string(macro_value))
 		{
-		if (x.size()<=critical_offset+token_len)
+		if (x.size()-critical_offset<=token_len)
 			x.rtrim(token_len);
 		else if (0==critical_offset)
 			x.ltrim(token_len);
@@ -3365,8 +3342,8 @@ CPreprocessor::_macro_replace(zaimoni::Token<char>& x, size_t& critical_offset, 
 		return;
 		}
 
-	const bool pad_left = (0<critical_offset) && require_padding(x.data()[critical_offset-1],macro_value[0]);
-	const bool pad_right = (x.size()>critical_offset+token_len) && require_padding(macro_value[strlen(macro_value)-1],x.data()[critical_offset+token_len]);
+	const bool pad_left = 0<critical_offset && require_padding(x.data()[critical_offset-1],macro_value[0]);
+	const bool pad_right = x.size()>critical_offset+token_len && require_padding(macro_value[strlen(macro_value)-1],x.data()[critical_offset+token_len]);
 
 	if (pad_right) x.replace_once(critical_offset+token_len,0,' ');
 	x.replace_once(critical_offset,token_len,macro_value);
@@ -3648,8 +3625,7 @@ static void remove_ws_from_token(zaimoni::Token<char>& x, const zaimoni::autoval
 				&& pretokenized[i].second<pretokenized[i+1].first-pretokenized[i].first)
 				{
 				const size_t ws_origin = pretokenized[i].first+pretokenized[i].second;
-				const size_t ws_span = pretokenized[i+1].first-ws_origin;
-				x.replace_once(std::nothrow,ws_origin,ws_span,' ');
+				x.replace_once(std::nothrow,ws_origin,pretokenized[i+1].first-ws_origin,' ');
 				}
 			}
 		while(0<i);
@@ -3785,6 +3761,22 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const zaimoni::autovalarra
 	while(0<j);
 }
 
+static void _complete_string_character_literal_define(zaimoni::Token<char>& x, const zaimoni::Token<char>& src, size_t critical_offset, size_t first_token_len,const char delim, const char* const end_error)
+{
+	if (delim!=x.back())
+		{
+		message_header(src);
+		INC_INFORM(ERR_STR);
+		INC_INFORM("#define ");
+		INC_INFORM(src.data()+critical_offset,first_token_len);
+		INC_INFORM(" ends in an unterminated");
+		if ('L'==x.front()) INC_INFORM(" wide");
+		INFORM(end_error);
+		zcc_errors.inc_error();
+		x.append(delim);
+		}
+}
+
 /*! 
  * Puts a macro expansion into a standardized form so that strcmp is sufficient to determine equivalence.
  * 
@@ -3808,54 +3800,28 @@ CPreprocessor::normalize_macro_expansion(zaimoni::Token<char>& x, const zaimoni:
 	while(offset<x.size())
 		{
 		zaimoni::lex_flags token_flags;
-		const size_t token_len = lang.UnfilteredNextToken(x.data()+offset,token_flags);
-		offset += token_len;
+		offset += lang.UnfilteredNextToken(x.data()+offset,token_flags);
 		if (x.size()<=offset)
 			{
 			if 		(C_TESTFLAG_STRING_LITERAL==token_flags)
-				{	//! \test Error_define_unterminated3.hpp
-					//! \test Error_define_unterminated4.hpp
-				if ('"'!=x.back())
-					{
-					message_header(src);
-					INC_INFORM(ERR_STR);
-					INC_INFORM("#define ");
-					INC_INFORM(src.data()+critical_offset,first_token_len);
-					INC_INFORM(" ends in an unterminated ");
-					if ('L'==x.front()) INC_INFORM("wide ");
-					INFORM("string literal.  Terminating. (C99 6.4.5p1/C++98 2.13.4)");
-					zcc_errors.inc_error();
-					x.append('"');
-					return;
-					}
-				}
+				//! \test Error_define_unterminated3.hpp
+				//! \test Error_define_unterminated4.hpp
+				_complete_string_character_literal_define(x,src,critical_offset,first_token_len,'"'," string literal.  Terminating. (C99 6.4.5p1/C++98 2.13.4)");
 			else if (C_TESTFLAG_CHAR_LITERAL  ==token_flags)
-				{	//! \test Error_define_unterminated1.hpp
-					//! \test Error_define_unterminated2.hpp
-				if ('\''!=x.back())
-					{
-					message_header(src);
-					INC_INFORM(ERR_STR);
-					INC_INFORM("#define ");
-					INC_INFORM(src.data()+critical_offset,first_token_len);
-					INC_INFORM(" ends in an unterminated ");
-					if ('L'==x.front()) INC_INFORM("wide ");
-					INFORM("character literal.  Terminating. (C99 6.4.4.4p1/C++98 2.13.2)");
-					zcc_errors.inc_error();
-					x.append('\'');
-					return;
-					}
-				}
+				//! \test Error_define_unterminated1.hpp
+				//! \test Error_define_unterminated2.hpp
+				_complete_string_character_literal_define(x,src,critical_offset,first_token_len,'\''," character literal.  Terminating. (C99 6.4.4.4p1/C++98 2.13.2)");
 			return;
 			}
 		const size_t skip_ws = strspn(x.data()+offset,lang.WhiteSpace+1);
-		if (x.size()-offset<=skip_ws)
-			{	//! \test Pass_define_dup5.hpp
-			x.rtrim(skip_ws);
-			return;
-			}
 		if (0<skip_ws)
-			{	//! \test Pass_define_dup6.hpp
+			{
+			if (x.size()-offset<=skip_ws)
+				{	//! \test Pass_define_dup5.hpp
+				x.lslice(offset);
+				return;
+				};
+			//! \test Pass_define_dup6.hpp
 			x.replace_once(std::nothrow,offset,skip_ws,' ');
 			++offset;
 			};
@@ -4412,8 +4378,12 @@ CPreprocessor::defined_span(const zaimoni::Token<char>& x, const size_t logical_
 	offset += skip_ws;
 	if (x.size()<=offset) return 0;
 	const bool paren_delimited = ('('==x.data()[offset]);
-	if (0==skip_ws && !paren_delimited) return 0;
-	if (paren_delimited && x.size()<= ++offset) return 0;
+	if (paren_delimited)
+		{
+		if (x.size()<= ++offset) return 0;
+		}
+	else if (0==skip_ws)
+		return 0;
 
 	zaimoni::lex_flags scratch_flags;
 	const size_t token_len = lang.UnfilteredNextToken(x.data()+offset,scratch_flags);
@@ -4421,8 +4391,8 @@ CPreprocessor::defined_span(const zaimoni::Token<char>& x, const size_t logical_
 	identifier.first = offset;
 	identifier.second = token_len;
 	offset += token_len;
-	if (!paren_delimited) return offset-logical_offset;
 	if (x.size()<=offset) return 0;
+	if (!paren_delimited) return offset-logical_offset;
 	offset += strspn(x.data()+offset,lang.WhiteSpace+1);
 	if (x.size()<=offset) return 0;
 	if (')'==x.data()[offset]) return (offset-logical_offset)+1;
@@ -4512,8 +4482,7 @@ CPreprocessor::function_macro_invocation_argspan(const char* const src,const siz
 		if ('('==src[i]) ++paren_depth;
 		else if (')'==src[i])
 			{
-			--paren_depth;
-			if (0==paren_depth)
+			if (0== --paren_depth)
 				{
 				arg_count = test_arg_count;
 				return i+1;
@@ -4689,7 +4658,6 @@ CPreprocessor::function_macro_concatenate_novars(zaimoni::Token<char>& x, const 
 							//! \test default.nonconforming/Error_autofail_concatenation2.hpp
 						INC_INFORM((bool_options[boolopt::pedantic]) ? WARN_STR : ERR_STR);
 						INC_INFORM("concatenation automatically fails at macro invocation.");
-						INFORM((bool_options[boolopt::pedantic]) ? "" : " (ZCPP nonconforming pragmatism)");
 						}
 					else{	//! \test Warn_empty_parameter_concatenation1.hpp
 							//! \test default.nonconforming/Error_empty_parameter_concatenation1.hpp
@@ -4697,8 +4665,8 @@ CPreprocessor::function_macro_concatenate_novars(zaimoni::Token<char>& x, const 
 						INC_INFORM("concatenation fails at macro invocation if parameter ");
 						INC_INFORM(x.data()+pretokenized[i-1].first,pretokenized[i-1].second);
 						INC_INFORM(" is not empty.");
-						INFORM((bool_options[boolopt::pedantic]) ? "" : " (ZCPP nonconforming pragmatism)");
 						}
+					INFORM((bool_options[boolopt::pedantic]) ? "" : " (ZCPP nonconforming pragmatism)");
 					// defer to here so we get the full messages out
 					if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();										// for order-of-evaluation
 					if (bool_options[boolopt::warnings_are_errors] || !bool_options[boolopt::pedantic]) zcc_errors.inc_error();	// for wonky concatenation
@@ -4718,21 +4686,19 @@ CPreprocessor::function_macro_concatenate_novars(zaimoni::Token<char>& x, const 
 						message_header(x);
 						INFORM("warning: order of evaluation of # and ## operators is undefined; evaluating # first (C99 6.10.3.2p2/C++98 16.3.2p2)");
 						message_header(x);
+						INC_INFORM((bool_options[boolopt::pedantic]) ? WARN_STR : ERR_STR);
 						if (after_token_is_parameter)
 							{	//! \test Warn_autofail_concatenation3.hpp
 								//! \test default.nonconforming/Error_autofail_concatenation3.hpp
-							INC_INFORM((bool_options[boolopt::pedantic]) ? WARN_STR : ERR_STR);
 							INC_INFORM("concatenation fails at macro invocation if parameter ");
 							INC_INFORM(x.data()+pretokenized[i+1].first,pretokenized[i+1].second);
 							INC_INFORM(" is not empty.");
-							INFORM((bool_options[boolopt::pedantic]) ? "" : " (ZCPP nonconforming pragmatism)");
 							}
 						else{	//! \test Warn_empty_parameter_concatenation2.hpp
 								//! \test default.nonconforming/Error_empty_parameter_concatenation2.hpp
-							INC_INFORM((bool_options[boolopt::pedantic]) ? WARN_STR : ERR_STR);
 							INC_INFORM("concatenation automatically fails at macro invocation.");
-							INFORM((bool_options[boolopt::pedantic]) ? "" : " (ZCPP nonconforming pragmatism)");
 							};
+						INFORM((bool_options[boolopt::pedantic]) ? "" : " (ZCPP nonconforming pragmatism)");
 						// defer to here so we get the full messages out
 						if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();										// for order-of-evaluation
 						if (bool_options[boolopt::warnings_are_errors] || !bool_options[boolopt::pedantic]) zcc_errors.inc_error();	// for wonky concatenation
