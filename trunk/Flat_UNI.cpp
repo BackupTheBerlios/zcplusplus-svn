@@ -55,10 +55,7 @@ FlattenUNICODE(char*& Text)
 				want_realloc = true;
 				}
 			bloat_unicode += 6;
-			if ((bloat_unicode-Text)+10U>TextLength)
-				bloat_unicode = NULL;
-			else
-				bloat_unicode = strstr(bloat_unicode,"\\U0000");
+			bloat_unicode = ((bloat_unicode-Text)+10U>TextLength) ? NULL : strstr(bloat_unicode,"\\U0000");
 			}
 		}
 	if (6<=TextLength)
@@ -81,13 +78,10 @@ FlattenUNICODE(char*& Text)
 				want_realloc = true;
 				++bloat_unicode;
 				}
-			else{
-				bloat_unicode += 4;
-				}
-			if ((bloat_unicode-Text)+6U>TextLength)
-				bloat_unicode = NULL;
 			else
-				bloat_unicode = strstr(bloat_unicode,"\\u00");
+				bloat_unicode += 4;
+
+			bloat_unicode = ((bloat_unicode-Text)+6U>TextLength) ? NULL : strstr(bloat_unicode,"\\u00");
 			}
 		}
 #ifndef ZAIMONI_FORCE_ISO

@@ -10,12 +10,12 @@
 // #define FAST_ROUTE 0
 #endif
 
+//! \todo rethink this for hosting machines where sizeof(char)==sizeof(uintmax_t)
 void _unsigned_copy(unsigned char* _x, uintmax_t src, unsigned int i)
 {
 	do	{
 		--i;
-		const unsigned char tmp = ((src & ((uintmax_t)(UCHAR_MAX)<<(i*CHAR_BIT)))>>(i*CHAR_BIT));
-		_x[i] = tmp;
+		_x[i] = ((src & ((uintmax_t)(UCHAR_MAX)<<(i*CHAR_BIT)))>>(i*CHAR_BIT));
 		}
 	while(0<i);
 }
@@ -26,9 +26,7 @@ void _mask_to(unsigned char* LHS, size_t LHS_len, size_t bitcount)
 	const size_t target_bits = bitcount%CHAR_BIT;
 	if (target_bytes>=LHS_len) return;
 	if (0==target_bits)
-		{
 		memset(LHS+target_bytes,0,LHS_len-target_bytes);
-		}
 	else{
 		if (target_bytes+1U<LHS_len) memset(LHS+target_bytes+1U,0,LHS_len-target_bytes-1U);
 		LHS[target_bytes] &= (UCHAR_MAX>>(CHAR_BIT-target_bits));
@@ -50,26 +48,20 @@ void _unsigned_sum(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
 #else
 	bool carry = false;
 	do	{
-		if (carry && (unsigned char)(UCHAR_MAX)>LHS[i])
+		if (carry && UCHAR_MAX>LHS[i])
 			{
 			LHS[i] += 1;
 			carry = false;
 			}
 
 		if (carry)
-			{
 			LHS[i] = RHS[i];
-			}
+		else if (UCHAR_MAX-LHS[i]>=RHS[i])
+			LHS[i] += RHS[i];
 		else{
-			if ((unsigned char)(UCHAR_MAX)-LHS[i]>=RHS[i])
-				{
-				LHS[i] += RHS[i];
-				}
-			else{
-				LHS[i] = RHS[i]-((unsigned char)(UCHAR_MAX)-LHS[i])
-				LHS[i] -= 1;
-				carry = true;
-				}
+			LHS[i] = RHS[i]-(UCHAR_MAX-LHS[i])
+			LHS[i] -= 1;
+			carry = true;
 			}
 		}
 	while(LHS_len > ++i);
@@ -92,7 +84,7 @@ void _unsigned_sum(unsigned char* LHS, size_t LHS_len, uintmax_t RHS)
 #else
 	bool carry = false;
 	do	{
-		if (carry && (unsigned char)(UCHAR_MAX)>LHS[i])
+		if (carry && UCHAR_MAX>LHS[i])
 			{
 			LHS[i] += 1;
 			carry = false;
@@ -101,19 +93,13 @@ void _unsigned_sum(unsigned char* LHS, size_t LHS_len, uintmax_t RHS)
 		const unsigned char RHS_image = (RHS & UCHAR_MAX);
 		RHS >>= CHAR_BIT;
 		if (carry)
-			{
 			LHS[i] = RHS_image;
-			}
+		else if (UCHAR_MAX-LHS[i]>=RHS_image)
+			LHS[i] += RHS_image;
 		else{
-			if ((unsigned char)(UCHAR_MAX)-LHS[i]>=RHS_image)
-				{
-				LHS[i] += RHS_image;
-				}
-			else{
-				LHS[i] = RHS_image-((unsigned char)(UCHAR_MAX)-LHS[i])
-				LHS[i] -= 1;
-				carry = true;
-				}
+			LHS[i] = RHS_image-(UCHAR_MAX-LHS[i])
+			LHS[i] -= 1;
+			carry = true;
 			}
 		}
 	while(LHS_len > ++i && RHS);

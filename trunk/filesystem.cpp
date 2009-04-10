@@ -3,12 +3,11 @@
 
 #include "filesystem.h"
 
-#include "Zaimoni.STL/Compiler.h"
-
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>	// for getcwd; POSIX
 
+#include "Zaimoni.STL/Compiler.h"
 #include "Zaimoni.STL/Logging.h"
 
 // exposed in errors.hpp
@@ -51,9 +50,7 @@ EXTERN_C void z_dirname(char* target_dirbuf,const char* const src_path)
 	strcpy(target_dirbuf,src_path);
 	char* last_sep = strrchr(target_dirbuf,ZAIMONI_PATH_SEP_CHAR);
 	if (NULL==last_sep)
-		{
 		strcpy(target_dirbuf,".");
-		}
 	else{	// POSIX: not correct for pathnames starting with //
 			// WINDOWS: correct enough (handles the intended use cases)
 		last_sep[(last_sep==target_dirbuf) ? 1 : 0] = '\x00';

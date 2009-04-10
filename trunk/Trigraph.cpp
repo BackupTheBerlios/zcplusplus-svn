@@ -52,11 +52,9 @@ are never part of a subsequent trigraph.  [Example: The sequence
 static size_t
 EnforceTrigraphsAux(size_t& Offset, char* const Text)
 {	// FORMALLY CORRECT: Kenneth Boyd, 10/17/2004
-	// this returns how much to increment Idx by (not directly passed)
-	if ('?'!=Text[1])
-		return 2;	// total miss: increment by 2
-	if ('?'!=Text[0])
-		return 1;	// partial miss: increment by 1
+	// this returns how much to increment i by (not directly passed)
+	if ('?'!=Text[1]) return 2;	// total miss: increment by 2
+	if ('?'!=Text[0]) return 1;	// partial miss: increment by 1
 
 	if ('='==Text[2])
 		{
@@ -109,7 +107,7 @@ EnforceTrigraphsAux(size_t& Offset, char* const Text)
 static size_t
 EnforceTrigraphsAuxV2(size_t& Offset, char* const Text, char* const Target)
 {	// FORMALLY CORRECT: Kenneth Boyd, 10/17/2004
-	// this returns how much to increment Idx by (not directly passed)
+	// this returns how much to increment i by (not directly passed)
 	if ('?'!=Text[1])
 		{
 		Target[0] = Text[0];
@@ -178,8 +176,9 @@ EnforceTrigraphsAuxV2(size_t& Offset, char* const Text, char* const Target)
 bool EnforceCTrigraphs(char*& Text)
 {	// FORMALLY CORRECT: Kenneth Boyd, 8/1/2002
 	// there are 10 C trigraphs of interest (?)
-// We use a modified Boyer-Moore algorithm, and compact after the left-to-right
-// sweep.  This is a candidate for a state-machine implementation.
+	// We use a modified Boyer-Moore algorithm, and compact after 
+	// the left-to-right sweep.  This is a candidate for 
+	// a state-machine implementation.
 #ifndef ZAIMONI_FORCE_ISO
 	const size_t TextLength = SafeArraySize(Text);
 #else
@@ -188,20 +187,18 @@ bool EnforceCTrigraphs(char*& Text)
 #endif
 	if (3<=TextLength)
 		{
-		size_t Idx = 0;
+		size_t i = 0;
 		size_t Offset = 0;
-		do	Idx += EnforceTrigraphsAux(Offset,Text+Idx);
-		while(Idx+2<TextLength && 0==Offset);
+		do	i += EnforceTrigraphsAux(Offset,Text+i);
+		while(i+2<TextLength && 0==Offset);
 		if (0!=Offset)
 			{
-			while(Idx+2<TextLength)
+			while(i+2<TextLength)
+				i += EnforceTrigraphsAuxV2(Offset,Text+i,Text+(i-Offset));
+			while(i<TextLength)
 				{
-				Idx += EnforceTrigraphsAuxV2(Offset,Text+Idx,Text+(Idx-Offset));
-				};
-			while(Idx<TextLength)
-				{
-				Text[Idx-Offset] = Text[Idx];
-				++Idx;
+				Text[i-Offset] = Text[i];
+				++i;
 				};
 #ifndef ZAIMONI_FORCE_ISO
 			_shrink(Text,TextLength-Offset);
