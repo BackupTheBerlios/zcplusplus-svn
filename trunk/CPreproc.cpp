@@ -1070,8 +1070,7 @@ ObjectLikeMacroEmptyString:
 								|| !macros_object_expansion.InsertNSlotsAt(1,object_macro_insertion_index)
 								|| !macros_object_expansion_pre_eval.InsertNSlotsAt(1,object_macro_insertion_index))
 								throw std::bad_alloc();
-							macros_object[object_macro_insertion_index] = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(first_token_len),1));
-							if (NULL==macros_object[object_macro_insertion_index]) throw std::bad_alloc();
+							macros_object[object_macro_insertion_index] = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
 							strncpy(macros_object[object_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
 							ZAIMONI_NULL_TERMINATE(macros_object[object_macro_insertion_index][first_token_len]);
 							}
@@ -1121,10 +1120,7 @@ ObjectLikeMacroEmptyString:
 								|| !macros_object_expansion.InsertNSlotsAt(1,object_macro_insertion_index)
 								|| !macros_object_expansion_pre_eval.InsertNSlotsAt(1,object_macro_insertion_index))
 								throw std::bad_alloc();
-
-							macros_object[object_macro_insertion_index] = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(first_token_len),1));
-							if (NULL==macros_object[object_macro_insertion_index])
-								throw std::bad_alloc();
+							macros_object[object_macro_insertion_index] = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
 
 							strncpy(macros_object[object_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
 							ZAIMONI_NULL_TERMINATE(macros_object[object_macro_insertion_index][first_token_len]);
@@ -1202,9 +1198,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 									|| !macros_function_expansion.InsertNSlotsAt(1,function_macro_insertion_index)
 									|| !macros_function_expansion_pre_eval.InsertNSlotsAt(1,function_macro_insertion_index))
 									throw std::bad_alloc();
-								macros_function[function_macro_insertion_index] = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(first_token_len),1));
-								if (NULL==macros_function[function_macro_insertion_index])
-									throw std::bad_alloc();
+								macros_function[function_macro_insertion_index] = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
 
 								strncpy(macros_function[function_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
 								ZAIMONI_NULL_TERMINATE(macros_function[function_macro_insertion_index][first_token_len]);
@@ -1250,9 +1244,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								|| !macros_function_expansion.InsertNSlotsAt(1,function_macro_insertion_index)
 								|| !macros_function_expansion_pre_eval.InsertNSlotsAt(1,function_macro_insertion_index))
 								throw std::bad_alloc();
-							macros_function[function_macro_insertion_index] = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(first_token_len),1));
-							if (NULL==macros_function[function_macro_insertion_index])
-								throw std::bad_alloc();
+							macros_function[function_macro_insertion_index] = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
 
 							strncpy(macros_function[function_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
 							ZAIMONI_NULL_TERMINATE(macros_function[function_macro_insertion_index][first_token_len]);
@@ -2122,7 +2114,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, zaimoni::auto
 									while(2<j)
 										{
 										if (C_TESTFLAG_IDENTIFIER!=pretokenized[--j].third) continue;
-										char* tmp = zaimoni::_new_buffer_nonNULL<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[j].second));
+										char* tmp = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[j].second));
 										strncpy(tmp,x+pretokenized[j].first,pretokenized[j].second);
 										if (!locked_macros.InsertSlotAt(locked_macros.size(),tmp))
 											{
@@ -3454,15 +3446,13 @@ CPreprocessor::dynamic_macro_replace_once(zaimoni::Token<char>& x, size_t& criti
 		if (NULL==used_macro_stack)
 			{
 			zaimoni::autovalarray_ptr<char*> macro_stack(1);
-			macro_stack[0] = reinterpret_cast<char*>(calloc(token_len,1));
-			if (NULL==macro_stack[0]) throw std::bad_alloc();
+			macro_stack[0] = zaimoni::_new_buffer_nonNULL_throws<char>(token_len);
 			memmove(macro_stack[0],x.data()+critical_offset,token_len);
 			intradirective_preprocess(Test,0,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion,&macro_stack);
 			}
 		else{
 			if (!used_macro_stack->InsertNSlotsAt(1,used_macro_stack->size())) throw std::bad_alloc();
-			used_macro_stack->back() = reinterpret_cast<char*>(calloc(token_len,1));
-			if (NULL==used_macro_stack->back()) throw std::bad_alloc();
+			used_macro_stack->back() = zaimoni::_new_buffer_nonNULL_throws<char>(token_len);
 			memmove(used_macro_stack->back(),x.data()+critical_offset,token_len);
 			intradirective_preprocess(Test,0,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion,used_macro_stack);
 			used_macro_stack->DeleteIdx(used_macro_stack->size()-1);
@@ -3553,20 +3543,17 @@ CPreprocessor::dynamic_macro_replace_once(zaimoni::Token<char>& x, size_t& criti
 		if (NULL==used_macro_stack)
 			{
 			zaimoni::autovalarray_ptr<char*> macro_stack(1);
-			macro_stack[0] = reinterpret_cast<char*>(calloc(token_len,1));
-			if (NULL==macro_stack[0]) throw std::bad_alloc();
+			macro_stack[0] = zaimoni::_new_buffer_nonNULL_throws<char>(token_len);
 			memmove(macro_stack[0],x.data()+critical_offset,token_len);
 
 			dynamic_function_macro_prereplace_once(macros_object, macros_object_expansion, macros_function, macros_function_arglist, macros_function_expansion, &macro_stack, formal_arguments, actual_arguments, Test);
 			}
 		else{
 			if (!used_macro_stack->InsertNSlotsAt(1,used_macro_stack->size())) throw std::bad_alloc();
-			used_macro_stack->back() = reinterpret_cast<char*>(calloc(token_len,1));
-			if (NULL==used_macro_stack->back()) throw std::bad_alloc();
+			used_macro_stack->back() = zaimoni::_new_buffer_nonNULL_throws<char>(token_len);
 			memmove(used_macro_stack->back(),x.data()+critical_offset,token_len);
 
 			dynamic_function_macro_prereplace_once(macros_object, macros_object_expansion, macros_function, macros_function_arglist, macros_function_expansion, used_macro_stack, formal_arguments, actual_arguments, Test);
-
 			used_macro_stack->DeleteIdx(used_macro_stack->size()-1);
 			}
 		_macro_replace(x,critical_offset,token_len,Test.data());

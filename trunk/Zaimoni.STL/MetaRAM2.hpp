@@ -164,6 +164,22 @@ _new_buffer_nonNULL(size_t Idx)
 }
 
 template<typename T>
+inline typename boost::disable_if<boost::type_traits::ice_and<boost::has_trivial_constructor<T>::value, boost::has_trivial_destructor<T>::value>, T*>::type
+_new_buffer_nonNULL_throws(size_t Idx)
+{
+	return new T[Idx];
+}
+
+template<typename T>
+inline typename boost::enable_if<boost::type_traits::ice_and<boost::has_trivial_constructor<T>::value, boost::has_trivial_destructor<T>::value>, T*>::type
+_new_buffer_nonNULL_throws(size_t Idx)
+{
+	T* tmp = reinterpret_cast<T*>(calloc(Idx,sizeof(T)));
+	if (NULL==tmp) throw std::bad_alloc();
+	return tmp;
+}
+
+template<typename T>
 inline typename boost::disable_if<boost::type_traits::ice_and<boost::has_trivial_constructor<T>::value, boost::has_trivial_destructor<T>::value>, void>::type
 _flush(T* _ptr)
 {

@@ -2547,8 +2547,7 @@ GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, char*
 	src_len -= 2;
 	if (target_idx+1==C_str_len)
 		{
-		char* tmp2 = reinterpret_cast<char*>(calloc(((wide_str) ? 6 : 5),1));
-		if (NULL==tmp2) throw std::bad_alloc();
+		char* tmp2 = _new_buffer_nonNULL_throws<char>((wide_str) ? 6 : 5);
 		tmp = tmp2;
 		if (wide_str) *(tmp2++) = 'L';
 		strcpy(tmp2,"'\\0'");
@@ -2561,8 +2560,7 @@ GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, char*
 		const size_t step = EscapedCharLength_C(src+i,src_len-i);
 		if (j==target_idx)
 			{
-			char* tmp2 = reinterpret_cast<char*>(calloc(((wide_str) ? 3 : 2)+step,1));
-			if (NULL==tmp2) throw std::bad_alloc();
+			char* tmp2 = _new_buffer_nonNULL_throws<char>(((wide_str) ? 3 : 2)+step);
 			tmp = tmp2;
 			if (wide_str) *(tmp2++) = 'L';
 			*(tmp2++) = '\'';
@@ -3693,7 +3691,6 @@ CPlusPlus_literal_converts_to_integer(const parse_tree& src)
 
 static parse_tree* repurpose_inner_parentheses(parse_tree& src)
 {
-	parse_tree* tmp2 = NULL;
 	if (1==src.size<0>() && is_naked_parentheses_pair(*src.data<0>()))
 		{
 		parse_tree::arglist_array tmp = src.c_array<0>()->args[0];
@@ -3703,14 +3700,12 @@ static parse_tree* repurpose_inner_parentheses(parse_tree& src)
 		src.c_array<0>()->args[0] = NULL;
 #endif
 		src.c_array<0>()->destroy();
-		tmp2 = src.c_array<0>();
+		parse_tree* const tmp2 = src.c_array<0>();
 		src.args[0] = tmp;
 
 		return tmp2;
 		};
-	tmp2 = reinterpret_cast<parse_tree*>(malloc(sizeof(parse_tree)));
-	if (NULL==tmp2) throw std::bad_alloc();
-	return tmp2;
+	return _new_buffer_nonNULL_throws<parse_tree>(1);
 }
 
 static void cancel_inner_parentheses(parse_tree& src)
