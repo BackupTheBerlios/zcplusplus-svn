@@ -5,8 +5,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-extern bool debug_tracer;
-
 #ifndef FAST_ROUTE
 #define FAST_ROUTE 2<=(UINT_MAX/UCHAR_MAX)
 // #define FAST_ROUTE 0

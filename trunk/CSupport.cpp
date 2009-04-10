@@ -955,11 +955,9 @@ static zaimoni::POD_pair<size_t,size_t> _balanced_character_count(const weak_tok
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth;
+	zaimoni::POD_pair<size_t,size_t> depth = {0,0};
 	const weak_token* const iter_end = tokenlist+tokenlist_len;
 	const weak_token* iter = tokenlist;
-	depth.first = 0;
-	depth.second = 0;
 	do	if (1==iter->token.second)
 			{
 			if 		(l_match==iter->token.first[0]) ++depth.first;
@@ -982,11 +980,9 @@ static zaimoni::POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const 
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth;
+	zaimoni::POD_pair<size_t,size_t> depth = {0, 0};
 	const weak_token* const iter_end = tokenlist+tokenlist_len;
 	const weak_token* iter = tokenlist;
-	depth.first = 0;
-	depth.second = 0;
 	do	if 		(detect_C_left_bracket_op(iter->token.first,iter->token.second)) ++depth.first;
 		else if (detect_C_right_bracket_op(iter->token.first,iter->token.second)) ++depth.second;
 	while(++iter!=iter_end);
@@ -998,11 +994,9 @@ static zaimoni::POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const 
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth;
+	zaimoni::POD_pair<size_t,size_t> depth = {0, 0};
 	const weak_token* const iter_end = tokenlist+tokenlist_len;
 	const weak_token* iter = tokenlist;
-	depth.first = 0;
-	depth.second = 0;
 	do	if 		(detect_C_left_brace_op(iter->token.first,iter->token.second)) ++depth.first;
 		else if (detect_C_right_brace_op(iter->token.first,iter->token.second)) ++depth.second;
 	while(++iter!=iter_end);
@@ -1013,11 +1007,9 @@ static zaimoni::POD_pair<size_t,size_t> _balanced_character_count(const parse_tr
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth;
+	zaimoni::POD_pair<size_t,size_t> depth = {0, 0};
 	const parse_tree* const iter_end = tokenlist+tokenlist_len;
 	const parse_tree* iter = tokenlist;
-	depth.first = 0;
-	depth.second = 0;
 	do	if (1==iter->index_tokens[0].token.second && NULL==iter->index_tokens[1].token.first)
 			{
 			if 		(l_match==iter->index_tokens[0].token.first[0]) ++depth.first;
@@ -1040,11 +1032,9 @@ static zaimoni::POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const 
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth;
+	zaimoni::POD_pair<size_t,size_t> depth = {0, 0};
 	const parse_tree* const iter_end = tokenlist+tokenlist_len;
 	const parse_tree* iter = tokenlist;
-	depth.first = 0;
-	depth.second = 0;
 	do	if (NULL==iter->index_tokens[1].token.first)
 			{
 			if 		(detect_C_left_bracket_op(iter->index_tokens[0].token.first,iter->index_tokens[0].token.second)) ++depth.first;
@@ -1059,11 +1049,9 @@ static zaimoni::POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const 
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth;
+	zaimoni::POD_pair<size_t,size_t> depth = {0, 0};
 	const parse_tree* const iter_end = tokenlist+tokenlist_len;
 	const parse_tree* iter = tokenlist;
-	depth.first = 0;
-	depth.second = 0;
 	do	if (NULL==iter->index_tokens[1].token.first)
 			{
 			if 		(detect_C_left_brace_op(iter->index_tokens[0].token.first,iter->index_tokens[0].token.second)) ++depth.first;
@@ -1085,15 +1073,14 @@ static void _construct_matched_pairs(const weak_token* tokenlist,size_t tokenlis
 		{
 		// reality-check: balanced parentheses
 		zaimoni::autovalarray_ptr<size_t> fixedstack(depth.first);
-		zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
-		size_t balanced_paren = 0;
-		size_t i = 0;
-
 		if (fixedstack.empty()) throw std::bad_alloc();
+		zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 		if (pair_fixedstack.empty()) throw std::bad_alloc();
 
 		depth.first = 0;
 		depth.second = 0;
+		size_t balanced_paren = 0;
+		size_t i = 0;
 		do	if (1==tokenlist[i].token.second)
 				{
 				assert(NULL!=tokenlist[i].token.first);
@@ -1179,14 +1166,13 @@ static void construct_matched_pairs<'[',']'>(const weak_token* tokenlist,size_t 
 		// reality-check: balanced parentheses
 		zaimoni::autovalarray_ptr<size_t> fixedstack(depth.first);
 		zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
-		size_t balanced_paren = 0;
-		size_t i = 0;
-
 		if (fixedstack.empty()) throw std::bad_alloc();
 		if (pair_fixedstack.empty()) throw std::bad_alloc();
 
 		depth.first = 0;
 		depth.second = 0;
+		size_t balanced_paren = 0;
+		size_t i = 0;
 		do	if (1==tokenlist[i].token.second)
 				{
 				assert(NULL!=tokenlist[i].token.first);
@@ -1258,14 +1244,13 @@ static void construct_matched_pairs<'{','}'>(const weak_token* tokenlist,size_t 
 		// reality-check: balanced parentheses
 		zaimoni::autovalarray_ptr<size_t> fixedstack(depth.first);
 		zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
-		size_t balanced_paren = 0;
-		size_t i = 0;
-
 		if (fixedstack.empty()) throw std::bad_alloc();
 		if (pair_fixedstack.empty()) throw std::bad_alloc();
 
 		depth.first = 0;
 		depth.second = 0;
+		size_t balanced_paren = 0;
+		size_t i = 0;
 		do	if (1==tokenlist[i].token.second)
 				{
 				assert(NULL!=tokenlist[i].token.first);
@@ -1325,68 +1310,65 @@ static void construct_matched_pairs<'{','}'>(const weak_token* tokenlist,size_t 
 
 
 static void
+_slice_error(const weak_token& src,size_t slice_count,const char cut,const std::pair<char,char>& knife)
+{
+	message_header(src);
+	INC_INFORM(ERR_STR);
+	INC_INFORM(slice_count);
+	INC_INFORM(' ');
+	INC_INFORM(cut);
+	INC_INFORM(" are unbalanced by improper grouping within ");
+	INC_INFORM(knife.first);
+	INC_INFORM(' ');
+	INFORM(knife.second);
+	zcc_errors.inc_error();
+}
+
+static void
 find_sliced_pairs(const weak_token* tokenlist, const zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >& stack1, const zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >& stack2,const std::pair<char,char>& pair1,const std::pair<char,char>& pair2)
 {
 	assert(NULL!=tokenlist);
 	if (stack1.empty()) return;
 	if (stack2.empty()) return;
-	size_t idx1 = 0;
-	size_t idx2 = 0;
+	size_t i = 0;
+	size_t j = 0;
 	do	{
-		if (stack1[idx1].second<stack2[idx2].first)
+		if (stack1[i].second<stack2[j].first)
 			{	// ok (disjoint)
-			++idx1;
+			++i;
 			continue;
 			};
-		if (stack2[idx2].second<stack1[idx1].first)
+		if (stack2[j].second<stack1[i].first)
 			{	// ok (disjoint)
-			++idx2;
+			++j;
 			continue;
 			};
-		if (stack1[idx1].first<stack2[idx2].first)
+		if (stack1[i].first<stack2[j].first)
 			{
-			if (stack2[idx2].second<stack1[idx1].second)
+			if (stack2[j].second<stack1[i].second)
 				{	// ok (proper nesting)
-				++idx1;
+				++i;
 				continue;
 				}
 			size_t slice_count = 1;
-			while(++idx1 < stack1.size() && stack1[idx1].first<stack2[idx2].first && stack2[idx2].second>=stack1[idx1].second) ++slice_count;
-			message_header(tokenlist[stack1[idx1-1].first]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(slice_count);
-			INC_INFORM(' ');
-			INC_INFORM(pair1.second);
-			INC_INFORM(" are unbalanced by improper grouping within ");
-			INC_INFORM(pair2.first);
-			INC_INFORM(' ');
-			INFORM(pair2.second);
-			zcc_errors.inc_error();
+			while(++i < stack1.size() && stack1[i].first<stack2[j].first && stack2[j].second>=stack1[i].second) ++slice_count;
+			_slice_error(tokenlist[stack1[i-1].first],slice_count,pair1.second,pair2);
 			continue;
 			}
-		if (stack2[idx2].first<stack1[idx1].first)
+		if (stack2[j].first<stack1[i].first)
 			{
-			if (stack1[idx1].second<stack2[idx2].second)
+			if (stack1[i].second<stack2[j].second)
 				{	// ok (proper nesting)
-				++idx2;
+				++j;
 				continue;
 				}
 			size_t slice_count = 1;
-			while(++idx2 < stack2.size() && stack2[idx2].first<stack1[idx1].first && stack1[idx1].second>=stack2[idx2].second) ++slice_count;
-			message_header(tokenlist[stack2[idx2-1].first]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(slice_count);
-			INC_INFORM(' ');
-			INC_INFORM(pair2.second);
-			INC_INFORM(" are unbalanced by improper grouping within ");
-			INC_INFORM(pair1.first);
-			INC_INFORM(' ');
-			INFORM(pair1.second);
-			zcc_errors.inc_error();
+			while(++j < stack2.size() && stack2[j].first<stack1[i].first && stack1[i].second>=stack2[j].second) ++slice_count;
+			_slice_error(tokenlist[stack2[j-1].first],slice_count,pair2.second,pair1);
 			continue;
 			}
 		}
-	while(idx1<stack1.size() && idx2<stack2.size());
+	while(i<stack1.size() && j<stack2.size());
 }
 
 static bool C_like_BalancingCheck(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
@@ -2260,9 +2242,8 @@ static unsigned int eval_octal_escape(const char* src, size_t src_len)
 static size_t hex_escape_length(const char* const src, const size_t ub)
 {
 	assert(NULL!=src);
-	size_t hex_len = strspn(src,C_HEXADECIMAL_DIGITS);
-	if (ub<hex_len) hex_len = ub;
-	return hex_len;
+	const size_t hex_len = strspn(src,C_HEXADECIMAL_DIGITS);
+	return (ub<hex_len) ? ub : hex_len;
 }
 
 static unsigned_fixed_int<VM_MAX_BIT_PLATFORM> eval_hex_escape(const char* src, size_t src_len)
@@ -2796,7 +2777,6 @@ bool CCharLiteralIsFalse(const char* x,size_t x_len)
 												return tmp==result;
 												}
 	};
-	return false;
 }
 
 // not sure if we need this bit, but it matches the standards
@@ -3166,7 +3146,6 @@ bool convert_to(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest,const C_PPIntCore&
 		dest *= alt_radix;
 		dest += InterpretHexadecimalDigit(*target);
 		};
-	debug_tracer = false;
 	return true;
 }
 
@@ -3243,9 +3222,7 @@ static bool C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 		const size_t promoted_type = default_promote_type(src.type_code.base_type_index);
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((promoted_type-C_TYPE::INT)/2+virtual_machine::std_int_int);
 		if (0==(promoted_type-C_TYPE::INT)%2)
-			{
 			target_machine->signed_additive_inverse(dest,machine_type);
-			}
 		else{
 			assert(dest<=target_machine->unsigned_max(machine_type));
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(target_machine->unsigned_max(machine_type));
@@ -3293,9 +3270,7 @@ static bool CPP_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 		const size_t promoted_type = default_promote_type(src.type_code.base_type_index);
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((promoted_type-C_TYPE::INT)/2+virtual_machine::std_int_int);
 		if (0==(promoted_type-C_TYPE::INT)%2)
-			{
 			target_machine->signed_additive_inverse(dest,machine_type);
-			}
 		else{
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(target_machine->unsigned_max(machine_type));
 			assert(dest<=tmp);
@@ -3725,19 +3700,17 @@ static parse_tree* repurpose_inner_parentheses(parse_tree& src)
 #ifdef ZAIMONI_FORCE_ISO
 		src.c_array<0>()->args[0].first = NULL;				 
 #else
-	src.c_array<0>()->args[0] = NULL;
+		src.c_array<0>()->args[0] = NULL;
 #endif
 		src.c_array<0>()->destroy();
 		tmp2 = src.c_array<0>();
 		src.args[0] = tmp;
 
 		return tmp2;
-		}
-	else{
-		tmp2 = reinterpret_cast<parse_tree*>(malloc(sizeof(parse_tree)));
-		if (NULL==tmp2) throw std::bad_alloc();
-		return tmp2;
-		}
+		};
+	tmp2 = reinterpret_cast<parse_tree*>(malloc(sizeof(parse_tree)));
+	if (NULL==tmp2) throw std::bad_alloc();
+	return tmp2;
 }
 
 static void cancel_inner_parentheses(parse_tree& src)
@@ -4659,14 +4632,11 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool ha
 			src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 			src.subtype = C99_UNARY_SUBTYPE_NEG;
 			assert(is_C99_unary_operator_expression<'-'>(src));
-			src.type_code = old_type;
-			return true;
 			}
-		else{	// convert to positive literal
+		else	// convert to positive literal
 			src = tmp;
-			src.type_code = old_type;
-			return true;
-			}
+		src.type_code = old_type;
+		return true;
 		};
 	if (	is_bitwise_complement_expression(*src.data<2>())
 		&&	is_bitwise_complement_expression(*src.data<2>()->data<2>()))
@@ -4745,8 +4715,7 @@ static bool locate_CPP_bitwise_complement(parse_tree& src, size_t& i, const type
 	if (	!(PARSE_OBVIOUS & src.data<0>()[i].flags)
 		&&	src.data<0>()[i].is_atomic()
 		&&	terse_locate_CPP_bitwise_complement(src,i))
-		{
-		//! \todo handle overloading
+		{	//! \todo handle overloading
 		CPP_bitwise_complement_easy_syntax_check(src.c_array<0>()[i],types);
 		return true;
 		}
@@ -5185,9 +5154,8 @@ static bool terse_C99_augment_mult_expression(parse_tree& src, size_t& i, const 
 			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
 			return true;
 			}
-		else{	// run syntax-checks against unary *
+		else	// run syntax-checks against unary *
 			C_deref_easy_syntax_check(src.c_array<0>()[i],types);
-			}
 		}
 	return false;
 }
@@ -5206,9 +5174,8 @@ static bool terse_CPP_augment_mult_expression(parse_tree& src, size_t& i, const 
 			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
 			return true;
 			}
-		else{	// run syntax-checks against unary *
+		else	// run syntax-checks against unary *
 			CPP_deref_easy_syntax_check(src.c_array<0>()[i],types);
-			}
 		}
 	return false;
 }
@@ -5275,12 +5242,9 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 		src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 		src.subtype = C99_UNARY_SUBTYPE_PLUS;
 		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
-			{
 			src.type_code = old_type;
-			}
-		else{
+		else
 			src.type_code.set_type(C_TYPE::LLONG);	// legalize
-			}
 		assert(is_C99_unary_operator_expression<'+'>(src));
 		return true;
 		};
@@ -5484,12 +5448,9 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 			src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 			src.subtype = C99_UNARY_SUBTYPE_PLUS;
 			if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
-				{
 				src.type_code = old_type;
-				}
-			else{
+			else
 				src.type_code.set_type(C_TYPE::LLONG);	// legalize
-				}
 			assert(is_C99_unary_operator_expression<'+'>(src));
 			return true;
 			}
@@ -5544,14 +5505,14 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 			if (rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation()) ub += 1;
 			if (lhs_test<rhs_test)
 				{
+				parse_tree tmp;
+				tmp.clear();
+				tmp.index_tokens[0].token.second = 1;
+				tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+				tmp.grab_index_token_location_from<0,0>(src);
 				if (rhs_negative==lhs_negative || !bool_options[boolopt::int_neg_div_rounds_away_from_zero])
 					{	// 0
-					parse_tree tmp;
-					tmp.clear();
 					tmp.index_tokens[0].token.first = "0";
-					tmp.index_tokens[0].token.second = 1;
-					tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-					tmp.grab_index_token_location_from<0,0>(src);
 					_label_one_literal(tmp,types);
 
 					// convert to parsed + literal
@@ -5561,17 +5522,10 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 					src.core_flag_update();
 					src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 					src.subtype = C99_UNARY_SUBTYPE_PLUS;
-					src.type_code = old_type;
 					assert(is_C99_unary_operator_expression<'+'>(src));
-					return true;
 					}
 				else{	// -1
-					parse_tree tmp;
-					tmp.clear();
 					tmp.index_tokens[0].token.first = "1";
-					tmp.index_tokens[0].token.second = 1;
-					tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-					tmp.grab_index_token_location_from<0,0>(src);
 					_label_one_literal(tmp,types);
 
 					// convert to parsed - literal
@@ -5581,10 +5535,10 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 					src.core_flag_update();
 					src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 					src.subtype = C99_UNARY_SUBTYPE_NEG;
-					src.type_code = old_type;
 					assert(is_C99_unary_operator_expression<'-'>(src));
-					return true;
 					}
+				src.type_code = old_type;
+				return true;
 				}
 
 			bool round_away = false;
@@ -5730,12 +5684,9 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 			src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 			src.subtype = C99_UNARY_SUBTYPE_PLUS;
 			if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
-				{
 				src.type_code = old_type;
-				}
-			else{
+			else
 				src.type_code.set_type(C_TYPE::LLONG);	// legalize
-				}
 			assert(is_C99_unary_operator_expression<'+'>(src));
 			return true;
 			}
@@ -5764,12 +5715,9 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 		src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 		src.subtype = C99_UNARY_SUBTYPE_PLUS;
 		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
-			{
 			src.type_code = old_type;
-			}
-		else{
+		else
 			src.type_code.set_type(C_TYPE::LLONG);	// legalize
-			}
 		assert(is_C99_unary_operator_expression<'+'>(src));
 		return true;
 		};
@@ -5902,25 +5850,13 @@ static void C_mult_expression_easy_syntax_check(parse_tree& src,const type_syste
 			}
 		else if (!converts_to_integerlike(src.data<1>()->type_code))
 			{
-			if (!converts_to_integerlike(src.data<2>()->type_code))
-				{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral LHS and RHS (C99 6.5.5p2)");
-				zcc_errors.inc_error();
-				return;
-				}
-			else{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral LHS (C99 6.5.5p2)");
-				zcc_errors.inc_error();
-				return;
-				}
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(converts_to_integerlike(src.data<2>()->type_code) ? " has nonintegral LHS (C99 6.5.5p2)" : " has nonintegral LHS and RHS (C99 6.5.5p2)");
+			zcc_errors.inc_error();
+			return;
 			}
 		else if (!converts_to_integerlike(src.data<2>()->type_code))
 			{
@@ -5942,25 +5878,13 @@ static void C_mult_expression_easy_syntax_check(parse_tree& src,const type_syste
 			}
 		else if (!converts_to_arithmeticlike(src.data<1>()->type_code))
 			{
-			if (!converts_to_arithmeticlike(src.data<2>()->type_code))
-				{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonarithmetic LHS and RHS (C99 6.5.5p2)");
-				zcc_errors.inc_error();
-				return;
-				}
-			else{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonarithmetic LHS (C99 6.5.5p2)");
-				zcc_errors.inc_error();
-				return;
-				}
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(converts_to_arithmeticlike(src.data<2>()->type_code) ? " has nonarithmetic LHS (C99 6.5.5p2)" : " has nonarithmetic LHS and RHS (C99 6.5.5p2)");
+			zcc_errors.inc_error();
+			return;
 			}
 		else if (!converts_to_arithmeticlike(src.data<2>()->type_code))
 			{
@@ -5993,25 +5917,13 @@ static void CPP_mult_expression_easy_syntax_check(parse_tree& src,const type_sys
 			}
 		else if (!converts_to_integerlike(src.data<1>()->type_code))
 			{
-			if (!converts_to_integerlike(src.data<2>()->type_code))
-				{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral LHS and RHS (C++98 5.6p2)");
-				zcc_errors.inc_error();
-				return;
-				}
-			else{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonintegral LHS (C++98 5.6p2)");
-				zcc_errors.inc_error();
-				return;
-				}
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(converts_to_integerlike(src.data<2>()->type_code) ? " has nonintegral LHS (C++98 5.6p2)" : " has nonintegral LHS and RHS (C++98 5.6p2)");
+			zcc_errors.inc_error();
+			return;
 			}
 		else if (!converts_to_integerlike(src.data<2>()->type_code))
 			{
@@ -6033,25 +5945,13 @@ static void CPP_mult_expression_easy_syntax_check(parse_tree& src,const type_sys
 			}
 		else if (!converts_to_arithmeticlike(src.data<1>()->type_code))
 			{
-			if (!converts_to_arithmeticlike(src.data<2>()->type_code))
-				{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonarithmetic LHS and RHS (C++98 5.6p2)");
-				zcc_errors.inc_error();
-				return;
-				}
-			else{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has nonarithmetic LHS (C++98 5.6p2)");
-				zcc_errors.inc_error();
-				return;
-				}
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(converts_to_arithmeticlike(src.data<2>()->type_code) ? " has nonarithmetic LHS and RHS (C++98 5.6p2)" : " has nonarithmetic LHS (C++98 5.6p2)");
+			zcc_errors.inc_error();
+			return;
 			}
 		else if (!converts_to_arithmeticlike(src.data<2>()->type_code))
 			{
@@ -6109,8 +6009,7 @@ static void locate_CPP_mult_expression(parse_tree& src, size_t& i, const type_sy
 	assert(i<src.size<0>());
 
 	if (terse_CPP_augment_mult_expression(src,i,types))
-		{
-		//! \todo handle operator overloading
+		{	//! \todo handle operator overloading
 		CPP_mult_expression_easy_syntax_check(src.c_array<0>()[i],types);
 		return;
 		}
@@ -6172,10 +6071,9 @@ static bool terse_C99_augment_add_expression(parse_tree& src, size_t& i, const t
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_add_operator_expression(src.data<0>()[i]));
 			return true;
-			}
-		else{	// run syntax-checks against unary + or unary -
-			C_unary_plusminus_easy_syntax_check(src.c_array<0>()[i],types);
-			}
+			};
+		// run syntax-checks against unary + or unary -
+		C_unary_plusminus_easy_syntax_check(src.c_array<0>()[i],types);
 		}
 	return false;
 }
@@ -6193,10 +6091,9 @@ static bool terse_CPP_augment_add_expression(parse_tree& src, size_t& i, const t
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_add_operator_expression(src.data<0>()[i]));
 			return true;
-			}
-		else{	// run syntax-checks against unary + or unary -
-			CPP_unary_plusminus_easy_syntax_check(src.c_array<0>()[i],types);
-			}
+			};
+		// run syntax-checks against unary + or unary -
+		CPP_unary_plusminus_easy_syntax_check(src.c_array<0>()[i],types);
 		}
 	return false;
 }
@@ -6668,25 +6565,13 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 	const bool exact_rhs_voidptr = 1==rhs_pointer && C_TYPE::VOID==src.data<2>()->type_code.base_type_index;
 	if (1==lhs_pointer && C_TYPE::VOID==src.data<1>()->type_code.base_type_index)
 		{
-		if (exact_rhs_voidptr)
-			{
-			src.flags |= parse_tree::INVALID;
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" uses void* arguments (C99 6.5.6p2,3)");
-			zcc_errors.inc_error();
-			return;
-			}
-		else{
-			src.flags |= parse_tree::INVALID;
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" uses void* left-hand argument (C99 6.5.6p2,3)");
-			zcc_errors.inc_error();
-			return;
-			}
+		src.flags |= parse_tree::INVALID;
+		message_header(src.index_tokens[0]);
+		INC_INFORM(ERR_STR);
+		INC_INFORM(src);
+		INFORM(exact_rhs_voidptr ? " uses void* arguments (C99 6.5.6p2,3)" : " uses void* left-hand argument (C99 6.5.6p2,3)");
+		zcc_errors.inc_error();
+		return;
 		}
 	else if (exact_rhs_voidptr)
 		{
@@ -6708,25 +6593,13 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
 			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index))
 				{
-				if (rhs_arithmeticlike)
-					{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has non-arithmetic non-pointer right argument (C99 6.5.6p2)");
-					zcc_errors.inc_error();
-					return;
-					}
-				else{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has non-arithmetic non-pointer arguments (C99 6.5.6p2)");
-					zcc_errors.inc_error();
-					return;
-					}
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(rhs_arithmeticlike ? " has non-arithmetic non-pointer right argument (C99 6.5.6p2)" : " has non-arithmetic non-pointer arguments (C99 6.5.6p2)");
+				zcc_errors.inc_error();
+				return;
 				}
 			else if (!rhs_arithmeticlike)
 				{
@@ -6785,25 +6658,13 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
 			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index))
 				{
-				if (rhs_arithmeticlike)
-					{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has non-arithmetic non-pointer right argument (C99 6.5.6p3)");
-					zcc_errors.inc_error();
-					return;
-					}
-				else{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has non-arithmetic non-pointer arguments (C99 6.5.6p3)");
-					zcc_errors.inc_error();
-					return;
-					}
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(rhs_arithmeticlike ? " has non-arithmetic non-pointer right argument (C99 6.5.6p3)" : " has non-arithmetic non-pointer arguments (C99 6.5.6p3)");
+				zcc_errors.inc_error();
+				return;
 				}
 			else if (!rhs_arithmeticlike)
 				{
@@ -6870,25 +6731,13 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 	const bool exact_rhs_voidptr = 1==rhs_pointer && C_TYPE::VOID==src.data<2>()->type_code.base_type_index;
 	if (1==lhs_pointer && C_TYPE::VOID==src.data<1>()->type_code.base_type_index)
 		{
-		if (exact_rhs_voidptr)
-			{
-			src.flags |= parse_tree::INVALID;
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" uses void* arguments (C++98 5.7p1,2)");
-			zcc_errors.inc_error();
-			return;
-			}
-		else{
-			src.flags |= parse_tree::INVALID;
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" uses void* left-hand argument (C++98 5.7p1,2)");
-			zcc_errors.inc_error();
-			return;
-			}
+		src.flags |= parse_tree::INVALID;
+		message_header(src.index_tokens[0]);
+		INC_INFORM(ERR_STR);
+		INC_INFORM(src);
+		INFORM(exact_rhs_voidptr ? " uses void* arguments (C++98 5.7p1,2)" : " uses void* left-hand argument (C++98 5.7p1,2)");
+		zcc_errors.inc_error();
+		return;
 		}
 	else if (exact_rhs_voidptr)
 		{
@@ -6910,25 +6759,13 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
 			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index))
 				{
-				if (rhs_arithmeticlike)
-					{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has non-arithmetic non-pointer right argument (C++98 5.7p1)");
-					zcc_errors.inc_error();
-					return;
-					}
-				else{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has non-arithmetic non-pointer arguments (C++98 5.7p1)");
-					zcc_errors.inc_error();
-					return;
-					}
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(rhs_arithmeticlike ? " has non-arithmetic non-pointer right argument (C++98 5.7p1)" : " has non-arithmetic non-pointer arguments (C++98 5.7p1)");
+				zcc_errors.inc_error();
+				return;
 				}
 			else if (!rhs_arithmeticlike)
 				{
@@ -6987,25 +6824,13 @@ static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_syst
 			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
 			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index))
 				{
-				if (rhs_arithmeticlike)
-					{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has non-arithmetic non-pointer right argument (C++98 5.7p2)");
-					zcc_errors.inc_error();
-					return;
-					}
-				else{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" has non-arithmetic non-pointer arguments (C++98 5.7p2)");
-					zcc_errors.inc_error();
-					return;
-					}
+				src.flags |= parse_tree::INVALID;
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(rhs_arithmeticlike ? " has non-arithmetic non-pointer right argument (C++98 5.7p2)" : " has non-arithmetic non-pointer arguments (C++98 5.7p2)");
+				zcc_errors.inc_error();
+				return;
 				}
 			else if (!rhs_arithmeticlike)
 				{
@@ -7097,8 +6922,7 @@ static void locate_CPP_add_expression(parse_tree& src, size_t& i, const type_sys
 	assert(i<src.size<0>());
 
 	if (terse_CPP_augment_add_expression(src,i,types))
-		{
-		//! \todo handle operator overloading
+		{	//! \todo handle operator overloading
 		CPP_add_expression_easy_syntax_check(src.c_array<0>()[i],types);
 		return;
 		}
@@ -7184,7 +7008,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 	// error if RHS is literal "out of bounds"
 	const type_spec old_type = src.type_code;
 	bool is_true = false;
-	if (literal_converts_to_bool(*src.data<2>(),is_true))
+	if (literal_converts_to_bool(*src.data<2>(),is_true) && !is_true)
 		{
 		if (!is_true)
 			{	// __ << 0 or __ >> 0: lift
@@ -7272,14 +7096,11 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 				src.subtype = C99_UNARY_SUBTYPE_NEG;
 				assert(is_C99_unary_operator_expression<'-'>(src));
-				src.type_code = old_type;
-				return true;
 				}
-			else{	// convert to positive literal
+			else	// convert to positive literal
 				src = tmp;
-				src.type_code = old_type;
-				return true;
-				}
+			src.type_code = old_type;
+			return true;
 			}
 		}
 	return false;
@@ -7964,12 +7785,9 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 		src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
 		_label_one_literal(src,types);
 		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
-			{
 			src.type_code = old_type;
-			}
-		else{
+		else
 			src.type_code.set_type(C_TYPE::LLONG);	// legalize
-			}
 		return true;
 		};
 
@@ -7984,17 +7802,11 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 		if (int_has_trapped(src,res_int,hard_error)) return false;
 
 		if 		(res_int==lhs_int)
-			{	// lhs & rhs = lhs; conserve type
+			// lhs & rhs = lhs; conserve type
 			src.eval_to_arg<1>(0);
-			src.type_code = old_type;
-			return true;
-			}
 		else if (res_int==rhs_int)
-			{	// lhs & rhs = rhs; conserve type
+			// lhs & rhs = rhs; conserve type
 			src.eval_to_arg<2>(0);
-			src.type_code = old_type;
-			return true;
-			}
 		else{
 			parse_tree tmp;
 			const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
@@ -8018,15 +7830,12 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 				src.subtype = C99_UNARY_SUBTYPE_NEG;
 				assert(is_C99_unary_operator_expression<'-'>(src));
-				src.type_code = old_type;
-				return true;
 				}
-			else{	// convert to positive literal
+			else	// convert to positive literal
 				src = tmp;
-				src.type_code = old_type;
-				return true;
-				}
 			}
+		src.type_code = old_type;
+		return true;
 		}
 	return false;
 }
@@ -8193,18 +8002,14 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 			src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 			src.subtype = C99_UNARY_SUBTYPE_NEG;
 			assert(is_C99_unary_operator_expression<'-'>(src));
-			src.type_code = old_type;
-			return true;
 			}
-		else{	// convert to positive literal
+		else	// convert to positive literal
 			src = tmp;
-			src.type_code = old_type;
-			return true;
-			}
+		src.type_code = old_type;
+		return true;
 		}
 	return false;
 }
-
 
 static void C_bitwise_XOR_easy_syntax_check(parse_tree& src,const type_system& types)
 {
@@ -8345,17 +8150,11 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 		res_int |= rhs_int;
 //		res_int.mask_to(target_machine->C_bit(machine_type));	// shouldn't need this
 		if 		(res_int==lhs_int)
-			{	// lhs | rhs = lhs; conserve type
+			// lhs | rhs = lhs; conserve type
 			src.eval_to_arg<1>(0);
-			src.type_code = old_type;
-			return true;
-			}
 		else if (res_int==rhs_int)
-			{	// lhs | rhs = rhs; conserve type
+			// lhs | rhs = rhs; conserve type
 			src.eval_to_arg<2>(0);
-			src.type_code = old_type;
-			return true;
-			}
 		else{
 			if (int_has_trapped(src,res_int,hard_error)) return false;
 
@@ -8380,15 +8179,12 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 				src.subtype = C99_UNARY_SUBTYPE_NEG;
 				assert(is_C99_unary_operator_expression<'-'>(src));
-				src.type_code = old_type;
-				return true;
 				}
-			else{	// convert to positive literal
+			else	// convert to positive literal
 				src = tmp;
-				src.type_code = old_type;
-				return true;
-				}
 			}
+		src.type_code = old_type;
+		return true;
 		}
 	return false;
 }
@@ -8456,23 +8252,12 @@ static bool binary_infix_failed_boolean_arguments(parse_tree& src, const char* s
 	if (!converts_to_bool(src.data<1>()->type_code))
 		{
 		src.flags |= parse_tree::INVALID;
-		if (!converts_to_bool(src.data<2>()->type_code))
-			{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INC_INFORM(" has nonscalar LHS and RHS ");
-			INFORM(standard);
-			zcc_errors.inc_error();
-			}
-		else{
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INC_INFORM(" has nonscalar LHS ");
-			INFORM(standard);
-			zcc_errors.inc_error();
-			}
+		message_header(src.index_tokens[0]);
+		INC_INFORM(ERR_STR);
+		INC_INFORM(src);
+		INC_INFORM(converts_to_bool(src.data<2>()->type_code) ? " has nonscalar LHS " : " has nonscalar LHS and RHS ");
+		INFORM(standard);
+		zcc_errors.inc_error();
 		return true;
 		}
 	else if (!converts_to_bool(src.data<2>()->type_code))
@@ -8849,9 +8634,8 @@ static bool eval_conditional_op(parse_tree& src, func_traits<bool (*)(const pars
 			INC_INFORM("invalid ? : operator optimized to valid ");
 			INFORM(src);
 			}
-		else{
+		else
 			src.type_code = old_type;
-			};
 		return true;
 		}
 	return false;
@@ -8925,9 +8709,8 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 				}
 			//! \todo test cases at preprocessor level
 			else if (0==src.data<0>()->type_code.pointer_power_after_array_decay() && is_innate_definite_type(src.data<0>()->type_code.base_type_index) && is_innate_definite_type(src.data<2>()->type_code.base_type_index))
-				{	// standard arithmetic conversions
+				// standard arithmetic conversions
 				src.type_code.set_type(arithmetic_reconcile(src.data<0>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
-				}
 			//! \todo --do-what-i-mean can handle elementary integer types with same indirection as well
 			else if (C_TYPE::NOT_VOID==src.data<0>()->type_code.base_type_index || C_TYPE::NOT_VOID==src.data<2>()->type_code.base_type_index)
 				{
@@ -9034,9 +8817,8 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 					}
 				}
 			else if (0==src.data<0>()->type_code.pointer_power_after_array_decay() && is_innate_definite_type(src.data<0>()->type_code.base_type_index) && is_innate_definite_type(src.data<2>()->type_code.base_type_index))
-				{	// standard arithmetic conversions
+				// standard arithmetic conversions
 				src.type_code.set_type(arithmetic_reconcile(src.data<0>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
-				}
 			//! \todo --do-what-i-mean can handle elementary integer types with same indirection as well
 			else if (C_TYPE::NOT_VOID==src.data<0>()->type_code.base_type_index || C_TYPE::NOT_VOID==src.data<2>()->type_code.base_type_index)
 				{
@@ -9556,17 +9338,14 @@ static void eval_string_literal_deref(parse_tree& src,const type_system& types,c
 		src.flags |= parse_tree::INVALID;
 		zcc_errors.inc_error();
 		return;
-		}
-	else{
-		char* tmp2 = NULL;
-		assert(tmp.representable_as_uint());
-		GetCCharacterLiteralAt(str_lit.first,str_lit.second,tmp.to_uint(),tmp2);
-		assert(NULL!=tmp2);
-		src.destroy();	// str_lit goes invalid here, don't use again
-		src.grab_index_token_from<0>(tmp2,C_TESTFLAG_CHAR_LITERAL);
-		_label_one_literal(src,types);
-		return;
-		}
+		};
+	char* tmp2 = NULL;
+	assert(tmp.representable_as_uint());
+	GetCCharacterLiteralAt(str_lit.first,str_lit.second,tmp.to_uint(),tmp2);
+	assert(NULL!=tmp2);
+	src.destroy();	// str_lit goes invalid here, don't use again
+	src.grab_index_token_from<0>(tmp2,C_TESTFLAG_CHAR_LITERAL);
+	_label_one_literal(src,types);
 }
 
 static bool
