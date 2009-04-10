@@ -214,7 +214,9 @@ bool process_options(const size_t argc, char* argv[])
 		int index = recognize_bool_opt(argv[i]);
 		if (0<=index)
 			{	// handle directly
+			assert(STATIC_SIZE(option_map_bool)>(size_t)index);
 			const size_t j = option_map_bool[index].second;
+			assert(STATIC_SIZE(bool_options)>j);
 			bool_options[j] = !bool_options_default[j];
 			last_arg_used_in_option = i;
 			continue;
@@ -225,44 +227,44 @@ bool process_options(const size_t argc, char* argv[])
 				// -x C++
 				// -x=C++
 				// -xC++
-			if (MAX_OPT_STRING>option_map_string[index].second)
+			assert(STATIC_SIZE(option_map_string)>(size_t)index);
+			assert(STATIC_SIZE(string_options)>option_map_string[index].second);
+			char* opt_target = NULL;
+			if (!strcmp(argv[i],option_map_string[index].first))
 				{
-				char* opt_target = NULL;
-				if (!strcmp(argv[i],option_map_string[index].first))
-					{
-					if (argc-1 > i) opt_target = argv[++i];
-					}
-				else{
-					opt_target = argv[i]+strlen(option_map_string[index].first);
-					if ('=' == *opt_target) ++opt_target;
-					}
-				last_arg_used_in_option = i;
-				if (NULL!=opt_target && (option_handler_string[option_map_string[index].second])(opt_target)) continue;
-				INC_INFORM("Bad syntax: option ");
-				INFORM(option_map_string[index].first);
-				continue;
+				if (argc-1 > i) opt_target = argv[++i];
 				}
+			else{
+				opt_target = argv[i]+strlen(option_map_string[index].first);
+				if ('=' == *opt_target) ++opt_target;
+				}
+			last_arg_used_in_option = i;
+			assert(NULL!=option_handler_string[option_map_string[index].second]);
+			if (NULL!=opt_target && (option_handler_string[option_map_string[index].second])(opt_target)) continue;
+			INC_INFORM("Bad syntax: option ");
+			INFORM(option_map_string[index].first);
+			continue;
 			}
 		index = recognize_int_opt(argv[i]);
 		if (0<=index)
 			{
-			if (MAX_OPT_INT>option_map_int[index].second)
+			assert(STATIC_SIZE(option_map_int)>(size_t)index);
+			assert(STATIC_SIZE(int_options)>option_map_int[index].second);
+			char* opt_target = NULL;
+			if (!strcmp(argv[i],option_map_int[index].first))
 				{
-				char* opt_target = NULL;
-				if (!strcmp(argv[i],option_map_int[index].first))
-					{
-					if (argc-1 > i) opt_target = argv[++i];
-					}
-				else{
-					opt_target = argv[i]+strlen(option_map_int[index].first);
-					if ('=' == *opt_target) ++opt_target;
-					}
-				last_arg_used_in_option = i;
-				if (NULL!=opt_target && (option_handler_int[option_map_int[index].second])(opt_target)) continue;
-				INC_INFORM("Bad syntax: option ");
-				INFORM(option_map_int[index].first);
-				continue;
+				if (argc-1 > i) opt_target = argv[++i];
 				}
+			else{
+				opt_target = argv[i]+strlen(option_map_int[index].first);
+				if ('=' == *opt_target) ++opt_target;
+				}
+			last_arg_used_in_option = i;
+			assert(NULL!=option_handler_int[option_map_int[index].second]);
+			if (NULL!=opt_target && (option_handler_int[option_map_int[index].second])(opt_target)) continue;
+			INC_INFORM("Bad syntax: option ");
+			INFORM(option_map_int[index].first);
+			continue;
 			};
 		if (argc-1>i)
 			{
@@ -359,7 +361,6 @@ main(int argc, char* argv[])
 		FATAL("]");
 		};
 
-
 	try	{
 		autovalarray_ptr<Token<char>* > TokenList;
 		InitializeCLexerDefs(target_machine);
@@ -403,6 +404,7 @@ main(int argc, char* argv[])
 		size_t i = 0;
 		while(list_size>i)
 			{
+			assert(NULL!=TokenList[i]);
 			STL_PTR_STRING_TO_STDOUT(TokenList[i]);
 			if (list_size<=i+1 || TokenList[i]->logical_line.first!=TokenList[i+1]->logical_line.first || strcmp(TokenList[i]->src_filename,TokenList[i+1]->src_filename))
 				STRING_LITERAL_TO_STDOUT("\n");
@@ -422,6 +424,6 @@ main(int argc, char* argv[])
 	catch(...)
 		{
 		INFORM("Unhandled exception");
-		}
+		};
 	return EXIT_SUCCESS;
 }
