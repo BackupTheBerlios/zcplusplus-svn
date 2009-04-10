@@ -265,13 +265,14 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// set up the negative signs
 	tmp[LIMITS_CHAR_MIN_LINE]->append((target_machine.char_is_signed_char()) ? " -" : " 0");	// char is unsigned: 0
 
+	// C99 5.2.4.2.1p1: types for UCHAR_MAX, USHRT_MAX are target-dependent
 	// unsigned character limits
 	tmp[LIMITS_UCHAR_MAX_LINE]->append(z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_char>(),buf+1,10)-1);
-	tmp[LIMITS_UCHAR_MAX_LINE]->append('U');	// C99 5.2.4.2.1 p1 : requires unsigned int
+	if (1==target_machine.C_sizeof_int()) tmp[LIMITS_UCHAR_MAX_LINE]->append('U');
 	if (!target_machine.char_is_signed_char())
 		{
 		tmp[LIMITS_CHAR_MAX_LINE]->append(buf);
-		tmp[LIMITS_CHAR_MAX_LINE]->append('U');	// C99 5.2.4.2.1 p1 : requires unsigned int
+		if (1==target_machine.C_sizeof_int()) tmp[LIMITS_CHAR_MAX_LINE]->append('U');
 		}
 	// signed character limits
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> s_max(target_machine.signed_max<virtual_machine::std_int_char>());
@@ -289,7 +290,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 
 	// unsigned short limits
 	tmp[LIMITS_USHRT_MAX_LINE]->append(z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_short>(),buf+1,10)-1);
-	tmp[LIMITS_USHRT_MAX_LINE]->append('U');	// C99 5.2.4.2.1 p1 : requires unsigned int
+	if (target_machine.C_sizeof_short()>=target_machine.C_sizeof_int()) tmp[LIMITS_USHRT_MAX_LINE]->append('U');
 	// signed short limits
 	s_max = target_machine.signed_max<virtual_machine::std_int_short>();
 	tmp[LIMITS_SHRT_MAX_LINE]->append(z_ucharint_toa(s_max,buf+1,10)-1);
@@ -396,12 +397,19 @@ static const char* signed_suffix_from_machine(const virtual_machine::std_int_enu
 }
 
 //! \bug balancing feature envy vs minimal interface
-static const char* unsigned_suffix_from_machine(const virtual_machine::std_int_enum x)
+// GCC compatibility: C99 7.18.4.1p1 (for stdint.h) requires that the INT_C
+// and UINT_C constants be of an integral constant type corresponding
+// to the type.  While strictly speaking there is no such type below int,
+// the integer promotions do elevate types below int to int upon use in 
+// any arithmetic operator (it is a machine-specific optimization 
+// to not do so).  This has no effect on INT_C, but UINT_C is paradoxical.  
+// C99 5.2.4.2.1p1 (for limits.h) is clearer.
+static const char* unsigned_suffix_from_machine(const virtual_machine::std_int_enum x,const virtual_machine::CPUInfo& target_machine)
 {
 	switch(x)
 	{
-	case virtual_machine::std_int_char:	return "U";
-	case virtual_machine::std_int_short:	return "U";
+	case virtual_machine::std_int_char:	return (1<target_machine.C_sizeof_int()) ? NULL : "U";
+	case virtual_machine::std_int_short:	return (target_machine.C_sizeof_short()<target_machine.C_sizeof_int()) ? NULL : "U";
 	case virtual_machine::std_int_int:	return "U";
 	case virtual_machine::std_int_long:	return "UL";
 	case virtual_machine::std_int_long_long:	return "ULL";
@@ -1050,7 +1058,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		memset_strcpy<sizeof("#define ")-1,sizeof(define_buf)>(define_buf,"UINT");
 		strcat(define_buf,buf+1);
 		strcat(define_buf,"_C(A) A");
-		const char* int_suffix = unsigned_suffix_from_machine(least_type);
+		const char* int_suffix = unsigned_suffix_from_machine(least_type,target_machine);
 		if (NULL!=int_suffix)
 			{
 			strcat(define_buf,"##");
