@@ -3188,34 +3188,42 @@ static bool _CPP_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& 
 	return false;
 }
 
-static bool C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
+// return value: literal to parse, whether additive inverse applies
+static POD_pair<const parse_tree*,bool>
+_find_intlike_literal(const parse_tree* src)
 {
-	const parse_tree* src_image = &src;
-	bool is_add_inv = false;
-	while(converts_to_integer(src_image->type_code))
+	assert(NULL!=src);
+	POD_pair<const parse_tree*,bool> ret = {src,false};
+	while(converts_to_integer(ret.first->type_code))
 		{
-		if 		(is_C99_unary_operator_expression<'-'>(*src_image))
+		if 		(is_C99_unary_operator_expression<'-'>(*ret.first))
 			{
-			is_add_inv = !is_add_inv;
-			src_image = src.data<2>();
-			assert(NULL!=src_image);
+			ret.second = !ret.second;
+			ret.first = ret.first->data<2>();
+			assert(NULL!=ret.first);
 			}
-		else if (is_C99_unary_operator_expression<'+'>(*src_image))
+		else if (is_C99_unary_operator_expression<'+'>(*ret.first))
 			{
-			src_image = src.data<2>();
-			assert(NULL!=src_image);
+			ret.first = ret.first->data<2>();
+			assert(NULL!=ret.first);
 			}
 		else
 			break;
-		}
+		};
+	return ret;
+}
 
-	if (	!src_image->is_atomic()
-		||	!(PARSE_PRIMARY_EXPRESSION & src_image->flags)
-		||	C_TYPE::INTEGERLIKE==src_image->type_code.base_type_index)
+static bool C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
+{
+	const POD_pair<const parse_tree*,bool> actual = _find_intlike_literal(&src);
+
+	if (	!actual.first->is_atomic()
+		||	!(PARSE_PRIMARY_EXPRESSION & actual.first->flags)
+		||	C_TYPE::INTEGERLIKE==actual.first->type_code.base_type_index)
 		return false;	
 
-	if (!_C99_intlike_literal_to_VM(dest,*src_image)) return false;
-	if (is_add_inv)
+	if (!_C99_intlike_literal_to_VM(dest,*actual.first)) return false;
+	if (actual.second)
 		{
 		const size_t promoted_type = default_promote_type(src.type_code.base_type_index);
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((promoted_type-C_TYPE::INT)/2+virtual_machine::std_int_int);
@@ -3223,61 +3231,42 @@ static bool C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 			target_machine->signed_additive_inverse(dest,machine_type);
 		else{
 			assert(dest<=target_machine->unsigned_max(machine_type));
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(target_machine->unsigned_max(machine_type));
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 			tmp -= dest;
-			tmp += 1;
 			tmp.mask_to(target_machine->C_bit(machine_type));
 			dest = tmp;
 			}
-		}
+		};
 	return true;
 }
 
 static bool CPP_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
 {
-	const parse_tree* src_image = &src;
-	bool is_add_inv = false;
-	while(converts_to_integer(src_image->type_code))
-		{
-		if 		(is_C99_unary_operator_expression<'-'>(*src_image))
-			{
-			is_add_inv = !is_add_inv;
-			src_image = src.data<2>();
-			assert(NULL!=src_image);
-			}
-		else if (is_C99_unary_operator_expression<'+'>(*src_image))
-			{
-			src_image = src.data<2>();
-			assert(NULL!=src_image);
-			}
-		else
-			break;
-		}
+	const POD_pair<const parse_tree*,bool> actual = _find_intlike_literal(&src);
 
-	if (!src_image->is_atomic()) return false;
-	if (!_CPP_intlike_literal_to_VM(dest,*src_image))
+	if (!actual.first->is_atomic()) return false;
+	if (!_CPP_intlike_literal_to_VM(dest,*actual.first))
 		{
-		if (	!(PARSE_PRIMARY_EXPRESSION & src_image->flags)
-			||	C_TYPE::INTEGERLIKE==src_image->type_code.base_type_index)
+		if (	!(PARSE_PRIMARY_EXPRESSION & actual.first->flags)
+			||	C_TYPE::INTEGERLIKE==actual.first->type_code.base_type_index)
 			return false;	
 
-		if (!_C99_intlike_literal_to_VM(dest,*src_image)) return false;
-		}
-	if (is_add_inv)
+		if (!_C99_intlike_literal_to_VM(dest,*actual.first)) return false;
+		};
+	if (actual.second)
 		{
 		const size_t promoted_type = default_promote_type(src.type_code.base_type_index);
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((promoted_type-C_TYPE::INT)/2+virtual_machine::std_int_int);
 		if (0==(promoted_type-C_TYPE::INT)%2)
 			target_machine->signed_additive_inverse(dest,machine_type);
 		else{
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(target_machine->unsigned_max(machine_type));
-			assert(dest<=tmp);
+			assert(dest<=target_machine->unsigned_max(machine_type));
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 			tmp -= dest;
-			tmp += 1;
 			tmp.mask_to(target_machine->C_bit(machine_type));
 			dest = tmp;
 			}
-		}
+		};
 	return true;
 }
 
