@@ -10,14 +10,21 @@
 
 struct C_PPOctalInteger : public C_PPIntCore
 {
-	static bool is(const char* x,size_t token_len) {assert(NULL!=x); assert(0<token_len); C_PPOctalInteger target; return is(x,token_len,target);};
+	static bool is(const char* x,size_t token_len)
+		{
+		assert(NULL!=x);
+		assert(0<token_len);
+		C_PPOctalInteger target;
+		return is(x,token_len,target);
+		};
 	static bool is(const char* x,size_t token_len,C_PPOctalInteger& target);
 
 	uintmax_t bits_required() const;
 	bool to_rawdata(unsigned char*& target,size_t& bitcount) const;
 
-	uintmax_t to_umax() {return z_atoumax(ptr,8);};	// inherits errno weirdness
-	intmax_t to_imax() {return imax_from_umax(is_negative,z_atoumax(ptr,10));};	// inherits errno weirdness; signals that CRTP is appropriate
+	// inherits errno weirdness
+	uintmax_t to_umax() {return z_atoumax(ptr,8);};
+	intmax_t to_imax() {return imax_from_umax(is_negative,z_atoumax(ptr,8));};	// signals that CRTP is appropriate
 };
 
 // usual: -1 <, 0 ==, 1 >

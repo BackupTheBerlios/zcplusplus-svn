@@ -12,6 +12,7 @@ C_PPOctalInteger::is(const char* x,size_t token_len,C_PPOctalInteger& target)
 {
 	assert(NULL!=x);
 	assert(0<token_len);
+	assert(token_len<=strlen(x));
 	// put in some data to signal badness in case of failure
 	target.ptr = NULL;
 	target.radix = 0;
@@ -23,7 +24,7 @@ C_PPOctalInteger::is(const char* x,size_t token_len,C_PPOctalInteger& target)
 		if (0 == --token_len) return false;
 		++x;
 		}
-	if ('0'!= *x || 'X'==x[1] || 'x'==x[1]) return false;
+	if ('X'==x[1] || 'x'==x[1]) return false;
 	target.digit_span = strspn(x,"01234567");
 	target.radix = 8;
 	target.ptr = x;
@@ -102,8 +103,7 @@ int cmp(const C_PPOctalInteger& LHS, const C_PPOctalInteger& RHS)
 		++RHS_ptr;
 		};
 
-	int test_cmp 	= (LHS_digit_span<RHS_digit_span) ? -1
-					: (LHS_digit_span>RHS_digit_span) ? 1 : 0;
+	int test_cmp = zaimoni::cmp(LHS_digit_span,RHS_digit_span);
 	if (!test_cmp) test_cmp = strncmp(LHS_ptr,RHS_ptr,LHS_digit_span);
 	if (LHS.is_negative) return -test_cmp;
 	return test_cmp;

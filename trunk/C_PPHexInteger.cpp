@@ -13,6 +13,7 @@ C_PPHexInteger::is(const char* x,size_t token_len,C_PPHexInteger& target)
 {
 	assert(NULL!=x);
 	assert(0<token_len);
+	assert(token_len<=strlen(x));
 	// as a matter of parsing convenience we allow unary -
 	// unary + should be automatically reduced out when parsing
 
@@ -110,8 +111,7 @@ int cmp(const C_PPHexInteger& LHS, const C_PPHexInteger& RHS)
 		++RHS_ptr;
 		};
 
-	int test_cmp 	= (LHS_digit_span<RHS_digit_span) ? -1
-					: (LHS_digit_span>RHS_digit_span) ? 1 : 0;
+	int test_cmp = zaimoni::cmp(LHS_digit_span,RHS_digit_span);
 	if (!test_cmp) test_cmp = strncmp(LHS_ptr,RHS_ptr,LHS_digit_span);
 	if (LHS.is_negative) return -test_cmp;
 	return test_cmp;

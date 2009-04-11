@@ -13,6 +13,7 @@ C_PPDecimalInteger::is(const char* x,size_t token_len,C_PPDecimalInteger& target
 {
 	assert(NULL!=x);
 	assert(0<token_len);
+	assert(token_len<=strlen(x));
 	// as a matter of parsing convenience we allow unary -
 	// unary + should be automatically reduced out when parsing
 	target.ptr = NULL;
@@ -75,7 +76,11 @@ bool C_PPDecimalInteger::to_rawdata(unsigned char*& target,size_t& bitcount) con
 	unsigned char* tmp = reinterpret_cast<unsigned char*>(calloc(target_bytecount,1));
 	if (NULL==tmp) return false;
 	unsigned char* tmp2 = reinterpret_cast<unsigned char*>(calloc(target_bytecount,1));
-	if (NULL==tmp2) return false;
+	if (NULL==tmp2)
+		{
+		free(tmp);
+		return false;
+		}
 
 	while(0<LHS_digit_span)
 		{
@@ -105,8 +110,7 @@ int cmp(const C_PPDecimalInteger& LHS, const C_PPDecimalInteger& RHS)
 	assert(1<=RHS.digit_span && 10==RHS.radix);
 	if (LHS.is_negative && !RHS.is_negative) return -1;
 	if (!LHS.is_negative && RHS.is_negative) return 1;
-	int test_cmp 	= (LHS.digit_span<RHS.digit_span) ? -1
-					: (LHS.digit_span>RHS.digit_span) ? 1 : 0;
+	int test_cmp = zaimoni::cmp(LHS.digit_span,RHS.digit_span);
 	if (!test_cmp) test_cmp = strncmp(LHS.ptr,RHS.ptr,LHS.digit_span);
 	if (LHS.is_negative) return -test_cmp;
 	return test_cmp;

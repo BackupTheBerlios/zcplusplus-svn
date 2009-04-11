@@ -11,9 +11,10 @@ C_PPDecimalFloat::is(const char* x,size_t token_len,C_PPDecimalFloat& target)
 {
 	assert(NULL!=x);
 	assert(0<token_len);
+	assert(token_len<=strlen(x));
 	// as a matter of parsing convenience we allow unary -
 	// unary + should be automatically reduced out when parsing
-	if ('\0'==x[0] || !strchr("-." DECIMAL_DIGITS,x[0])) return false;
+	if (!strchr("-." DECIMAL_DIGITS,x[0])) return false;
 	target.is_negative = ('-'==x[0]);
 	if (target.is_negative)
 		{
@@ -44,7 +45,6 @@ C_PPDecimalFloat::is(const char* x,size_t token_len,C_PPDecimalFloat& target)
 		target.ptr_predecimal = x;
 		x += target.digit_span_predecimal;
 		token_len -= target.digit_span_predecimal;
-		if ('\0'==x[0] || !strchr(".Ee",x[0])) return false;
 		if ('.'==x[0])
 			{
 			if (0== --token_len)
@@ -57,9 +57,7 @@ C_PPDecimalFloat::is(const char* x,size_t token_len,C_PPDecimalFloat& target)
 				}
 			target.digit_span_postdecimal = strspn(++x,DECIMAL_DIGITS);
 			if (0==target.digit_span_postdecimal)
-				{
 				target.ptr_postdecimal = NULL;
-				}
 			else{
 				target.ptr_postdecimal = x;
 				if (token_len<target.digit_span_postdecimal) target.digit_span_postdecimal = token_len;
@@ -72,12 +70,13 @@ C_PPDecimalFloat::is(const char* x,size_t token_len,C_PPDecimalFloat& target)
 				x += target.digit_span_postdecimal;
 				}
 			}
+		else if ('E'!=x[0] && 'e'!=x[0]) return false;
 		};
-	if ('\0'!=x[0] && strchr("Ee",x[0]))
+	if ('E'==x[0] || 'e'==x[0])
 		{
 		if (0== --token_len) return false;
 		++x;
-		if ('\0'!=x[0] && strchr("+-",x[0]))
+		if ('+'==x[0] || '-'==x[0])
 			{
 			if (0== --token_len) return false;
 			target.exp_is_negative = ('-'==x[0]);

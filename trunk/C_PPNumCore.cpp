@@ -20,6 +20,7 @@ C_PPIntCore::is(const char* x,size_t token_len,C_PPIntCore& target)
 {
 	assert(NULL!=x);
 	assert(0<token_len);
+	assert(token_len<=strlen(x));
 	// put in some data to signal badness in case of failure
 	target.ptr = NULL;
 	target.radix = 0;

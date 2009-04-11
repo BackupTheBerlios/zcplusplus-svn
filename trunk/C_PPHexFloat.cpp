@@ -12,16 +12,17 @@ C_PPHexFloat::is(const char* x,size_t token_len,C_PPHexFloat& target)
 {
 	assert(NULL!=x);
 	assert(0<token_len);
+	assert(token_len<=strlen(x));
 	// as a matter of parsing convenience we allow unary -
 	// unary + should be automatically reduced out when parsing
-	if ('\0'==x[0] || !strchr("-0",x[0])) return false;
+	if ('-'!=x[0] && '0'!=x[0]) return false;
 	target.is_negative = ('-'==x[0]);
 	if (target.is_negative)
 		{
 		if (0 == --token_len) return false;
 		++x;
 		}
-	if (2>=token_len || '0'!=x[0] || ('\0'==x[1] || !strchr("Xx",x[1]))) return false;
+	if (2>=token_len || '0'!=x[0] || ('X'!=x[1] && 'x'!=x[1])) return false;
 	x += 2;
 	token_len -= 2;
 
@@ -49,7 +50,6 @@ C_PPHexFloat::is(const char* x,size_t token_len,C_PPHexFloat& target)
 		target.ptr_predecimal = x;
 		x += target.digit_span_predecimal;
 		token_len -= target.digit_span_predecimal;
-		if ('\0'==x[0] || !strchr(".Pp",x[0])) return false;
 		if ('.'==x[0])
 			{
 			if (0== --token_len)
@@ -62,9 +62,7 @@ C_PPHexFloat::is(const char* x,size_t token_len,C_PPHexFloat& target)
 				}
 			target.digit_span_postdecimal = strspn(++x,HEXADECIMAL_DIGITS);
 			if (0==target.digit_span_postdecimal)
-				{
 				target.ptr_postdecimal = NULL;
-				}
 			else{
 				target.ptr_postdecimal = x;
 				if (token_len<target.digit_span_postdecimal) target.digit_span_postdecimal = token_len;
@@ -77,12 +75,13 @@ C_PPHexFloat::is(const char* x,size_t token_len,C_PPHexFloat& target)
 				x += target.digit_span_postdecimal;
 				}
 			}
+		else if ('P'!=x[0] && 'p'!=x[0]) return false;
 		};
-	if ('\0'!=x[0] && strchr("Pp",x[0]))
+	if ('P'==x[0] || 'p'==x[0])
 		{
 		if (0== --token_len) return false;
 		++x;
-		if ('\0'!=x[0] && strchr("+-",x[0]))
+		if ('+'==x[0] || '-'==x[0])
 			{
 			if (0== --token_len) return false;
 			target.exp_is_negative = ('-'==x[0]);
