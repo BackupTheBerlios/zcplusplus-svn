@@ -3229,13 +3229,8 @@ static bool C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((promoted_type-C_TYPE::INT)/2+virtual_machine::std_int_int);
 		if (0==(promoted_type-C_TYPE::INT)%2)
 			target_machine->signed_additive_inverse(dest,machine_type);
-		else{
-			assert(dest<=target_machine->unsigned_max(machine_type));
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
-			tmp -= dest;
-			tmp.mask_to(target_machine->C_bit(machine_type));
-			dest = tmp;
-			}
+		else
+			target_machine->unsigned_additive_inverse(dest,machine_type);
 		};
 	return true;
 }
@@ -3259,13 +3254,8 @@ static bool CPP_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((promoted_type-C_TYPE::INT)/2+virtual_machine::std_int_int);
 		if (0==(promoted_type-C_TYPE::INT)%2)
 			target_machine->signed_additive_inverse(dest,machine_type);
-		else{
-			assert(dest<=target_machine->unsigned_max(machine_type));
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
-			tmp -= dest;
-			tmp.mask_to(target_machine->C_bit(machine_type));
-			dest = tmp;
-			}
+		else
+			target_machine->unsigned_additive_inverse(dest,machine_type);
 		};
 	return true;
 }
@@ -4293,13 +4283,9 @@ static void C_deref_easy_syntax_check(parse_tree& src,const type_system& types)
 	src.type_code = src.data<2>()->type_code;
 	src.type_code.traits |= type_spec::lvalue;	// result is lvalue; C99 unclear regarding string literals, follow C++98
 	if (0<src.type_code.pointer_power)
-		{
 		--src.type_code.pointer_power;
-		}
 	else if (0<src.type_code.static_array_size)
-		{
 		src.type_code.static_array_size = 0;
-		}
 	else{
 		message_header(src.index_tokens[0]);
 		INC_INFORM(ERR_STR);
@@ -4318,13 +4304,9 @@ static void CPP_deref_easy_syntax_check(parse_tree& src,const type_system& types
 	src.type_code = src.data<2>()->type_code;
 	src.type_code.traits |= type_spec::lvalue;	// result is lvalue
 	if (0<src.type_code.pointer_power)
-		{
 		--src.type_code.pointer_power;
-		}
 	else if (0<src.type_code.static_array_size)
-		{
 		src.type_code.static_array_size = 0;
-		}
 	else{
 		message_header(src.index_tokens[0]);
 		INC_INFORM(ERR_STR);
@@ -4774,12 +4756,10 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,func_trai
 	if (converts_to_integer(src.data<2>()->type_code) && 1==(src.type_code.base_type_index-C_TYPE::INT)%2 && (PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
 		{	// unsigned...we're fine
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int = target_machine->unsigned_max(machine_type);
-		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> src_int;
 		const type_spec old_type = src.type_code;
-		intlike_literal_to_VM(src_int,*src.data<2>());
-		assert(res_int>=src_int);
-		(res_int -= src_int) += 1;
+		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
+		intlike_literal_to_VM(res_int,*src.data<2>());
+		target_machine->unsigned_additive_inverse(res_int,machine_type);
 
 		//! \todo flag failures to reduce as RAM-stalled
 		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
@@ -5345,17 +5325,13 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 				{
 				if (lhs_negative) 
 					{
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 					target_machine->signed_additive_inverse(res_int,machine_type_old);
-					tmp -= res_int;
-					res_int = tmp;
+					target_machine->unsigned_additive_inverse(res_int,machine_type_old);
 					};
 				if (rhs_negative)
 					{
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-					tmp -= rhs_int;
-					rhs_int = tmp;
+					target_machine->unsigned_additive_inverse(rhs_int,machine_type_old);
 					};
 				};
 			res_int *= rhs_int;
@@ -5580,17 +5556,13 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 				{
 				if (lhs_negative) 
 					{
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 					target_machine->signed_additive_inverse(res_int,machine_type_old);
-					tmp -= res_int;
-					res_int = tmp;
+					target_machine->unsigned_additive_inverse(res_int,machine_type_old);
 					};
 				if (rhs_negative)
 					{
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-					tmp -= rhs_int;
-					rhs_int = tmp;
+					target_machine->unsigned_additive_inverse(rhs_int,machine_type_old);
 					};
 				};
 			res_int /= rhs_int;
@@ -5778,17 +5750,13 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 				{
 				if (lhs_negative) 
 					{
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 					target_machine->signed_additive_inverse(res_int,machine_type_old);
-					tmp -= res_int;
-					res_int = tmp;
+					target_machine->unsigned_additive_inverse(res_int,machine_type_old);
 					};
 				if (rhs_negative)
 					{
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-					tmp -= rhs_int;
-					rhs_int = tmp;
+					target_machine->unsigned_additive_inverse(rhs_int,machine_type_old);
 					};
 				};
 			res_int %= rhs_int;
@@ -6250,17 +6218,13 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 						{
 						if (lhs_negative) 
 							{
-							unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 							target_machine->signed_additive_inverse(res_int,machine_type_old);
-							tmp -= res_int;
-							res_int = tmp;
+							target_machine->unsigned_additive_inverse(res_int,machine_type_old);
 							};
 						if (rhs_negative)
 							{
-							unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 							target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-							tmp -= rhs_int;
-							rhs_int = tmp;
+							target_machine->unsigned_additive_inverse(rhs_int,machine_type_old);
 							};
 						};
 					res_int += rhs_int;
@@ -6464,17 +6428,13 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 						{
 						if (lhs_negative) 
 							{
-							unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 							target_machine->signed_additive_inverse(res_int,machine_type_old);
-							tmp -= res_int;
-							res_int = tmp;
+							target_machine->unsigned_additive_inverse(res_int,machine_type_old);
 							};
 						if (rhs_negative)
 							{
-							unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 							target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-							tmp -= rhs_int;
-							rhs_int = tmp;
+							target_machine->unsigned_additive_inverse(rhs_int,machine_type_old);
 							};
 						};
 					res_int -= rhs_int;

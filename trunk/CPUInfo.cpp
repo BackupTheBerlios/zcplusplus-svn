@@ -86,6 +86,16 @@ void CPUInfo::signed_additive_inverse(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& s
 	src_int = tmp;
 }
 
+void CPUInfo::unsigned_additive_inverse(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,std_int_enum machine_type) const
+{
+	assert(machine_type);
+	assert(src_int<=unsigned_max(machine_type));
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
+	tmp -= src_int;
+	tmp.mask_to(C_bit(machine_type));
+	src_int = tmp;
+}
+
 }	// end namespace virtual_machine
 
 #undef C_sizeof_char
