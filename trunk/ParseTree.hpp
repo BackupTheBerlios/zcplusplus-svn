@@ -231,7 +231,7 @@ struct parse_tree
 		}
 
 	static bool collapse_matched_pair(parse_tree& src, const zaimoni::POD_pair<size_t,size_t>& target);
-	template<size_t dest_idx,size_t src_idx> void grab_index_token_location_from(parse_tree& tmp)
+	template<size_t dest_idx,size_t src_idx> void grab_index_token_location_from(const parse_tree& tmp)
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>dest_idx);
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>src_idx);

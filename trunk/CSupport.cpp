@@ -3717,8 +3717,7 @@ static void cancel_outermost_parentheses(parse_tree& src)
  * 
  * \return true iff ( ... ) expression was recognized
  */
-bool
-inspect_potential_paren_primary_expression(parse_tree& src, size_t& err_count)
+static bool inspect_potential_paren_primary_expression(parse_tree& src)
 {
 	assert(!(PARSE_OBVIOUS & src.flags));
 	if (is_naked_parentheses_pair(src))
@@ -3732,7 +3731,7 @@ inspect_potential_paren_primary_expression(parse_tree& src, size_t& err_count)
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INFORM("tried to use () as expression (C99 6.5.2p1/C++98 5.2p1)");
-			++err_count;
+			zcc_errors.inc_error();
 			return true;
 			};
 		if (1==content_length && (PARSE_PRIMARY_EXPRESSION & src.data<0>()->flags))
@@ -4472,8 +4471,7 @@ static bool locate_CPP_logical_NOT(parse_tree& src, size_t& i, const type_system
 	assert(src.data<0>()[i].is_atomic());
 
 	if (terse_locate_CPP_logical_NOT(src,i))
-		{
-		//! \todo handle operator overloading
+		{	//! \todo handle operator overloading
 		CPP_logical_NOT_easy_syntax_check(src.c_array<0>()[i],types);
 		return true;
 		}
@@ -4482,16 +4480,14 @@ static bool locate_CPP_logical_NOT(parse_tree& src, size_t& i, const type_system
 
 static bool VM_to_token(const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,const size_t base_type_index,zaimoni::POD_pair<char*,zaimoni::lex_flags>& dest)
 {
-	const uintmax_t res = src_int.to_uint();
-	const char* suffix = literal_suffix(base_type_index);
+	const char* const suffix = literal_suffix(base_type_index);
 	char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
 	dest.second = literal_flags(base_type_index);
 	dest.second |= C_TESTFLAG_DECIMAL;
-	z_umaxtoa(res,buf,10);
+	z_ucharint_toa(src_int,buf,10);
 	assert(!suffix || 3>=strlen(suffix));
 	assert(dest.second);
 	if (suffix) strcat(buf,suffix);
-	assert(strlen(buf));
 
 	dest.first = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(strlen(buf)),1));
 	if (!dest.first) return false;
@@ -4518,6 +4514,31 @@ static bool int_has_trapped(parse_tree& src,const unsigned_fixed_int<VM_MAX_BIT_
 		return true;
 		}
 	return false;
+}
+
+static void force_unary_negative_literal(parse_tree& src,const parse_tree& tmp)
+{
+	assert(0==src.size<0>());
+	assert(0==src.size<1>());
+	assert(1==src.size<2>());
+	assert(NULL==src.index_tokens[1].token.first);
+	src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+	*src.c_array<2>() = tmp;
+	src.core_flag_update();
+	src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+	src.subtype = C99_UNARY_SUBTYPE_NEG;
+	assert(is_C99_unary_operator_expression<'-'>(src));
+}
+
+static bool VM_to_literal(parse_tree& dest, const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,const parse_tree& src,const type_system& types)
+{
+	zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+	if (!VM_to_token(src_int,src.type_code.base_type_index,new_token)) return false;
+	dest.clear();
+	dest.grab_index_token_from<0>(new_token.first,new_token.second);
+	dest.grab_index_token_location_from<0,0>(src);
+	_label_one_literal(dest,types);
+	return true;
 }
 
 static bool terse_locate_C99_bitwise_complement(parse_tree& src, size_t& i)
@@ -4573,32 +4594,19 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool ha
 		{
 		const type_spec old_type = src.type_code;
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((old_type.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
-		intlike_literal_to_VM(res_int,*src.data<2>());
 		res_int.auto_bitwise_complement();
 		res_int.mask_to(target_machine->C_bit(machine_type));
 
 		if (int_has_trapped(src,res_int,hard_error)) return false;
 
-		parse_tree tmp;
 		const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
 		if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
-		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-		//! \todo flag failures to reduce as RAM-stalled
-		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-		tmp.clear();
-		tmp.grab_index_token_from<0>(new_token.first,new_token.second);
-		tmp.grab_index_token_location_from<0,0>(src);
-		_label_one_literal(tmp,types);
+		parse_tree tmp;
+		if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
 		if (negative_signed_int)
-			{	// convert to parsed - literal
-			src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-			*src.c_array<2>() = tmp;
-			src.core_flag_update();
-			src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-			src.subtype = C99_UNARY_SUBTYPE_NEG;
-			assert(is_C99_unary_operator_expression<'-'>(src));
-			}
+			// convert to parsed - literal
+			force_unary_negative_literal(src,tmp);
 		else	// convert to positive literal
 			src = tmp;
 		src.type_code = old_type;
@@ -4764,7 +4772,7 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,func_trai
 		//! \todo flag failures to reduce as RAM-stalled
 		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
 		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-		src.c_array<2>()->grab_index_token_from<0>(new_token.first,new_token.second | C_TESTFLAG_DECIMAL);
+		src.c_array<2>()->grab_index_token_from<0>(new_token.first,new_token.second);
 		src.eval_to_arg<2>(0);
 		src.type_code = old_type;
 		return true;
@@ -4807,12 +4815,12 @@ static void C_unary_plusminus_easy_syntax_check(parse_tree& src,const type_syste
 			src.flags |= parse_tree::INVALID;
 			src.type_code.set_type(0);
 			if (!(parse_tree::INVALID & src.data<2>()->flags))
-				{
+				{	// NOTE: unary + on pointer is legal in C++98
 				src.c_array<2>()->flags |= parse_tree::INVALID;
 				message_header(src.index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM(src);
-				INFORM(" applies unary + to a pointer (C99 6.5.3.3p1)");	// NOTE: unary + on pointer is legal in C++98
+				INFORM(" applies unary + to a pointer (C99 6.5.3.3p1)");
 				zcc_errors.inc_error();
 				}
 			return;
@@ -5298,24 +5306,12 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 
 				target_machine->signed_additive_inverse(lhs_test,machine_type_old);
 				// convert to parsed - literal
-				zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-				if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 				parse_tree tmp;
-				tmp.clear();
-				tmp.index_tokens[0].token.first = new_token.first;
-				tmp.index_tokens[0].token.second = strlen(new_token.first);
-				tmp.index_tokens[0].flags = new_token.second;
-				tmp.grab_index_token_location_from<0,0>(src);
-				_label_one_literal(tmp,types);
+				if (!VM_to_literal(tmp,lhs_test,src,types)) return false;
 
-				src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-				*src.c_array<2>() = tmp;
 				src.DeleteIdx<1>(0);
-				src.core_flag_update();
-				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-				src.subtype = C99_UNARY_SUBTYPE_NEG;
+				force_unary_negative_literal(src,tmp);
 				src.type_code = old_type;
-				assert(is_C99_unary_operator_expression<'-'>(src));
 				return true;
 				}
 			res_int = lhs_test;
@@ -5337,15 +5333,8 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 			res_int *= rhs_int;
 			}
 		// convert to parsed + literal
-		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 		parse_tree tmp;
-		tmp.clear();
-		tmp.index_tokens[0].token.first = new_token.first;
-		tmp.index_tokens[0].token.second = strlen(new_token.first);
-		tmp.index_tokens[0].flags = new_token.second;
-		tmp.grab_index_token_location_from<0,0>(src);
-		_label_one_literal(tmp,types);
+		if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
 		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
 		*src.c_array<2>() = tmp;
@@ -5489,13 +5478,8 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 					_label_one_literal(tmp,types);
 
 					// convert to parsed - literal
-					src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-					*src.c_array<2>() = tmp;
 					src.DeleteIdx<1>(0);
-					src.core_flag_update();
-					src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-					src.subtype = C99_UNARY_SUBTYPE_NEG;
-					assert(is_C99_unary_operator_expression<'-'>(src));
+					force_unary_negative_literal(src,tmp);
 					}
 				src.type_code = old_type;
 				return true;
@@ -5514,24 +5498,12 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 				if (round_away) lhs_test += 1;
 				target_machine->signed_additive_inverse(lhs_test,machine_type_old);
 				// convert to parsed - literal
-				zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-				if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 				parse_tree tmp;
-				tmp.clear();
-				tmp.index_tokens[0].token.first = new_token.first;
-				tmp.index_tokens[0].token.second = strlen(new_token.first);
-				tmp.index_tokens[0].flags = new_token.second;
-				tmp.grab_index_token_location_from<0,0>(src);
-				_label_one_literal(tmp,types);
+				if (!VM_to_literal(tmp,lhs_test,src,types)) return false;
 
-				src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-				*src.c_array<2>() = tmp;
 				src.DeleteIdx<1>(0);
-				src.core_flag_update();
-				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-				src.subtype = C99_UNARY_SUBTYPE_NEG;
+				force_unary_negative_literal(src,tmp);
 				src.type_code = old_type;
-				assert(is_C99_unary_operator_expression<'-'>(src));
 				return true;
 				}
 			if (ub<lhs_test)
@@ -5569,15 +5541,8 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 			}
 
 		// convert to parsed + literal
-		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 		parse_tree tmp;
-		tmp.clear();
-		tmp.index_tokens[0].token.first = new_token.first;
-		tmp.index_tokens[0].token.second = strlen(new_token.first);
-		tmp.index_tokens[0].flags = new_token.second;
-		tmp.grab_index_token_location_from<0,0>(src);
-		_label_one_literal(tmp,types);
+		if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
 		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
 		*src.c_array<2>() = tmp;
@@ -5721,24 +5686,12 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 					}
 				else{
 					// convert to parsed - literal
-					zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-					if (!VM_to_token(lhs_test,old_type.base_type_index,new_token)) return false;
 					parse_tree tmp;
-					tmp.clear();
-					tmp.index_tokens[0].token.first = new_token.first;
-					tmp.index_tokens[0].token.second = strlen(new_token.first);
-					tmp.index_tokens[0].flags = new_token.second;
-					tmp.grab_index_token_location_from<0,0>(src);
-					_label_one_literal(tmp,types);
+					if (!VM_to_literal(tmp,lhs_test,src,types)) return false;
 
-					src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-					*src.c_array<2>() = tmp;
 					src.DeleteIdx<1>(0);
-					src.core_flag_update();
-					src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-					src.subtype = C99_UNARY_SUBTYPE_NEG;
+					force_unary_negative_literal(src,tmp);
 					src.type_code = old_type;
-					assert(is_C99_unary_operator_expression<'-'>(src));
 					return true;
 					}
 				};
@@ -5763,15 +5716,8 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 			}
 
 		// convert to parsed + literal
-		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 		parse_tree tmp;
-		tmp.clear();
-		tmp.index_tokens[0].token.first = new_token.first;
-		tmp.index_tokens[0].token.second = strlen(new_token.first);
-		tmp.index_tokens[0].flags = new_token.second;
-		tmp.grab_index_token_location_from<0,0>(src);
-		_label_one_literal(tmp,types);
+		if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
 		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
 		*src.c_array<2>() = tmp;
@@ -6191,24 +6137,12 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 					if (result_is_negative)
 						{
 						// convert to parsed - literal
-						zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-						if (!VM_to_token(lhs_test,old_type.base_type_index,new_token)) return false;
 						parse_tree tmp;
-						tmp.clear();
-						tmp.index_tokens[0].token.first = new_token.first;
-						tmp.index_tokens[0].token.second = strlen(new_token.first);
-						tmp.index_tokens[0].flags = new_token.second;
-						tmp.grab_index_token_location_from<0,0>(src);
-						_label_one_literal(tmp,types);
+						if (!VM_to_literal(tmp,lhs_test,src,types)) return false;
 
-						src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-						*src.c_array<2>() = tmp;
 						src.DeleteIdx<1>(0);
-						src.core_flag_update();
-						src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-						src.subtype = C99_UNARY_SUBTYPE_NEG;
+						force_unary_negative_literal(src,tmp);
 						src.type_code = old_type;
-						assert(is_C99_unary_operator_expression<'-'>(src));
 						return true;
 						};
 					res_int = lhs_test;
@@ -6231,15 +6165,8 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 					}
 
 				// convert to parsed + literal
-				zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-				if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 				parse_tree tmp;
-				tmp.clear();
-				tmp.index_tokens[0].token.first = new_token.first;
-				tmp.index_tokens[0].token.second = strlen(new_token.first);
-				tmp.index_tokens[0].flags = new_token.second;
-				tmp.grab_index_token_location_from<0,0>(src);
-				_label_one_literal(tmp,types);
+				if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
 				src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
 				*src.c_array<2>() = tmp;
@@ -6401,24 +6328,12 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 					if (result_is_negative)
 						{
 						// convert to parsed - literal
-						zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-						if (!VM_to_token(lhs_test,old_type.base_type_index,new_token)) return false;
 						parse_tree tmp;
-						tmp.clear();
-						tmp.index_tokens[0].token.first = new_token.first;
-						tmp.index_tokens[0].token.second = strlen(new_token.first);
-						tmp.index_tokens[0].flags = new_token.second;
-						tmp.grab_index_token_location_from<0,0>(src);
-						_label_one_literal(tmp,types);
+						if (!VM_to_literal(tmp,lhs_test,src,types)) return false;
 
-						src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-						*src.c_array<2>() = tmp;
 						src.DeleteIdx<1>(0);
-						src.core_flag_update();
-						src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-						src.subtype = C99_UNARY_SUBTYPE_NEG;
+						force_unary_negative_literal(src,tmp);
 						src.type_code = old_type;
-						assert(is_C99_unary_operator_expression<'-'>(src));
 						return true;
 						};
 					res_int = lhs_test;
@@ -6441,15 +6356,8 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 					}
 
 				// convert to parsed + literal
-				zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-				if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 				parse_tree tmp;
-				tmp.clear();
-				tmp.index_tokens[0].token.first = new_token.first;
-				tmp.index_tokens[0].token.second = strlen(new_token.first);
-				tmp.index_tokens[0].flags = new_token.second;
-				tmp.grab_index_token_location_from<0,0>(src);
-				_label_one_literal(tmp,types);
+				if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
 				src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
 				*src.c_array<2>() = tmp;
@@ -7019,27 +6927,16 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 			else	// if (C99_SHIFT_SUBTYPE_RIGHT==src.subtype)
 				res_int >>= rhs_int.to_uint();
 
-			parse_tree tmp;
 			const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
 			const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
 			if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
-			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-			//! \todo flag failures to reduce as RAM-stalled
-			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-			tmp.clear();
-			tmp.grab_index_token_from<0>(new_token.first,new_token.second);
-			tmp.grab_index_token_location_from<0,0>(src);
-			_label_one_literal(tmp,types);
+			parse_tree tmp;
+			if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
 			if (negative_signed_int)
 				{	// convert to parsed - literal
-				src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-				*src.c_array<2>() = tmp;
 				src.DeleteIdx<1>(0);
-				src.core_flag_update();
-				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-				src.subtype = C99_UNARY_SUBTYPE_NEG;
-				assert(is_C99_unary_operator_expression<'-'>(src));
+				force_unary_negative_literal(src,tmp);
 				}
 			else	// convert to positive literal
 				src = tmp;
@@ -7752,28 +7649,16 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 			// lhs & rhs = rhs; conserve type
 			src.eval_to_arg<2>(0);
 		else{
-			parse_tree tmp;
 			const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
 			const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
 			if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
-			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-			//! \todo flag failures to reduce as RAM-stalled
-			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-			tmp.clear();
-			tmp.grab_index_token_from<0>(new_token.first,new_token.second);
-			tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-			tmp.grab_index_token_location_from<0,0>(src);
-			_label_one_literal(tmp,types);
+			parse_tree tmp;
+			if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
 			if (negative_signed_int)
 				{	// convert to parsed - literal
-				src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-				*src.c_array<2>() = tmp;
 				src.DeleteIdx<1>(0);
-				src.core_flag_update();
-				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-				src.subtype = C99_UNARY_SUBTYPE_NEG;
-				assert(is_C99_unary_operator_expression<'-'>(src));
+				force_unary_negative_literal(src,tmp);
 				}
 			else	// convert to positive literal
 				src = tmp;
@@ -7925,27 +7810,16 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 
 		if (int_has_trapped(src,res_int,hard_error)) return false;
 
-		parse_tree tmp;
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
 		const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
 		if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
-		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-		//! \todo flag failures to reduce as RAM-stalled
-		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-		tmp.clear();
-		tmp.grab_index_token_from<0>(new_token.first,new_token.second);
-		tmp.grab_index_token_location_from<0,0>(src);
-		_label_one_literal(tmp,types);
+		parse_tree tmp;
+		if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
 		if (negative_signed_int)
 			{	// convert to parsed - literal
-			src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-			*src.c_array<2>() = tmp;
 			src.DeleteIdx<1>(0);
-			src.core_flag_update();
-			src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-			src.subtype = C99_UNARY_SUBTYPE_NEG;
-			assert(is_C99_unary_operator_expression<'-'>(src));
+			force_unary_negative_literal(src,tmp);
 			}
 		else	// convert to positive literal
 			src = tmp;
@@ -8102,27 +7976,16 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 		else{
 			if (int_has_trapped(src,res_int,hard_error)) return false;
 
-			parse_tree tmp;
 			const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
 			const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
 			if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
-			zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
-			//! \todo flag failures to reduce as RAM-stalled
-			if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
-			tmp.clear();
-			tmp.grab_index_token_from<0>(new_token.first,new_token.second);
-			tmp.grab_index_token_location_from<0,0>(src);
-			_label_one_literal(tmp,types);
+			parse_tree tmp;
+			if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
 			if (negative_signed_int)
 				{	// convert to parsed - literal
-				src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-				*src.c_array<2>() = tmp;
 				src.DeleteIdx<1>(0);
-				src.core_flag_update();
-				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-				src.subtype = C99_UNARY_SUBTYPE_NEG;
-				assert(is_C99_unary_operator_expression<'-'>(src));
+				force_unary_negative_literal(src,tmp);
 				}
 			else	// convert to positive literal
 				src = tmp;
@@ -8914,7 +8777,7 @@ static size_t C99_locate_expressions(parse_tree& src,const size_t parent_identif
 									|| (top_level && 0==identifier_count);	// top-level, no identifiers
 
 	if (parens_are_expressions || top_level || parent_identifier_count==identifier_count)
-		if (inspect_potential_paren_primary_expression(src,err_count))
+		if (inspect_potential_paren_primary_expression(src))
 			{
 			if (top_level && 1==src.size<0>() && is_naked_parentheses_pair(src))
 				src.eval_to_arg<0>(0);
@@ -8992,7 +8855,7 @@ static size_t CPlusPlus_locate_expressions(parse_tree& src,const size_t parent_i
 
 	// try for ( expression )
 	if (parens_are_expressions || top_level || parent_identifier_count==identifier_count)
-		if (inspect_potential_paren_primary_expression(src,err_count))
+		if (inspect_potential_paren_primary_expression(src))
 			{
 			if (top_level && 1==src.size<0>() && is_naked_parentheses_pair(src))
 				src.eval_to_arg<0>(0);
