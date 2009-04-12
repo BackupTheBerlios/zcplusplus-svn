@@ -81,7 +81,7 @@ const char* string_options[MAX_OPT_STRING]
 
 
 static const POD_triple<const char*, size_t, const char*> option_map_int[]
-=	{	{ "-fdiagnostics-limit",		intopt::error_ub, 					"how many errors are too many (default 100)\n"}
+=	{	{ "-fmax-errors",		intopt::error_ub, 					"how many errors are too many (default 100)\n"}	// GFortran compatibility
 	};
 
 // exposed in errors.hpp
