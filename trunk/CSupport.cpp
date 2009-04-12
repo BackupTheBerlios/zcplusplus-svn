@@ -3415,15 +3415,14 @@ static void _label_literals(parse_tree& src,const type_system& types)
 			{
 			if (2<=str_span.second || C_TESTFLAG_STRING_LITERAL!=src.data<0>()[str_span.second-2].index_tokens[0].flags)
 				{	// psuedo-concatenate
-					// that this is still a constant primary expression, as we are just pretending that the string concatenation went through
+					// this is still a constant primary expression, as we are just pretending that the string concatenation went through
 				src.c_array<0>()[str_span.second-1].grab_index_token_from<1,0>(src.c_array<0>()[str_span.second]);
 				src.DeleteIdx<0>(str_span.second);
 				if (1>=(str_count -= 2)) break;
 				str_span.second -= 2;
 				want_second_slidedown = true;
 				}
-			else{
-				// more than two strings to psuedo-concatenate
+			else{	// more than two strings to psuedo-concatenate
 				zaimoni::POD_pair<size_t,size_t> scan = {str_span.second-2,str_span.second};
 				while(0<scan.first && C_TESTFLAG_STRING_LITERAL==src.data<0>()[scan.first-1].index_tokens[0].flags) --scan.first;
 				if (parse_tree::collapse_matched_pair(src,scan))
@@ -3443,11 +3442,8 @@ static void _label_literals(parse_tree& src,const type_system& types)
 			{
 			while(C_TESTFLAG_STRING_LITERAL!=src.data<0>()[str_span.first].index_tokens[0].flags)
 				{
-#ifdef NDEBUG
 				++str_span.first;
-#else
-				assert(str_span.second > ++str_span.first);
-#endif
+				assert(str_span.second > str_span.first);
 				};
 			RAMfail = false;
 			}
@@ -3455,52 +3451,12 @@ static void _label_literals(parse_tree& src,const type_system& types)
 			{
 			while(C_TESTFLAG_STRING_LITERAL!=src.data<0>()[str_span.second].index_tokens[0].flags)
 				{
-#ifdef NDEBUG
 				--str_span.second;
-#else
-				assert(str_span.first < --str_span.second);
-#endif
+				assert(str_span.first < str_span.second);
 				};
 			RAMfail = false;
 			}		
 		if (RAMfail) throw std::bad_alloc();	// couldn't do anything at all: stalled
-		}
-}
-
-static void _label_cplusplus_literals(parse_tree& src)
-{	// intercept: boolean literals true, false
-	// intercept: primary expression/reserved word this
-	size_t i = src.size<0>();
-	while(0<i)
-		{
-		if (!src.data<0>()[--i].is_atomic()) continue;
-		if (C_TESTFLAG_IDENTIFIER==src.index_tokens[0].flags)
-			{
-			if		(4==src.index_tokens[0].token.second)
-				{
-				if 		(!strncmp(src.index_tokens[0].token.first,"true",4))
-					{
-					src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
-					src.type_code.set_type(C_TYPE::BOOL);
-					}
-				else if (!strncmp(src.index_tokens[0].token.first,"this",4))
-					{	//! \todo would like a non-null/null tracer pair of flags
-					src.flags |= PARSE_PRIMARY_EXPRESSION;
-					src.type_code.base_type_index = C_TYPE::NOT_VOID;
-					src.type_code.pointer_power = 1;
-					src.type_code.static_array_size = 0;
-					src.type_code.traits = 0;
-					}
-				}
-			else if (5==src.index_tokens[0].token.second)
-				{
-				if (!strncmp(src.index_tokens[0].token.first,"false",5))
-					{
-					src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
-					src.type_code.set_type(C_TYPE::BOOL);
-					}	
-				}
-			}
 		}
 }
 
@@ -3659,8 +3615,7 @@ static bool C99_literal_converts_to_integer(const parse_tree& src)
 	//! \todo --do-what-i-mean should try to identify floats that are really integers
 }
 
-static bool
-CPlusPlus_literal_converts_to_integer(const parse_tree& src)
+static bool CPP_literal_converts_to_integer(const parse_tree& src)
 {
 	if (!src.is_atomic()) return false;
 	if (token_is_string<4>(src.index_tokens[0].token,"true") || token_is_string<5>(src.index_tokens[0].token,"false")) return true;
@@ -4182,13 +4137,9 @@ static bool CPP_literal_converts_to_bool(const parse_tree& src, bool& is_true)
 		is_true = false;
 		return true;
 		}
-	else if (token_is_string<4>(src.index_tokens[0].token,"true"))
+	else if (	token_is_string<4>(src.index_tokens[0].token,"true")
+			 ||	token_is_string<4>(src.index_tokens[0].token,"this"))
 		{
-		is_true = true;
-		return true;
-		}
-	else if (token_is_string<4>(src.index_tokens[0].token,"this"))
-		{	// this is mandated to be non-NULL
 		is_true = true;
 		return true;
 		};
@@ -4516,18 +4467,32 @@ static bool int_has_trapped(parse_tree& src,const unsigned_fixed_int<VM_MAX_BIT_
 	return false;
 }
 
-static void force_unary_negative_literal(parse_tree& src,const parse_tree& tmp)
+static void force_unary_negative_literal(parse_tree& dest,const parse_tree& src)
 {
-	assert(0==src.size<0>());
-	assert(0==src.size<1>());
-	assert(1==src.size<2>());
-	assert(NULL==src.index_tokens[1].token.first);
-	src.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-	*src.c_array<2>() = tmp;
-	src.core_flag_update();
-	src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-	src.subtype = C99_UNARY_SUBTYPE_NEG;
-	assert(is_C99_unary_operator_expression<'-'>(src));
+	assert(0==dest.size<0>());
+	assert(0==dest.size<1>());
+	assert(1==dest.size<2>());
+	assert(NULL==dest.index_tokens[1].token.first);
+	dest.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+	*dest.c_array<2>() = src;
+	dest.core_flag_update();
+	dest.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+	dest.subtype = C99_UNARY_SUBTYPE_NEG;
+	assert(is_C99_unary_operator_expression<'-'>(dest));
+}
+
+static void force_unary_positive_literal(parse_tree& dest,const parse_tree& src)
+{
+	assert(0==dest.size<0>());
+	assert(0==dest.size<1>());
+	assert(1==dest.size<2>());
+	assert(NULL==dest.index_tokens[1].token.first);
+	dest.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+	*dest.c_array<2>() = src;
+	dest.core_flag_update();
+	dest.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+	dest.subtype = C99_UNARY_SUBTYPE_PLUS;
+	assert(is_C99_unary_operator_expression<'+'>(dest));
 }
 
 static bool VM_to_literal(parse_tree& dest, const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,const parse_tree& src,const type_system& types)
@@ -5207,17 +5172,12 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 		_label_one_literal(tmp,types);
 
 		// convert to parsed + literal
-		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-		*src.c_array<2>() = tmp;
 		src.DeleteIdx<1>(0);
-		src.core_flag_update();
-		src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-		src.subtype = C99_UNARY_SUBTYPE_PLUS;
+		force_unary_positive_literal(src,tmp);
 		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
 			src.type_code = old_type;
 		else
 			src.type_code.set_type(C_TYPE::LLONG);	// legalize
-		assert(is_C99_unary_operator_expression<'+'>(src));
 		return true;
 		};
 
@@ -5336,14 +5296,9 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 		parse_tree tmp;
 		if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
-		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-		*src.c_array<2>() = tmp;
 		src.DeleteIdx<1>(0);
-		src.core_flag_update();
-		src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-		src.subtype = C99_UNARY_SUBTYPE_PLUS;
+		force_unary_positive_literal(src,tmp);
 		src.type_code = old_type;
-		assert(is_C99_unary_operator_expression<'+'>(src));
 		return true;
 		}
 	return false;
@@ -5390,17 +5345,12 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 			_label_one_literal(tmp,types);
 
 			// convert to parsed + literal
-			src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-			*src.c_array<2>() = tmp;
 			src.DeleteIdx<1>(0);
-			src.core_flag_update();
-			src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-			src.subtype = C99_UNARY_SUBTYPE_PLUS;
+			force_unary_positive_literal(src,tmp);
 			if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
 				src.type_code = old_type;
 			else
 				src.type_code.set_type(C_TYPE::LLONG);	// legalize
-			assert(is_C99_unary_operator_expression<'+'>(src));
 			return true;
 			}
 		//! \todo change target for formal verification; would like to inject a constraint against div-by-integer-zero here
@@ -5465,13 +5415,8 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 					_label_one_literal(tmp,types);
 
 					// convert to parsed + literal
-					src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-					*src.c_array<2>() = tmp;
 					src.DeleteIdx<1>(0);
-					src.core_flag_update();
-					src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-					src.subtype = C99_UNARY_SUBTYPE_PLUS;
-					assert(is_C99_unary_operator_expression<'+'>(src));
+					force_unary_positive_literal(src,tmp);
 					}
 				else{	// -1
 					tmp.index_tokens[0].token.first = "1";
@@ -5544,14 +5489,9 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 		parse_tree tmp;
 		if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
-		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-		*src.c_array<2>() = tmp;
 		src.DeleteIdx<1>(0);
-		src.core_flag_update();
-		src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-		src.subtype = C99_UNARY_SUBTYPE_PLUS;
+		force_unary_positive_literal(src,tmp);
 		src.type_code = old_type;
-		assert(is_C99_unary_operator_expression<'+'>(src));
 		return true;
 		}
 	return false;
@@ -5598,17 +5538,12 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 			_label_one_literal(tmp,types);
 
 			// convert to parsed + literal
-			src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-			*src.c_array<2>() = tmp;
 			src.DeleteIdx<1>(0);
-			src.core_flag_update();
-			src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-			src.subtype = C99_UNARY_SUBTYPE_PLUS;
+			force_unary_positive_literal(src,tmp);
 			if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
 				src.type_code = old_type;
 			else
 				src.type_code.set_type(C_TYPE::LLONG);	// legalize
-			assert(is_C99_unary_operator_expression<'+'>(src));
 			return true;
 			}
 		//! \todo change target for formal verification; would like to inject a constraint against div-by-integer-zero here
@@ -5629,17 +5564,12 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 		_label_one_literal(tmp,types);
 
 		// convert to parsed + literal
-		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-		*src.c_array<2>() = tmp;
 		src.DeleteIdx<1>(0);
-		src.core_flag_update();
-		src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-		src.subtype = C99_UNARY_SUBTYPE_PLUS;
+		force_unary_positive_literal(src,tmp);
 		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
 			src.type_code = old_type;
 		else
 			src.type_code.set_type(C_TYPE::LLONG);	// legalize
-		assert(is_C99_unary_operator_expression<'+'>(src));
 		return true;
 		};
 	if (lhs_converted && rhs_converted)
@@ -5719,14 +5649,9 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 		parse_tree tmp;
 		if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
-		src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-		*src.c_array<2>() = tmp;
 		src.DeleteIdx<1>(0);
-		src.core_flag_update();
-		src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-		src.subtype = C99_UNARY_SUBTYPE_PLUS;
+		force_unary_positive_literal(src,tmp);
 		src.type_code = old_type;
-		assert(is_C99_unary_operator_expression<'+'>(src));
 		return true;
 		}
 	return false;
@@ -6168,14 +6093,9 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 				parse_tree tmp;
 				if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
-				src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-				*src.c_array<2>() = tmp;
 				src.DeleteIdx<1>(0);
-				src.core_flag_update();
-				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-				src.subtype = C99_UNARY_SUBTYPE_PLUS;
+				force_unary_positive_literal(src,tmp);
 				src.type_code = old_type;
-				assert(is_C99_unary_operator_expression<'+'>(src));
 				return true;
 				}
 			break;
@@ -6359,14 +6279,9 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 				parse_tree tmp;
 				if (!VM_to_literal(tmp,res_int,src,types)) return false;
 
-				src.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-				*src.c_array<2>() = tmp;
 				src.DeleteIdx<1>(0);
-				src.core_flag_update();
-				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-				src.subtype = C99_UNARY_SUBTYPE_PLUS;
+				force_unary_positive_literal(src,tmp);
 				src.type_code = old_type;
-				assert(is_C99_unary_operator_expression<'+'>(src));
 				return true;
 				}
 			break;
@@ -8920,7 +8835,32 @@ expression:
 	return err_count+(zcc_errors.err_count()-starting_errors);
 }
 
-bool C99_CondenseParseTree(parse_tree& src,const type_system& types)
+static void _label_CPP_literal(parse_tree& src)
+{
+	if (src.is_atomic() && C_TESTFLAG_IDENTIFIER==src.index_tokens[0].flags) 
+		{
+		if 		(token_is_string<4>(src.index_tokens[0].token,"true"))
+			{
+			src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
+			src.type_code.set_type(C_TYPE::BOOL);
+			}
+		else if (token_is_string<4>(src.index_tokens[0].token,"this"))
+			{
+			src.flags |= PARSE_PRIMARY_EXPRESSION;
+			src.type_code.base_type_index = C_TYPE::NOT_VOID;
+			src.type_code.pointer_power = 1;
+			src.type_code.static_array_size = 0;
+			src.type_code.traits = 0;
+			}
+		else if (token_is_string<5>(src.index_tokens[0].token,"false"))
+			{
+			src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
+			src.type_code.set_type(C_TYPE::BOOL);
+			}
+		}
+}
+
+static bool C99_CondenseParseTree(parse_tree& src,const type_system& types)
 {
 	assert(src.is_raw_list());
 	assert(1<src.size<0>());
@@ -8935,13 +8875,13 @@ bool C99_CondenseParseTree(parse_tree& src,const type_system& types)
 	return true;
 }
 
-bool CPlusPlus_CondenseParseTree(parse_tree& src,const type_system& types)
+static bool CPP_CondenseParseTree(parse_tree& src,const type_system& types)
 {
 	assert(src.is_raw_list());
 	assert(1<src.size<0>());
 	const size_t starting_errors = zcc_errors.err_count();
 	_label_literals(src,types);
-	_label_cplusplus_literals(src);	// intercepts: true, false, this
+	std::for_each(src.begin<0>(),src.end<0>(),_label_CPP_literal);	// intercepts: true, false, this
 	if (!_match_pairs(src)) return false;
 	// check that this is at least within a brace pair or a parentheses pair (it is actually required to be in a non-static member function, or constructor mem-initializer
 	if (!_this_vaguely_where_it_could_be_cplusplus(src)) return false;
@@ -9509,7 +9449,7 @@ bool CPlusPlus_EvalParseTree(parse_tree& src,const type_system& types)
 	const size_t starting_errors = zcc_errors.err_count();
 RestartEval:
 	if (src.is_atomic() || (parse_tree::INVALID & src.flags)) return starting_errors==zcc_errors.err_count();
-	if (eval_array_deref(src,types,CPlusPlus_EvalParseTree,CPlusPlus_literal_converts_to_integer,CPlusPlus_convert_literal_to_integer)) goto RestartEval;
+	if (eval_array_deref(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_integer,CPlusPlus_convert_literal_to_integer)) goto RestartEval;
 	if (eval_conditional_operator(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool)) goto RestartEval;
 	if (eval_logical_OR(src,types,CPlusPlus_EvalParseTree,is_CPP_logical_OR_expression,CPP_literal_converts_to_bool)) goto RestartEval;
 	if (eval_logical_AND(src,types,CPlusPlus_EvalParseTree,is_CPP_logical_AND_expression,CPP_literal_converts_to_bool)) goto RestartEval;
@@ -9720,7 +9660,7 @@ PP_auxfunc CPlusPlus_aux
 	CPlusPlus_ControlExpressionContextFreeErrorCount,
 	CPlusPlus_ExpressionContextFreeErrorCount,
 	CPlusPlus_ContextFreeErrorCount,
-	CPlusPlus_CondenseParseTree,
+	CPP_CondenseParseTree,
 	CPlusPlus_EvalParseTree,
 	CPP_PPHackTree,
 	ConcatenateCStringLiterals

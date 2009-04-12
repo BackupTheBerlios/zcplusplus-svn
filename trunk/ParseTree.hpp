@@ -141,6 +141,78 @@ struct parse_tree
 		return zaimoni::SafeArraySize(args[arg_idx]);
 #endif
 		}
+	parse_tree* begin(size_t arg_idx)
+		{
+		assert(STATIC_SIZE(args)>arg_idx);
+#ifdef ZAIMONI_FORCE_ISO
+		return args[arg_idx].first;
+#else
+		return args[arg_idx];
+#endif
+		};
+	template<size_t arg_idx> parse_tree* begin()
+		{
+		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
+#ifdef ZAIMONI_FORCE_ISO
+		return args[arg_idx].first;
+#else
+		return args[arg_idx];
+#endif
+		}
+	const parse_tree* begin(size_t arg_idx) const
+		{
+		assert(STATIC_SIZE(args)>arg_idx);
+#ifdef ZAIMONI_FORCE_ISO
+		return args[arg_idx].first;
+#else
+		return args[arg_idx];
+#endif
+		}
+	template<size_t arg_idx> const parse_tree* begin() const
+		{
+		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
+#ifdef ZAIMONI_FORCE_ISO
+		return args[arg_idx].first;
+#else
+		return args[arg_idx];
+#endif
+		}
+	parse_tree* end(size_t arg_idx)
+		{
+		assert(STATIC_SIZE(args)>arg_idx);
+#ifdef ZAIMONI_FORCE_ISO
+		return (NULL==args[arg_idx].first) ? NULL : args[arg_idx].first+args[arg_idx].second;
+#else
+		return (NULL==args[arg_idx]) ? NULL : args[arg_idx]+zaimoni::ArraySize(args[arg_idx]);
+#endif
+		};
+	template<size_t arg_idx> parse_tree* end()
+		{
+		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
+#ifdef ZAIMONI_FORCE_ISO
+		return (NULL==args[arg_idx].first) ? NULL : args[arg_idx].first+args[arg_idx].second;
+#else
+		return (NULL==args[arg_idx]) ? NULL : args[arg_idx]+zaimoni::ArraySize(args[arg_idx]);
+#endif
+		}
+	const parse_tree* end(size_t arg_idx) const
+		{
+		assert(STATIC_SIZE(args)>arg_idx);
+#ifdef ZAIMONI_FORCE_ISO
+		return (NULL==args[arg_idx].first) ? NULL : args[arg_idx].first+args[arg_idx].second;
+#else
+		return (NULL==args[arg_idx]) ? NULL : args[arg_idx]+zaimoni::ArraySize(args[arg_idx]);
+#endif
+		}
+	template<size_t arg_idx> const parse_tree* end() const
+		{
+		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
+#ifdef ZAIMONI_FORCE_ISO
+		return (NULL==args[arg_idx].first) ? NULL : args[arg_idx].first+args[arg_idx].second;
+#else
+		return (NULL==args[arg_idx]) ? NULL : args[arg_idx]+zaimoni::ArraySize(args[arg_idx]);
+#endif
+		}
 	bool empty(size_t arg_idx) const
 		{
 		assert(STATIC_SIZE(args)>arg_idx);
