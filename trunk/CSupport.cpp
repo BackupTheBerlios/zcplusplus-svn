@@ -1657,71 +1657,19 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 	return starting_errors!=zcc_errors.err_count();
 }
 
-bool C99_ControlExpressionContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
+static bool C99_ControlExpressionContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
 	return C99_CoreControlExpressionContextFreeErrorCount(tokenlist,tokenlist_len,hard_start,hard_end);
 }
 
-bool CPlusPlus_ControlExpressionContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
+static bool CPlusPlus_ControlExpressionContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
 	return C99_CoreControlExpressionContextFreeErrorCount(tokenlist,tokenlist_len,hard_start,hard_end);
 }
-
-size_t C99_ExpressionContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
-{
-	assert(NULL!=tokenlist);
-	assert(0<tokenlist_len);
-	size_t err_count = 0;
-
-	err_count += C99_CoreControlExpressionContextFreeErrorCount(tokenlist,tokenlist_len,hard_start,hard_end);
-
-	return err_count;
-}
-
-size_t CPlusPlus_ExpressionContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
-{
-	assert(NULL!=tokenlist);
-	assert(0<tokenlist_len);
-	size_t err_count = 0;
-
-	err_count += C99_CoreControlExpressionContextFreeErrorCount(tokenlist,tokenlist_len,hard_start,hard_end);
-
-	return err_count;
-}
-
-/*
-parameter-type-list may end with ...
-varadic macro may end with ...
-* both of these are always immediately followed by )
-* both of these may be preceded by one of , (
-*/
-
-size_t C99_ContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
-{
-	assert(NULL!=tokenlist);
-	assert(0<tokenlist_len);
-	size_t err_count = 0;
-
-	err_count += C99_CoreControlExpressionContextFreeErrorCount(tokenlist,tokenlist_len,hard_start,hard_end);
-
-	return err_count;
-}
-
-size_t CPlusPlus_ContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
-{
-	assert(NULL!=tokenlist);
-	assert(0<tokenlist_len);
-	size_t err_count = 0;
-
-	err_count += C99_CoreControlExpressionContextFreeErrorCount(tokenlist,tokenlist_len,hard_start,hard_end);
-
-	return err_count;
-}
-
 
 size_t
 LengthOfCPurePreprocessingOperatorPunctuation(const char* const Test)
@@ -8602,18 +8550,16 @@ static void parse_backward(parse_tree& src,const type_system& types, T parse_han
 }
 
 // top-level has SIZE_MAX for parent_identifier_count
-static size_t C99_locate_expressions(parse_tree& src,const size_t parent_identifier_count,const type_system& types)
+static void C99_locate_expressions(parse_tree& src,const size_t parent_identifier_count,const type_system& types)
 {
-	if (PARSE_OBVIOUS & src.flags) return 0;
-	const size_t starting_errors = zcc_errors.err_count();
+	if (PARSE_OBVIOUS & src.flags) return;
 	size_t identifier_count = (0==parent_identifier_count) ? 0 : _count_identifiers(src);
-	size_t err_count = 0;
 	size_t i = src.size<0>();
-	while(0<i) err_count += C99_locate_expressions(src.c_array<0>()[--i],identifier_count,types);
+	while(0<i) C99_locate_expressions(src.c_array<0>()[--i],identifier_count,types);
 	i = src.size<1>();
-	while(0<i) err_count += C99_locate_expressions(src.c_array<1>()[--i],identifier_count,types);
+	while(0<i) C99_locate_expressions(src.c_array<1>()[--i],identifier_count,types);
 	i = src.size<2>();
-	while(0<i) err_count += C99_locate_expressions(src.c_array<2>()[--i],identifier_count,types);
+	while(0<i) C99_locate_expressions(src.c_array<2>()[--i],identifier_count,types);
 
 	const bool top_level = SIZE_MAX==parent_identifier_count;
 	const bool parens_are_expressions = 0==parent_identifier_count	// no identifiers from outside
@@ -8624,16 +8570,20 @@ static size_t C99_locate_expressions(parse_tree& src,const size_t parent_identif
 			{
 			if (top_level && 1==src.size<0>() && is_naked_parentheses_pair(src))
 				src.eval_to_arg<0>(0);
-			return err_count+(zcc_errors.err_count()-starting_errors);
+			return;
 			}
 
 	// top-level [ ] and { } die regardless of contents
 	// note that top-level [ ] should be asphyxiating now
-	if (top_level && suppress_naked_brackets_and_braces(src,"top-level",sizeof("top-level")-1)) return ++err_count;
+	if (top_level && suppress_naked_brackets_and_braces(src,"top-level",sizeof("top-level")-1))
+		{
+		zcc_errors.inc_error();
+		return;
+		}
 
 	if (!src.empty<0>())
 		{
-		if (suppress_naked_brackets_and_braces(*src.c_array<0>(),"top-level",sizeof("top-level")-1)) ++err_count;
+		if (suppress_naked_brackets_and_braces(*src.c_array<0>(),"top-level",sizeof("top-level")-1)) zcc_errors.inc_error();
 		parse_forward(src,types,locate_C99_postfix_expression);
 		parse_backward(src,types,locate_C99_unary_expression);
 		parse_forward(src,types,locate_C99_mult_expression);
@@ -8656,11 +8606,7 @@ assignment-operator: one of
 	= *= /= %= += -= <<= >>= &= ^= |=
 */
 #if 0
-		i = src.size<0>();
-		while(0<i)
-			{
-			if (parse_tree::INVALID & src.data<0>()[--i].flags) continue;
-			};
+		parse_backward(src,types,...);
 #endif
 /*
 expression:
@@ -8668,29 +8614,22 @@ expression:
 	expression , assignment-expression
 */
 #if 0
-		i = 0;
-		do	{
-			if (parse_tree::INVALID & src.data<0>()[i].flags) continue;
-			}
-		while(src.size<0>() > ++i);	
+		parse_forward(src,types,...);
 #endif
 		};
-	return err_count+(zcc_errors.err_count()-starting_errors);
 }
 
 // top-level has SIZE_MAX for parent_identifier_count
-static size_t CPlusPlus_locate_expressions(parse_tree& src,const size_t parent_identifier_count,const type_system& types)
+static void CPP_locate_expressions(parse_tree& src,const size_t parent_identifier_count,const type_system& types)
 {
-	if (PARSE_OBVIOUS & src.flags) return 0;
-	const size_t starting_errors = zcc_errors.err_count();
+	if (PARSE_OBVIOUS & src.flags) return;
 	const size_t identifier_count = (0==parent_identifier_count) ? 0 : _count_identifiers(src);
-	size_t err_count = 0;
 	size_t i = src.size<0>();
-	while(0<i) err_count += CPlusPlus_locate_expressions(src.c_array<0>()[--i],identifier_count,types);
+	while(0<i) CPP_locate_expressions(src.c_array<0>()[--i],identifier_count,types);
 	i = src.size<1>();
-	while(0<i) err_count += CPlusPlus_locate_expressions(src.c_array<1>()[--i],identifier_count,types);
+	while(0<i) CPP_locate_expressions(src.c_array<1>()[--i],identifier_count,types);
 	i = src.size<2>();
-	while(0<i) err_count += CPlusPlus_locate_expressions(src.c_array<2>()[--i],identifier_count,types);
+	while(0<i) CPP_locate_expressions(src.c_array<2>()[--i],identifier_count,types);
 
 	const bool top_level = SIZE_MAX==parent_identifier_count;
 	const bool parens_are_expressions = 0==parent_identifier_count	// no identifiers from outside
@@ -8702,15 +8641,19 @@ static size_t CPlusPlus_locate_expressions(parse_tree& src,const size_t parent_i
 			{
 			if (top_level && 1==src.size<0>() && is_naked_parentheses_pair(src))
 				src.eval_to_arg<0>(0);
-			return err_count+(zcc_errors.err_count()-starting_errors);
+			return;
 			}
 
 	// top-level [ ] and { } die regardless of contents
-	if (top_level && suppress_naked_brackets_and_braces(src,"top-level",sizeof("top-level")-1)) return ++err_count;
+	if (top_level && suppress_naked_brackets_and_braces(src,"top-level",sizeof("top-level")-1))
+		{
+		zcc_errors.inc_error();
+		return;
+		}
 
 	if (!src.empty<0>())
 		{
-		if (suppress_naked_brackets_and_braces(*src.c_array<0>(),"top-level",sizeof("top-level")-1)) ++err_count;
+		if (suppress_naked_brackets_and_braces(*src.c_array<0>(),"top-level",sizeof("top-level")-1)) zcc_errors.inc_error();
 		parse_forward(src,types,locate_CPP_postfix_expression);
 		parse_backward(src,types,locate_CPP_unary_expression);
 #if 0
@@ -8720,6 +8663,7 @@ pmexpression:
 	pmexpression .* castexpression
 	pmexpression ->* castexpression
 */
+		parse_forward(src,types,...);
 #endif
 		parse_forward(src,types,locate_CPP_mult_expression);
 		parse_forward(src,types,locate_CPP_add_expression);
@@ -8741,11 +8685,7 @@ assignment-operator: one of
 	= *= /= %= += -= <<= >>= &= ^= |=
 */
 #if 0
-		i = src.size<0>();
-		while(0<i)
-			{
-			if (parse_tree::INVALID & src.data<0>()[--i].flags) continue;
-			};
+		parse_backward(src,types,...);
 #endif
 /*
 expression:
@@ -8753,14 +8693,9 @@ expression:
 	expression , assignment-expression
 */
 #if 0
-		i = 0;
-		do	{
-			if (parse_tree::INVALID & src.data<0>()[i].flags) continue;
-			}
-		while(src.size<0>() > ++i);	
+		parse_forward(src,types,...);
 #endif
 		};
-	return err_count+(zcc_errors.err_count()-starting_errors);
 }
 
 static void _label_CPP_literal(parse_tree& src)
@@ -8795,7 +8730,8 @@ static bool C99_CondenseParseTree(parse_tree& src,const type_system& types)
 	const size_t starting_errors = zcc_errors.err_count();
 	_label_literals(src,types);
 	if (!_match_pairs(src)) return false;
-	if (zcc_errors.inc_error(C99_locate_expressions(src,SIZE_MAX,types)) || starting_errors<zcc_errors.err_count()) return false;
+	C99_locate_expressions(src,SIZE_MAX,types);
+	if (starting_errors<zcc_errors.err_count()) return false;
 
 	// ...
 
@@ -8813,7 +8749,8 @@ static bool CPP_CondenseParseTree(parse_tree& src,const type_system& types)
 	if (!_match_pairs(src)) return false;
 	// check that this is at least within a brace pair or a parentheses pair (it is actually required to be in a non-static member function, or constructor mem-initializer
 	if (!_this_vaguely_where_it_could_be_cplusplus(src)) return false;
-	if (zcc_errors.inc_error(CPlusPlus_locate_expressions(src,SIZE_MAX,types)) || starting_errors<zcc_errors.err_count()) return false;
+	CPP_locate_expressions(src,SIZE_MAX,types);
+	if (starting_errors<zcc_errors.err_count()) return false;
 
 	// ...
 
@@ -9562,8 +9499,6 @@ PP_auxfunc C99_aux
 	LengthOfCStringLiteral,
 	C_like_BalancingCheck,
 	C99_ControlExpressionContextFreeErrorCount,
-	C99_ExpressionContextFreeErrorCount,
-	C99_ContextFreeErrorCount,
 	C99_CondenseParseTree,
 	C99_EvalParseTree,
 	C99_PPHackTree,
@@ -9578,8 +9513,6 @@ PP_auxfunc CPlusPlus_aux
 	LengthOfCStringLiteral,
 	C_like_BalancingCheck,
 	CPlusPlus_ControlExpressionContextFreeErrorCount,
-	CPlusPlus_ExpressionContextFreeErrorCount,
-	CPlusPlus_ContextFreeErrorCount,
 	CPP_CondenseParseTree,
 	CPlusPlus_EvalParseTree,
 	CPP_PPHackTree,

@@ -78,7 +78,6 @@ struct parse_tree
 		PREDEFINED_STRICT_UB = 4	// number of bits reserved by parse_tree
 	};
 
-	zaimoni::POD_pair<unsigned char*,size_t> rawdata;	// first: raw bit pattern; size_t is the significant bit count
 	weak_token index_tokens[2];	//!< 0: left, 1: right
 	arglist_array args[3];		//!< 0: infix, 1: prefix, 2: postfix
 	zaimoni::lex_flags flags;	// mostly opaque flag suite (parse_tree reserves the lowest 3 bits)

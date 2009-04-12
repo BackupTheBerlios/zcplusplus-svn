@@ -55,8 +55,6 @@ parse_tree::clear()
 	args[1] = NULL;
 	args[2] = NULL;
 #endif
-	rawdata.first = NULL;
-	rawdata.second = 0;
 	flags = 0;
 	subtype = 0;
 	type_code.clear();
@@ -92,8 +90,6 @@ parse_tree::destroy()
 	_destroy(args[2]);
 	_destroy(args[1]);
 	_destroy(args[0]);
-	free(rawdata.first);
-	rawdata.first = NULL;
 	if (own_index_token<1>()) free(const_cast<char*>(index_tokens[1].token.first));
 	if (own_index_token<0>()) free(const_cast<char*>(index_tokens[0].token.first));
 	index_tokens[1].token.first = NULL;

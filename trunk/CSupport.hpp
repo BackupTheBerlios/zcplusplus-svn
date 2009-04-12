@@ -10,7 +10,6 @@
 #include <string.h>
 #include <limits.h>
 #include "type_algebra.hpp"
-//#include "est_size.h"
 #include "Zaimoni.STL/pure.C/auto_int.h"
 #include "Zaimoni.STL/LexParse/std.h"
 
@@ -92,8 +91,6 @@ struct PP_auxfunc
 	func_traits<size_t (*)(const char*,size_t)>::function_ref_type LengthOfStringLiteral;	// returns length of string literal as an array of its char type
 	func_traits<bool (*)(const weak_token*,size_t,bool,bool)>::function_ref_type BalancingErrorCheck;		// slow; returns true if any errors found
 	func_traits<bool (*)(const weak_token*,size_t,bool,bool)>::function_ref_type ControlExpressionContextFreeErrorCheck;	// returns true if any errors found
-	func_traits<size_t (*)(const weak_token*,size_t,bool,bool)>::function_ref_type ExpressionContextFreeErrorCount;	// returns number of errors detected
-	func_traits<size_t (*)(const weak_token*,size_t,bool,bool)>::function_ref_type ContextFreeErrorCount;	// returns number of errors detected
 	func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type CondenseParseTree;	// returns number of errors detected
 	func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree;		// return true iff no errors
 	func_traits<void (*)(parse_tree&,const type_system&)>::function_ref_type PPHackTree;	// makes near-constants look constant to the preprocessor (trashes parse tree to do it)
@@ -194,36 +191,6 @@ DEFINE_DETECT_C_OPCHAR('{',"<%",left_brace)
 DEFINE_DETECT_C_OPCHAR('}',"%>",right_brace)
 
 #undef DEFINE_DETECT_C_OPCHAR
-
-// following eleven are dictated by C++98 2.5 p2
-#define DEFINE_DETECT_CPP_OPSTRING(A,B)	\
-inline bool detect_CPP_##B##_op(const char* const src,const size_t src_len)	\
-{	\
-	return		(sizeof( A)-1==src_len && !strncmp(src, A,sizeof( A)-1))	\
-			||	(sizeof(#B)-1==src_len && !strncmp(src,#B,sizeof(#B)-1));	\
-}
-
-#define DEFINE_DETECT_CPP_OPCHAR(A,B)	\
-inline bool detect_CPP_##B##_op(const char* const src,const size_t src_len)	\
-{	\
-	return		(1==src_len && A == *src)	\
-			||	(sizeof(#B)-1==src_len && !strncmp(src,#B,sizeof(#B)-1));	\
-}
-
-DEFINE_DETECT_CPP_OPSTRING("&&",and)
-DEFINE_DETECT_CPP_OPSTRING("||",or)
-DEFINE_DETECT_CPP_OPCHAR('^',xor)
-DEFINE_DETECT_CPP_OPCHAR('!',not)
-DEFINE_DETECT_CPP_OPSTRING("&=",and_eq)
-DEFINE_DETECT_CPP_OPSTRING("|=",or_eq)
-DEFINE_DETECT_CPP_OPSTRING("^=",xor_eq)
-DEFINE_DETECT_CPP_OPSTRING("!=",not_eq)
-DEFINE_DETECT_CPP_OPCHAR('&',bitand)
-DEFINE_DETECT_CPP_OPCHAR('|',bitor)
-DEFINE_DETECT_CPP_OPCHAR('~',compl)
-
-#undef DEFINE_DETECT_CPP_OPCHAR
-#undef DEFINE_DETECT_CPP_OPSTRING
 
 /* all atomic characters are preprocessing punctuation; flag definitions should be consistent with CSupport.cpp */
 /* LangConf is dictating C_TESTFLAG_ATOMIC_PP_OP_PUNC, C_TESTFLAG_ATOMIC_PP_OP_PUNC */

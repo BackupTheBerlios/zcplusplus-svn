@@ -63,47 +63,6 @@ uintmax_t C_PPDecimalInteger::bits_required() const
 		return 4U*LHS_digit_span-3U;
 }
 
-bool C_PPDecimalInteger::to_rawdata(unsigned char*& target,size_t& bitcount) const
-{
-	assert(1<=this->digit_span);
-	assert(10==this->radix);
-	assert(NULL==target);
-	size_t LHS_digit_span = this->digit_span;
-	const char* LHS_ptr = this->ptr;
-	const size_t target_bitcount = bits_required();
-	const size_t target_bytecount = target_bitcount/CHAR_BIT+(0!=target_bitcount);
-	const unsigned char test = 10;
-	unsigned char* tmp = reinterpret_cast<unsigned char*>(calloc(target_bytecount,1));
-	if (NULL==tmp) return false;
-	unsigned char* tmp2 = reinterpret_cast<unsigned char*>(calloc(target_bytecount,1));
-	if (NULL==tmp2)
-		{
-		free(tmp);
-		return false;
-		}
-
-	while(0<LHS_digit_span)
-		{
-		assert('0'<= *LHS_ptr && '9'>= *LHS_ptr);
-		unsigned_sum(tmp,target_bytecount,*LHS_ptr-'0');
-		unsigned_mult(tmp2,target_bytecount,tmp,target_bytecount,&test,1);
-		{	// std::swap(tmp,tmp2)
-		unsigned char* const tmp3 = tmp;
-		tmp2 = tmp;
-		tmp = tmp3;
-		}
-		--LHS_digit_span;
-		++LHS_ptr;
-		};
-	free(tmp2);
-	size_t target_bytecount2 = target_bytecount;
-	while(1<target_bytecount2 && 0==tmp[target_bytecount2-1]) --target_bytecount2;
-	if (target_bytecount2<target_bytecount) tmp = reinterpret_cast<unsigned char*>(realloc(tmp,target_bytecount2));
-	target = tmp;
-	bitcount = CHAR_BIT*(target_bytecount2-1)+UCHAR_LOG2(tmp[target_bytecount2-1])+1U;
-	return true;
-}
-
 int cmp(const C_PPDecimalInteger& LHS, const C_PPDecimalInteger& RHS)
 {
 	assert(1<=LHS.digit_span && 10==LHS.radix);

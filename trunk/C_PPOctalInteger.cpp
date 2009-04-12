@@ -57,31 +57,6 @@ uintmax_t C_PPOctalInteger::bits_required() const
 		return 3U*LHS_digit_span-2U;
 }
 
-bool C_PPOctalInteger::to_rawdata(unsigned char*& target,size_t& bitcount) const
-{
-	assert(2<=this->digit_span && '0'==this->ptr[0]);
-	assert(8==this->radix);
-	assert(NULL==target);
-	const size_t target_bitcount = bits_required();
-	const size_t target_bytecount = target_bitcount/CHAR_BIT+(0!=target_bitcount);
-	unsigned char* const tmp = reinterpret_cast<unsigned char*>(calloc(target_bytecount,1));
-	if (NULL==tmp) return false;
-
-	size_t LHS_digit_span = this->digit_span-1;
-	const char* LHS_ptr = this->ptr+1;
-	while(0<LHS_digit_span)
-		{
-		assert('0'<= *LHS_ptr && '7'>= *LHS_ptr);
-		unsigned_sum(tmp,target_bytecount,*LHS_ptr-'0');
-		unsigned_left_shift(tmp,target_bytecount,3);
-		--LHS_digit_span;
-		++LHS_ptr;
-		};
-	target = tmp;
-	bitcount = target_bitcount;
-	return true;
-}
-
 int cmp(const C_PPOctalInteger& LHS, const C_PPOctalInteger& RHS)
 {
 	assert(2<=LHS.digit_span && '0'==LHS.ptr[0] && 8==LHS.radix);

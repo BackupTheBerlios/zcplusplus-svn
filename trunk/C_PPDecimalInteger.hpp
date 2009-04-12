@@ -19,7 +19,6 @@ struct C_PPDecimalInteger : public C_PPIntCore
 	static bool is(const char* x,size_t token_len,C_PPDecimalInteger& target);
 
 	uintmax_t bits_required() const;
-	bool to_rawdata(unsigned char*& target,size_t& bitcount) const;
 
 	// these two inherit errno weirdness
 	uintmax_t to_umax() {return z_atoumax(ptr,10);};

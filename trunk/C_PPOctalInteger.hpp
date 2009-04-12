@@ -20,7 +20,6 @@ struct C_PPOctalInteger : public C_PPIntCore
 	static bool is(const char* x,size_t token_len,C_PPOctalInteger& target);
 
 	uintmax_t bits_required() const;
-	bool to_rawdata(unsigned char*& target,size_t& bitcount) const;
 
 	// inherits errno weirdness
 	uintmax_t to_umax() {return z_atoumax(ptr,8);};
