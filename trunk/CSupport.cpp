@@ -4506,6 +4506,28 @@ static bool VM_to_literal(parse_tree& dest, const unsigned_fixed_int<VM_MAX_BIT_
 	return true;
 }
 
+static void force_decimal_literal(parse_tree& dest,const char* src,const type_system& types)
+{
+	assert(NULL!=src);
+	dest.destroy();
+	dest.index_tokens[0].token.first = src;
+	dest.index_tokens[0].token.second = strlen(src);
+	dest.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+	_label_one_literal(dest,types);
+}
+
+static parse_tree decimal_literal(const char* src,const type_system& types)
+{
+	assert(NULL!=src);
+	parse_tree dest;
+	dest.clear();
+	dest.index_tokens[0].token.first = src;
+	dest.index_tokens[0].token.second = strlen(src);
+	dest.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+	_label_one_literal(dest,types);
+	return dest;
+}
+
 static bool terse_locate_C99_bitwise_complement(parse_tree& src, size_t& i)
 {
 	assert(!src.empty<0>());
@@ -4718,11 +4740,7 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,func_trai
 		{	// -0=0 most of the time (except for trap-signed-int machines using sign/magnitude or one's-complement integers
 			// deal with unary - not being allowed to actually return -0 on these machines later
 		const type_spec old_type = src.type_code;
-		src.destroy();
-		src.index_tokens[0].token.first = "0";
-		src.index_tokens[0].token.second = 1;
-		src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-		_label_one_literal(src,types);
+		force_decimal_literal(src,"0",types);
 		src.type_code = old_type;		
 		return true;
 		};
@@ -5163,15 +5181,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 			INFORM(" optimized to valid 0");
 			};
 		// construct +0 to defuse 1-0*6
-		parse_tree tmp;
-		tmp.clear();
-		tmp.index_tokens[0].token.first = "0";
-		tmp.index_tokens[0].token.second = 1;
-		tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-		tmp.grab_index_token_location_from<0,0>(src);
-		_label_one_literal(tmp,types);
-
-		// convert to parsed + literal
+		parse_tree tmp = decimal_literal("0",types);
 		src.DeleteIdx<1>(0);
 		force_unary_positive_literal(src,tmp);
 		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
@@ -5336,15 +5346,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 				INFORM(" optimized to valid 0");
 				};
 			// construct +0 to defuse 1-0/6
-			parse_tree tmp;
-			tmp.clear();
-			tmp.index_tokens[0].token.first = "0";
-			tmp.index_tokens[0].token.second = 1;
-			tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-			tmp.grab_index_token_location_from<0,0>(src);
-			_label_one_literal(tmp,types);
-
-			// convert to parsed + literal
+			parse_tree tmp = decimal_literal("0",types);
 			src.DeleteIdx<1>(0);
 			force_unary_positive_literal(src,tmp);
 			if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
@@ -5404,23 +5406,16 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 			if (rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation()) ub += 1;
 			if (lhs_test<rhs_test)
 				{
-				parse_tree tmp;
-				tmp.clear();
-				tmp.index_tokens[0].token.second = 1;
-				tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-				tmp.grab_index_token_location_from<0,0>(src);
 				if (rhs_negative==lhs_negative || !bool_options[boolopt::int_neg_div_rounds_away_from_zero])
 					{	// 0
-					tmp.index_tokens[0].token.first = "0";
-					_label_one_literal(tmp,types);
+					parse_tree tmp = decimal_literal("0",types);
 
 					// convert to parsed + literal
 					src.DeleteIdx<1>(0);
 					force_unary_positive_literal(src,tmp);
 					}
 				else{	// -1
-					tmp.index_tokens[0].token.first = "1";
-					_label_one_literal(tmp,types);
+					parse_tree tmp = decimal_literal("1",types);
 
 					// convert to parsed - literal
 					src.DeleteIdx<1>(0);
@@ -5529,15 +5524,7 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 				INFORM(" optimized to valid 0");
 				};
 			// construct +0 to defuse 1-0%6
-			parse_tree tmp;
-			tmp.clear();
-			tmp.index_tokens[0].token.first = "0";
-			tmp.index_tokens[0].token.second = 1;
-			tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-			tmp.grab_index_token_location_from<0,0>(src);
-			_label_one_literal(tmp,types);
-
-			// convert to parsed + literal
+			parse_tree tmp = decimal_literal("0",types);
 			src.DeleteIdx<1>(0);
 			force_unary_positive_literal(src,tmp);
 			if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
@@ -5555,15 +5542,7 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 	const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
 	if (rhs_converted && rhs_int==1)
 		{	// __%1 |-> +0
-		parse_tree tmp;
-		tmp.clear();
-		tmp.index_tokens[0].token.first = "0";
-		tmp.index_tokens[0].token.second = 1;
-		tmp.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-		tmp.grab_index_token_location_from<0,0>(src);
-		_label_one_literal(tmp,types);
-
-		// convert to parsed + literal
+		parse_tree tmp = decimal_literal("0",types);
 		src.DeleteIdx<1>(0);
 		force_unary_positive_literal(src,tmp);
 		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
@@ -6305,11 +6284,7 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 			bool is_equal = false;
 			if (C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal) && is_equal)
 				{
-				src.destroy();
-				src.index_tokens[0].token.first = "0";
-				src.index_tokens[0].token.second = 1;
-				src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-				_label_one_literal(src,types);
+				force_decimal_literal(src,"0",types);
 				src.type_code = old_type;
 				return true;
 				}
@@ -6804,11 +6779,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 			{
 			if (!is_true)
 				{	// 0 << __ or 0 >> __: zero out (note that we can do this even if we invoked undefined behavior)
-				src.destroy();
-				src.index_tokens[0].token.first = "0";
-				src.index_tokens[0].token.second = 1;
-				src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-				_label_one_literal(src,types);
+				force_decimal_literal(src,"0",types);
 				src.type_code = old_type;
 				return true;
 				}
@@ -6955,13 +6926,10 @@ static bool eval_relation_expression(parse_tree& src, const type_system& types,f
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
 
-	if (	 converts_to_integer(src.data<1>()->type_code)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags)
-		&&	 converts_to_integer(src.data<2>()->type_code)
-		&&	(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+	const bool lhs_converted = intlike_literal_to_VM(lhs_int,*src.data<1>());
+	const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
+	if (lhs_converted && rhs_converted)
 		{
-		intlike_literal_to_VM(lhs_int,*src.data<1>());
-		intlike_literal_to_VM(rhs_int,*src.data<2>());
 		const char* result 	= NULL;
 		switch(src.subtype)
 		{
@@ -6982,11 +6950,7 @@ static bool eval_relation_expression(parse_tree& src, const type_system& types,f
 										break;
 										}
 		}
-		src.destroy();
-		src.index_tokens[0].token.first = result;
-		src.index_tokens[0].token.second = 1;
-		src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-		_label_one_literal(src,types);
+		force_decimal_literal(src,result,types);
 		return true;
 		};
 	return false;
@@ -7221,11 +7185,7 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 			bool is_equal = false;
 			if (C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal))
 				{
-				src.destroy();
-				src.index_tokens[0].token.first = (is_equal_op==is_equal) ? "1" : "0";
-				src.index_tokens[0].token.second = 1;
-				src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-				_label_one_literal(src,types);
+				force_decimal_literal(src,is_equal_op==is_equal ? "1" : "0",types);
 				return true;
 				};
 			break;
@@ -7237,11 +7197,7 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 					{	
 					if (src.data<2>()->type_code.decays_to_nonnull_pointer())
 						{	// string literal != NULL, etc.
-						src.destroy();
-						src.index_tokens[0].token.first = (is_equal_op) ? "0" : "1";
-						src.index_tokens[0].token.second = 1;
-						src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-						_label_one_literal(src,types);
+						force_decimal_literal(src,is_equal_op ? "0" : "1",types);
 						return true;
 						}
 					}
@@ -7265,11 +7221,7 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 					{	// string literal != NULL
 					if (src.data<1>()->type_code.decays_to_nonnull_pointer())
 						{
-						src.destroy();
-						src.index_tokens[0].token.first = (is_equal_op) ? "0" : "1";
-						src.index_tokens[0].token.second = 1;
-						src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-						_label_one_literal(src,types);
+						force_decimal_literal(src,is_equal_op ? "0" : "1",types);
 						return true;
 						}
 					}
@@ -7289,11 +7241,7 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 	case 3:	{	// integer literal == integer literal
 			intlike_literal_to_VM(lhs_int,*src.data<1>());
 			intlike_literal_to_VM(rhs_int,*src.data<2>());
-			src.destroy();
-			src.index_tokens[0].token.first = ((lhs_int==rhs_int)==is_equal_op) ? "1" : "0";
-			src.index_tokens[0].token.second = 1;
-			src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-			_label_one_literal(src,types);
+			force_decimal_literal(src,(lhs_int==rhs_int)==is_equal_op ? "1" : "0",types);
 			return true;
 			}
 	};
@@ -7535,11 +7483,7 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 			INC_INFORM(src);
 			INFORM(" optimized to valid 0");
 			};
-		src.destroy();
-		src.index_tokens[0].token.first = "0";
-		src.index_tokens[0].token.second = 1;
-		src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-		_label_one_literal(src,types);
+		force_decimal_literal(src,"0",types);
 		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
 			src.type_code = old_type;
 		else
@@ -8064,20 +8008,12 @@ static bool eval_logical_AND(parse_tree& src, const type_system& types, func_tra
 				INC_INFORM(src);
 				INFORM(" optimized to valid 0");
 				};
-			src.destroy();
-			src.index_tokens[0].token.first = "0";
-			src.index_tokens[0].token.second = 1;
-			src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-			_label_one_literal(src,types);
+			force_decimal_literal(src,"0",types);
 			return true;
 			}
 		else if (literal_converts_to_bool(*src.data<2>(),is_true))
 			{	// 1 && 1 or 1 && 0
-			src.destroy();
-			src.index_tokens[0].token.first = (is_true ? "1" : "0");
-			src.index_tokens[0].token.second = 1;
-			src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-			_label_one_literal(src,types);
+			force_decimal_literal(src,is_true ? "1" : "0",types);
 			return true;
 			}
 #if 0
@@ -8209,20 +8145,12 @@ static bool eval_logical_OR(parse_tree& src, const type_system& types, func_trai
 				INC_INFORM(src);
 				INFORM(" optimized to valid 1");
 				};
-			src.destroy();
-			src.index_tokens[0].token.first = "1";
-			src.index_tokens[0].token.second = 1;
-			src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-			_label_one_literal(src,types);
+			force_decimal_literal(src,"1",types);
 			return true;
 			}
 		else if (literal_converts_to_bool(*src.data<2>(),is_true))
 			{	// 0 || 1 or 0 || 0
-			src.destroy();
-			src.index_tokens[0].token.first = (is_true ? "1" : "0");
-			src.index_tokens[0].token.second = 1;
-			src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-			_label_one_literal(src,types);
+			force_decimal_literal(src,is_true ? "1" : "0",types);
 			return true;
 			}
 #if 0
@@ -9490,15 +9418,11 @@ void C99_PPHackTree(parse_tree& src,const type_system& types)
 		if (C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal))
 			{
 			assert(!is_equal);	// should have intercepted equal-literal reduction earlier
-			src.destroy();
 #ifndef NDEBUG
-			src.index_tokens[0].token.first = "1";
+			force_decimal_literal(src,"1",types);
 #else
-			src.index_tokens[0].token.first = (is_equal) ? "0" : "1";
+			force_decimal_literal(src,is_equal ? "0" : "1",types);
 #endif
-			src.index_tokens[0].token.second = 1;
-			src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-			_label_one_literal(src,types);
 			src.type_code.set_type(C_TYPE::INT);
 			return;
 			};
@@ -9571,15 +9495,11 @@ void CPP_PPHackTree(parse_tree& src,const type_system& types)
 		if (C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal))
 			{
 			assert(!is_equal);	// should have intercepted equal-literal reduction earlier
-			src.destroy();
 #ifndef NDEBUG
-			src.index_tokens[0].token.first = "1";
+			force_decimal_literal(src,"1",types);
 #else
-			src.index_tokens[0].token.first = (is_equal) ? "0" : "1";
+			force_decimal_literal(src,is_equal ? "0" : "1",types);
 #endif
-			src.index_tokens[0].token.second = 1;
-			src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-			_label_one_literal(src,types);
 			src.type_code.set_type(C_TYPE::INT);
 			return;
 			};
