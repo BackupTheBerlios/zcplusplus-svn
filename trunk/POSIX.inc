@@ -15,7 +15,8 @@ OBJEXT = o
 
 CFLAGS = -fargument-alias -finline -Os -Wall --pedantic
 CXXFLAGS =
-ARCH_FLAGS = -mwindows -mno-cygwin -march=pentium -mtune=pentium3
+ARCH_FLAGS = -mconsole -mno-cygwin -march=pentium -mtune=pentium3
+LINK_FLAGS = 
 
 OTHER_INCLUDEDIR =
 C_MACROS = 
