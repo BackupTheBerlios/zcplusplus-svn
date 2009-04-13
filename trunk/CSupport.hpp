@@ -140,27 +140,28 @@ extern const size_t C_int_priority[];
 
 // character classification
 // utilities to consider more generally
-inline bool IsNumericChar(unsigned char Test) {return 10U>((unsigned int)Test-(unsigned int)'0');}
-bool IsHexadecimalDigit(unsigned char Test);
-unsigned int InterpretHexadecimalDigit(unsigned char Test);
-bool IsUnaccentedAlphabeticChar(unsigned char Test);
-bool IsAlphabeticChar(unsigned char Test);
-inline bool IsCIdentifierChar(char Target) { return '_'==Target || IsAlphabeticChar(Target) || IsNumericChar(Target); }
-bool C_IsLegalSourceChar(char Test);
+inline bool IsNumericChar(unsigned char x) {return 10U>((unsigned int)x-(unsigned int)'0');}
+bool IsHexadecimalDigit(unsigned char x);
+unsigned int InterpretHexadecimalDigit(unsigned char x);
+bool IsUnaccentedAlphabeticChar(unsigned char x);
+bool IsAlphabeticChar(unsigned char x);
+inline bool IsCIdentifierChar(char x) { return '_'==x || IsAlphabeticChar(x) || IsNumericChar(x); }
+bool C_IsLegalSourceChar(char x);
 
 // some assistants for strspn, etc.
 extern const char* const list_hexadecimal_digits;
 
 // lexers
-size_t LengthOfCIdentifier(const char* const Test);
-size_t LengthOfCPreprocessingNumber(const char* const Test);
-size_t LengthOfCCharLiteral(const char* const Test);	// these two may return syntactically bad tokens that aren't terminated correctly (cut off by newline)
-size_t LengthOfCStringLiteral(const char* const Test);
-size_t LengthOfCPurePreprocessingOperatorPunctuation(const char* const Test);	// language-sensitive
-size_t LengthOfCPPPurePreprocessingOperatorPunctuation(const char* const Test);	// language-sensitive
+size_t LengthOfCIdentifier(const char* const x);
+size_t LengthOfCPreprocessingNumber(const char* const x);
+// these two may return syntactically bad tokens that aren't terminated correctly (cut off by newline)
+size_t LengthOfCCharLiteral(const char* const x);
+size_t LengthOfCStringLiteral(const char* const x);
+size_t LengthOfCPurePreprocessingOperatorPunctuation(const char* const x);
+size_t LengthOfCPPPurePreprocessingOperatorPunctuation(const char* const x);
 
-bool IsLegalCString(const char* src, size_t src_len);
-bool IsLegalCCharacterLiteral(const char* src, size_t src_len);
+bool IsLegalCString(const char* x, size_t x_len);
+bool IsLegalCCharacterLiteral(const char* x, size_t x_len);
 bool LocateCCharacterLiteralAt(const char* const src, size_t src_len, size_t target_idx, size_t& char_offset, size_t& char_len);
 void GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, char*& tmp);
 bool CCharLiteralIsFalse(const char* x,size_t x_len);

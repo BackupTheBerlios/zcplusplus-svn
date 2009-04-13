@@ -159,77 +159,66 @@ also ‘‘flush-to-zero’’ underflow.
 
 */
 
-bool
-IsHexadecimalDigit(unsigned char Test)
+bool IsHexadecimalDigit(unsigned char x)
 {	// FORMALLY CORRECT: Kenneth Boyd, 8/1/2002
-	if (   in_range<'0','9'>(Test)
-		|| in_range<'A','F'>(Test)
-		|| in_range<'a','f'>(Test))
+	if (   in_range<'0','9'>(x)
+		|| in_range<'A','F'>(x)
+		|| in_range<'a','f'>(x))
 		return true;
 	return false;
 }
 
-unsigned int
-InterpretHexadecimalDigit(unsigned char Test)
+unsigned int InterpretHexadecimalDigit(unsigned char x)
 {	// FORMALLY CORRECT: Kenneth Boyd, 8/1/2002
-	if (in_range<'0','9'>(Test))
-		return Test-(unsigned char)'0';
-	if (in_range<'A','F'>(Test))
-		return Test-(unsigned char)'A'+10;
-	if (in_range<'a','f'>(Test))
-		return Test-(unsigned char)'a'+10;
+	if (in_range<'0','9'>(x)) return x-(unsigned char)'0';
+	if (in_range<'A','F'>(x)) return x-(unsigned char)'A'+10;
+	if (in_range<'a','f'>(x)) return x-(unsigned char)'a'+10;
 	return 0;
 }
 
-bool
-IsUnaccentedAlphabeticChar(unsigned char Test)
+bool IsUnaccentedAlphabeticChar(unsigned char x)
 {	// FORMALLY CORRECT: Kenneth Boyd, 7/29/2001
-	if (   in_range<'A','Z'>(Test)
-		|| in_range<'a','z'>(Test))
+	if (   in_range<'A','Z'>(x)
+		|| in_range<'a','z'>(x))
 		return true;
 	return false;
 }
 
-bool
-IsAlphabeticChar(unsigned char Test)
+bool IsAlphabeticChar(unsigned char x)
 {	// FORMALLY CORRECT: Kenneth Boyd, 7/27/2001
 	// META: uses ASCII/default ISO web encoding implicitly
 	// NOTE: lower-case eth (240) will pass as partial differential operator!
-	if (   IsUnaccentedAlphabeticChar(Test)
-//		|| (unsigned char)('\x8c')==Test				// OE ligature
-//		|| (unsigned char)('\x9c')==Test				// oe ligature
-//		|| (unsigned char)('\x9f')==Test				// Y umlaut
-		|| ((unsigned char)('\xc0')<=Test && (unsigned char)('\xd6')>=Test)	// various accented characters
-		|| ((unsigned char)('\xd8')<=Test && (unsigned char)('\xf6')>=Test)	// various accented characters
-		|| ((unsigned char)('\xf8')<=Test /* && (unsigned char)('\xff')>=Test */))	// various accented characters
+	if (   IsUnaccentedAlphabeticChar(x)
+//		|| (unsigned char)('\x8c')==x				// OE ligature
+//		|| (unsigned char)('\x9c')==x				// oe ligature
+//		|| (unsigned char)('\x9f')==x				// Y umlaut
+		|| ((unsigned char)('\xc0')<=x && (unsigned char)('\xd6')>=x)	// various accented characters
+		|| ((unsigned char)('\xd8')<=x && (unsigned char)('\xf6')>=x)	// various accented characters
+		|| ((unsigned char)('\xf8')<=x /* && (unsigned char)('\xff')>=x */))	// various accented characters
 		return true;
 	return false;
 }
 
-bool
-C_IsLegalSourceChar(char Test2)
+bool C_IsLegalSourceChar(char x)
 {
-	unsigned char Test = Test2;
-	if (   IsAlphabeticChar(Test)
-		|| in_range<'0','9'>(Test)
-		|| strchr(C_WHITESPACE,Test)
-		|| strchr(C_ATOMIC_CHAR,Test)
-		|| strchr("_#<>%:.*+­/^&|!=\\",Test))
+	if (   IsAlphabeticChar(x)
+		|| in_range<'0','9'>(x)
+		|| strchr(C_WHITESPACE,x)
+		|| strchr(C_ATOMIC_CHAR,x)
+		|| strchr("_#<>%:.*+­/^&|!=\\",x))
 		return true;
 	return false;
 }
 
-static bool
-C_IsPrintableChar(unsigned char Test)
+static bool C_IsPrintableChar(unsigned char x)
 {
-	return in_range<' ','~'>(Test);	//! \todo fix; assumes ASCII
+	return in_range<' ','~'>(x);	//! \todo fix; assumes ASCII
 }
 
 #if 0
-static bool
-C_ExtendedSource(unsigned char Test)
+static bool C_ExtendedSource(unsigned char x)
 {
-	return in_range<'\xA0','\xFF'>(Test);	//! \todo fix: assumes CHAR_BIT 8, UNICODE
+	return in_range<'\xA0','\xFF'>(x);	//! \todo fix: assumes CHAR_BIT 8, UNICODE
 }
 #endif
 
@@ -248,14 +237,12 @@ C_ExtendedSource(unsigned char Test)
 			0 1 2 3 4 5 6 7 8 9
 #endif
 
-size_t
-LengthOfCIdentifier(const char* const Test)
-{	//! \todo FIX: enhance this later
-	if (!IsAlphabeticChar(Test[0]) && '_'!=Test[0])
-		return 0;
+size_t LengthOfCIdentifier(const char* const x)
+{	//! \todo should handle universal character names
+	assert(NULL!=x);
+	if (!IsAlphabeticChar(*x) && '_'!=*x) return 0;
 	size_t Length = 1;
-	while(IsCIdentifierChar(Test[Length]))
-		Length++;
+	while(IsCIdentifierChar(x[Length])) Length++;
 	return Length;
 }
 
@@ -269,81 +256,75 @@ LengthOfCIdentifier(const char* const Test)
 		pp-number E sign
 		pp-number .
 #endif
-size_t
-LengthOfCPreprocessingNumber(const char* const Test)
+size_t LengthOfCPreprocessingNumber(const char* const x)
 {
-	size_t Length = 0;
-	if (IsNumericChar(Test[0]))
-		Length = 1;
-	else if ('.'==Test[0] && IsNumericChar(Test[1]))
-		Length = 2;
-	if (0<Length)
+	assert(NULL!=x);
+	size_t i = 0;	// Length
+	if (IsNumericChar(*x)) i = 1;
+	else if ('.'==*x && IsNumericChar(x[1])) i = 2;
+	if (0<i)
 		{
-		do	if ('.'==Test[Length] || IsNumericChar(Test[Length]))
-				Length++;
-			else if (IsAlphabeticChar(Test[Length]))
+		do	if ('.'==x[i] || IsNumericChar(x[i]))
+				++i;
+			else if (IsAlphabeticChar(x[i]))
 				{
-				if (   ('+'==Test[Length+1] || '-'==Test[Length+1])
-					&& ('E'==Test[Length] || 'e'==Test[Length] || 'P'==Test[Length] || 'p'==Test[Length]))
-					Length += 2;
+				if (   ('+'==x[i+1] || '-'==x[i+1])
+					&& ('E'==x[i] || 'e'==x[i] || 'P'==x[i] || 'p'==x[i]))
+					i += 2;
 				else
-					Length += 1;
+					i += 1;
 				}
 			else
-				return Length;
+				return i;
 		while(1);
 		};
 	return 0;
 }
 
-size_t
-LengthOfCCharLiteral(const char* const Test)
+size_t LengthOfCCharLiteral(const char* const x)
 {	// FORMALLY CORRECT: Kenneth Boyd, 10/17/2004
 	size_t Length = 0;
-	if ('\''==Test[0])
+	if ('\''==*x)
 		Length = 1;
-	else if (0==strncmp(Test,"L'",2))
+	else if (0==strncmp(x,"L'",2))
 		Length = 2;
-	if (0<Length)
+	if (0==Length) return 0;
+
+	const char* base = x+Length;
+	const char* find_end = strpbrk(base,"\\'\n");
+	while(NULL!=find_end)
 		{
-		const char* base = Test+Length;
-		const char* find_end = strpbrk(base,"\\'\n");
-		while(NULL!=find_end)
-			{
-			Length = find_end-Test+1;
-			if ('\''==find_end[0]) return Length;
-			if ('\n'==find_end[0]) return Length-1;
-			if ('\x00'==find_end[1]) return Length;
-			base = find_end+2;
-			find_end = ('\x00'==base[0]) ? NULL : strpbrk(base,"\\'\n");
-			};
-		return strlen(Test);
-		}
-	return 0;
+		Length = find_end-x+1;
+		if ('\''==find_end[0]) return Length;
+		if ('\n'==find_end[0]) return Length-1;
+		if ('\0'==find_end[1]) return Length;
+		base = find_end+2;
+		find_end = ('\0'==base[0]) ? NULL : strpbrk(base,"\\'\n");
+		};
+	return strlen(x);
 }
 
-size_t
-LengthOfCStringLiteral(const char* const Test)
+size_t LengthOfCStringLiteral(const char* const x)
 {	// FORMALLY CORRECT: Kenneth Boyd, 10/17/2004
 	size_t Length = 0;
-	if ('"'==Test[0])
+	if ('"'==*x)
 		Length = 1;
-	else if (0==strncmp(Test,"L\"",2))
+	else if (0==strncmp(x,"L\"",2))
 		Length = 2;
 	if (0<Length)
 		{
-		const char* base = Test+Length;
+		const char* base = x+Length;
 		const char* find_end = strpbrk(base,"\\\"\n");
 		while(NULL!=find_end)
 			{
-			Length = find_end-Test+1;
+			Length = find_end-x+1;
 			if ('"'==find_end[0]) return Length;
 			if ('\n'==find_end[0]) return Length-1;
-			if ('\x00'==find_end[1]) return Length;
+			if ('\0'==find_end[1]) return Length;
 			base = find_end+2;
-			find_end = ('\x00'==base[0]) ? NULL : strpbrk(base,"\\\"\n");
+			find_end = ('\0'==base[0]) ? NULL : strpbrk(base,"\\\"\n");
 			};
-		return strlen(Test);
+		return strlen(x);
 		}
 	return 0;
 }
@@ -367,7 +348,7 @@ LengthOfCStringLiteral(const char* const Test)
 
 #define ATOMIC_PREPROC_PUNC "()[]{};~,?"
 
-static const zaimoni::POD_triple<const char*,size_t,unsigned int> valid_pure_preprocessing_op_punc[]
+static const POD_triple<const char*,size_t,unsigned int> valid_pure_preprocessing_op_punc[]
 	=	{	DICT2_STRUCT("{",C_DISALLOW_CONSTANT_EXPR),
 			DICT2_STRUCT("}",C_DISALLOW_CONSTANT_EXPR),
 			DICT2_STRUCT("[",0),
@@ -436,7 +417,7 @@ static const zaimoni::POD_triple<const char*,size_t,unsigned int> valid_pure_pre
 
 BOOST_STATIC_ASSERT(NONATOMIC_PREPROC_OP_LB<C_PREPROC_OP_STRICT_UB);
 
-static const zaimoni::POD_pair<const char*,size_t> valid_keyword[]
+static const POD_pair<const char*,size_t> valid_keyword[]
 	=	{	DICT_STRUCT("__asm"),		// reserved to the implementation, so OK to make a keyword for C only
 			DICT_STRUCT("restrict"),	// C99 keywords not in C++98
 			DICT_STRUCT("_Bool"),
@@ -772,7 +753,7 @@ static const char* literal_suffix(size_t i)
 	return NULL;
 }
 
-static zaimoni::lex_flags literal_flags(size_t i)
+static lex_flags literal_flags(size_t i)
 {
 	switch(i)
 	{
@@ -792,7 +773,7 @@ static zaimoni::lex_flags literal_flags(size_t i)
 
 /* reference arrays for instantiating type_system class with */
 /* typenames starting with $ are internal, as $ is not a legal C-source character */
-const zaimoni::POD_triple<const char* const,size_t,zaimoni::lex_flags> C_atomic_types[]
+const POD_triple<const char* const,size_t,lex_flags> C_atomic_types[]
 	=	{
 		DICT2_STRUCT("void",0),
 		DICT2_STRUCT("$not-void",0),
@@ -817,7 +798,7 @@ const zaimoni::POD_triple<const char* const,size_t,zaimoni::lex_flags> C_atomic_
 		DICT2_STRUCT("long double _Complex",0)
 		};
 
-const zaimoni::POD_triple<const char* const,size_t,zaimoni::lex_flags> CPP_atomic_types[]
+const POD_triple<const char* const,size_t,lex_flags> CPP_atomic_types[]
 	=	{
 		DICT2_STRUCT("void",0),
 		DICT2_STRUCT("$not-void",0),
@@ -951,11 +932,12 @@ static void message_header(const weak_token& src)
 }
 
 // balanced character count
-static zaimoni::POD_pair<size_t,size_t> _balanced_character_count(const weak_token* tokenlist,size_t tokenlist_len,const char l_match,const char r_match)
+static POD_pair<size_t,size_t>
+_balanced_character_count(const weak_token* tokenlist,size_t tokenlist_len,const char l_match,const char r_match)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth = {0,0};
+	POD_pair<size_t,size_t> depth = {0,0};
 	const weak_token* const iter_end = tokenlist+tokenlist_len;
 	const weak_token* iter = tokenlist;
 	do	if (1==iter->token.second)
@@ -968,7 +950,7 @@ static zaimoni::POD_pair<size_t,size_t> _balanced_character_count(const weak_tok
 }
 
 template<char l_match,char r_match>
-inline static zaimoni::POD_pair<size_t,size_t> balanced_character_count(const weak_token* tokenlist,size_t tokenlist_len)
+inline static POD_pair<size_t,size_t> balanced_character_count(const weak_token* tokenlist,size_t tokenlist_len)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
@@ -976,11 +958,11 @@ inline static zaimoni::POD_pair<size_t,size_t> balanced_character_count(const we
 }
 
 template<>
-static zaimoni::POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const weak_token* tokenlist,size_t tokenlist_len)
+static POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const weak_token* tokenlist,size_t tokenlist_len)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth = {0, 0};
+	POD_pair<size_t,size_t> depth = {0, 0};
 	const weak_token* const iter_end = tokenlist+tokenlist_len;
 	const weak_token* iter = tokenlist;
 	do	if 		(detect_C_left_bracket_op(iter->token.first,iter->token.second)) ++depth.first;
@@ -990,11 +972,11 @@ static zaimoni::POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const 
 }
 
 template<>
-static zaimoni::POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const weak_token* tokenlist,size_t tokenlist_len)
+static POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const weak_token* tokenlist,size_t tokenlist_len)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth = {0, 0};
+	POD_pair<size_t,size_t> depth = {0, 0};
 	const weak_token* const iter_end = tokenlist+tokenlist_len;
 	const weak_token* iter = tokenlist;
 	do	if 		(detect_C_left_brace_op(iter->token.first,iter->token.second)) ++depth.first;
@@ -1003,11 +985,12 @@ static zaimoni::POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const 
 	return depth;
 }
 
-static zaimoni::POD_pair<size_t,size_t> _balanced_character_count(const parse_tree* tokenlist,size_t tokenlist_len,const char l_match,const char r_match)
+static POD_pair<size_t,size_t>
+_balanced_character_count(const parse_tree* tokenlist,size_t tokenlist_len,const char l_match,const char r_match)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth = {0, 0};
+	POD_pair<size_t,size_t> depth = {0, 0};
 	const parse_tree* const iter_end = tokenlist+tokenlist_len;
 	const parse_tree* iter = tokenlist;
 	do	if (1==iter->index_tokens[0].token.second && NULL==iter->index_tokens[1].token.first)
@@ -1020,7 +1003,7 @@ static zaimoni::POD_pair<size_t,size_t> _balanced_character_count(const parse_tr
 }
 
 template<char l_match,char r_match>
-inline static zaimoni::POD_pair<size_t,size_t> balanced_character_count(const parse_tree* tokenlist,size_t tokenlist_len)
+inline static POD_pair<size_t,size_t> balanced_character_count(const parse_tree* tokenlist,size_t tokenlist_len)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
@@ -1028,11 +1011,11 @@ inline static zaimoni::POD_pair<size_t,size_t> balanced_character_count(const pa
 }
 
 template<>
-static zaimoni::POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const parse_tree* tokenlist,size_t tokenlist_len)
+static POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const parse_tree* tokenlist,size_t tokenlist_len)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth = {0, 0};
+	POD_pair<size_t,size_t> depth = {0, 0};
 	const parse_tree* const iter_end = tokenlist+tokenlist_len;
 	const parse_tree* iter = tokenlist;
 	do	if (NULL==iter->index_tokens[1].token.first)
@@ -1045,11 +1028,11 @@ static zaimoni::POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const 
 }
 
 template<>
-static zaimoni::POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const parse_tree* tokenlist,size_t tokenlist_len)
+static POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const parse_tree* tokenlist,size_t tokenlist_len)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth = {0, 0};
+	POD_pair<size_t,size_t> depth = {0, 0};
 	const parse_tree* const iter_end = tokenlist+tokenlist_len;
 	const parse_tree* iter = tokenlist;
 	do	if (NULL==iter->index_tokens[1].token.first)
@@ -1061,20 +1044,20 @@ static zaimoni::POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const 
 	return depth;
 }
 
-static void _construct_matched_pairs(const weak_token* tokenlist,size_t tokenlist_len, zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >& stack1,const char l_match,const char r_match)
+static void _construct_matched_pairs(const weak_token* tokenlist,size_t tokenlist_len, autovalarray_ptr<POD_pair<size_t,size_t> >& stack1,const char l_match,const char r_match)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth = _balanced_character_count(tokenlist,tokenlist_len,l_match,r_match);	// pre-scan
+	POD_pair<size_t,size_t> depth = _balanced_character_count(tokenlist,tokenlist_len,l_match,r_match);	// pre-scan
 	std::pair<size_t,size_t> unbalanced_loc(0,0);
 	const size_t starting_errors = zcc_errors.err_count();
 
 	if (0<depth.first && 0<depth.second)
 		{
 		// reality-check: balanced parentheses
-		zaimoni::autovalarray_ptr<size_t> fixedstack(depth.first);
+		autovalarray_ptr<size_t> fixedstack(depth.first);
 		if (fixedstack.empty()) throw std::bad_alloc();
-		zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
+		autovalarray_ptr<POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 		if (pair_fixedstack.empty()) throw std::bad_alloc();
 
 		depth.first = 0;
@@ -1145,7 +1128,7 @@ static void _construct_matched_pairs(const weak_token* tokenlist,size_t tokenlis
 }
 
 template<char l_match,char r_match>
-static void construct_matched_pairs(const weak_token* tokenlist,size_t tokenlist_len, zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >& stack1)
+static void construct_matched_pairs(const weak_token* tokenlist,size_t tokenlist_len, autovalarray_ptr<POD_pair<size_t,size_t> >& stack1)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
@@ -1153,19 +1136,19 @@ static void construct_matched_pairs(const weak_token* tokenlist,size_t tokenlist
 }
 
 template<>
-static void construct_matched_pairs<'[',']'>(const weak_token* tokenlist,size_t tokenlist_len, zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >& stack1)
+static void construct_matched_pairs<'[',']'>(const weak_token* tokenlist,size_t tokenlist_len, autovalarray_ptr<POD_pair<size_t,size_t> >& stack1)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth = balanced_character_count<'[',']'>(tokenlist,tokenlist_len);	// pre-scan
+	POD_pair<size_t,size_t> depth = balanced_character_count<'[',']'>(tokenlist,tokenlist_len);	// pre-scan
 	std::pair<size_t,size_t> unbalanced_loc(0,0);
 	const size_t starting_errors = zcc_errors.err_count();
 
 	if (0<depth.first && 0<depth.second)
 		{
 		// reality-check: balanced parentheses
-		zaimoni::autovalarray_ptr<size_t> fixedstack(depth.first);
-		zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
+		autovalarray_ptr<size_t> fixedstack(depth.first);
+		autovalarray_ptr<POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 		if (fixedstack.empty()) throw std::bad_alloc();
 		if (pair_fixedstack.empty()) throw std::bad_alloc();
 
@@ -1231,19 +1214,19 @@ static void construct_matched_pairs<'[',']'>(const weak_token* tokenlist,size_t 
 }
 
 template<>
-static void construct_matched_pairs<'{','}'>(const weak_token* tokenlist,size_t tokenlist_len, zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >& stack1)
+static void construct_matched_pairs<'{','}'>(const weak_token* tokenlist,size_t tokenlist_len, autovalarray_ptr<POD_pair<size_t,size_t> >& stack1)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::POD_pair<size_t,size_t> depth = balanced_character_count<'{','}'>(tokenlist,tokenlist_len);	// pre-scan
+	POD_pair<size_t,size_t> depth = balanced_character_count<'{','}'>(tokenlist,tokenlist_len);	// pre-scan
 	std::pair<size_t,size_t> unbalanced_loc(0,0);
 	const size_t starting_errors = zcc_errors.err_count();
 
 	if (0<depth.first && 0<depth.second)
 		{
 		// reality-check: balanced parentheses
-		zaimoni::autovalarray_ptr<size_t> fixedstack(depth.first);
-		zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
+		autovalarray_ptr<size_t> fixedstack(depth.first);
+		autovalarray_ptr<POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 		if (fixedstack.empty()) throw std::bad_alloc();
 		if (pair_fixedstack.empty()) throw std::bad_alloc();
 
@@ -1325,7 +1308,7 @@ _slice_error(const weak_token& src,size_t slice_count,const char cut,const std::
 }
 
 static void
-find_sliced_pairs(const weak_token* tokenlist, const zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >& stack1, const zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >& stack2,const std::pair<char,char>& pair1,const std::pair<char,char>& pair2)
+find_sliced_pairs(const weak_token* tokenlist, const autovalarray_ptr<POD_pair<size_t,size_t> >& stack1, const autovalarray_ptr<POD_pair<size_t,size_t> >& stack2,const std::pair<char,char>& pair1,const std::pair<char,char>& pair2)
 {
 	assert(NULL!=tokenlist);
 	if (stack1.empty()) return;
@@ -1375,9 +1358,9 @@ static bool C_like_BalancingCheck(const weak_token* tokenlist,size_t tokenlist_l
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
-	zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> > parenpair_stack;
-	zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> > bracketpair_stack;
-	zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> > bracepair_stack;
+	autovalarray_ptr<POD_pair<size_t,size_t> > parenpair_stack;
+	autovalarray_ptr<POD_pair<size_t,size_t> > bracketpair_stack;
+	autovalarray_ptr<POD_pair<size_t,size_t> > bracepair_stack;
 	const size_t starting_errors = zcc_errors.err_count();
 
 	// responsible for context-free error checking	
@@ -1418,7 +1401,7 @@ static bool C_like_BalancingCheck(const weak_token* tokenlist,size_t tokenlist_l
 
 template<size_t targ_len>
 static inline bool
-robust_token_is_string(const zaimoni::POD_pair<const char*,size_t>& x,const char* const target)
+robust_token_is_string(const POD_pair<const char*,size_t>& x,const char* const target)
 {
 	assert(NULL!=target);
 	assert(targ_len==strlen(target));
@@ -1427,7 +1410,7 @@ robust_token_is_string(const zaimoni::POD_pair<const char*,size_t>& x,const char
 
 template<size_t targ_len>
 static inline bool
-token_is_string(const zaimoni::POD_pair<const char*,size_t>& x,const char* const target)
+token_is_string(const POD_pair<const char*,size_t>& x,const char* const target)
 {
 	assert(NULL!=target);
 	assert(targ_len==strlen(target));
@@ -1437,7 +1420,7 @@ token_is_string(const zaimoni::POD_pair<const char*,size_t>& x,const char* const
 
 template<char c>
 static inline bool
-token_is_char(const zaimoni::POD_pair<const char*,size_t>& x)
+token_is_char(const POD_pair<const char*,size_t>& x)
 {
 	assert(NULL!=x.first);
 	return 1==x.second && c== *x.first;
@@ -1445,7 +1428,7 @@ token_is_char(const zaimoni::POD_pair<const char*,size_t>& x)
 
 template<>
 static inline bool
-token_is_char<'#'>(const zaimoni::POD_pair<const char*,size_t>& x)
+token_is_char<'#'>(const POD_pair<const char*,size_t>& x)
 {
 	assert(NULL!=x.first);
 	return detect_C_stringize_op(x.first,x.second);
@@ -1453,7 +1436,7 @@ token_is_char<'#'>(const zaimoni::POD_pair<const char*,size_t>& x)
 
 template<>
 static inline bool
-token_is_char<'['>(const zaimoni::POD_pair<const char*,size_t>& x)
+token_is_char<'['>(const POD_pair<const char*,size_t>& x)
 {
 	assert(NULL!=x.first);
 	return detect_C_left_bracket_op(x.first,x.second);
@@ -1461,7 +1444,7 @@ token_is_char<'['>(const zaimoni::POD_pair<const char*,size_t>& x)
 
 template<>
 static inline bool
-token_is_char<']'>(const zaimoni::POD_pair<const char*,size_t>& x)
+token_is_char<']'>(const POD_pair<const char*,size_t>& x)
 {
 	assert(NULL!=x.first);
 	return detect_C_right_bracket_op(x.first,x.second);
@@ -1469,7 +1452,7 @@ token_is_char<']'>(const zaimoni::POD_pair<const char*,size_t>& x)
 
 template<>
 static inline bool
-token_is_char<'{'>(const zaimoni::POD_pair<const char*,size_t>& x)
+token_is_char<'{'>(const POD_pair<const char*,size_t>& x)
 {
 	assert(NULL!=x.first);
 	return detect_C_left_brace_op(x.first,x.second);
@@ -1477,7 +1460,7 @@ token_is_char<'{'>(const zaimoni::POD_pair<const char*,size_t>& x)
 
 template<>
 static inline bool
-token_is_char<'}'>(const zaimoni::POD_pair<const char*,size_t>& x)
+token_is_char<'}'>(const POD_pair<const char*,size_t>& x)
 {
 	assert(NULL!=x.first);
 	return detect_C_right_brace_op(x.first,x.second);
@@ -1485,42 +1468,42 @@ token_is_char<'}'>(const zaimoni::POD_pair<const char*,size_t>& x)
 
 template<char c>
 static inline bool
-robust_token_is_char(const zaimoni::POD_pair<const char*,size_t>& x)
+robust_token_is_char(const POD_pair<const char*,size_t>& x)
 {
 	return NULL!=x.first && 1==x.second && c== *x.first;
 }
 
 template<>
 static inline bool
-robust_token_is_char<'#'>(const zaimoni::POD_pair<const char*,size_t>& x)
+robust_token_is_char<'#'>(const POD_pair<const char*,size_t>& x)
 {
 	return NULL!=x.first && detect_C_stringize_op(x.first,x.second);
 }
 
 template<>
 static inline bool
-robust_token_is_char<'['>(const zaimoni::POD_pair<const char*,size_t>& x)
+robust_token_is_char<'['>(const POD_pair<const char*,size_t>& x)
 {
 	return NULL!=x.first && detect_C_left_bracket_op(x.first,x.second);
 }
 
 template<>
 static inline bool
-robust_token_is_char<']'>(const zaimoni::POD_pair<const char*,size_t>& x)
+robust_token_is_char<']'>(const POD_pair<const char*,size_t>& x)
 {
 	return NULL!=x.first && detect_C_right_bracket_op(x.first,x.second);
 }
 
 template<>
 static inline bool
-robust_token_is_char<'{'>(const zaimoni::POD_pair<const char*,size_t>& x)
+robust_token_is_char<'{'>(const POD_pair<const char*,size_t>& x)
 {
 	return NULL!=x.first && detect_C_left_brace_op(x.first,x.second);
 }
 
 template<>
 static inline bool
-robust_token_is_char<'}'>(const zaimoni::POD_pair<const char*,size_t>& x)
+robust_token_is_char<'}'>(const POD_pair<const char*,size_t>& x)
 {
 	return NULL!=x.first && detect_C_right_brace_op(x.first,x.second);
 }
@@ -1586,6 +1569,45 @@ static bool left_paren_asphyxiates(const weak_token& token)
 	return false;
 }
 
+static bool paren_is_bad_news(const weak_token& lhs, const weak_token& rhs)
+{
+	if (token_is_char<'['>(rhs.token) && asphyxiates_left_bracket(lhs))
+		{
+		message_header(rhs);
+		INC_INFORM(ERR_STR);
+		INC_INFORM(lhs.token.first,lhs.token.second);
+		INFORM(" [ denies [ ] its left argument (C99 6.5.2p1/C++98 5.2p1)");
+		zcc_errors.inc_error();
+		};
+	if (token_is_char<')'>(rhs.token) || token_is_char<']'>(rhs.token))
+		{
+		if (right_paren_asphyxiates(lhs))
+			{
+			message_header(rhs);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(rhs.token.first,rhs.token.second);
+			INC_INFORM(" denies ");
+			INC_INFORM(lhs.token.first,lhs.token.second);
+			INFORM(" its right argument (C99 6.5.3p1/C++98 5.3p1)");
+			zcc_errors.inc_error();
+			}
+		}
+	if (token_is_char<'('>(lhs.token) || token_is_char<'['>(lhs.token))
+		{
+		if (left_paren_asphyxiates(rhs))
+			{
+			message_header(lhs);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(lhs.token.first,lhs.token.second);
+			INC_INFORM(" denies ");
+			INC_INFORM(rhs.token.first,rhs.token.second);
+			INFORM(" its left argument");
+			zcc_errors.inc_error();
+			}
+		}
+	return false;	//! \todo don't abuse std::adjacent_find
+}
+
 static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
 {
 	assert(NULL!=tokenlist);
@@ -1599,46 +1621,7 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 		INFORM("[ at start of expression denies [ ] its left argument (C99 6.5.2p1/C++98 5.2p1)");
 		zcc_errors.inc_error();
 		};
-	size_t i = 0;
-	do	{
-		if (0<i && token_is_char<'['>(tokenlist[i].token) && asphyxiates_left_bracket(tokenlist[i-1]))
-			{
-			message_header(tokenlist[i]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(tokenlist[i-1].token.first,tokenlist[i-1].token.second);
-			INFORM(" [ denies [ ] its left argument (C99 6.5.2p1/C++98 5.2p1)");
-			zcc_errors.inc_error();
-			};
-		if (	0<i
-			&& (token_is_char<')'>(tokenlist[i].token) || token_is_char<']'>(tokenlist[i].token)))
-			{
-			if (right_paren_asphyxiates(tokenlist[i-1]))
-				{
-				message_header(tokenlist[i]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(tokenlist[i].token.first,tokenlist[i-1].token.second);
-				INC_INFORM(" denies ");
-				INC_INFORM(tokenlist[i-1].token.first,tokenlist[i-1].token.second);
-				INFORM(" its right argument (C99 6.5.3p1/C++98 5.3p1)");
-				zcc_errors.inc_error();
-				}
-			}
-		if (	1<tokenlist_len-i
-			&& 	(token_is_char<'('>(tokenlist[i].token) || token_is_char<'['>(tokenlist[i].token)))
-			{
-			if (left_paren_asphyxiates(tokenlist[i+1]))
-				{
-				message_header(tokenlist[i]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(tokenlist[i].token.first,tokenlist[i].token.second);
-				INC_INFORM(" denies ");
-				INC_INFORM(tokenlist[i+1].token.first,tokenlist[i+1].token.second);
-				INFORM(" its left argument");
-				zcc_errors.inc_error();
-				}
-			}
-		}
-	while(tokenlist_len> ++i);
+	std::adjacent_find(tokenlist,tokenlist+tokenlist_len,paren_is_bad_news);
 	if (hard_end && right_paren_asphyxiates(tokenlist[tokenlist_len-1]))
 		{
 		message_header(tokenlist[tokenlist_len-1]);
@@ -1665,35 +1648,33 @@ static bool CPP_ControlExpressionContextFreeErrorCount(const weak_token* tokenli
 	return C99_CoreControlExpressionContextFreeErrorCount(tokenlist,tokenlist_len,hard_start,hard_end);
 }
 
-size_t
-LengthOfCPurePreprocessingOperatorPunctuation(const char* const Test)
+size_t LengthOfCPurePreprocessingOperatorPunctuation(const char* const x)
 {
-	assert(NULL!=Test);
-	if (NULL!=strchr(ATOMIC_PREPROC_PUNC,Test[0])) return 1;
-	const errr i = linear_reverse_find_prefix_in_lencached(Test,valid_pure_preprocessing_op_punc+NONATOMIC_PREPROC_OP_LB,C_PREPROC_OP_STRICT_UB-NONATOMIC_PREPROC_OP_LB);
+	assert(NULL!=x);
+	assert('\0'!=*x);
+	if (NULL!=strchr(ATOMIC_PREPROC_PUNC,*x)) return 1;
+	const errr i = linear_reverse_find_prefix_in_lencached(x,valid_pure_preprocessing_op_punc+NONATOMIC_PREPROC_OP_LB,C_PREPROC_OP_STRICT_UB-NONATOMIC_PREPROC_OP_LB);
 	if (0<=i) return valid_pure_preprocessing_op_punc[i+NONATOMIC_PREPROC_OP_LB].second;
 	return 0;
 }
 
-size_t
-LengthOfCPPPurePreprocessingOperatorPunctuation(const char* const Test)
+size_t LengthOfCPPPurePreprocessingOperatorPunctuation(const char* const x)
 {
-	assert(NULL!=Test);
-	if (NULL!=strchr(ATOMIC_PREPROC_PUNC,Test[0])) return 1;
-	const errr i = linear_reverse_find_prefix_in_lencached(Test,valid_pure_preprocessing_op_punc+NONATOMIC_PREPROC_OP_LB,CPP_PREPROC_OP_STRICT_UB-NONATOMIC_PREPROC_OP_LB);
+	assert(NULL!=x);
+	assert('\0'!=*x);
+	if (NULL!=strchr(ATOMIC_PREPROC_PUNC,*x)) return 1;
+	const errr i = linear_reverse_find_prefix_in_lencached(x,valid_pure_preprocessing_op_punc+NONATOMIC_PREPROC_OP_LB,CPP_PREPROC_OP_STRICT_UB-NONATOMIC_PREPROC_OP_LB);
 	if (0<=i) return valid_pure_preprocessing_op_punc[i+NONATOMIC_PREPROC_OP_LB].second;
 	return 0;
 }
 
-unsigned int
-CPurePreprocessingOperatorPunctuationFlags(signed int i)
+static unsigned int CPurePreprocessingOperatorPunctuationFlags(signed int i)
 {
 	assert(0<i && C_PREPROC_OP_STRICT_UB>=(unsigned int)i);
 	return valid_pure_preprocessing_op_punc[i-1].third;
 }
 
-unsigned int
-CPPPurePreprocessingOperatorPunctuationFlags(signed int i)
+static unsigned int CPPPurePreprocessingOperatorPunctuationFlags(signed int i)
 {
 	assert(0<i && CPP_PREPROC_OP_STRICT_UB>=(unsigned int)i);
 	return valid_pure_preprocessing_op_punc[i-1].third;
@@ -1702,30 +1683,28 @@ CPPPurePreprocessingOperatorPunctuationFlags(signed int i)
 // encoding reality checks
 BOOST_STATIC_ASSERT(PP_CODE_MASK>CPP_PREPROC_OP_STRICT_UB);
 BOOST_STATIC_ASSERT((PP_CODE_MASK>>1)<=CPP_PREPROC_OP_STRICT_UB);
-signed int
+static signed int
 CPurePreprocessingOperatorPunctuationCode(const char* const x, size_t x_len)
 {
 	BOOST_STATIC_ASSERT(INT_MAX-1>=C_PREPROC_OP_STRICT_UB);
 	return 1+linear_reverse_find_lencached(x,x_len,valid_pure_preprocessing_op_punc,C_PREPROC_OP_STRICT_UB);
 }
 
-signed int
+static signed int
 CPPPurePreprocessingOperatorPunctuationCode(const char* const x, size_t x_len)
 {
 	BOOST_STATIC_ASSERT(INT_MAX-1>=CPP_PREPROC_OP_STRICT_UB);
 	return 1+linear_reverse_find_lencached(x,x_len,valid_pure_preprocessing_op_punc,CPP_PREPROC_OP_STRICT_UB);
 }
 
-size_t
-LengthOfCSystemHeader(const char* src)
+static size_t LengthOfCSystemHeader(const char* src)
 {
 	const errr i = linear_find(src,system_headers,C_SYS_HEADER_STRICT_UB);
 	if (0<=i) return strlen(system_headers[i]);
 	return 0;
 }
 
-size_t
-LengthOfCPPSystemHeader(const char* src)
+static size_t LengthOfCPPSystemHeader(const char* src)
 {
 	const errr i = linear_find(src,system_headers,CPP_SYS_HEADER_STRICT_UB);
 	if (0<=i) return strlen(system_headers[i]);
@@ -1740,9 +1719,8 @@ LengthOfCPPSystemHeader(const char* src)
 static const char* const c99_symbolic_escaped_escapes = C99_SYMBOLIC_ESCAPED_ESCAPES;
 static const char* const c99_symbolic_escapes = C99_SYMBOLIC_ESCAPES;
 
-size_t
-LengthOfEscapedCString(const char* src, size_t src_len)
-{	//! \todo synchronize with EscapeCString
+static size_t LengthOfEscapedCString(const char* src, size_t src_len)
+{
 	assert(NULL!=src);
 	assert(0<src_len);
 	size_t actual_size = src_len;
@@ -1818,8 +1796,7 @@ LengthOfEscapedCString(const char* src, size_t src_len)
 	return actual_size;
 }
 
-size_t
-LengthOfEscapedCString(const my_UNICODE* src, size_t src_len)
+static size_t LengthOfEscapedCString(const my_UNICODE* src, size_t src_len)
 {	//! \todo synchronize with EscapeCString
 	assert(NULL!=src);
 	assert(0<src_len);
@@ -1896,8 +1873,7 @@ LengthOfEscapedCString(const my_UNICODE* src, size_t src_len)
 	return actual_size;
 }
 
-void
-EscapeCString(char* dest, const char* src, size_t src_len)
+static void EscapeCString(char* dest, const char* src, size_t src_len)
 {	// \todo fix ASCII dependency.
 	assert(NULL!=src);
 	assert(0<src_len);
@@ -2035,8 +2011,7 @@ EscapeCString(char* dest, const char* src, size_t src_len)
 	while(src_len > ++i);
 }
 
-void
-EscapeCString(char* dest, const my_UNICODE* src, size_t src_len)
+static void EscapeCString(char* dest, const my_UNICODE* src, size_t src_len)
 {	// \todo fix ASCII dependency.
 	assert(NULL!=src);
 	assert(0<src_len);
@@ -2161,9 +2136,8 @@ EscapeCString(char* dest, const my_UNICODE* src, size_t src_len)
 static size_t octal_escape_length(const char* const src, const size_t ub)
 {
 	assert(NULL!=src);
-	size_t oct_len = strspn(src,C_OCTAL_DIGITS);
-	if (ub<oct_len) oct_len = ub;
-	return oct_len;
+	const size_t oct_len = strspn(src,C_OCTAL_DIGITS);
+	return (ub<oct_len) ? ub : oct_len;
 }
 
 static unsigned int eval_octal_escape(const char* src, size_t src_len)
@@ -2278,8 +2252,7 @@ static size_t RobustEscapedCharLength_C(const char* src, size_t src_len)
 	return oct_len+1;
 }
 
-size_t
-LengthOfUnescapedCString(const char* src, size_t src_len)
+static size_t LengthOfUnescapedCString(const char* src, size_t src_len)
 {
 	assert(NULL!=src);
 	assert(0<src_len);
@@ -2320,7 +2293,7 @@ static uintmax_t _eval_character(const char* src, size_t src_len)
 	return eval_hex_escape(src+2,src_len-2).to_uint();
 }
 
-void UnescapeCString(char* dest, const char* src, size_t src_len)
+static void UnescapeCString(char* dest, const char* src, size_t src_len)
 {	//! \todo cross-compiler augmentation target, dest needs to be able represent target strings
 	assert(NULL!=src);
 	assert(0<src_len);
@@ -2336,7 +2309,7 @@ void UnescapeCString(char* dest, const char* src, size_t src_len)
 	while(src_len > i);
 }
 
-void UnescapeCWideString(my_UNICODE* dest, const char* src, size_t src_len)
+static void UnescapeCWideString(my_UNICODE* dest, const char* src, size_t src_len)
 {	//! \todo cross-compiler change target, dest needs to be able represent target strings
 	assert(NULL!=src);
 	assert(0<src_len);
@@ -2352,61 +2325,61 @@ void UnescapeCWideString(my_UNICODE* dest, const char* src, size_t src_len)
 	while(src_len > i);
 }
 
-bool IsLegalCString(const char* src, size_t src_len)
+bool IsLegalCString(const char* x, size_t x_len)
 {
-	assert(NULL!=src);
-	assert(0<src_len);
-	if ('"'!=src[src_len-1]) return false;
-	if (0 == --src_len) return false;
-	const bool wide_string = 'L'==src[0];
+	assert(NULL!=x);
+	assert(0<x_len);
+	if ('"' != x[x_len-1]) return false;
+	if (0 == --x_len) return false;
+	const bool wide_string = 'L' == *x;
 	if (wide_string)
 		{
-		if (0 == --src_len) return false;	
-		++src;
+		if (0 == --x_len) return false;	
+		++x;
 		}
-	if ('"'!=*(src++)) return false;
-	if (0 == --src_len) return true;	// empty string is legal
+	if ('"' != *(x++)) return false;
+	if (0 == --x_len) return true;	// empty string is legal
 	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& uchar_max = target_machine->unsigned_max((wide_string) ? target_machine->UNICODE_wchar_t() : virtual_machine::std_int_char);
 
 	size_t i = 0;
 	do	{
-		const size_t step = RobustEscapedCharLength_C(src+i,src_len-i);
+		const size_t step = RobustEscapedCharLength_C(x+i,x_len-i);
 		if (0==step) return false;
-		if (uchar_max<_eval_character(src+i,step)) return false;
+		if (uchar_max<_eval_character(x+i,step)) return false;
 		i += step;
 		}
-	while(src_len > i);
+	while(x_len > i);
 	return true;
 }
 
-bool IsLegalCCharacterLiteral(const char* src, size_t src_len)
+bool IsLegalCCharacterLiteral(const char* x, size_t x_len)
 {
-	assert(NULL!=src);
-	assert(0<src_len);
-	if ('\''!=src[src_len-1]) return false;
-	if (0 == --src_len) return false;
-	const bool wide_string = 'L'==src[0];
+	assert(NULL!=x);
+	assert(0<x_len);
+	if ('\'' != x[x_len-1]) return false;
+	if (0 == --x_len) return false;
+	const bool wide_string = 'L' == *x;
 	if (wide_string)
 		{
-		if (0 == --src_len) return false;	
-		++src;
+		if (0 == --x_len) return false;	
+		++x;
 		}
-	if ('\''!=*(src++)) return false;
-	if (0 == --src_len) return false;	// empty character literal is illegal
+	if ('\'' != *(x++)) return false;
+	if (0 == --x_len) return false;	// empty character literal is illegal
 	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& uchar_max = target_machine->unsigned_max((wide_string) ? target_machine->UNICODE_wchar_t() : virtual_machine::std_int_char);
 
 	size_t i = 0;
 	do	{
-		const size_t step = RobustEscapedCharLength_C(src+i,src_len-i);
+		const size_t step = RobustEscapedCharLength_C(x+i,x_len-i);
 		if (0==step) return false;
-		if (uchar_max<_eval_character(src+i,step)) return false;
+		if (uchar_max<_eval_character(x+i,step)) return false;
 		i += step;
 		}
-	while(src_len > i);
+	while(x_len > i);
 	return true;
 }
 
-size_t LengthOfCStringLiteral(const char* src, size_t src_len)
+static size_t LengthOfCStringLiteral(const char* src, size_t src_len)
 {
 	assert(NULL!=src);
 	assert(2<=src_len);
@@ -2441,7 +2414,8 @@ bool LocateCCharacterLiteralAt(const char* const src, size_t src_len, size_t tar
 	const char* src2 = src;
 	const size_t C_str_len = LengthOfCStringLiteral(src,src_len);
 	assert(C_str_len>target_idx);
-	if (target_idx+1<=C_str_len) return false;	// NUL; using <= to be failsafed in release mode
+	// NUL; using <= to be failsafed in release mode
+	if (target_idx+1<=C_str_len) return false;
 	const bool wide_str = ('L'==src[0]);
 	if (wide_str)
 		{
@@ -2469,8 +2443,7 @@ bool LocateCCharacterLiteralAt(const char* const src, size_t src_len, size_t tar
 	return false;
 }
 
-void
-GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, char*& tmp)
+void GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, char*& tmp)
 {
 	assert(NULL!=src);
 	assert(2<=src_len);
@@ -2537,7 +2510,7 @@ GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, char*
  * \post returns 1 iff NULL!=target
  * \post if NULL!=target, target points to a valid string literal
  */
-int ConcatenateCStringLiterals(const char* src, size_t src_len, const char* src2, size_t src2_len, char*& target)
+static int ConcatenateCStringLiterals(const char* src, size_t src_len, const char* src2, size_t src2_len, char*& target)
 {
 	assert(NULL!=src);
 	assert(NULL!=src2);
@@ -2587,7 +2560,7 @@ int ConcatenateCStringLiterals(const char* src, size_t src_len, const char* src2
 	bool simple_paste_ok = !strchr(C_HEXADECIMAL_DIGITS,*str2);
 	if (!simple_paste_ok)
 		{
-		zaimoni::POD_pair<size_t,size_t> loc;
+		POD_pair<size_t,size_t> loc;
 #ifndef NDEBUG
 		assert(LocateCCharacterLiteralAt(src,src_len,str1_un_len-1,loc.first,loc.second));
 #else
@@ -2721,27 +2694,27 @@ bool CCharLiteralIsFalse(const char* x,size_t x_len)
 
 // not sure if we need this bit, but it matches the standards
 // PM expression is C++ only
-#define PARSE_PRIMARY_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-1))
-#define PARSE_STRICT_POSTFIX_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-2))
-#define PARSE_STRICT_UNARY_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-3))
-#define PARSE_STRICT_CAST_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-4))
-#define PARSE_STRICT_PM_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-5))
-#define PARSE_STRICT_MULT_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-6))
-#define PARSE_STRICT_ADD_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-7))
-#define PARSE_STRICT_SHIFT_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-8))
-#define PARSE_STRICT_RELATIONAL_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-9))
-#define PARSE_STRICT_EQUALITY_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-10))
-#define PARSE_STRICT_BITAND_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-11))
-#define PARSE_STRICT_BITXOR_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-12))
-#define PARSE_STRICT_BITOR_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-13))
-#define PARSE_STRICT_LOGICAND_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-14))
-#define PARSE_STRICT_LOGICOR_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-15))
-#define PARSE_STRICT_CONDITIONAL_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-16))
-#define PARSE_STRICT_ASSIGNMENT_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-17))
-#define PARSE_STRICT_COMMA_EXPRESSION ((zaimoni::lex_flags)(1)<<(sizeof(zaimoni::lex_flags)*CHAR_BIT-18))
+#define PARSE_PRIMARY_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-1))
+#define PARSE_STRICT_POSTFIX_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-2))
+#define PARSE_STRICT_UNARY_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-3))
+#define PARSE_STRICT_CAST_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-4))
+#define PARSE_STRICT_PM_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-5))
+#define PARSE_STRICT_MULT_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-6))
+#define PARSE_STRICT_ADD_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-7))
+#define PARSE_STRICT_SHIFT_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-8))
+#define PARSE_STRICT_RELATIONAL_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-9))
+#define PARSE_STRICT_EQUALITY_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-10))
+#define PARSE_STRICT_BITAND_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-11))
+#define PARSE_STRICT_BITXOR_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-12))
+#define PARSE_STRICT_BITOR_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-13))
+#define PARSE_STRICT_LOGICAND_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-14))
+#define PARSE_STRICT_LOGICOR_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-15))
+#define PARSE_STRICT_CONDITIONAL_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-16))
+#define PARSE_STRICT_ASSIGNMENT_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-17))
+#define PARSE_STRICT_COMMA_EXPRESSION ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-18))
 
 // check for collision with lowest three bits
-BOOST_STATIC_ASSERT(sizeof(zaimoni::lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>=18);
+BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>=18);
 
 /* nonstrict expression types */
 #define PARSE_POSTFIX_EXPRESSION (PARSE_PRIMARY_EXPRESSION | PARSE_STRICT_POSTFIX_EXPRESSION)
@@ -2770,7 +2743,7 @@ BOOST_STATIC_ASSERT(sizeof(zaimoni::lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_S
 static void INC_INFORM(const parse_tree& src)
 {	// generally...
 	// prefix data
-	const zaimoni::lex_flags my_rank = src.flags & PARSE_EXPRESSION;
+	const lex_flags my_rank = src.flags & PARSE_EXPRESSION;
 	bool need_parens = (1==src.size<1>()) ? my_rank>(src.data<1>()->flags & PARSE_EXPRESSION) : false;
 	if (need_parens) INC_INFORM('(');
 	size_t i = 0;
@@ -3340,7 +3313,7 @@ static void _label_literals(parse_tree& src,const type_system& types)
 				}
 			else{
 				// more than two strings to psuedo-concatenate
-				zaimoni::POD_pair<size_t,size_t> scan = {str_span.first,str_span.first+2};
+				POD_pair<size_t,size_t> scan = {str_span.first,str_span.first+2};
 				while(src.size<0>()>scan.second+1 && C_TESTFLAG_STRING_LITERAL==src.data<0>()[scan.second+1].index_tokens[0].flags) ++scan.second;
 				if (parse_tree::collapse_matched_pair(src,scan))
 					src.c_array<0>()[scan.first].flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
@@ -3365,7 +3338,7 @@ static void _label_literals(parse_tree& src,const type_system& types)
 				want_second_slidedown = true;
 				}
 			else{	// more than two strings to psuedo-concatenate
-				zaimoni::POD_pair<size_t,size_t> scan = {str_span.second-2,str_span.second};
+				POD_pair<size_t,size_t> scan = {str_span.second-2,str_span.second};
 				while(0<scan.first && C_TESTFLAG_STRING_LITERAL==src.data<0>()[scan.first-1].index_tokens[0].flags) --scan.first;
 				if (parse_tree::collapse_matched_pair(src,scan))
 					src.c_array<0>()[scan.first].flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
@@ -3444,16 +3417,16 @@ static bool _this_vaguely_where_it_could_be_cplusplus(const parse_tree& src)
 static bool _match_pairs(parse_tree& src)
 {
 	assert(!src.empty<0>());
-	zaimoni::POD_pair<size_t,size_t> depth_parens = balanced_character_count<'(',')'>(src.data<0>(),src.size<0>());	// pre-scan
-	zaimoni::POD_pair<size_t,size_t> depth_brackets = balanced_character_count<'[',']'>(src.data<0>(),src.size<0>());	// pre-scan
-	zaimoni::POD_pair<size_t,size_t> depth_braces = balanced_character_count<'{','}'>(src.data<0>(),src.size<0>());	// pre-scan
+	POD_pair<size_t,size_t> depth_parens = balanced_character_count<'(',')'>(src.data<0>(),src.size<0>());	// pre-scan
+	POD_pair<size_t,size_t> depth_brackets = balanced_character_count<'[',']'>(src.data<0>(),src.size<0>());	// pre-scan
+	POD_pair<size_t,size_t> depth_braces = balanced_character_count<'{','}'>(src.data<0>(),src.size<0>());	// pre-scan
 	assert(depth_parens.first==depth_parens.second);
 	assert(depth_brackets.first==depth_brackets.second);
 	assert(depth_braces.first==depth_braces.second);
 	if (0==depth_parens.first && 0==depth_brackets.first && 0==depth_braces.first) return true;
-	zaimoni::autovalarray_ptr<size_t> paren_stack(depth_parens.first);
-	zaimoni::autovalarray_ptr<size_t> bracket_stack(depth_brackets.first);
-	zaimoni::autovalarray_ptr<size_t> brace_stack(depth_braces.first);
+	autovalarray_ptr<size_t> paren_stack(depth_parens.first);
+	autovalarray_ptr<size_t> bracket_stack(depth_brackets.first);
+	autovalarray_ptr<size_t> brace_stack(depth_braces.first);
 
 	if (0<depth_parens.first && paren_stack.empty()) throw std::bad_alloc();
 	if (0<depth_brackets.first && bracket_stack.empty()) throw std::bad_alloc();
@@ -3472,7 +3445,7 @@ static bool _match_pairs(parse_tree& src)
 			assert(0<paren_idx);
 			assert(0==bracket_idx || bracket_stack[bracket_idx-1]<paren_stack[paren_idx-1]);
 			assert(0==brace_idx || brace_stack[brace_idx-1]<paren_stack[paren_idx-1]);
-			const zaimoni::POD_pair<size_t,size_t> target = {paren_stack[--paren_idx],i};
+			const POD_pair<size_t,size_t> target = {paren_stack[--paren_idx],i};
 			if (!parse_tree::collapse_matched_pair(src,target)) throw std::bad_alloc();
 			i = paren_stack[paren_idx];
 			// do not suppress inner parentheses here, this only works for known expressions
@@ -3489,7 +3462,7 @@ static bool _match_pairs(parse_tree& src)
 			assert(0<bracket_idx);
 			assert(0==paren_idx || paren_stack[paren_idx-1]<bracket_stack[bracket_idx-1]);
 			assert(0==brace_idx || brace_stack[brace_idx-1]<bracket_stack[bracket_idx-1]);
-			const zaimoni::POD_pair<size_t,size_t> target = {bracket_stack[--bracket_idx],i};
+			const POD_pair<size_t,size_t> target = {bracket_stack[--bracket_idx],i};
 			if (!parse_tree::collapse_matched_pair(src,target)) throw std::bad_alloc();
 			i = bracket_stack[bracket_idx];
 			// do not suppress inner parentheses here, this only works for known expressions
@@ -3506,7 +3479,7 @@ static bool _match_pairs(parse_tree& src)
 			assert(0<brace_idx);
 			assert(0==paren_idx || paren_stack[paren_idx-1]<brace_stack[brace_idx-1]);
 			assert(0==bracket_idx || bracket_stack[bracket_idx-1]<brace_stack[brace_idx-1]);
-			const zaimoni::POD_pair<size_t,size_t> target = {brace_stack[--brace_idx],i};
+			const POD_pair<size_t,size_t> target = {brace_stack[--brace_idx],i};
 			if (!parse_tree::collapse_matched_pair(src,target)) throw std::bad_alloc();
 			i = brace_stack[brace_idx];
 			if (0==brace_idx && 1<src.size<0>()-i)
@@ -4371,7 +4344,7 @@ static bool locate_CPP_logical_NOT(parse_tree& src, size_t& i, const type_system
 	return false;
 }
 
-static bool VM_to_token(const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,const size_t base_type_index,zaimoni::POD_pair<char*,zaimoni::lex_flags>& dest)
+static bool VM_to_token(const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,const size_t base_type_index,POD_pair<char*,lex_flags>& dest)
 {
 	const char* const suffix = literal_suffix(base_type_index);
 	char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
@@ -4439,7 +4412,7 @@ static void force_unary_positive_literal(parse_tree& dest,const parse_tree& src)
 
 static bool VM_to_literal(parse_tree& dest, const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,const parse_tree& src,const type_system& types)
 {
-	zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+	POD_pair<char*,lex_flags> new_token;
 	if (!VM_to_token(src_int,src.type_code.base_type_index,new_token)) return false;
 	dest.clear();
 	dest.grab_index_token_from<0>(new_token.first,new_token.second);
@@ -4695,7 +4668,7 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,func_trai
 		target_machine->unsigned_additive_inverse(res_int,machine_type);
 
 		//! \todo flag failures to reduce as RAM-stalled
-		zaimoni::POD_pair<char*,zaimoni::lex_flags> new_token;
+		POD_pair<char*,lex_flags> new_token;
 		if (!VM_to_token(res_int,old_type.base_type_index,new_token)) return false;
 		src.c_array<2>()->grab_index_token_from<0>(new_token.first,new_token.second);
 		src.eval_to_arg<2>(0);
@@ -5001,7 +4974,7 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 #endif
 }
 
-static void assemble_binary_infix_arguments(parse_tree& src, size_t& i, const zaimoni::lex_flags _flags)
+static void assemble_binary_infix_arguments(parse_tree& src, size_t& i, const lex_flags _flags)
 {
 	assert(1<=i && 2<=src.size<0>()-i);
 	parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
@@ -5022,7 +4995,7 @@ static void assemble_binary_infix_arguments(parse_tree& src, size_t& i, const za
 	cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
 }
 
-static void merge_binary_infix_argument(parse_tree& src, size_t& i, const zaimoni::lex_flags _flags)
+static void merge_binary_infix_argument(parse_tree& src, size_t& i, const lex_flags _flags)
 {
 	assert(1<=i);
 	parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
@@ -8795,7 +8768,7 @@ static bool C99_convert_literal_to_integer(const parse_tree& src,unsigned_fixed_
 	C_PPOctalInteger test_oct;
 	int errno_copy = 0;
 	{
-	zaimoni::OS::scoped_lock errno_lock(errno_mutex);
+	OS::scoped_lock errno_lock(errno_mutex);
 	errno = 0;
 	switch(C_EXTRACT_BASE_CODE(src.index_tokens[0].flags))
 	{
@@ -8859,7 +8832,7 @@ static bool CPlusPlus_convert_literal_to_integer(const parse_tree& src,unsigned_
 }
 
 //! \test Pass_if_zero.hpp
-bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const zaimoni::lex_flags flags)
+bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const lex_flags flags)
 {
 	assert(NULL!=x);
 	assert(0<x_len);
@@ -8905,7 +8878,7 @@ bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const za
 	}
 }
 
-static void eval_string_literal_deref(parse_tree& src,const type_system& types,const zaimoni::POD_pair<const char*,size_t>& str_lit,const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& tmp, bool is_negative,bool index_src_is_char)
+static void eval_string_literal_deref(parse_tree& src,const type_system& types,const POD_pair<const char*,size_t>& str_lit,const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& tmp, bool is_negative,bool index_src_is_char)
 {
 	const size_t strict_ub = LengthOfCStringLiteral(str_lit.first,str_lit.second);
 	// C99 6.2.6.2p3 -0 is not actually allowed to generate the bitpattern -0, so no trapping
