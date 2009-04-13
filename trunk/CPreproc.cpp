@@ -30,6 +30,8 @@
 
 #include "DebugCSupport.h"
 
+using namespace zaimoni;
+
 namespace Lang {
 
 // some idea of which lexer to use
@@ -82,7 +84,7 @@ static void init_fixed_system_include_search(void)
 		size_t i = STATIC_SIZE(fixed_system_include_search);
 		do	{
 			--i;
-			assert(!zaimoni::is_empty_string(fixed_system_include_search[i]));
+			assert(!is_empty_string(fixed_system_include_search[i]));
 			char* exists = z_realpath(filepath,fixed_system_include_search[i]);
 			fixed_system_include_exists[i] = (NULL!=exists && !access(exists,F_OK));
 			}
@@ -177,7 +179,7 @@ leading underscore followed by an uppercase letter or a second underscore.
 
 // design decision: make this consistent across both C, C++
 // design decision: make this consistent across all versions of C, C++
-static const zaimoni::POD_pair<const char*,size_t> C99_CPP0x_locked_macros_default[]
+static const POD_pair<const char*,size_t> C99_CPP0x_locked_macros_default[]
  =	{	DICT_STRUCT("__DATE__"),				// determine in realtime at start of translation
 		DICT_STRUCT("__TIME__"),				// determine in realtime at start of translation
 		DICT_STRUCT("__FILE__"),				// special handling
@@ -198,7 +200,7 @@ static const zaimoni::POD_pair<const char*,size_t> C99_CPP0x_locked_macros_defau
 		DICT_STRUCT("__ZCC_PATCHLEVEL__")		// lock down our identity
 	};
 
-static const zaimoni::POD_pair<const char*,const char*> C99_macro_identifier_default[]
+static const POD_pair<const char*,const char*> C99_macro_identifier_default[]
  =	{	{"__DATE__", NULL},			// start standard-mandated macros
 		{"__TIME__", NULL},
 		{"__FILE__", NULL},
@@ -211,7 +213,7 @@ static const zaimoni::POD_pair<const char*,const char*> C99_macro_identifier_def
 		{"__ZCC_PATCHLEVEL__", STRINGIZE(ZCC_VERSION_PATCH)}	// patchlevel
 	};
 
-static const zaimoni::POD_pair<const char*,const char*> CPP0x_macro_identifier_default[]
+static const POD_pair<const char*,const char*> CPP0x_macro_identifier_default[]
  =	{	{"__DATE__", NULL},			// start standard-mandated macros
 		{"__TIME__", NULL},
 		{"__FILE__", NULL},
@@ -225,7 +227,7 @@ static const zaimoni::POD_pair<const char*,const char*> CPP0x_macro_identifier_d
 		{"__ZCC_PATCHLEVEL__", "0"}	// patchlevel
 	};
 
-static const zaimoni::POD_pair<const char*,Lang::LangTypes> LegalLanguages[]
+static const POD_pair<const char*,Lang::LangTypes> LegalLanguages[]
 	=	{	{"C", Lang::C},
 			{"C++", Lang::CPlusPlus},
 			{"c", Lang::C},
@@ -242,7 +244,7 @@ static const zaimoni::POD_pair<const char*,Lang::LangTypes> LegalLanguages[]
 const char*
 CPreprocessor::echo_valid_lang(const char* const x)
 {
-	if (!zaimoni::is_empty_string(x))
+	if (!is_empty_string(x))
 		{
 		size_t i = STATIC_SIZE(LegalLanguages);
 		do	if (!strcmp(x,LegalLanguages[--i].first)) return x;
@@ -251,7 +253,7 @@ CPreprocessor::echo_valid_lang(const char* const x)
 	return NULL;
 }
 
-static zaimoni::LangConf& lexer_from_lang(unsigned int lang)
+static LangConf& lexer_from_lang(unsigned int lang)
 {
 	switch(lang)
 	{
@@ -272,7 +274,7 @@ static unsigned int lang_index(const char* const lang)
 	FATAL("'");
 }
 
-zaimoni::LangConf&
+LangConf&
 lexer_from_string(const char* const lang)
 {
 	return lexer_from_lang(lang_index(lang));
@@ -313,7 +315,7 @@ CPreprocessor::CPreprocessor(const virtual_machine::CPUInfo& _target_machine, co
 	assert(0<lang.len_InvariantKeywords);
 }
 
-static const zaimoni::POD_pair<const char*,size_t> valid_directives[]
+static const POD_pair<const char*,size_t> valid_directives[]
 	=	{	DICT_STRUCT("if"),
 			DICT_STRUCT("ifdef"),
 			DICT_STRUCT("ifndef"),
@@ -328,7 +330,7 @@ static const zaimoni::POD_pair<const char*,size_t> valid_directives[]
 			DICT_STRUCT("pragma")
 		};
 
-static const zaimoni::POD_pair<const char*,size_t> accept_pragma_leading_tokens[]
+static const POD_pair<const char*,size_t> accept_pragma_leading_tokens[]
 	=	{	DICT_STRUCT("STDC"),	// C99
 			DICT_STRUCT("ZCC"),		// our own
 			DICT_STRUCT("GCC"),		// we also pay attention to GCC pragmas
@@ -341,14 +343,14 @@ static const zaimoni::POD_pair<const char*,size_t> accept_pragma_leading_tokens[
 // #define PRAGMA_LEADING_GCC 2
 #define PRAGMA_MESSAGE 3
 
-static const zaimoni::POD_pair<const char*,size_t> pragma_ZCC_keywords[]
+static const POD_pair<const char*,size_t> pragma_ZCC_keywords[]
 	=	{	DICT_STRUCT("lock"),
 		};
 
 #define PRAGMA_ZCC_LOCK 0
 #undef DICT_STRUCT
 
-static void _init_weak_token(weak_token& dest, const zaimoni::Token<char>& x,const zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags>& pretoken)
+static void _init_weak_token(weak_token& dest, const Token<char>& x,const POD_triple<size_t,size_t,lex_flags>& pretoken)
 {
 	dest.token.first = x.data()+pretoken.first;
 	dest.token.second = pretoken.second;
@@ -358,7 +360,7 @@ static void _init_weak_token(weak_token& dest, const zaimoni::Token<char>& x,con
 	dest.src_filename = x.src_filename;
 }
 
-static void _weak_tokenize_aux(const zaimoni::Token<char>& x,const zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >& pretokenized, zaimoni::autovalarray_ptr<weak_token>& weaktoken_list)
+static void _weak_tokenize_aux(const Token<char>& x,const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized, autovalarray_ptr<weak_token>& weaktoken_list)
 {
 	assert(!x.empty());
 	assert(!pretokenized.empty());
@@ -371,7 +373,7 @@ static void _weak_tokenize_aux(const zaimoni::Token<char>& x,const zaimoni::auto
 	while(0<j);
 }
 
-static void _parsetreeize_aux(const zaimoni::Token<char>& x,const zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >& pretokenized, parse_tree& parsetree)
+static void _parsetreeize_aux(const Token<char>& x,const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized, parse_tree& parsetree)
 {
 	assert(!x.empty());
 	assert(!pretokenized.empty());
@@ -389,9 +391,9 @@ static void _parsetreeize_aux(const zaimoni::Token<char>& x,const zaimoni::autov
 	while(0<j);
 }
 
-static void _flush_duplicated_ws(zaimoni::Token<char>& x, const zaimoni::LangConf& lang)
+static void _flush_duplicated_ws(Token<char>& x, const LangConf& lang)
 {
-	zaimoni::lex_flags scratch_flags;
+	lex_flags scratch_flags;
 	size_t offset2 = lang.UnfilteredNextToken(x.data(),scratch_flags);
 	while(offset2<x.size())
 		{
@@ -437,7 +439,7 @@ STL_translate_second(IntType origin, Iterator iter, const Iterator iter_end)
 }
 
 //! \todo use lang.AtomicSymbols to get further compression
-static bool _flush_token_gaps(zaimoni::Token<char>& x, zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >& pretokenized, const zaimoni::LangConf& lang)
+static bool _flush_token_gaps(Token<char>& x, autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized, const LangConf& lang)
 {
 	assert(!x.empty());
 	assert(!pretokenized.empty());
@@ -504,9 +506,9 @@ enum directive_indexes	{	IF = 0,
 // we assume that 15 is available to flag invalid
 BOOST_STATIC_ASSERT((1<<4)>=MAX_PP_DIRECTIVE && ((1<<3)<MAX_PP_DIRECTIVE));
 
-static errr find_directive(const char* const Text, const zaimoni::LangConf& lang)
+static errr find_directive(const char* const Text, const LangConf& lang)
 {
-	assert(!zaimoni::is_empty_string(Text));
+	assert(!is_empty_string(Text));
 	size_t i = STATIC_SIZE(valid_directives);
 	do	{
 		--i;
@@ -518,7 +520,7 @@ static errr find_directive(const char* const Text, const zaimoni::LangConf& lang
 	return -1;
 }
 
-static void message_header(const zaimoni::Token<char>& src)
+static void message_header(const Token<char>& src)
 {
 	assert(NULL!=src.src_filename);
 	INC_INFORM(src.src_filename);
@@ -527,7 +529,7 @@ static void message_header(const zaimoni::Token<char>& src)
 	INC_INFORM(": ");
 }
 
-static void message_header2(const zaimoni::Token<char>& src,size_t where)
+static void message_header2(const Token<char>& src,size_t where)
 {
 	assert(NULL!=src.src_filename);
 	INC_INFORM(src.src_filename);
@@ -538,8 +540,7 @@ static void message_header2(const zaimoni::Token<char>& src,size_t where)
 	INC_INFORM(": ");
 }
 
-void
-CPreprocessor::detailed_UNICODE_syntax(zaimoni::Token<char>& x)
+void CPreprocessor::detailed_UNICODE_syntax(Token<char>& x) const
 {
 	assert(!x.empty());
 	const char* UNICODE_escape = strstr(x.data(),"\\U");
@@ -555,7 +556,7 @@ CPreprocessor::detailed_UNICODE_syntax(zaimoni::Token<char>& x)
 			zcc_errors.inc_error();
 			break;
 			}
-		if (!zaimoni::and_range_n(IsHexadecimalDigit,UNICODE_escape+2,8))
+		if (!and_range_n(IsHexadecimalDigit,UNICODE_escape+2,8))
 			{	//! \test UNICODE.C99/Error_AstralNonhex.h
 				//! \test UNICODE.C99/Error_AstralNonhex.hpp
 			message_header(x);
@@ -582,7 +583,7 @@ CPreprocessor::detailed_UNICODE_syntax(zaimoni::Token<char>& x)
 			zcc_errors.inc_error();
 			break;
 			}
-		if (!zaimoni::and_range_n(IsHexadecimalDigit,UNICODE_escape+2,4))
+		if (!and_range_n(IsHexadecimalDigit,UNICODE_escape+2,4))
 			{	//! \test UNICODE.C99/Error_Nonhex.h
 				//! \test UNICODE.C99/Error_Nonhex.hpp
 				//! \test UNICODE.C99/Error_Nonhex2.h
@@ -666,18 +667,18 @@ CPreprocessor::detailed_UNICODE_syntax(zaimoni::Token<char>& x)
  * \return bool
  */
 bool
-CPreprocessor::preprocess(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList)
+CPreprocessor::preprocess(autovalarray_ptr<Token<char>* >& TokenList)
 {
-	zaimoni::autovalarray_ptr<char*> locked_macros;
-	zaimoni::autovalarray_ptr<char*> macros_object;
-	zaimoni::autovalarray_ptr<zaimoni::Token<char>*> macros_object_expansion;
-	zaimoni::autovalarray_ptr<zaimoni::Token<char>*> macros_object_expansion_pre_eval;
-	zaimoni::autovalarray_ptr<char*> macros_function;
-	zaimoni::autovalarray_ptr<zaimoni::Token<char>*> macros_function_arglist;
-	zaimoni::autovalarray_ptr<zaimoni::Token<char>*> macros_function_expansion;
-	zaimoni::autovalarray_ptr<zaimoni::Token<char>*> macros_function_expansion_pre_eval;
-	zaimoni::autovalarray_ptr<zaimoni::POD_triple<const char*, const char*,uintptr_t> > include_file_index;
-	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,zaimoni::autovalarray_ptr<zaimoni::Token<char>*>* > > include_file_cache;
+	autovalarray_ptr<char*> locked_macros;
+	autovalarray_ptr<char*> macros_object;
+	autovalarray_ptr<Token<char>*> macros_object_expansion;
+	autovalarray_ptr<Token<char>*> macros_object_expansion_pre_eval;
+	autovalarray_ptr<char*> macros_function;
+	autovalarray_ptr<Token<char>*> macros_function_arglist;
+	autovalarray_ptr<Token<char>*> macros_function_expansion;
+	autovalarray_ptr<Token<char>*> macros_function_expansion_pre_eval;
+	autovalarray_ptr<POD_triple<const char*, const char*,uintptr_t> > include_file_index;
+	autovalarray_ptr<POD_pair<const char*,autovalarray_ptr<Token<char>*>* > > include_file_cache;
 	const type_system min_types((Lang::C==lang_code) ? C_atomic_types : CPP_atomic_types,C_CPP_TYPE_MAX,C_int_priority+C_PP_INT_PRIORITY_ORIGIN,C_INT_PRIORITY_SIZE-C_PP_INT_PRIORITY_ORIGIN);
 
 	// this is subject to the Y10K bug, per standard.
@@ -698,8 +699,8 @@ CPreprocessor::preprocess(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& Tok
 	}
 
 	{	// do detailed UNICODE error trapping here: S-zone [\uD800-\uDFFF], sub-\u00A0 processing (latter is language-sensitive), syntax
-	const zaimoni::autovalarray_ptr<zaimoni::Token<char>* >::iterator iter_end = TokenList.end();
-	zaimoni::autovalarray_ptr<zaimoni::Token<char>* >::iterator iter = TokenList.begin();
+	const autovalarray_ptr<Token<char>* >::iterator iter_end = TokenList.end();
+	autovalarray_ptr<Token<char>* >::iterator iter = TokenList.begin();
 	while(iter!=iter_end) detailed_UNICODE_syntax(**iter++);
 	}
 
@@ -723,8 +724,8 @@ CPreprocessor::preprocess(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& Tok
 	// for this to work, #pragma must be converted to _Pragma operators
 	// do not flush whitespace tokens here, as the standalone will need them
 	{
-	const zaimoni::autovalarray_ptr<zaimoni::Token<char>* >::iterator iter_end = TokenList.end();
-	zaimoni::autovalarray_ptr<zaimoni::Token<char>* >::iterator iter = TokenList.begin();
+	const autovalarray_ptr<Token<char>* >::iterator iter_end = TokenList.end();
+	autovalarray_ptr<Token<char>* >::iterator iter = TokenList.begin();
 	if (iter!=iter_end)
 		do	{
 			(*iter)->flags &= ~PREPROCESSING_DIRECTIVE_FLAG;
@@ -769,15 +770,15 @@ CPreprocessor::preprocess(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& Tok
 }
 
 static inline bool
-pragma_locked_macro(const char* const x,const size_t x_len,const zaimoni::autovalarray_ptr<char*>& locked_macros)
+pragma_locked_macro(const char* const x,const size_t x_len,const autovalarray_ptr<char*>& locked_macros)
 {
-	assert(!zaimoni::is_empty_string(x));
+	assert(!is_empty_string(x));
 	assert(0<x_len);
 	return 0<=binary_find(x,x_len,locked_macros);
 }
 
 void
-CPreprocessor::_preprocess(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, zaimoni::autovalarray_ptr<char*>& locked_macros, zaimoni::autovalarray_ptr<char*>& macros_object, zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion, zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion_pre_eval, zaimoni::autovalarray_ptr<char*>& macros_function, zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_arglist, zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion, zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion_pre_eval, zaimoni::autovalarray_ptr<zaimoni::POD_triple<const char*, const char*,uintptr_t> >& include_file_index, zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,zaimoni::autovalarray_ptr<zaimoni::Token<char>*>* > >& include_file_cache, const type_system& min_types)
+CPreprocessor::_preprocess(autovalarray_ptr<Token<char>* >& TokenList, autovalarray_ptr<char*>& locked_macros, autovalarray_ptr<char*>& macros_object, autovalarray_ptr<Token<char>*>& macros_object_expansion, autovalarray_ptr<Token<char>*>& macros_object_expansion_pre_eval, autovalarray_ptr<char*>& macros_function, autovalarray_ptr<Token<char>*>& macros_function_arglist, autovalarray_ptr<Token<char>*>& macros_function_expansion, autovalarray_ptr<Token<char>*>& macros_function_expansion_pre_eval, autovalarray_ptr<POD_triple<const char*, const char*,uintptr_t> >& include_file_index, autovalarray_ptr<POD_pair<const char*,autovalarray_ptr<Token<char>*>* > >& include_file_cache, const type_system& min_types)
 {
 Restart:
 	size_t i = 0;
@@ -879,7 +880,7 @@ RestartAfterInclude:
 			// #if nesting-depth 0 processing
 			if (0==if_depth)
 				{
-				zaimoni::lex_flags first_token_flags = 0;
+				lex_flags first_token_flags = 0;
 				size_t first_token_len = 0;
 				if (PP::ERROR==directive_type)
 					{	// an error by fiat
@@ -1070,7 +1071,7 @@ ObjectLikeMacroEmptyString:
 								|| !macros_object_expansion.InsertNSlotsAt(1,object_macro_insertion_index)
 								|| !macros_object_expansion_pre_eval.InsertNSlotsAt(1,object_macro_insertion_index))
 								throw std::bad_alloc();
-							macros_object[object_macro_insertion_index] = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
+							macros_object[object_macro_insertion_index] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
 							strncpy(macros_object[object_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
 							ZAIMONI_NULL_TERMINATE(macros_object[object_macro_insertion_index][first_token_len]);
 							}
@@ -1086,7 +1087,7 @@ ObjectLikeMacroEmptyString:
 								--i;
 								continue;
 								}
-							zaimoni::Token<char> expansion(*TokenList[i],critical_offset+first_token_len,TokenList[i]->size()-(critical_offset+first_token_len),0);
+							Token<char> expansion(*TokenList[i],critical_offset+first_token_len,TokenList[i]->size()-(critical_offset+first_token_len),0);
 							normalize_macro_expansion(expansion,*TokenList[i],critical_offset,first_token_len);
 							//! \test Pass_define_dup2.hpp
 							//! \test Error_define_concatenate1.hpp
@@ -1120,12 +1121,12 @@ ObjectLikeMacroEmptyString:
 								|| !macros_object_expansion.InsertNSlotsAt(1,object_macro_insertion_index)
 								|| !macros_object_expansion_pre_eval.InsertNSlotsAt(1,object_macro_insertion_index))
 								throw std::bad_alloc();
-							macros_object[object_macro_insertion_index] = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
+							macros_object[object_macro_insertion_index] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
 
 							strncpy(macros_object[object_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
 							ZAIMONI_NULL_TERMINATE(macros_object[object_macro_insertion_index][first_token_len]);
-							macros_object_expansion_pre_eval[object_macro_insertion_index] = new zaimoni::Token<char>(expansion);
-							macros_object_expansion[object_macro_insertion_index] = new zaimoni::Token<char>;
+							macros_object_expansion_pre_eval[object_macro_insertion_index] = new Token<char>(expansion);
+							macros_object_expansion[object_macro_insertion_index] = new Token<char>;
 							expansion.MoveInto(*macros_object_expansion[object_macro_insertion_index]);
 							object_macro_concatenate(*macros_object_expansion_pre_eval[object_macro_insertion_index]);
 							if (C99_VA_ARGS_flinch(*macros_object_expansion_pre_eval[object_macro_insertion_index],0))
@@ -1164,7 +1165,7 @@ ObjectLikeMacroEmptyString:
 								--i;
 								continue;
 								};
-							zaimoni::Token<char> arglist(*TokenList[i],critical_offset+first_token_len,argspan,0);
+							Token<char> arglist(*TokenList[i],critical_offset+first_token_len,argspan,0);
 							normalize_macro_expansion(arglist,*TokenList[i],critical_offset,first_token_len);	// should be no string literals here, so should be no errors here
 							if (0<=function_macro_index && strcmp(arglist.data(),macros_function_arglist[function_macro_index]->data()))
 								{	//! \test Error_define_dup7.hpp
@@ -1198,11 +1199,11 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 									|| !macros_function_expansion.InsertNSlotsAt(1,function_macro_insertion_index)
 									|| !macros_function_expansion_pre_eval.InsertNSlotsAt(1,function_macro_insertion_index))
 									throw std::bad_alloc();
-								macros_function[function_macro_insertion_index] = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
+								macros_function[function_macro_insertion_index] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
 
 								strncpy(macros_function[function_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
 								ZAIMONI_NULL_TERMINATE(macros_function[function_macro_insertion_index][first_token_len]);
-								macros_function_arglist[function_macro_insertion_index] = new zaimoni::Token<char>;
+								macros_function_arglist[function_macro_insertion_index] = new Token<char>;
 								arglist.MoveInto(*macros_function_arglist[function_macro_insertion_index]);
 
 								TokenList.DeleteIdx(i);
@@ -1210,7 +1211,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								--i;
 								continue;
 								};
-							zaimoni::Token<char> expansion(*TokenList[i],critical_offset+first_token_len+argspan,TokenList[i]->size()-(critical_offset+first_token_len+argspan),0);
+							Token<char> expansion(*TokenList[i],critical_offset+first_token_len+argspan,TokenList[i]->size()-(critical_offset+first_token_len+argspan),0);
 							normalize_macro_expansion(expansion,*TokenList[i],critical_offset,first_token_len);
 							// white-box test policy: cases above will work
 							if (discard_leading_trailing_concatenate_op(expansion))
@@ -1244,13 +1245,13 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								|| !macros_function_expansion.InsertNSlotsAt(1,function_macro_insertion_index)
 								|| !macros_function_expansion_pre_eval.InsertNSlotsAt(1,function_macro_insertion_index))
 								throw std::bad_alloc();
-							macros_function[function_macro_insertion_index] = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
+							macros_function[function_macro_insertion_index] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
 
 							strncpy(macros_function[function_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
 							ZAIMONI_NULL_TERMINATE(macros_function[function_macro_insertion_index][first_token_len]);
-							macros_function_arglist[function_macro_insertion_index] = new zaimoni::Token<char>;
-							macros_function_expansion[function_macro_insertion_index] = new zaimoni::Token<char>;
-							macros_function_expansion_pre_eval[function_macro_insertion_index] = new zaimoni::Token<char>(expansion);
+							macros_function_arglist[function_macro_insertion_index] = new Token<char>;
+							macros_function_expansion[function_macro_insertion_index] = new Token<char>;
+							macros_function_expansion_pre_eval[function_macro_insertion_index] = new Token<char>(expansion);
 							arglist.MoveInto(*macros_function_arglist[function_macro_insertion_index]);
 							expansion.MoveInto(*macros_function_expansion[function_macro_insertion_index]);
 							if (flush_bad_stringize(*macros_function_expansion_pre_eval[function_macro_insertion_index],*macros_function_arglist[function_macro_insertion_index]))
@@ -1540,7 +1541,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 							TokenList[i+2]->ltrim(1);
 						if (2<TokenList[i+2]->size())
 							{	//! \test Pass_pragma_STDC.hpp
-							zaimoni::autovalarray_ptr<char> pragma_string(lang.UnescapeStringLength(TokenList[i+2]->data()+1,TokenList[i+2]->size()-2));
+							autovalarray_ptr<char> pragma_string(lang.UnescapeStringLength(TokenList[i+2]->data()+1,TokenList[i+2]->size()-2));
 							if (pragma_string.empty()) throw std::bad_alloc();
 							lang.UnescapeString(pragma_string.c_array(),TokenList[i+2]->data()+1,TokenList[i+2]->size()-2);
 							interpret_pragma(pragma_string.data(),pragma_string.size(),locked_macros);
@@ -1568,7 +1569,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								}
 							assert(!macros_object_expansion_pre_eval[object_macro_index]->empty());
 							{	//! \bug need test cases
-							zaimoni::Token<char>* Tmp = new zaimoni::Token<char>(*macros_object_expansion_pre_eval[object_macro_index]);
+							Token<char>* Tmp = new Token<char>(*macros_object_expansion_pre_eval[object_macro_index]);
 							Tmp->logical_line = TokenList[i]->logical_line;
 							if (!nonrecursive_macro_replacement_list(Tmp->data()))
 								{
@@ -1678,7 +1679,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 										}
 									assert(!macros_function_expansion_pre_eval[function_macro_index]->empty());
 									{	//! \bug need test cases
-									zaimoni::Token<char>* Tmp = new zaimoni::Token<char>(*macros_function_expansion_pre_eval[function_macro_index]);
+									Token<char>* Tmp = new Token<char>(*macros_function_expansion_pre_eval[function_macro_index]);
 									Tmp->logical_line = TokenList[i]->logical_line;
 									if (!nonrecursive_macro_replacement_list(Tmp->data()))
 										{
@@ -1792,7 +1793,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 		// We need a de-facto stack for the "most recent include dirctory" to deal with local includes
 #define CPP_INCLUDE_NOT_FOUND 1U
 
-		zaimoni::autovalarray_ptr<zaimoni::Token<char>* > IncludeTokenList;
+		autovalarray_ptr<Token<char>* > IncludeTokenList;
 		const char* const look_for = register_substring(TokenList[include_where]->data()+sizeof("#include <")-1,filename_len);
 		assert(filename_len==strlen(look_for));
 		if (local_include)
@@ -1877,7 +1878,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					if (   !include_file_index.InsertNSlotsAt(1,include_file_index_target)
 						|| !include_file_cache.InsertNSlotsAt(1,include_file_cache_target))
 						throw std::bad_alloc();
-					include_file_cache[include_file_cache_target].second = new zaimoni::autovalarray_ptr<zaimoni::Token<char>* >(IncludeTokenList);
+					include_file_cache[include_file_cache_target].second = new autovalarray_ptr<Token<char>* >(IncludeTokenList);
 					include_file_cache[include_file_cache_target].first = main_index_name;
 					include_file_index[include_file_index_target].first = main_index_name;
 					include_file_index[include_file_index_target].second = main_index_name;
@@ -1989,7 +1990,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					if (   !include_file_index.InsertNSlotsAt(1,include_file_index_target)
 						|| !include_file_cache.InsertNSlotsAt(1,include_file_cache_target))
 						throw std::bad_alloc();
-					include_file_cache[include_file_cache_target].second = new zaimoni::autovalarray_ptr<zaimoni::Token<char>* >(IncludeTokenList);
+					include_file_cache[include_file_cache_target].second = new autovalarray_ptr<Token<char>* >(IncludeTokenList);
 					include_file_cache[include_file_cache_target].first = main_index_name;
 					include_file_index[include_file_index_target].first = look_for;
 					include_file_index[include_file_index_target].second = main_index_name;
@@ -2031,9 +2032,9 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 				{
 				size_t j = IncludeTokenList.size();
 				if (!TokenList.InsertNSlotsAt(j,include_where+1)) throw std::bad_alloc();
-				memmove(TokenList.c_array()+include_where+1,IncludeTokenList.data(),j*sizeof(zaimoni::Token<char*>*));
+				memmove(TokenList.c_array()+include_where+1,IncludeTokenList.data(),j*sizeof(Token<char*>*));
 #ifdef ZAIMONI_NULL_REALLY_IS_ZERO
-				memset(IncludeTokenList.c_array(),0,j*sizeof(zaimoni::Token<char*>*));
+				memset(IncludeTokenList.c_array(),0,j*sizeof(Token<char*>*));
 #else
 				std::fill(IncludeTokenList.begin(),IncludeTokenList.end(),NULL)
 #endif
@@ -2049,7 +2050,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 }
 
 bool
-CPreprocessor::raw_system_include(const char* const look_for, zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& IncludeTokenList) const
+CPreprocessor::raw_system_include(const char* const look_for, autovalarray_ptr<Token<char>* >& IncludeTokenList) const
 {
 	char buf[FILENAME_MAX];
 	// raw system include has minimal macro context, so don't worry about legality check
@@ -2087,7 +2088,7 @@ CPreprocessor::raw_system_include(const char* const look_for, zaimoni::autovalar
 }
 
 bool
-CPreprocessor::line_is_preprocessing_directive(zaimoni::Token<char>& x) const
+CPreprocessor::line_is_preprocessing_directive(Token<char>& x) const
 {
 	// normalize leading %: to # to handle equivalency of these tokens
 	//! \bug need test case
@@ -2096,9 +2097,9 @@ CPreprocessor::line_is_preprocessing_directive(zaimoni::Token<char>& x) const
 }
 
 void
-CPreprocessor::interpret_pragma(const char* const x, size_t x_len, zaimoni::autovalarray_ptr<char*>& locked_macros)
+CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_ptr<char*>& locked_macros)
 {
-	zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> > pretokenized;
+	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	lang.line_lex(x, x_len, pretokenized);
 
 	const errr valid_pragma_class = linear_find_lencached(x+pretokenized[0].first, pretokenized[0].second, accept_pragma_leading_tokens, STATIC_SIZE(accept_pragma_leading_tokens));
@@ -2114,11 +2115,11 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, zaimoni::auto
 									while(2<j)
 										{
 										if (C_TESTFLAG_IDENTIFIER!=pretokenized[--j].third) continue;
-										char* tmp = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[j].second));
+										char* tmp = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[j].second));
 										strncpy(tmp,x+pretokenized[j].first,pretokenized[j].second);
 										if (!locked_macros.InsertSlotAt(locked_macros.size(),tmp))
 											{
-											zaimoni::_flush(tmp);
+											_flush(tmp);
 											throw std::bad_alloc();
 											}
 										}
@@ -2142,12 +2143,12 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, zaimoni::auto
 
 				//! \todo change target, this only handles target CHAR_BIT<=host CHAR_BIT
 				const size_t tmp_len = lang.UnescapeStringLength(x+pretokenized[2].first,pretokenized[2].second);
-				char* tmp = zaimoni::_new_buffer<char>(ZAIMONI_LEN_WITH_NULL(tmp_len));
+				char* tmp = _new_buffer<char>(ZAIMONI_LEN_WITH_NULL(tmp_len));
 				if (NULL!=tmp)
 					{
 					lang.UnescapeString(tmp,x+pretokenized[2].first,pretokenized[2].second);
 					INFORM(tmp,tmp_len);
-					zaimoni::_flush(tmp);
+					_flush(tmp);
 					return;
 					}
 				};
@@ -2167,7 +2168,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, zaimoni::auto
 }
 
 size_t
-CPreprocessor::tokenize_line(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, size_t i)
+CPreprocessor::tokenize_line(autovalarray_ptr<Token<char>* >& TokenList, size_t i) const
 {
 	assert(TokenList.size()>i);
 	if (TokenList[i]->empty())
@@ -2182,7 +2183,7 @@ CPreprocessor::tokenize_line(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& 
 	//! \test Error_naked_VA_ARGS.hpp
 	if (!TokenList[i]->flags) C99_VA_ARGS_flinch(*TokenList[i],0);
 
-	zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> > pretokenized;
+	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	lang.line_lex(TokenList[i]->data(),TokenList[i]->size(),pretokenized);
 	if (pretokenized.empty())
 		{
@@ -2198,20 +2199,20 @@ CPreprocessor::tokenize_line(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& 
 		}
 	else{
 		size_t lb = 0;
-		zaimoni::autovalarray_ptr<zaimoni::Token<char>* > TokenListAlt(ub+1);
+		autovalarray_ptr<Token<char>* > TokenListAlt(ub+1);
 		if (TokenListAlt.empty()) throw std::bad_alloc();
 		if (!TokenList.InsertNSlotsAt(ub,i+1)) throw std::bad_alloc();
 		{
-		const zaimoni::Token<char>& tmp = *TokenList[i];
+		const Token<char>& tmp = *TokenList[i];
 		while(lb<ub)
 			{
 			if (pretokenized[lb].second<=pretokenized[ub].second)
 				{	// first token not longer
-				TokenListAlt[lb] = new zaimoni::Token<char>(tmp,pretokenized[lb].first,pretokenized[lb].second,pretokenized[lb].third);
+				TokenListAlt[lb] = new Token<char>(tmp,pretokenized[lb].first,pretokenized[lb].second,pretokenized[lb].third);
 				complete_string_character_literal(*TokenListAlt[lb++]);
 				}
 			else{	// second token longer
-				TokenListAlt[ub] = new zaimoni::Token<char>(tmp,pretokenized[ub].first,pretokenized[ub].second,pretokenized[ub].third);
+				TokenListAlt[ub] = new Token<char>(tmp,pretokenized[ub].first,pretokenized[ub].second,pretokenized[ub].third);
 				complete_string_character_literal(*TokenListAlt[ub--]);
 				}
 			}
@@ -2232,7 +2233,7 @@ CPreprocessor::tokenize_line(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& 
 	return pretokenized.size();
 }
 
-static void _complete_string_character_literal(zaimoni::Token<char>& x,const char delim, const char* const end_error)
+static void _complete_string_character_literal(Token<char>& x,const char delim, const char* const end_error)
 {
 	if (delim!=x.back())
 		{
@@ -2247,7 +2248,7 @@ static void _complete_string_character_literal(zaimoni::Token<char>& x,const cha
 }
 
 void
-CPreprocessor::complete_string_character_literal(zaimoni::Token<char>& x)
+CPreprocessor::complete_string_character_literal(Token<char>& x) const
 {
 	if (C_TESTFLAG_STRING_LITERAL==x.flags)
 		//! \test Error_unterminated1.hpp
@@ -2269,13 +2270,13 @@ CPreprocessor::complete_string_character_literal(zaimoni::Token<char>& x)
  * \return true if and only if a filepath was found.
  */
 bool
-CPreprocessor::find_local_include(const char* const src, char* const filepath_buf, const char* const local_root)
+CPreprocessor::find_local_include(const char* const src, char* const filepath_buf, const char* const local_root) const
 {
 	char image_filepath[FILENAME_MAX];
 	char test_filepath[FILENAME_MAX];
 
-	assert(!zaimoni::is_empty_string(src));
-	assert(!zaimoni::is_empty_string(local_root));
+	assert(!is_empty_string(src));
+	assert(!is_empty_string(local_root));
 	assert(NULL!=filepath_buf);
 	const size_t src_len = strlen(src);
 
@@ -2332,7 +2333,7 @@ CPreprocessor::find_system_include(const char* const src, char* const filepath_b
 	char image_filepath[FILENAME_MAX];
 	char test_filepath[FILENAME_MAX];
 
-	assert(!zaimoni::is_empty_string(src));
+	assert(!is_empty_string(src));
 	assert(NULL!=filepath_buf);
 	const size_t src_len = strlen(src);
 	// automatically fail anything that won't fit in FILENAME_MAX
@@ -2412,7 +2413,7 @@ CPreprocessor::context_free_defined(const char* const x, size_t x_len) const
 }
 
 static bool
-macro_is_defined(const char* const x, const size_t x_len, const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<char*>& macros_function)
+macro_is_defined(const char* const x, const size_t x_len, const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<char*>& macros_function)
 {
 	assert(NULL!=x);
 	assert(0<x_len);
@@ -2427,14 +2428,14 @@ macro_is_defined(const char* const x, const size_t x_len, const zaimoni::autoval
 }
 
 bool
-CPreprocessor::ifdef_ifndef_syntax_ok(zaimoni::Token<char>& x, const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<char*>& macros_function)
+CPreprocessor::ifdef_ifndef_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<char*>& macros_function)
 {
 	assert(3<=x.size());
 	assert('#'==x.front());
 	const unsigned int if_directive = UNPACK_DIRECTIVE(x.flags);
 	assert(PP::IFDEF==if_directive || PP::IFNDEF==if_directive);
 	assert(!strncmp(x.data()+1,valid_directives[if_directive].first,valid_directives[if_directive].second));
-	zaimoni::lex_flags token_flags;
+	lex_flags token_flags;
 
 	//! \test ifdef.C99/Error_noarg.hpp
 	//! \test ifdef.C99/Error_noarg2.hpp
@@ -2517,11 +2518,11 @@ CPreprocessor::ifdef_ifndef_syntax_ok(zaimoni::Token<char>& x, const zaimoni::au
 		}
 }
 
-static zaimoni::POD_pair<size_t,size_t> balanced_character_count(const char* const x, const zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >& pretokenized,const char l_match,const char r_match)
+static POD_pair<size_t,size_t> balanced_character_count(const char* const x, const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized,const char l_match,const char r_match)
 {
-	zaimoni::POD_pair<size_t,size_t> paren_depth = {0,0};
-	const zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >::const_iterator iter_end = pretokenized.end();
-	zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >::const_iterator iter = pretokenized.begin();
+	POD_pair<size_t,size_t> paren_depth = {0,0};
+	const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >::const_iterator iter_end = pretokenized.end();
+	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >::const_iterator iter = pretokenized.begin();
 	assert(NULL!=x);
 	if (iter!=iter_end)
 		do	if (1==iter->second)
@@ -2534,15 +2535,15 @@ static zaimoni::POD_pair<size_t,size_t> balanced_character_count(const char* con
 }
 
 // This should notice zero errors, thanks to a prior context-free check
-static void _construct_matched_pairs(const zaimoni::Token<char>& x, const zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >& pretokenized, zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >& pair_stack,const char l_match,const char r_match)
+static void _construct_matched_pairs(const Token<char>& x, const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized, autovalarray_ptr<POD_pair<size_t,size_t> >& pair_stack,const char l_match,const char r_match)
 {
-	zaimoni::POD_pair<size_t,size_t> depth = balanced_character_count(x.data(),pretokenized,l_match,r_match);	// pre-scan
+	POD_pair<size_t,size_t> depth = balanced_character_count(x.data(),pretokenized,l_match,r_match);	// pre-scan
 	size_t err_count = 0;
 	if (0<depth.first && 0<depth.second)
 		{
 		// reality-check: balanced parentheses
-		zaimoni::autovalarray_ptr<size_t> lparen_fixedstack(depth.first);
-		zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> > parenpair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
+		autovalarray_ptr<size_t> lparen_fixedstack(depth.first);
+		autovalarray_ptr<POD_pair<size_t,size_t> > parenpair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 		size_t balanced_paren = 0;
 		size_t i = 0;
 
@@ -2588,21 +2589,21 @@ static void _construct_matched_pairs(const zaimoni::Token<char>& x, const zaimon
 }
 
 template<char l_match,char r_match>
-inline static void construct_matched_pairs(const zaimoni::Token<char>& x, const zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >& pretokenized, zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >& pair_stack)
+inline static void construct_matched_pairs(const Token<char>& x, const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized, autovalarray_ptr<POD_pair<size_t,size_t> >& pair_stack)
 {
 	_construct_matched_pairs(x,pretokenized,pair_stack,l_match,r_match);
 }
 
 template<>
-static void construct_matched_pairs<'[',']'>(const zaimoni::Token<char>& x, const zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >& pretokenized, zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >& pair_stack)
+static void construct_matched_pairs<'[',']'>(const Token<char>& x, const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized, autovalarray_ptr<POD_pair<size_t,size_t> >& pair_stack)
 {
-	zaimoni::POD_pair<size_t,size_t> depth = balanced_character_count(x.data(),pretokenized,'[',']');	// pre-scan
+	POD_pair<size_t,size_t> depth = balanced_character_count(x.data(),pretokenized,'[',']');	// pre-scan
 	size_t err_count = 0;
 	if (0<depth.first && 0<depth.second)
 		{
 		// reality-check: balanced parentheses
-		zaimoni::autovalarray_ptr<size_t> lparen_fixedstack(depth.first);
-		zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> > parenpair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
+		autovalarray_ptr<size_t> lparen_fixedstack(depth.first);
+		autovalarray_ptr<POD_pair<size_t,size_t> > parenpair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 		size_t balanced_paren = 0;
 		size_t i = 0;
 
@@ -2644,10 +2645,10 @@ static void construct_matched_pairs<'[',']'>(const zaimoni::Token<char>& x, cons
 	assert(0==err_count);
 }
 
-static void pairstack_clean(const zaimoni::POD_pair<size_t,size_t>& target, zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >& pair_stack)
+static void pairstack_clean(const POD_pair<size_t,size_t>& target, autovalarray_ptr<POD_pair<size_t,size_t> >& pair_stack)
 {
-	zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >::iterator iter = pair_stack.begin();
-	const zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >::iterator iter_end = pair_stack.end();
+	autovalarray_ptr<POD_pair<size_t,size_t> >::iterator iter = pair_stack.begin();
+	const autovalarray_ptr<POD_pair<size_t,size_t> >::iterator iter_end = pair_stack.end();
 	if (iter!=iter_end)
 		do	{
 			assert(iter->first<iter->second);
@@ -2665,10 +2666,10 @@ static void pairstack_clean(const zaimoni::POD_pair<size_t,size_t>& target, zaim
 		while(++iter!=iter_end);
 }
 
-static void balanced_character_kill(zaimoni::Token<char>& x, zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >& pretokenized, zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> >& parenpair_stack, size_t target_idx)
+static void balanced_character_kill(Token<char>& x, autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized, autovalarray_ptr<POD_pair<size_t,size_t> >& parenpair_stack, size_t target_idx)
 {
 	assert(parenpair_stack.size()>target_idx);
-	zaimoni::POD_pair<size_t,size_t> target	= parenpair_stack[target_idx];
+	POD_pair<size_t,size_t> target	= parenpair_stack[target_idx];
 	assert(pretokenized.size()>target.first);
 	assert(pretokenized.size()>target.second);
 	assert(target.first<target.second);
@@ -2684,7 +2685,7 @@ static void balanced_character_kill(zaimoni::Token<char>& x, zaimoni::autovalarr
 
 template<char c>
 static inline bool
-token_is_char(const char* const x, const zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags>& lexed_token)
+token_is_char(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
 	assert(NULL!=x);
 	return 1==lexed_token.second && c==x[lexed_token.first];
@@ -2692,7 +2693,7 @@ token_is_char(const char* const x, const zaimoni::POD_triple<size_t,size_t,zaimo
 
 template<>
 static inline bool
-token_is_char<'#'>(const char* const x, const zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags>& lexed_token)
+token_is_char<'#'>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
 	assert(NULL!=x);
 	return detect_C_stringize_op(x+lexed_token.first,lexed_token.second);
@@ -2700,7 +2701,7 @@ token_is_char<'#'>(const char* const x, const zaimoni::POD_triple<size_t,size_t,
 
 template<>
 static inline bool
-token_is_char<'['>(const char* const x, const zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags>& lexed_token)
+token_is_char<'['>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
 	assert(NULL!=x);
 	return detect_C_left_bracket_op(x+lexed_token.first,lexed_token.second);
@@ -2708,7 +2709,7 @@ token_is_char<'['>(const char* const x, const zaimoni::POD_triple<size_t,size_t,
 
 template<>
 static inline bool
-token_is_char<']'>(const char* const x, const zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags>& lexed_token)
+token_is_char<']'>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
 	assert(NULL!=x);
 	return detect_C_right_bracket_op(x+lexed_token.first,lexed_token.second);
@@ -2716,7 +2717,7 @@ token_is_char<']'>(const char* const x, const zaimoni::POD_triple<size_t,size_t,
 
 template<>
 static inline bool
-token_is_char<'{'>(const char* const x, const zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags>& lexed_token)
+token_is_char<'{'>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
 	assert(NULL!=x);
 	return detect_C_left_brace_op(x+lexed_token.first,lexed_token.second);
@@ -2724,14 +2725,14 @@ token_is_char<'{'>(const char* const x, const zaimoni::POD_triple<size_t,size_t,
 
 template<>
 static inline bool
-token_is_char<'}'>(const char* const x, const zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags>& lexed_token)
+token_is_char<'}'>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
 	assert(NULL!=x);
 	return detect_C_right_brace_op(x+lexed_token.first,lexed_token.second);
 }
 
 static bool
-_bad_syntax_pretokenized(const zaimoni::Token<char>& x,const zaimoni::LangConf& lang,zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags>& pretoken)
+_bad_syntax_pretokenized(const Token<char>& x,const LangConf& lang,POD_triple<size_t,size_t,lex_flags>& pretoken)
 {
 	assert((C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_PP_OP_PUNC | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_IDENTIFIER) & pretoken.third);
 	assert(x.size()>pretoken.first);
@@ -2749,7 +2750,7 @@ _bad_syntax_pretokenized(const zaimoni::Token<char>& x,const zaimoni::LangConf& 
 
 	if (C_TESTFLAG_PP_NUMERAL==pretoken.third)
 		{
-		zaimoni::union_quartet<C_PPIntCore,C_PPFloatCore,C_PPDecimalFloat,C_PPHexFloat> test;
+		union_quartet<C_PPIntCore,C_PPFloatCore,C_PPDecimalFloat,C_PPHexFloat> test;
 		if 		(C_PPDecimalFloat::is(x.data()+pretoken.first,pretoken.second,test.third))
 			{
 			pretoken.third |= C_TESTFLAG_FLOAT | C_TESTFLAG_DECIMAL;
@@ -2761,7 +2762,7 @@ _bad_syntax_pretokenized(const zaimoni::Token<char>& x,const zaimoni::LangConf& 
 		else if (C_PPIntCore::is(x.data()+pretoken.first,pretoken.second,test.first))
 			{
 			assert(C_PPIntCore::ULL>=test.first.hinted_type);
-			pretoken.third |= (((zaimoni::lex_flags)(test.first.hinted_type))<<10);
+			pretoken.third |= (((lex_flags)(test.first.hinted_type))<<10);
 			assert(8==test.first.radix || 10==test.first.radix || 16==test.first.radix);
 			switch(test.first.radix)
 			{
@@ -2782,7 +2783,7 @@ _bad_syntax_pretokenized(const zaimoni::Token<char>& x,const zaimoni::LangConf& 
 		if 		(pretoken.third & C_TESTFLAG_FLOAT)
 			{
 			assert(C_PPFloatCore::L>=test.second.hinted_type);
-			pretoken.third |= (((zaimoni::lex_flags)(test.second.hinted_type))<<10);
+			pretoken.third |= (((lex_flags)(test.second.hinted_type))<<10);
 			};
 		if (C_TESTFLAG_PP_NUMERAL==pretoken.third)
 			{
@@ -2853,7 +2854,7 @@ _bad_syntax_pretokenized(const zaimoni::Token<char>& x,const zaimoni::LangConf& 
  *	OneTokenExit: centralize exit code when down to one token
  */
 bool
-CPreprocessor::if_elif_syntax_ok(zaimoni::Token<char>& x, const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion, const zaimoni::autovalarray_ptr<char*>& macros_function, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_arglist, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion,const type_system& min_types)
+CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<Token<char>*>& macros_object_expansion, const autovalarray_ptr<char*>& macros_function, const autovalarray_ptr<Token<char>*>& macros_function_arglist, const autovalarray_ptr<Token<char>*>& macros_function_expansion,const type_system& min_types)
 {
 	const unsigned int if_directive = UNPACK_DIRECTIVE(x.flags);
 	assert(PP::IF==if_directive || PP::ELIF==if_directive);
@@ -2872,7 +2873,7 @@ CPreprocessor::if_elif_syntax_ok(zaimoni::Token<char>& x, const zaimoni::autoval
 		};
 
 	// tokenize the whole line
-	zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> > pretokenized;
+	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	const size_t critical_offset = valid_directives[if_directive].second+2;
 	//! \test Error_if_control2.hpp (#if)
 	//! \todo __VA_ARGS__ within defined operator should only be a warning with --do-what-i-mean option
@@ -3110,13 +3111,13 @@ oneTokenExit:
 		}
 
 	{	// check for balancing errors (slow)
-	zaimoni::autovalarray_ptr<weak_token> weaktoken_list;
+	autovalarray_ptr<weak_token> weaktoken_list;
 	_weak_tokenize_aux(x,pretokenized,weaktoken_list);
 	// do not process further if there are context-free errors
 	if (lang.pp_support->BalancingErrorCheck(weaktoken_list.data(),weaktoken_list.size(),true,true)) return false;
 	};
 
-	zaimoni::autovalarray_ptr<zaimoni::POD_pair<size_t,size_t> > parenpair_stack;
+	autovalarray_ptr<POD_pair<size_t,size_t> > parenpair_stack;
 	// context-free check should be intercepting when these are invalid
 	construct_matched_pairs<'(',')'>(x,pretokenized,parenpair_stack);
 
@@ -3162,7 +3163,7 @@ oneTokenExit:
 		}
 
 	{	// check for context-free errors
-	zaimoni::autovalarray_ptr<weak_token> weaktoken_list;
+	autovalarray_ptr<weak_token> weaktoken_list;
 	_weak_tokenize_aux(x,pretokenized,weaktoken_list);
 	// do not process further if there are context-free errors
 	if (lang.pp_support->ControlExpressionContextFreeErrorCheck(weaktoken_list.data(),weaktoken_list.size(),true,true)) return false;
@@ -3215,9 +3216,9 @@ oneTokenExit:
  * \return true iff suitable for an #if/#elif control expression
  */
 bool
-CPreprocessor::if_elif_control_is_zero(const zaimoni::Token<char>& x, const zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags>& lexed_token, bool& is_zero) const
+CPreprocessor::if_elif_control_is_zero(const Token<char>& x, const POD_triple<size_t,size_t,lex_flags>& lexed_token, bool& is_zero) const
 {
-	const zaimoni::lex_flags flags = lexed_token.third;
+	const lex_flags flags = lexed_token.third;
 	if (C_TESTFLAG_CHAR_LITERAL==flags)
 		{	//! \test Pass_if_zero.hpp
 			//! \test Pass_if_zero.h
@@ -3247,10 +3248,10 @@ CPreprocessor::if_elif_control_is_zero(const zaimoni::Token<char>& x, const zaim
 #undef INVALID_DIRECTIVE_FLAG
 
 void
-CPreprocessor::predefined_macro_replacement(zaimoni::Token<char>& x, size_t critical_offset)
+CPreprocessor::predefined_macro_replacement(Token<char>& x, size_t critical_offset)
 {
 	assert(x.size()>critical_offset);
-	zaimoni::lex_flags token_flags;
+	lex_flags token_flags;
 	while(x.size()>critical_offset)
 		{
 		const size_t token_len = lang.UnfilteredNextToken(x.data()+critical_offset,token_flags);
@@ -3272,7 +3273,7 @@ CPreprocessor::predefined_macro_replacement(zaimoni::Token<char>& x, size_t crit
  * \return true iff replaced a predefined macro.  Updates critical_offset when returning true
  */
 bool
-CPreprocessor::predefined_macro_replace_once(zaimoni::Token<char>& x, size_t& critical_offset, const size_t token_len)
+CPreprocessor::predefined_macro_replace_once(Token<char>& x, size_t& critical_offset, const size_t token_len)
 {
 	assert(x.size()>critical_offset);
 	assert(x.size()>=critical_offset+token_len);
@@ -3315,13 +3316,13 @@ CPreprocessor::predefined_macro_replace_once(zaimoni::Token<char>& x, size_t& cr
 }
 
 void
-CPreprocessor::_macro_replace(zaimoni::Token<char>& x, size_t& critical_offset, const size_t token_len,const char* const macro_value) const
+CPreprocessor::_macro_replace(Token<char>& x, size_t& critical_offset, const size_t token_len,const char* const macro_value) const
 {
 	assert(x.size()>critical_offset);
 	assert(x.size()-critical_offset>=token_len);
 	assert(0<token_len);
 
-	if (zaimoni::is_empty_string(macro_value))
+	if (is_empty_string(macro_value))
 		{
 		if (x.size()-critical_offset<=token_len)
 			x.rtrim(token_len);
@@ -3348,9 +3349,9 @@ CPreprocessor::_macro_replace(zaimoni::Token<char>& x, size_t& critical_offset, 
 
 
 void
-CPreprocessor::instantiate_function_macro_arguments(zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& arguments, const zaimoni::Token<char>& arglist, size_t arg_count) const
+CPreprocessor::instantiate_function_macro_arguments(autovalarray_ptr<Token<char>*>& arguments, const Token<char>& arglist, size_t arg_count) const
 {
-	zaimoni::lex_flags scratch_flags;
+	lex_flags scratch_flags;
 	size_t paren_depth = 1;
 	size_t var_origin = 0;
 	size_t offset = 1;
@@ -3386,7 +3387,7 @@ CPreprocessor::instantiate_function_macro_arguments(zaimoni::autovalarray_ptr<za
 					const size_t skip_ws = strspn(arglist.data()+var_origin+1,lang.WhiteSpace);
 					if (offset-var_origin+1>skip_ws)
 						{
-						arguments[count_args] = new zaimoni::Token<char>(arglist,var_origin+1+skip_ws,offset-var_origin-1-skip_ws,0);
+						arguments[count_args] = new Token<char>(arglist,var_origin+1+skip_ws,offset-var_origin-1-skip_ws,0);
 						_flush_duplicated_ws(*arguments[count_args],lang);
 						}
 					};
@@ -3401,7 +3402,7 @@ CPreprocessor::instantiate_function_macro_arguments(zaimoni::autovalarray_ptr<za
 				const size_t skip_ws = strspn(arglist.data()+var_origin+1,lang.WhiteSpace);
 				if (offset-var_origin+1>skip_ws)
 					{
-					arguments[count_args] = new zaimoni::Token<char>(arglist,var_origin+1+skip_ws,offset-var_origin-1-skip_ws,0);
+					arguments[count_args] = new Token<char>(arglist,var_origin+1+skip_ws,offset-var_origin-1-skip_ws,0);
 					_flush_duplicated_ws(*arguments[count_args],lang);
 					}
 				};
@@ -3416,7 +3417,7 @@ CPreprocessor::instantiate_function_macro_arguments(zaimoni::autovalarray_ptr<za
 }
 
 bool
-CPreprocessor::dynamic_macro_replace_once(zaimoni::Token<char>& x, size_t& critical_offset, size_t token_len, const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion, const zaimoni::autovalarray_ptr<char*>& macros_function, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_arglist, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion, zaimoni::autovalarray_ptr<char*>* const used_macro_stack)
+CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offset, size_t token_len, const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<Token<char>*>& macros_object_expansion, const autovalarray_ptr<char*>& macros_function, const autovalarray_ptr<Token<char>*>& macros_function_arglist, const autovalarray_ptr<Token<char>*>& macros_function_expansion, autovalarray_ptr<char*>* const used_macro_stack)
 {
 	assert(x.size()>critical_offset);
 	assert(x.size()>=critical_offset+token_len);
@@ -3438,21 +3439,21 @@ CPreprocessor::dynamic_macro_replace_once(zaimoni::Token<char>& x, size_t& criti
 			return true;
 			};
 		size_t test_critical_offset = 0;
-		zaimoni::Token<char> Test(x);
+		Token<char> Test(x);
 		Test.lslice(critical_offset+token_len);
 		Test.ltrim(critical_offset);
 		_macro_replace(Test,test_critical_offset,token_len,macros_object_expansion[object_macro_index]->data());
 		predefined_macro_replacement(Test,0);
 		if (NULL==used_macro_stack)
 			{
-			zaimoni::autovalarray_ptr<char*> macro_stack(1);
-			macro_stack[0] = zaimoni::_new_buffer_nonNULL_throws<char>(token_len);
+			autovalarray_ptr<char*> macro_stack(1);
+			macro_stack[0] = _new_buffer_nonNULL_throws<char>(token_len);
 			memmove(macro_stack[0],x.data()+critical_offset,token_len);
 			intradirective_preprocess(Test,0,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion,&macro_stack);
 			}
 		else{
 			if (!used_macro_stack->InsertNSlotsAt(1,used_macro_stack->size())) throw std::bad_alloc();
-			used_macro_stack->back() = zaimoni::_new_buffer_nonNULL_throws<char>(token_len);
+			used_macro_stack->back() = _new_buffer_nonNULL_throws<char>(token_len);
 			memmove(used_macro_stack->back(),x.data()+critical_offset,token_len);
 			intradirective_preprocess(Test,0,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion,used_macro_stack);
 			used_macro_stack->DeleteIdx(used_macro_stack->size()-1);
@@ -3509,10 +3510,10 @@ CPreprocessor::dynamic_macro_replace_once(zaimoni::Token<char>& x, size_t& criti
 			return true;
 			};
 
-		zaimoni::autovalarray_ptr<zaimoni::Token<char>*> formal_arguments;
-		zaimoni::autovalarray_ptr<zaimoni::Token<char>*> actual_arguments;
+		autovalarray_ptr<Token<char>*> formal_arguments;
+		autovalarray_ptr<Token<char>*> actual_arguments;
 		{
-		zaimoni::Token<char> actual_pre_args(x,critical_offset+token_len,arg_span,0);
+		Token<char> actual_pre_args(x,critical_offset+token_len,arg_span,0);
 		instantiate_function_macro_arguments(actual_arguments,actual_pre_args,formal_arg_count);
 		}
 		//! \todo consider calling this once on-demand (space vs. time trade)
@@ -3522,7 +3523,7 @@ CPreprocessor::dynamic_macro_replace_once(zaimoni::Token<char>& x, size_t& criti
 		assert(actual_arguments.size()==formal_arg_count);
 #ifndef NDEBUG
 		{	// reality-check the formal argument list
-		zaimoni::lex_flags identifier_flags;
+		lex_flags identifier_flags;
 		size_t j = formal_arg_count;
 		do	{
 			--j;
@@ -3539,18 +3540,18 @@ CPreprocessor::dynamic_macro_replace_once(zaimoni::Token<char>& x, size_t& criti
 		//! __VA_ARGS__ occurs only in the replacement list of varadic function-like macros, so it is the proper variable name for that ...
 		if (formal_varadic) formal_arguments.back()->replace_once(0,formal_arguments.back()->size(),"__VA_ARGS__");
 		//! \todo should discard unused formal arguments and their parameter lists; not worth a warning, as there are a number of legitimate uses for discarding formal parameters
-		zaimoni::Token<char> Test(x);
+		Token<char> Test(x);
 		if (NULL==used_macro_stack)
 			{
-			zaimoni::autovalarray_ptr<char*> macro_stack(1);
-			macro_stack[0] = zaimoni::_new_buffer_nonNULL_throws<char>(token_len);
+			autovalarray_ptr<char*> macro_stack(1);
+			macro_stack[0] = _new_buffer_nonNULL_throws<char>(token_len);
 			memmove(macro_stack[0],x.data()+critical_offset,token_len);
 
 			dynamic_function_macro_prereplace_once(macros_object, macros_object_expansion, macros_function, macros_function_arglist, macros_function_expansion, &macro_stack, formal_arguments, actual_arguments, Test);
 			}
 		else{
 			if (!used_macro_stack->InsertNSlotsAt(1,used_macro_stack->size())) throw std::bad_alloc();
-			used_macro_stack->back() = zaimoni::_new_buffer_nonNULL_throws<char>(token_len);
+			used_macro_stack->back() = _new_buffer_nonNULL_throws<char>(token_len);
 			memmove(used_macro_stack->back(),x.data()+critical_offset,token_len);
 
 			dynamic_function_macro_prereplace_once(macros_object, macros_object_expansion, macros_function, macros_function_arglist, macros_function_expansion, used_macro_stack, formal_arguments, actual_arguments, Test);
@@ -3569,14 +3570,14 @@ CPreprocessor::dynamic_macro_replace_once(zaimoni::Token<char>& x, size_t& criti
  * 
  * \return true if and only if concatenation happened
  */
-static bool _concatenate_single(zaimoni::Token<char>& x,const zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags>* pretokenized, zaimoni::LangConf& lang)
+static bool _concatenate_single(Token<char>& x,const POD_triple<size_t,size_t,lex_flags>* pretokenized, LangConf& lang)
 {
 	assert(NULL!=pretokenized);
-	zaimoni::autovalarray_ptr<char> new_token(pretokenized[0].second+pretokenized[2].second);
+	autovalarray_ptr<char> new_token(pretokenized[0].second+pretokenized[2].second);
 	if (new_token.empty()) throw std::bad_alloc();
 	strncpy(new_token.c_array(),x.data()+pretokenized[0].first,pretokenized[0].second);
 	strncpy(new_token.c_array()+pretokenized[0].second,x.data()+pretokenized[2].first,pretokenized[2].second);
-	zaimoni::lex_flags scratch_flags;
+	lex_flags scratch_flags;
 	const size_t new_token_len = lang.UnfilteredNextToken(new_token.data(),scratch_flags);
 	if (new_token_len!=new_token.size())
 		{	//! \test Error_define_concatenate3.hpp
@@ -3598,7 +3599,7 @@ static bool _concatenate_single(zaimoni::Token<char>& x,const zaimoni::POD_tripl
 	return true;
 }
 
-static void remove_ws_from_token(zaimoni::Token<char>& x, const zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >& pretokenized)
+static void remove_ws_from_token(Token<char>& x, const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized)
 {
 	// truncate everything past last token
 	x.lslice(pretokenized.back().first+pretokenized.back().second);
@@ -3623,10 +3624,10 @@ static void remove_ws_from_token(zaimoni::Token<char>& x, const zaimoni::autoval
 }
 
 void
-CPreprocessor::dynamic_function_macro_prereplace_once(const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion, const zaimoni::autovalarray_ptr<char*>& macros_function, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_arglist, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion,zaimoni::autovalarray_ptr<char*>* const used_macro_stack, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& formal_arguments, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& actual_arguments, zaimoni::Token<char>& x)
+CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<Token<char>*>& macros_object_expansion, const autovalarray_ptr<char*>& macros_function, const autovalarray_ptr<Token<char>*>& macros_function_arglist, const autovalarray_ptr<Token<char>*>& macros_function_expansion,autovalarray_ptr<char*>* const used_macro_stack, const autovalarray_ptr<Token<char>*>& formal_arguments, const autovalarray_ptr<Token<char>*>& actual_arguments, Token<char>& x)
 {
 	// deal with # operators before macro-replacing arguments
-	zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> > pretokenized;
+	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	if (lang.line_lex_find(x.data(),x.size(),"#",sizeof("#")-1,pretokenized) || lang.line_lex_find(x.data(),x.size(),"%:",sizeof("%:")-1,pretokenized))
 		{
 		size_t i = pretokenized.size();
@@ -3640,7 +3641,7 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const zaimoni::autovalarra
 				assert(0<=j);
 
 				{
-				zaimoni::autovalarray_ptr<char> stringized_actual;	//! \todo inefficient, should stringize any parameter only once and reuse
+				autovalarray_ptr<char> stringized_actual;	//! \todo inefficient, should stringize any parameter only once and reuse
 				stringize(stringized_actual,actual_arguments[j]);
 				// safe because narrow string
 				x.replace_once(pretokenized[i].first,pretokenized[i+1].second+pretokenized[i].second,stringized_actual.data());
@@ -3728,7 +3729,7 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const zaimoni::autovalarra
 				{	// oops....must do replacement *before* the ## concatenation
 				assert(NULL!=actual_arguments[j3]);
 				assert(!actual_arguments[j3]->empty());
-				zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> > pretokenized_alt;
+				autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized_alt;
 				lang.line_lex(actual_arguments[j3]->data(),actual_arguments[j3]->size(),pretokenized_alt);
 				_macro_replace(x,pretokenized[j-1].first,pretokenized[j-1].second,actual_arguments[j3]->data());
 				lang.line_lex(x.data(),x.size(),pretokenized);
@@ -3748,7 +3749,7 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const zaimoni::autovalarra
 	while(0<j);
 }
 
-static void _complete_string_character_literal_define(zaimoni::Token<char>& x, const zaimoni::Token<char>& src, size_t critical_offset, size_t first_token_len,const char delim, const char* const end_error)
+static void _complete_string_character_literal_define(Token<char>& x, const Token<char>& src, size_t critical_offset, size_t first_token_len,const char delim, const char* const end_error)
 {
 	if (delim!=x.back())
 		{
@@ -3772,7 +3773,7 @@ static void _complete_string_character_literal_define(zaimoni::Token<char>& x, c
  * \return false if the macro ends in an unterminated (wide?) string/character literal.  [We terminate it here, but the caller should react later on.]
  */
 void
-CPreprocessor::normalize_macro_expansion(zaimoni::Token<char>& x, const zaimoni::Token<char>& src, size_t critical_offset, size_t first_token_len)
+CPreprocessor::normalize_macro_expansion(Token<char>& x, const Token<char>& src, size_t critical_offset, size_t first_token_len)
 {
 	if (x.empty()) return;
 	size_t offset = 0;
@@ -3786,7 +3787,7 @@ CPreprocessor::normalize_macro_expansion(zaimoni::Token<char>& x, const zaimoni:
 	}
 	while(offset<x.size())
 		{
-		zaimoni::lex_flags token_flags;
+		lex_flags token_flags;
 		offset += lang.UnfilteredNextToken(x.data()+offset,token_flags);
 		if (x.size()<=offset)
 			{
@@ -3817,7 +3818,7 @@ CPreprocessor::normalize_macro_expansion(zaimoni::Token<char>& x, const zaimoni:
 }
 
 void
-CPreprocessor::intradirective_preprocess(zaimoni::Token<char>& x, size_t critical_offset, const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion, const zaimoni::autovalarray_ptr<char*>& macros_function, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_arglist, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion,zaimoni::autovalarray_ptr<char*>* const used_macro_stack)
+CPreprocessor::intradirective_preprocess(Token<char>& x, size_t critical_offset, const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<Token<char>*>& macros_object_expansion, const autovalarray_ptr<char*>& macros_function, const autovalarray_ptr<Token<char>*>& macros_function_arglist, const autovalarray_ptr<Token<char>*>& macros_function_expansion,autovalarray_ptr<char*>* const used_macro_stack)
 {
 	while(x.size()>critical_offset)
 		{
@@ -3828,7 +3829,7 @@ CPreprocessor::intradirective_preprocess(zaimoni::Token<char>& x, size_t critica
 			++critical_offset;
 			continue;
 			};
-		zaimoni::lex_flags token_flags;
+		lex_flags token_flags;
 		const size_t token_len = lang.UnfilteredNextToken(x.data()+critical_offset,token_flags);
 		if (    C_TESTFLAG_IDENTIFIER!=token_flags
 			|| (NULL!=used_macro_stack && 0<=binary_find(x.data()+critical_offset,token_len,*used_macro_stack))
@@ -3842,7 +3843,7 @@ CPreprocessor::intradirective_preprocess(zaimoni::Token<char>& x, size_t critica
 }
 
 void
-CPreprocessor::intradirective_flush_identifiers_to_zero(zaimoni::Token<char>& x, size_t critical_offset) const
+CPreprocessor::intradirective_flush_identifiers_to_zero(Token<char>& x, size_t critical_offset) const
 {	//! test Error_if_control.hpp
 	//! test Pass_if_control.hpp
 	while(x.size()>critical_offset)
@@ -3854,7 +3855,7 @@ CPreprocessor::intradirective_flush_identifiers_to_zero(zaimoni::Token<char>& x,
 			++critical_offset;
 			continue;
 			};
-		zaimoni::lex_flags token_flags;
+		lex_flags token_flags;
 		const size_t token_len = lang.UnfilteredNextToken(x.data()+critical_offset,token_flags);
 		if (C_TESTFLAG_IDENTIFIER!=token_flags)
 			{
@@ -3880,17 +3881,17 @@ CPreprocessor::die_on_pp_errors(void) const
 }
 
 void
-CPreprocessor::weak_tokenize(const zaimoni::Token<char>& x,zaimoni::autovalarray_ptr<weak_token>& weaktoken_list) const
+CPreprocessor::weak_tokenize(const Token<char>& x,autovalarray_ptr<weak_token>& weaktoken_list) const
 {
 	assert(!x.empty());
-	zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> > pretokenized;
+	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	lang.line_lex(x.data(), x.size(), pretokenized);
 	assert(!pretokenized.empty());
 	_weak_tokenize_aux(x,pretokenized,weaktoken_list);
 }
 
 void
-CPreprocessor::debug_to_stderr(const zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion, const zaimoni::autovalarray_ptr<char*>& macros_function, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_arglist, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion) const
+CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<Token<char>*>& macros_object_expansion, const autovalarray_ptr<char*>& macros_function, const autovalarray_ptr<Token<char>*>& macros_function_arglist, const autovalarray_ptr<Token<char>*>& macros_function_expansion) const
 {
 	// need whitespace tokens here to force pretty-printing
 	if (debug_mode)
@@ -3971,7 +3972,7 @@ CPreprocessor::debug_to_stderr(const zaimoni::autovalarray_ptr<zaimoni::Token<ch
  * \return bool if and only if an error was found.
  */
 bool
-CPreprocessor::C99_VA_ARGS_flinch(const zaimoni::Token<char>& x, const size_t critical_offset)
+CPreprocessor::C99_VA_ARGS_flinch(const Token<char>& x, const size_t critical_offset) const
 {	//! \todo option to bypass this
 	assert(!x.empty());
 	assert(x.size()>critical_offset);
@@ -3987,7 +3988,7 @@ CPreprocessor::C99_VA_ARGS_flinch(const zaimoni::Token<char>& x, const size_t cr
 }
 
 void
-CPreprocessor::delete_unrecognized_directive(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i)
+CPreprocessor::delete_unrecognized_directive(autovalarray_ptr<Token<char>* >& TokenList, const size_t i)
 {
 	assert(TokenList.size()>i);
 	message_header(*TokenList[i]);
@@ -4001,7 +4002,7 @@ CPreprocessor::delete_unrecognized_directive(zaimoni::autovalarray_ptr<zaimoni::
 }
 
 void
-CPreprocessor::delete_naked_else_elif_endif(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i,const int directive_type)
+CPreprocessor::delete_naked_else_elif_endif(autovalarray_ptr<Token<char>* >& TokenList, const size_t i,const int directive_type)
 {	//! \todo called only once, consider inlining
 	message_header(*TokenList[i]);
 	INC_INFORM(ERR_STR);
@@ -4013,7 +4014,7 @@ CPreprocessor::delete_naked_else_elif_endif(zaimoni::autovalarray_ptr<zaimoni::T
 }
 
 void
-CPreprocessor::handle_error_directive(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i)
+CPreprocessor::handle_error_directive(autovalarray_ptr<Token<char>* >& TokenList, const size_t i)
 {	//! \todo called only once, consider inlining
 	message_header(*TokenList[i]);
 	INC_INFORM(ERR_STR);
@@ -4023,7 +4024,7 @@ CPreprocessor::handle_error_directive(zaimoni::autovalarray_ptr<zaimoni::Token<c
 }
 
 bool
-CPreprocessor::discard_unless_preprocessing_tokens(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i,const int directive_type)
+CPreprocessor::discard_unless_preprocessing_tokens(autovalarray_ptr<Token<char>* >& TokenList, const size_t i,const int directive_type)
 {	//! \todo called only once, consider inlining
 	if (TokenList[i]->size()==valid_directives[directive_type].second+1)
 		{
@@ -4040,7 +4041,7 @@ CPreprocessor::discard_unless_preprocessing_tokens(zaimoni::autovalarray_ptr<zai
 }
 
 void
-CPreprocessor::discard_no_identifier(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i,const int directive_type)
+CPreprocessor::discard_no_identifier(autovalarray_ptr<Token<char>* >& TokenList, const size_t i,const int directive_type)
 {	//! \todo called only once, consider inlining
 	message_header(*TokenList[i]);
 	INC_INFORM(ERR_STR);
@@ -4052,7 +4053,7 @@ CPreprocessor::discard_no_identifier(zaimoni::autovalarray_ptr<zaimoni::Token<ch
 }
 
 void
-CPreprocessor::discard_locked_macro(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i,const int directive_type)
+CPreprocessor::discard_locked_macro(autovalarray_ptr<Token<char>* >& TokenList, const size_t i,const int directive_type)
 {
 	message_header(*TokenList[i]);
 	INC_INFORM(ERR_STR);
@@ -4066,7 +4067,7 @@ CPreprocessor::discard_locked_macro(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 }
 
 void
-CPreprocessor::discard_duplicate_define(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i, const size_t critical_offset, const size_t first_token_len)
+CPreprocessor::discard_duplicate_define(autovalarray_ptr<Token<char>* >& TokenList, const size_t i, const size_t critical_offset, const size_t first_token_len)
 {
 	message_header(*TokenList[i]);
 	INC_INFORM(ERR_STR);
@@ -4085,13 +4086,13 @@ CPreprocessor::discard_duplicate_define(zaimoni::autovalarray_ptr<zaimoni::Token
  * \return bool : true iff truncated to empty
  */
 bool
-CPreprocessor::discard_leading_trailing_concatenate_op(zaimoni::Token<char>& x)
+CPreprocessor::discard_leading_trailing_concatenate_op(Token<char>& x)
 {
 	if ((sizeof("##")-1)>x.size()) return false;
 	assert(!strpbrk(x.data(),lang.WhiteSpace+2));	// check for normalization
 	assert(!strchr(x.data(),'\n'));	// check for normalization
 	// tokenize the whole line
-	zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> > pretokenized;
+	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	lang.line_lex(x.data(),x.size(),pretokenized);
 
 	if (detect_C_concatenation_op(x.data()+pretokenized.back().first,pretokenized.back().second))
@@ -4127,12 +4128,12 @@ CPreprocessor::discard_leading_trailing_concatenate_op(zaimoni::Token<char>& x)
 }
 
 void
-CPreprocessor::use_line_directive_and_discard(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i)
+CPreprocessor::use_line_directive_and_discard(autovalarray_ptr<Token<char>* >& TokenList, const size_t i)
 {
 	assert(!strncmp(TokenList[i]->data(),"#line ",sizeof("#line ")-1));
 	C_PPDecimalInteger line_number;
-	zaimoni::lex_flags first_token_flags;
-	zaimoni::lex_flags second_token_flags;
+	lex_flags first_token_flags;
+	lex_flags second_token_flags;
 	size_t critical_offset = sizeof("#line ")-1;
 	// C99: check for decimal integer literal, then optional string literal; error if this is not found
 	{
@@ -4159,7 +4160,7 @@ CPreprocessor::use_line_directive_and_discard(zaimoni::autovalarray_ptr<zaimoni:
 			// Behavior is undefined if the syntax is bad (line number with malformed filename string), so don't worry about this happening too early.
 		size_t numeric_line_number;
 		{	// don't worry about failure (pre-validated above), *but* as errno should be a synchronized global we have to lock it anyway
-		zaimoni::OS::scoped_lock tmp(errno_mutex);
+		OS::scoped_lock tmp(errno_mutex);
 		numeric_line_number = line_number.to_umax();	//! \warning can catastrophically overflow if size_t isn't at least 32-bit
 		};
 		if (TokenList[i]->logical_line.first!=numeric_line_number)
@@ -4217,7 +4218,7 @@ CPreprocessor::use_line_directive_and_discard(zaimoni::autovalarray_ptr<zaimoni:
 		const size_t escape_length = lang.UnescapeStringLength(TokenList[i]->data()+critical_offset+1,second_token_len-2);
 		if (escape_length<second_token_len-2)
 			{
-			zaimoni::autovalarray_ptr<char> tmp(escape_length);
+			autovalarray_ptr<char> tmp(escape_length);
 			if (tmp.empty() && 0<escape_length) throw std::bad_alloc();
 			if (0<escape_length) lang.UnescapeString(tmp.c_array(),TokenList[i]->data()+critical_offset+1,second_token_len-2);
 			new_FILE = register_string(tmp.empty() ? "" : tmp.data());
@@ -4235,7 +4236,7 @@ CPreprocessor::use_line_directive_and_discard(zaimoni::autovalarray_ptr<zaimoni:
 }
 
 void
-CPreprocessor::truncate_illegal_tokens(zaimoni::Token<char>& x,const int directive_type,const size_t critical_offset)
+CPreprocessor::truncate_illegal_tokens(Token<char>& x,const int directive_type,const size_t critical_offset)
 {
 	if (x.size()>critical_offset)
 		{
@@ -4256,7 +4257,7 @@ CPreprocessor::truncate_illegal_tokens(zaimoni::Token<char>& x,const int directi
 bool
 CPreprocessor::hard_locked_macro(const char* const x,const size_t x_len) const
 {
-	assert(!zaimoni::is_empty_string(x));
+	assert(!is_empty_string(x));
 	assert(0<x_len);
 // C99: 6.11.9 Predefined macro names
 // Macro names beginning with __STDC_ are reserved for future standardization.
@@ -4273,7 +4274,7 @@ CPreprocessor::hard_locked_macro(const char* const x,const size_t x_len) const
 size_t
 CPreprocessor::function_macro_argument_span(const char* const x) const
 {
-	assert(!zaimoni::is_empty_string(x));
+	assert(!is_empty_string(x));
 	if ('('!=x[0]) return 0;
 	const size_t x_len = strlen(x);
 	size_t span = 1;
@@ -4312,7 +4313,7 @@ CPreprocessor::function_macro_argument_span(const char* const x) const
 			}
 
 
-		zaimoni::lex_flags scratch_flags;
+		lex_flags scratch_flags;
 		const size_t token_len = lang.UnfilteredNextToken(x+span,scratch_flags);
 		if (C_TESTFLAG_IDENTIFIER==scratch_flags)
 			{
@@ -4355,7 +4356,7 @@ CPreprocessor::function_macro_argument_span(const char* const x) const
 }
 
 size_t
-CPreprocessor::defined_span(const zaimoni::Token<char>& x, const size_t logical_offset, zaimoni::POD_pair<size_t,size_t>& identifier)
+CPreprocessor::defined_span(const Token<char>& x, const size_t logical_offset, POD_pair<size_t,size_t>& identifier)
 {	//! \todo more verbose error reporting
 	assert(!strncmp(x.data()+logical_offset,"defined",(sizeof("defined")-1)));
 	size_t offset = logical_offset;
@@ -4372,7 +4373,7 @@ CPreprocessor::defined_span(const zaimoni::Token<char>& x, const size_t logical_
 	else if (0==skip_ws)
 		return 0;
 
-	zaimoni::lex_flags scratch_flags;
+	lex_flags scratch_flags;
 	const size_t token_len = lang.UnfilteredNextToken(x.data()+offset,scratch_flags);
 	if (C_TESTFLAG_IDENTIFIER!=scratch_flags) return 0;
 	identifier.first = offset;
@@ -4427,10 +4428,10 @@ CPreprocessor::require_padding(char LHS, char RHS) const
 bool
 CPreprocessor::nonrecursive_macro_replacement_list(const char* const x) const
 {
-	if (zaimoni::is_empty_string(x)) return true;
+	if (is_empty_string(x)) return true;
 	const size_t x_len = strlen(x);
 	size_t offset = 0;
-	zaimoni::lex_flags scratch_flags;
+	lex_flags scratch_flags;
 	while(x_len>offset)
 		{
 		const size_t token_len = lang.UnfilteredNextToken(x+offset,scratch_flags);
@@ -4452,7 +4453,7 @@ CPreprocessor::nonrecursive_macro_replacement_list(const char* const x) const
 size_t
 CPreprocessor::function_macro_invocation_argspan(const char* const src,const size_t src_span,size_t& arg_count) const
 {
-	assert(!zaimoni::is_empty_string(src));
+	assert(!is_empty_string(src));
 	assert('('==src[0]);
 	assert(src_span==strlen(src));
 	if (2>src_span) return 0;
@@ -4461,7 +4462,7 @@ CPreprocessor::function_macro_invocation_argspan(const char* const src,const siz
 		arg_count = 0;
 		return 2;
 		}
-	zaimoni::lex_flags scratch_flags;
+	lex_flags scratch_flags;
 	size_t test_arg_count = 1;
 	size_t paren_depth = 1;
 	size_t i = 1;
@@ -4496,7 +4497,7 @@ CPreprocessor::function_macro_invocation_argspan(const char* const src,const siz
  * \param src to be stringized
  */
 void
-CPreprocessor::stringize(zaimoni::autovalarray_ptr<char>& stringized_actual,const zaimoni::Token<char>* const & src)
+CPreprocessor::stringize(autovalarray_ptr<char>& stringized_actual,const Token<char>* const & src)
 {
 	if (NULL==src || src->empty())
 		{	// empty string
@@ -4520,9 +4521,9 @@ CPreprocessor::stringize(zaimoni::autovalarray_ptr<char>& stringized_actual,cons
  * \return bool true if macro was emptied (caller should complete the cleanup)
  */
 bool
-CPreprocessor::flush_bad_stringize(zaimoni::Token<char>& x, const zaimoni::Token<char>& arglist)
+CPreprocessor::flush_bad_stringize(Token<char>& x, const Token<char>& arglist)
 {
-	zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> > pretokenized;
+	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	if (lang.line_lex_find(x.data(),x.size(),"#",sizeof("#")-1,pretokenized) || lang.line_lex_find(x.data(),x.size(),"%:",sizeof("%:")-1,pretokenized))
 		{
 		size_t i = 0;
@@ -4577,13 +4578,13 @@ CPreprocessor::flush_bad_stringize(zaimoni::Token<char>& x, const zaimoni::Token
 }
 
 void
-CPreprocessor::object_macro_concatenate(zaimoni::Token<char>& x)
+CPreprocessor::object_macro_concatenate(Token<char>& x)
 {	//! \pre: x is normalized
 	//! \bug need data-transform test cases
 	if (4>x.size()) return;
 	assert(!strpbrk(x.data(),lang.WhiteSpace+2));	// check for normalization
 	assert(!strchr(x.data(),'\n'));					// check for normalization
-	zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> > pretokenized;
+	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	if (lang.line_lex_find(x.data(),x.size(),"##",sizeof("##")-1,pretokenized) || lang.line_lex_find(x.data(),x.size(),"%:%:",sizeof("%:%:")-1,pretokenized))
 		{
 		assert(!pretokenized.empty());
@@ -4610,13 +4611,13 @@ CPreprocessor::object_macro_concatenate(zaimoni::Token<char>& x)
 }
 
 void
-CPreprocessor::function_macro_concatenate_novars(zaimoni::Token<char>& x, const zaimoni::Token<char>& arglist)
+CPreprocessor::function_macro_concatenate_novars(Token<char>& x, const Token<char>& arglist)
 {	//! \pre: x is normalized
 	//! \bug need data-transform test cases
 	if (4>x.size()) return;
 	assert(!strpbrk(x.data(),lang.WhiteSpace+2));	// check for normalization
 	assert(!strchr(x.data(),'\n'));	// check for normalization
-	zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> > pretokenized;
+	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	if (lang.line_lex_find(x.data(),x.size(),"##",sizeof("##")-1,pretokenized) || lang.line_lex_find(x.data(),x.size(),"%:%:",sizeof("%:%:")-1,pretokenized))
 		{
 		assert(!pretokenized.empty());

@@ -1525,30 +1525,13 @@ robust_token_is_char<'}'>(const zaimoni::POD_pair<const char*,size_t>& x)
 	return NULL!=x.first && detect_C_right_brace_op(x.first,x.second);
 }
 
-//! \todo if we have an air_for_left_brace, suppress_naked_brackets_and_braces goes obsolete
-static void air_for_left_bracket(const weak_token* tokenlist,size_t i,bool hard_start)
-{	//! \bug need test cases
-	assert(NULL!=tokenlist);
-	assert(token_is_char<'['>(tokenlist->token));
-	if (0<i)
-		{
-		// accept: ), ], identifier, string-lit, char-lit, pp-num
-		if ((C_TESTFLAG_IDENTIFIER | C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_PP_NUMERAL) & tokenlist[-1].flags) return;
-		if (token_is_char<')'>(tokenlist[-1].token)) return;
-		if (token_is_char<']'>(tokenlist[-1].token)) return;
-		message_header(*tokenlist);
-		INC_INFORM(ERR_STR);
-		INC_INFORM(tokenlist[-1].token.first,tokenlist[-1].token.second);
-		INFORM(" [ denies [ ] its left argument (C99 6.5.2p1/C++98 5.2p1)");
-		zcc_errors.inc_error();
-		}
-	else if (hard_start)
-		{
-		message_header(*tokenlist);
-		INC_INFORM(ERR_STR);
-		INFORM("[ at start of expression denies [ ] its left argument (C99 6.5.2p1/C++98 5.2p1)");
-		zcc_errors.inc_error();
-		}
+//! \todo if we have an asphyxiates_left_brace, suppress_naked_brackets_and_braces goes obsolete
+static bool asphyxiates_left_bracket(const weak_token& x)
+{
+	if ((C_TESTFLAG_IDENTIFIER | C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_PP_NUMERAL) & x.flags) return false;
+	if (token_is_char<')'>(x.token)) return false;
+	if (token_is_char<']'>(x.token)) return false;
+	return true;
 }
 
 //! \todo this forks when distinctions between C, C++ are supported
@@ -1609,19 +1592,31 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 	assert(0<tokenlist_len);
 	const size_t starting_errors = zcc_errors.err_count();
 
+	if (hard_start && token_is_char<'['>(tokenlist[0].token))
+		{
+		message_header(tokenlist[0]);
+		INC_INFORM(ERR_STR);
+		INFORM("[ at start of expression denies [ ] its left argument (C99 6.5.2p1/C++98 5.2p1)");
+		zcc_errors.inc_error();
+		};
 	size_t i = 0;
 	do	{
-		if (token_is_char<'['>(tokenlist[i].token))
-			air_for_left_bracket(tokenlist+i,i,hard_start);
+		if (0<i && token_is_char<'['>(tokenlist[i].token) && asphyxiates_left_bracket(tokenlist[i-1]))
+			{
+			message_header(tokenlist[i]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(tokenlist[i-1].token.first,tokenlist[i-1].token.second);
+			INFORM(" [ denies [ ] its left argument (C99 6.5.2p1/C++98 5.2p1)");
+			zcc_errors.inc_error();
+			};
 		if (	0<i
 			&& (token_is_char<')'>(tokenlist[i].token) || token_is_char<']'>(tokenlist[i].token)))
 			{
 			if (right_paren_asphyxiates(tokenlist[i-1]))
 				{
-				message_header(tokenlist[i-1]);
+				message_header(tokenlist[i]);
 				INC_INFORM(ERR_STR);
-				INC_INFORM(tokenlist[i-1].token.first,tokenlist[i-1].token.second);
-				INC_INFORM(tokenlist[i].token.first,tokenlist[i].token.second);
+				INC_INFORM(tokenlist[i].token.first,tokenlist[i-1].token.second);
 				INC_INFORM(" denies ");
 				INC_INFORM(tokenlist[i-1].token.first,tokenlist[i-1].token.second);
 				INFORM(" its right argument (C99 6.5.3p1/C++98 5.3p1)");
@@ -1633,10 +1628,9 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 			{
 			if (left_paren_asphyxiates(tokenlist[i+1]))
 				{
-				message_header(tokenlist[i-1]);
+				message_header(tokenlist[i]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM(tokenlist[i].token.first,tokenlist[i].token.second);
-				INC_INFORM(tokenlist[i+1].token.first,tokenlist[i+1].token.second);
 				INC_INFORM(" denies ");
 				INC_INFORM(tokenlist[i+1].token.first,tokenlist[i+1].token.second);
 				INFORM(" its left argument");
@@ -1664,7 +1658,7 @@ static bool C99_ControlExpressionContextFreeErrorCount(const weak_token* tokenli
 	return C99_CoreControlExpressionContextFreeErrorCount(tokenlist,tokenlist_len,hard_start,hard_end);
 }
 
-static bool CPlusPlus_ControlExpressionContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
+static bool CPP_ControlExpressionContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
@@ -9281,7 +9275,7 @@ static bool cancel_addressof_deref_operators(parse_tree& src)
 }
 #endif
 
-bool C99_EvalParseTree(parse_tree& src,const type_system& types)
+static bool C99_EvalParseTree(parse_tree& src,const type_system& types)
 {
 	const size_t starting_errors = zcc_errors.err_count();
 RestartEval:
@@ -9309,31 +9303,31 @@ RestartEval:
 	return starting_errors==zcc_errors.err_count();
 }
 
-bool CPlusPlus_EvalParseTree(parse_tree& src,const type_system& types)
+static bool CPP_EvalParseTree(parse_tree& src,const type_system& types)
 {
 	const size_t starting_errors = zcc_errors.err_count();
 RestartEval:
 	if (src.is_atomic() || (parse_tree::INVALID & src.flags)) return starting_errors==zcc_errors.err_count();
-	if (eval_array_deref(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_integer,CPlusPlus_convert_literal_to_integer)) goto RestartEval;
-	if (eval_conditional_operator(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool)) goto RestartEval;
-	if (eval_logical_OR(src,types,CPlusPlus_EvalParseTree,is_CPP_logical_OR_expression,CPP_literal_converts_to_bool)) goto RestartEval;
-	if (eval_logical_AND(src,types,CPlusPlus_EvalParseTree,is_CPP_logical_AND_expression,CPP_literal_converts_to_bool)) goto RestartEval;
-	if (eval_deref(src,types,CPlusPlus_EvalParseTree)) goto RestartEval; 
-	if (eval_logical_NOT(src,types,CPlusPlus_EvalParseTree,is_CPP_logical_NOT_expression,CPP_literal_converts_to_bool)) goto RestartEval;
-	if (eval_unary_plus(src,types,CPlusPlus_EvalParseTree)) goto RestartEval;
-	if (eval_unary_minus(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
-	if (eval_mult_expression(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
-	if (eval_div_expression(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
-	if (eval_mod_expression(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
-	if (eval_add_expression(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
-	if (eval_sub_expression(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
-	if (eval_shift(src,types,CPlusPlus_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
-	if (eval_relation_expression(src,types,CPlusPlus_EvalParseTree,CPP_intlike_literal_to_VM)) goto RestartEval;
-	if (eval_equality_expression(src,types,CPlusPlus_EvalParseTree,is_CPP_equality_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
-	if (eval_bitwise_AND(src,types,CPlusPlus_EvalParseTree,is_CPP_bitwise_AND_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
-	if (eval_bitwise_XOR(src,types,CPlusPlus_EvalParseTree,is_CPP_bitwise_XOR_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
-	if (eval_bitwise_OR(src,types,CPlusPlus_EvalParseTree,is_CPP_bitwise_OR_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
-	if (eval_bitwise_compl(src,types,CPlusPlus_EvalParseTree,is_CPP_bitwise_complement_expression,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_array_deref(src,types,CPP_EvalParseTree,CPP_literal_converts_to_integer,CPlusPlus_convert_literal_to_integer)) goto RestartEval;
+	if (eval_conditional_operator(src,types,CPP_EvalParseTree,CPP_literal_converts_to_bool)) goto RestartEval;
+	if (eval_logical_OR(src,types,CPP_EvalParseTree,is_CPP_logical_OR_expression,CPP_literal_converts_to_bool)) goto RestartEval;
+	if (eval_logical_AND(src,types,CPP_EvalParseTree,is_CPP_logical_AND_expression,CPP_literal_converts_to_bool)) goto RestartEval;
+	if (eval_deref(src,types,CPP_EvalParseTree)) goto RestartEval; 
+	if (eval_logical_NOT(src,types,CPP_EvalParseTree,is_CPP_logical_NOT_expression,CPP_literal_converts_to_bool)) goto RestartEval;
+	if (eval_unary_plus(src,types,CPP_EvalParseTree)) goto RestartEval;
+	if (eval_unary_minus(src,types,CPP_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_mult_expression(src,types,CPP_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_div_expression(src,types,CPP_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_mod_expression(src,types,CPP_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_add_expression(src,types,CPP_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_sub_expression(src,types,CPP_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_shift(src,types,CPP_EvalParseTree,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_relation_expression(src,types,CPP_EvalParseTree,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_equality_expression(src,types,CPP_EvalParseTree,is_CPP_equality_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_bitwise_AND(src,types,CPP_EvalParseTree,is_CPP_bitwise_AND_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_bitwise_XOR(src,types,CPP_EvalParseTree,is_CPP_bitwise_XOR_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_bitwise_OR(src,types,CPP_EvalParseTree,is_CPP_bitwise_OR_expression,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) goto RestartEval;
+	if (eval_bitwise_compl(src,types,CPP_EvalParseTree,is_CPP_bitwise_complement_expression,CPP_intlike_literal_to_VM)) goto RestartEval;
 	return starting_errors==zcc_errors.err_count();
 }
 
@@ -9512,9 +9506,9 @@ PP_auxfunc CPlusPlus_aux
 	CPPPurePreprocessingOperatorPunctuationFlags,
 	LengthOfCStringLiteral,
 	C_like_BalancingCheck,
-	CPlusPlus_ControlExpressionContextFreeErrorCount,
+	CPP_ControlExpressionContextFreeErrorCount,
 	CPP_CondenseParseTree,
-	CPlusPlus_EvalParseTree,
+	CPP_EvalParseTree,
 	CPP_PPHackTree,
 	ConcatenateCStringLiterals
 	};

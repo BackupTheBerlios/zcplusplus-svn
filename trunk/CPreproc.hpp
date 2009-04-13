@@ -56,20 +56,20 @@ private:
 
 	void die_on_pp_errors(void) const;
 	void debug_to_stderr(const zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion, const zaimoni::autovalarray_ptr<char*>& macros_function, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_arglist, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion) const;
-	bool C99_VA_ARGS_flinch(const zaimoni::Token<char>& x, const size_t critical_offset);
-	void detailed_UNICODE_syntax(zaimoni::Token<char>& x);
+	bool C99_VA_ARGS_flinch(const zaimoni::Token<char>& x, const size_t critical_offset) const;
+	void detailed_UNICODE_syntax(zaimoni::Token<char>& x) const;
 
 	void _preprocess(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, zaimoni::autovalarray_ptr<char*>& locked_macros, zaimoni::autovalarray_ptr<char*>& macros_object, zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion, zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion_pre_eval, zaimoni::autovalarray_ptr<char*>& macros_function, zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_arglist, zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion, zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion_pre_eval, zaimoni::autovalarray_ptr<zaimoni::POD_triple<const char*, const char*,uintptr_t> >& include_file_index, zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,zaimoni::autovalarray_ptr<zaimoni::Token<char>*>* > >& include_file_cache,const type_system& min_types);
 
 	// #include path handling
-	bool find_local_include(const char* const src, char* const filepath_buf, const char* const local_root);
+	bool find_local_include(const char* const src, char* const filepath_buf, const char* const local_root) const;
 	bool find_system_include(const char* const src, char* const filepath_buf) const;
 
 	// alter token list
 	void weak_tokenize(const zaimoni::Token<char>& x,zaimoni::autovalarray_ptr<weak_token>& weaktoken_list) const;
 	bool line_is_preprocessing_directive(zaimoni::Token<char>& x) const;
-	size_t tokenize_line(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, size_t i);
-	void complete_string_character_literal(zaimoni::Token<char>& x);
+	size_t tokenize_line(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, size_t i) const;
+	void complete_string_character_literal(zaimoni::Token<char>& x) const;
 	void delete_unrecognized_directive(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i);
 	void delete_naked_else_elif_endif(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i, const int directive_type);
 	void handle_error_directive(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i);
