@@ -1,0 +1,30 @@
+SUFFIXES h hpp
+DESC runs regression tests for z_cpp.exe
+DESC (C)2009 Kenneth Boyd, license: MIT.txt
+
+PROLOG
+VAR CPP ../../z_cpp
+VAR CPP_ISO ../../z_cpp --pedantic
+
+ECHO Checking ISO error requirements
+ERROR CPP_ISO Error*
+ERROR CPP_ISO UNICODE.C99/Error*
+ERROR CPP_ISO ifdef.C99/Error*
+ERROR CPP_ISO if.C99/Error*
+
+ECHO Checking ZCC warnings on ISO-accepted code
+WARN CPP_ISO Warn*
+
+ECHO Checking ISO acceptance requirements
+PASS CPP_ISO Pass*
+PASS CPP_ISO if.C99/Pass*
+
+ECHO Checking ZCC implementation-defined errors and features
+ERROR CPP default/Error*
+PASS CPP default/Pass*
+
+ECHO Checking ZCC nonconforming errors
+ERROR CPP default.nonconforming/Error*
+
+EPILOG
+
