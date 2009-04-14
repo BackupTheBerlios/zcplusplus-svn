@@ -70,11 +70,6 @@ private:
 	bool line_is_preprocessing_directive(zaimoni::Token<char>& x) const;
 	size_t tokenize_line(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, size_t i) const;
 	void complete_string_character_literal(zaimoni::Token<char>& x) const;
-	void delete_unrecognized_directive(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i);
-	void delete_naked_else_elif_endif(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i, const int directive_type);
-	void handle_error_directive(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i);
-	bool discard_unless_preprocessing_tokens(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, size_t i, const int directive_type);
-	void discard_no_identifier(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i, const int directive_type);
 	void discard_locked_macro(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i, const int directive_type);
 	void discard_duplicate_define(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i, const size_t critical_offset, const size_t first_token_len);
 	bool discard_leading_trailing_concatenate_op(zaimoni::Token<char>& x);

@@ -822,7 +822,14 @@ RestartAfterInclude:
 			const errr directive_type = find_directive(TokenList[i]->data()+1,lang);
 			if (0>directive_type && 0==if_depth)
 				{	//! \test Warn_unrecognized_directive.hpp : naked unrecognized directive
-				delete_unrecognized_directive(TokenList,i);
+				message_header(*TokenList[i]);
+				INC_INFORM("warning: unrecognized preprocessing directive '");
+				size_t j = 0;
+				while(++j<TokenList[i]->size() && !lang.IsWS_NotFirst(TokenList[i]->data()[j]))
+					INC_INFORM(TokenList[i]->data()[j]);
+				INFORM("' (C99 6.10p1/C++98 16.1p1)");
+				if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
+				TokenList.DeleteIdx(i);
 				if (0==i) goto Restart;
 				--i;
 				continue;
@@ -885,7 +892,11 @@ RestartAfterInclude:
 				if (PP::ERROR==directive_type)
 					{	// an error by fiat
 						//! \test Error_error_directive.hpp : #error directive
-					handle_error_directive(TokenList,i);
+					message_header(*TokenList[i]);
+					INC_INFORM(ERR_STR);
+					INFORM(TokenList[i]->data()+(sizeof("#error ")-1));
+					TokenList.DeleteIdx(i);
+					zcc_errors.inc_error();
 					if (0==i) goto Restart;
 					--i;
 					continue;
@@ -899,7 +910,13 @@ RestartAfterInclude:
 					//! \test Error_naked_endif.hpp : #endif without #if/#ifdef/#ifndef
 					//! \test Error_elif_after_else.hpp : #elif after #else
 					//! \test Error_else_after_else.hpp : #else after #else
-					delete_naked_else_elif_endif(TokenList,i,directive_type);
+					message_header(*TokenList[i]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("#");
+					INC_INFORM(valid_directives[directive_type].first);
+					INFORM(" without paired #if/#ifdef/#ifndef (C99 6.10p1/C++98 16.1p1)");
+					TokenList.DeleteIdx(i);
+					zcc_errors.inc_error();
 					if (0==i) goto Restart;
 					--i;
 					continue;
@@ -913,8 +930,15 @@ RestartAfterInclude:
 					//! \test Error_no_token_undef.hpp : #undef no tokens
 					//! \test Error_no_token_include.hpp : #include no tokens
 					//! \test Error_no_token_line.hpp : #line no tokens
-					if (discard_unless_preprocessing_tokens(TokenList,i,directive_type))
-						{	// nope
+					if (TokenList[i]->size()==valid_directives[directive_type].second+1)
+						{
+						message_header(*TokenList[i]);
+						INC_INFORM(ERR_STR);
+						INC_INFORM("#");
+						INC_INFORM(valid_directives[directive_type].first);
+						INFORM(" must have preprocessing tokens afterwards (allowing for macro substitution); discarding. (C99 6.10p1/C++98 16.1p1)");
+						TokenList.DeleteIdx(i);
+						zcc_errors.inc_error();
 						if (0==i) goto Restart;
 						--i;
 						continue;
@@ -927,7 +951,13 @@ RestartAfterInclude:
 					if (TokenList[i]->size()>critical_offset) first_token_len = lang.UnfilteredNextToken(TokenList[i]->data()+critical_offset,first_token_flags);
 					if (C_TESTFLAG_IDENTIFIER!=first_token_flags)
 						{	//! \test Error_undef_no_identifier.hpp : #undef without identifier
-						discard_no_identifier(TokenList,i,directive_type);
+						message_header(*TokenList[i]);
+						INC_INFORM(ERR_STR);
+						INC_INFORM("#");
+						INC_INFORM(valid_directives[directive_type].first);
+						INFORM(" does not have an identifier afterwards; discarding. (C99 6.10p1/C++98 16.1p1)");
+						TokenList.DeleteIdx(i);
+						zcc_errors.inc_error();
 						if (0==i) goto Restart;
 						--i;
 						continue;
@@ -3584,12 +3614,9 @@ static bool _concatenate_single(Token<char>& x,const POD_triple<size_t,size_t,le
 			//! \test Error_define_concatenate4.hpp
 		const size_t offset = pretokenized[0].first+pretokenized[0].second;
 		if (new_token_len==pretokenized[0].second)
-			{
 			x.intradelete(offset,pretokenized[2].first-offset);
-			}
-		else{
+		else
 			x.replace_once(offset,pretokenized[2].first-offset,' ');
-			};
 		return false;
 		};
 	// splice it
@@ -3937,9 +3964,8 @@ CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,
 				INC_INFORM(" ");
 				INFORM(macros_object_expansion[i]->data());
 				}
-			else{
+			else
 				INC_INFORM("\n");
-				}
 			++i;
 			}
 		const size_t function_macro_size = macros_function.size();
@@ -3954,9 +3980,8 @@ CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,
 				INC_INFORM(" ");
 				INFORM(macros_function_expansion[i]->data());
 				}
-			else{
+			else
 				INC_INFORM("\n");
-				}
 			++i;
 			}
 		// put non-default macro locks here when we get to them.
@@ -3985,71 +4010,6 @@ CPreprocessor::C99_VA_ARGS_flinch(const Token<char>& x, const size_t critical_of
 		return true;
 		}
 	return false;
-}
-
-void
-CPreprocessor::delete_unrecognized_directive(autovalarray_ptr<Token<char>* >& TokenList, const size_t i)
-{
-	assert(TokenList.size()>i);
-	message_header(*TokenList[i]);
-	INC_INFORM("warning: unrecognized preprocessing directive '");
-	size_t j = 0;
-	while(++j<TokenList[i]->size() && !lang.IsWS_NotFirst(TokenList[i]->data()[j]))
-		INC_INFORM(TokenList[i]->data()[j]);
-	INFORM("' (C99 6.10p1/C++98 16.1p1)");
-	if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
-	TokenList.DeleteIdx(i);
-}
-
-void
-CPreprocessor::delete_naked_else_elif_endif(autovalarray_ptr<Token<char>* >& TokenList, const size_t i,const int directive_type)
-{	//! \todo called only once, consider inlining
-	message_header(*TokenList[i]);
-	INC_INFORM(ERR_STR);
-	INC_INFORM("#");
-	INC_INFORM(valid_directives[directive_type].first);
-	INFORM(" without paired #if/#ifdef/#ifndef (C99 6.10p1/C++98 16.1p1)");
-	TokenList.DeleteIdx(i);
-	zcc_errors.inc_error();
-}
-
-void
-CPreprocessor::handle_error_directive(autovalarray_ptr<Token<char>* >& TokenList, const size_t i)
-{	//! \todo called only once, consider inlining
-	message_header(*TokenList[i]);
-	INC_INFORM(ERR_STR);
-	INFORM(TokenList[i]->data()+7);
-	TokenList.DeleteIdx(i);
-	zcc_errors.inc_error();
-}
-
-bool
-CPreprocessor::discard_unless_preprocessing_tokens(autovalarray_ptr<Token<char>* >& TokenList, const size_t i,const int directive_type)
-{	//! \todo called only once, consider inlining
-	if (TokenList[i]->size()==valid_directives[directive_type].second+1)
-		{
-		message_header(*TokenList[i]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM("#");
-		INC_INFORM(valid_directives[directive_type].first);
-		INFORM(" must have preprocessing tokens afterwards (allowing for macro substitution); discarding. (C99 6.10p1/C++98 16.1p1)");
-		TokenList.DeleteIdx(i);
-		zcc_errors.inc_error();
-		return true;
-		}
-	return false;
-}
-
-void
-CPreprocessor::discard_no_identifier(autovalarray_ptr<Token<char>* >& TokenList, const size_t i,const int directive_type)
-{	//! \todo called only once, consider inlining
-	message_header(*TokenList[i]);
-	INC_INFORM(ERR_STR);
-	INC_INFORM("#");
-	INC_INFORM(valid_directives[directive_type].first);
-	INFORM(" does not have an identifier afterwards; discarding. (C99 6.10p1/C++98 16.1p1)");
-	TokenList.DeleteIdx(i);
-	zcc_errors.inc_error();
 }
 
 void
