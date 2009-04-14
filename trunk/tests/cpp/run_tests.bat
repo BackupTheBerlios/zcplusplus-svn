@@ -1,6 +1,7 @@
-@REM runs regression tests for z_cpp.exe
 @REM not sure how far below WinXP this will run
+@REM runs regression tests for z_cpp.exe
 @REM (C)2009 Kenneth Boyd, license: MIT.txt
+
 @setlocal
 @set BAD_PASS=0
 @set BAD_PASS_NAME=LastAccepted:
@@ -13,41 +14,58 @@
 
 @echo Checking ISO error requirements
 @echo ====
+@for %%f in (Error*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
 @for %%f in (Error*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
-@for %%f in (UNICODE.C99\Error*.hpp) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
-@for %%f in (UNICODE.C99\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
-@for %%f in (UNICODE.C99\Error*.h) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (UNICODE.C99\Error*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (UNICODE.C99\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
-@for %%f in (ifdef.C99\Error*.hpp) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
-@for %%f in (ifdef.C99\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
-@for %%f in (ifdef.C99\Error*.h) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (UNICODE.C99\Error*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (UNICODE.C99\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (ifdef.C99\Error*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (ifdef.C99\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (ifdef.C99\Error*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (ifdef.C99\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (if.C99\Error*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (if.C99\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (if.C99\Error*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (if.C99\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
 
 @echo Checking ZCC warnings on ISO-accepted code
 @echo ====
+@for %%f in (Warn*.h) do @echo %CPP_ISO% -Werror %%f & @%CPP_ISO% -Werror %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (Warn*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (Warn*.h) do @(set /a ACCEPT_TEST=ACCEPT_TEST+1 & set /a REJECT_TEST=REJECT_TEST+1)
 @for %%f in (Warn*.hpp) do @echo %CPP_ISO% -Werror %%f & @%CPP_ISO% -Werror %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (Warn*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (Warn*.hpp) do @(set /a ACCEPT_TEST=ACCEPT_TEST+1 & set /a REJECT_TEST=REJECT_TEST+1)
 
 @echo Checking ISO acceptance requirements
 @echo ====
-@for %%f in (Pass*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
-@for %%f in (Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 @for %%f in (Pass*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (Pass*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (if.C99\Pass*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (if.C99\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (if.C99\Pass*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (if.C99\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 
 @echo Checking ZCC implementation-defined errors and features
 @echo ====
+@for %%f in (default\Error*.h) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (default\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
 @for %%f in (default\Error*.hpp) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (default\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
-@for %%f in (default\Pass*.hpp) do @echo %CPP% %%f & @%CPP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
-@for %%f in (default\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 @for %%f in (default\Pass*.h) do @echo %CPP% %%f & @%CPP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (default\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\Pass*.hpp) do @echo %CPP% %%f & @%CPP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 
 @echo Checking ZCC nonconforming errors
 @echo ====
+@for %%f in (default.nonconforming\Error*.h) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (default.nonconforming\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
 @for %%f in (default.nonconforming\Error*.hpp) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (default.nonconforming\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
 
