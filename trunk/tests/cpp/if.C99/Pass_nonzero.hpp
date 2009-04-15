@@ -1,4 +1,4 @@
-/* Pass_if_nonzero.hpp
+/* tests/cpp/if.C99/Pass_nonzero.hpp
  * check that we recognize a variety of zero literals as zero
  * all of the following must be accepted */
 // (C)2009 Kenneth Boyd, license: MIT.txt

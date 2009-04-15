@@ -1576,7 +1576,7 @@ static bool paren_is_bad_news(const weak_token& lhs, const weak_token& rhs)
 		message_header(rhs);
 		INC_INFORM(ERR_STR);
 		INC_INFORM(lhs.token.first,lhs.token.second);
-		INFORM(" [ denies [ ] its left argument (C99 6.5.2p1/C++98 5.2p1)");
+		INFORM(" denies [ ] its left argument (C99 6.5.2p1/C++98 5.2p1)");
 		zcc_errors.inc_error();
 		};
 	if (token_is_char<')'>(rhs.token) || token_is_char<']'>(rhs.token))
@@ -1615,7 +1615,7 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 	const size_t starting_errors = zcc_errors.err_count();
 
 	if (hard_start && token_is_char<'['>(tokenlist[0].token))
-		{
+		{	//! \test if.C99/Error_control3.h, if.C99/Error_control3.hpp
 		message_header(tokenlist[0]);
 		INC_INFORM(ERR_STR);
 		INFORM("[ at start of expression denies [ ] its left argument (C99 6.5.2p1/C++98 5.2p1)");
@@ -8831,7 +8831,7 @@ static bool CPlusPlus_convert_literal_to_integer(const parse_tree& src,unsigned_
 	return C99_convert_literal_to_integer(src,tmp,is_negative);
 }
 
-//! \test Pass_if_zero.hpp
+//! \test if.C99/Pass_zero.hpp, if.C99/Pass_zero.h
 bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const lex_flags flags)
 {
 	assert(NULL!=x);

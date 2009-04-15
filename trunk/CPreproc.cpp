@@ -2888,9 +2888,9 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 {
 	const unsigned int if_directive = UNPACK_DIRECTIVE(x.flags);
 	assert(PP::IF==if_directive || PP::ELIF==if_directive);
-	//! \test Error_no_arg_if.hpp : #if no control expression
-	//! \test Error_if0_no_arg_elif.hpp : #elif no control expression, critical
-	//! \test Error_if1_no_arg_elif.hpp : #elif no control expression, non-critical; could allow this with a do-what-i-mean option
+	//! \test if.C99/Error_no_arg.hpp, if.C99/Error_no_arg.h : #if no control expression
+	//! \test if.C99/Error_if0_no_arg_elif.hpp, if.C99/Error_if0_no_arg_elif.h : #elif no control expression, critical
+	//! \test if.C99/Error_if1_no_arg_elif.hpp, if.C99/Error_if1_no_arg_elif.h : #elif no control expression, non-critical; could allow this with a do-what-i-mean option
 	if (!strcmp(x.data()+1,valid_directives[if_directive].first))
 		{
 		message_header(x);
@@ -2905,7 +2905,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 	// tokenize the whole line
 	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	const size_t critical_offset = valid_directives[if_directive].second+2;
-	//! \test Error_if_control2.hpp (#if)
+	//! \test if.C99/Error_control2.hpp, if.C99/Error_control2.h (#if)
 	//! \todo __VA_ARGS__ within defined operator should only be a warning with --do-what-i-mean option
 	bool bad_control = C99_VA_ARGS_flinch(x,critical_offset);
 
@@ -3250,10 +3250,8 @@ CPreprocessor::if_elif_control_is_zero(const Token<char>& x, const POD_triple<si
 {
 	const lex_flags flags = lexed_token.third;
 	if (C_TESTFLAG_CHAR_LITERAL==flags)
-		{	//! \test Pass_if_zero.hpp
-			//! \test Pass_if_zero.h
-			//! \test Pass_if_nonzero.hpp 
-			//! \test Pass_if_nonzero.h
+		{	//! \test if.C99/Pass_zero.hpp, if.C99/Pass_zero.h
+			//! \test if.C99/Pass_nonzero.hpp, if.C99/Pass_nonzero.h
 		is_zero = CCharLiteralIsFalse(x.data()+lexed_token.first,lexed_token.second);
 		return true;
 		};
@@ -3263,7 +3261,7 @@ CPreprocessor::if_elif_control_is_zero(const Token<char>& x, const POD_triple<si
 	C_REALITY_CHECK_PP_NUMERAL_FLAGS(flags);
 	if (C_TESTFLAG_FLOAT & flags) return false;
 	// zeros go to zero, everything else canonicalizes to one
-	//! \test Pass_if_zero.hpp
+	//! \test if.C99/Pass_if_zero.hpp, if.C99/Pass_if_zero.h
 	is_zero = C99_integer_literal_is_zero(x.data()+lexed_token.first,lexed_token.second,flags);
 	return true;
 }
@@ -3871,8 +3869,8 @@ CPreprocessor::intradirective_preprocess(Token<char>& x, size_t critical_offset,
 
 void
 CPreprocessor::intradirective_flush_identifiers_to_zero(Token<char>& x, size_t critical_offset) const
-{	//! test Error_if_control.hpp
-	//! test Pass_if_control.hpp
+{	//! test if.C99/Error_if_control.hpp, if.C99/Error_if_control.h
+	//! test if.C99/Pass_if_control.hpp, if.C99/Pass_if_control.h
 	while(x.size()>critical_offset)
 		{
 		const size_t skip_ws = strspn(x.data()+critical_offset,lang.WhiteSpace+1);
