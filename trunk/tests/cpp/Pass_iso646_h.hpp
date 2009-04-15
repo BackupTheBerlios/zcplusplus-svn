@@ -5,7 +5,7 @@
 
 #include <iso646.h>
 
-/* C++98 and later also requires that the following be defined afterwards */
+/* C++98 and later also requires that the following be undefined afterwards */
 #ifdef and
 #error and defined after #include <iso646.h>
 #endif
