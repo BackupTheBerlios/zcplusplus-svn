@@ -1,17 +1,11 @@
-// Pass_cstddef.hpp
+SUFFIXES h hpp hpp
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
-#include <cstddef>
+INCLUDE_FILES stddef.h stddef.h cstddef
 
 /* check that the required macros exist */
 /* XXX offsetof is not implemented yet XXX */
 
 // all null constants are integer constant expressions evaluating to zero
-#ifdef NULL
-	#if NULL
-	#error NULL is true
-	#endif
-#else
-#error NULL is undefined
-#endif
+MACRO_DEFINED_FALSE NULL
 
