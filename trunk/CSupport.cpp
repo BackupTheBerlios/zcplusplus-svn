@@ -1621,8 +1621,17 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 		INFORM("[ at start of expression denies [ ] its left argument (C99 6.5.2p1/C++98 5.2p1)");
 		zcc_errors.inc_error();
 		};
+	if (hard_start && left_paren_asphyxiates(tokenlist[0]))
+		{
+		message_header(tokenlist[0]);
+		INC_INFORM(ERR_STR);
+		INC_INFORM(tokenlist[0].token.first,tokenlist[0].token.second);
+		INC_INFORM(		(1==tokenlist_len && hard_end && right_paren_asphyxiates(tokenlist[0])) ? " as only token doesn't have either of its arguments (C99 6.5.3p1/C++98 5.3p1)"
+				   :  	" as first token doesn't have its left argument (C99 6.5.3p1/C++98 5.3p1)");
+		zcc_errors.inc_error();
+		};
 	std::adjacent_find(tokenlist,tokenlist+tokenlist_len,paren_is_bad_news);
-	if (hard_end && right_paren_asphyxiates(tokenlist[tokenlist_len-1]))
+	if (1<tokenlist_len && hard_end && right_paren_asphyxiates(tokenlist[tokenlist_len-1]))
 		{
 		message_header(tokenlist[tokenlist_len-1]);
 		INC_INFORM(ERR_STR);
