@@ -1613,6 +1613,7 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
 	const size_t starting_errors = zcc_errors.err_count();
+	bool already_errored = false;
 
 	if (hard_start && token_is_char<'['>(tokenlist[0].token))
 		{	//! \test if.C99/Error_control3.h, if.C99/Error_control3.hpp
@@ -1622,17 +1623,34 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 		zcc_errors.inc_error();
 		};
 	if (hard_start && left_paren_asphyxiates(tokenlist[0]))
-		{
+		{	//! \test if.C99/Error_control4.h, if.C99/Error_control4.hpp
+			//! \test if.C99/Error_control11.h, if.C99/Error_control11.hpp
+			//! \test if.C99/Error_control12.h, if.C99/Error_control12.hpp
+			//! \test if.C99/Error_control13.h, if.C99/Error_control13.hpp
+			//! \test if.C99/Error_control14.h, if.C99/Error_control14.hpp
+			//! \test if.C99/Error_control15.h, if.C99/Error_control15.hpp
+			//! \test if.C99/Error_control16.h, if.C99/Error_control16.hpp
+			//! \test if.C99/Error_control17.h, if.C99/Error_control17.hpp
+			//! \test if.C99/Error_control18.h, if.C99/Error_control18.hpp
+			//! \test if.C99/Error_control19.h, if.C99/Error_control19.hpp
+			//! \test if.C99/Error_control20.h, if.C99/Error_control20.hpp
+			//! \test if.C99/Error_control21.h, if.C99/Error_control21.hpp
 		message_header(tokenlist[0]);
 		INC_INFORM(ERR_STR);
 		INC_INFORM(tokenlist[0].token.first,tokenlist[0].token.second);
 		INC_INFORM(		(1==tokenlist_len && hard_end && right_paren_asphyxiates(tokenlist[0])) ? " as only token doesn't have either of its arguments (C99 6.5.3p1/C++98 5.3p1)"
 				   :  	" as first token doesn't have its left argument (C99 6.5.3p1/C++98 5.3p1)");
 		zcc_errors.inc_error();
+		already_errored = 1==tokenlist_len;
 		};
 	std::adjacent_find(tokenlist,tokenlist+tokenlist_len,paren_is_bad_news);
-	if (1<tokenlist_len && hard_end && right_paren_asphyxiates(tokenlist[tokenlist_len-1]))
-		{
+	if (hard_end && !already_errored && right_paren_asphyxiates(tokenlist[tokenlist_len-1]))
+		{	//! \test if.C99/Error_control5.h, if.C99/Error_control5.hpp
+			//! \test if.C99/Error_control6.h, if.C99/Error_control6.hpp
+			//! \test if.C99/Error_control7.h, if.C99/Error_control7.hpp
+			//! \test if.C99/Error_control8.h, if.C99/Error_control8.hpp
+			//! \test if.C99/Error_control9.h, if.C99/Error_control9.hpp
+			//! \test if.C99/Error_control10.h, if.C99/Error_control10.hpp
 		message_header(tokenlist[tokenlist_len-1]);
 		INC_INFORM(ERR_STR);
 		INC_INFORM(tokenlist[tokenlist_len-1].token.first,tokenlist[tokenlist_len-1].token.second);

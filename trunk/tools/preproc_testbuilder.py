@@ -58,6 +58,10 @@ def SpawnTestCases(filename):
 			elif line.startswith('MACRO_DEFINED_FALSE '):
 				target = line[20:].strip()
 				ExpandMacroDefinedFalse(test_lines,index_ifdef_modes,target)
+			elif line.startswith('VALID_EXPRESSION '):
+				target = line[17:].strip()
+				test_lines.append('#if '+target+'\n')
+				test_lines.append('#endif\n')
 			else:
 				test_lines.append(line);
 
