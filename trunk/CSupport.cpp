@@ -3302,6 +3302,18 @@ static void _label_one_literal(parse_tree& src,const type_system& types)
 		}
 }
 
+void C99_literal_is_legal(const char* const x,const size_t x_len,const lex_flags flags,const char* src_filename,size_t lineno,const type_system& types)
+{
+	parse_tree tmp;
+	tmp.clear();
+	tmp.index_tokens[0].token.first = x;
+	tmp.index_tokens[0].token.second = x_len;
+	tmp.index_tokens[0].flags = flags;
+	tmp.index_tokens[0].src_filename = src_filename;
+	tmp.index_tokens[0].logical_line.first = lineno;
+	_label_one_literal(tmp,types);
+}
+
 // C and C++ agree that literals are constant primary expressions
 // note that on some huge-char platforms not all strings can be concatenated safely in C
 // we almost certainly have have memory problems if there are non-concatenated strings around
@@ -8866,7 +8878,7 @@ bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const le
 	assert(C_TESTFLAG_PP_NUMERAL & flags);
 	assert(!(C_TESTFLAG_FLOAT & flags));
 	C_REALITY_CHECK_PP_NUMERAL_FLAGS(flags);
-	//! \bug this should not be strictly correct for unsigned integer literals, as those are supposed to be reduced modulo arithmetic.  Check standards before fixing.
+	//! \bug need some way to signal legality for integer literals
 	switch(C_EXTRACT_BASE_CODE(flags))
 	{
 #ifndef NDEBUG

@@ -3136,6 +3136,8 @@ oneTokenExit:
 			zcc_errors.inc_error();
 			return false;
 			}
+		//! \todo --do-what-i-mean doesn't call this to evoke an error
+		C99_literal_is_legal(x.data()+pretokenized.front().first,pretokenized.front().second,pretokenized.front().third,x.src_filename,x.logical_line.first,min_types);
 		x.replace_once(std::nothrow,critical_offset,x.size()-critical_offset,(is_zero) ? '0' : '1');
 		return true;
 		}
@@ -3407,7 +3409,6 @@ CPreprocessor::instantiate_function_macro_arguments(autovalarray_ptr<Token<char>
 		else if	(')'==arglist.data()[offset])
 			{
 			--paren_depth;
-			assert(0!=paren_depth || offset>arglist.size());
 			if (0==paren_depth)
 				{	// update var
 				if (var_origin+1<offset)
@@ -3568,7 +3569,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 		//! __VA_ARGS__ occurs only in the replacement list of varadic function-like macros, so it is the proper variable name for that ...
 		if (formal_varadic) formal_arguments.back()->replace_once(0,formal_arguments.back()->size(),"__VA_ARGS__");
 		//! \todo should discard unused formal arguments and their parameter lists; not worth a warning, as there are a number of legitimate uses for discarding formal parameters
-		Token<char> Test(x);
+		Token<char> Test(*macros_function_expansion[function_macro_index]);
 		if (NULL==used_macro_stack)
 			{
 			autovalarray_ptr<char*> macro_stack(1);
@@ -3585,7 +3586,8 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 			dynamic_function_macro_prereplace_once(macros_object, macros_object_expansion, macros_function, macros_function_arglist, macros_function_expansion, used_macro_stack, formal_arguments, actual_arguments, Test);
 			used_macro_stack->DeleteIdx(used_macro_stack->size()-1);
 			}
-		_macro_replace(x,critical_offset,token_len,Test.data());
+		_macro_replace(x,critical_offset,token_len+arg_span,Test.data());
+		return true;
 		};
 	return false;
 }
@@ -3610,6 +3612,13 @@ static bool _concatenate_single(Token<char>& x,const POD_triple<size_t,size_t,le
 	if (new_token_len!=new_token.size())
 		{	//! \test Error_define_concatenate3.hpp
 			//! \test Error_define_concatenate4.hpp
+		message_header(x);
+		INC_INFORM(ERR_STR);
+		INC_INFORM("## concatenation result ");
+		INC_INFORM(new_token.data());
+		INFORM(" is not a single token.  Defining undefined behavior as eliminating ## and continuing (C99 6.10.3.3p3/C++98 16.3.3p3)");
+		zcc_errors.inc_error();
+
 		const size_t offset = pretokenized[0].first+pretokenized[0].second;
 		if (new_token_len==pretokenized[0].second)
 			x.intradelete(offset,pretokenized[2].first-offset);
@@ -3660,7 +3669,7 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 			--i;
 			if (detect_C_stringize_op(x.data()+pretokenized[i].first,pretokenized[i].second))
 				{
-				assert(pretokenized.size()==i+1);
+				assert(pretokenized.size()>i+1);
 				assert(pretokenized[i].first+pretokenized[i].second==pretokenized[i+1].first);
 				const errr j = (C_TESTFLAG_IDENTIFIER==pretokenized[i].third) ? linear_find_STL_deref2(x.data()+pretokenized[i+1].first,pretokenized[i+1].second,formal_arguments) : -1;
 				assert(0<=j);
@@ -3746,6 +3755,7 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 			{
 			assert(NULL!=actual_arguments[j2]);
 			_macro_replace(x,pretokenized[j].first,pretokenized[j].second,actual_arguments[j2]->data());
+			lang.line_lex(x.data(),x.size(),pretokenized);
 			}
 		else if (detect_C_concatenation_op(x.data()+pretokenized[j].first,pretokenized[j].second))
 			{	// hmm...
@@ -3761,14 +3771,7 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 				j += pretokenized_alt.size()-1;
 				assert(detect_C_concatenation_op(x.data()+pretokenized[j-1].first,pretokenized[j-1].second));
 				};
-			if (_concatenate_single(x,pretokenized.data()+(j-1),lang))
-				--j;
-			else{
-				message_header(x);
-				INC_INFORM(ERR_STR);
-				INFORM("## concatenation result is not a single token.  Defining undefined behavior as eliminating ## and continuing (C99 6.10.3.3p3/C++98 16.3.3p3)");
-				zcc_errors.inc_error();
-				};
+			if (_concatenate_single(x,pretokenized.data()+(j-1),lang)) --j;
 			}
 		}
 	while(0<j);
@@ -4554,14 +4557,7 @@ CPreprocessor::object_macro_concatenate(Token<char>& x)
 			if (detect_C_concatenation_op(x.data()+pretokenized[i].first,pretokenized[i].second))
 				{
 				assert(0<i && pretokenized.size()-1>i);
-				if (_concatenate_single(x,pretokenized.data()+(i-1),lang))
-					--i;
-				else{
-					message_header(x);
-					INC_INFORM(ERR_STR);
-					INFORM("## concatenation result is not a single token.  Defining undefined behavior as eliminating ## and continuing (C99 6.10.3.3p3/C++98 16.3.3p3)");
-					zcc_errors.inc_error();
-					};
+				if (_concatenate_single(x,pretokenized.data()+(i-1),lang)) --i;
 				}
 			}
 		while(0<i);
@@ -4656,14 +4652,7 @@ CPreprocessor::function_macro_concatenate_novars(Token<char>& x, const Token<cha
 				// will not be be able to complete concatenation against a parameter, bail
 				if (after_token_is_parameter) continue;
 
-				if (_concatenate_single(x,pretokenized.data()+(i-1),lang))
-					--i;
-				else{
-					message_header(x);
-					INC_INFORM(ERR_STR);
-					INFORM("## concatenation result is not a single token.  Defining undefined behavior as eliminating ## and continuing (C99 6.10.3.3p3/C++98 16.3.3p3)");
-					zcc_errors.inc_error();
-					};
+				if (_concatenate_single(x,pretokenized.data()+(i-1),lang)) --i;
 				}
 			}
 		while(0<i);

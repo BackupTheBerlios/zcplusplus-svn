@@ -166,6 +166,7 @@ bool LocateCCharacterLiteralAt(const char* const src, size_t src_len, size_t tar
 void GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, char*& tmp);
 bool CCharLiteralIsFalse(const char* x,size_t x_len);
 bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const zaimoni::lex_flags flags);
+void C99_literal_is_legal(const char* const x,const size_t x_len,const zaimoni::lex_flags flags,const char* src_filename,size_t line,const type_system& types);
 
 // call before use
 void InitializeCLexerDefs(const virtual_machine::CPUInfo& target);

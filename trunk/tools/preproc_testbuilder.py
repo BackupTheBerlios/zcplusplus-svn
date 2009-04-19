@@ -70,7 +70,7 @@ def SpawnTestCases(filename):
 		if include_files:
 			root_name = core_root_name+include_files[Idx].replace('.','_')
 		TargetFile = open(root_name+'.'+suffix,'w')	# *.sh
-		TargetFile.write('// '+root_name+'.'+suffix+'\n')
+		TargetFile.write('// '+root_name.replace('/','\\')+'.'+suffix+'\n')
 		for line in test_lines:
 			if line.startswith('INCLUDE_FILES '):
 				TargetFile.write('#include <'+include_files[Idx]+'>\n')
