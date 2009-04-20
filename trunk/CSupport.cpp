@@ -3285,6 +3285,8 @@ static void _label_one_literal(parse_tree& src,const type_system& types)
 				};
 			assert(C_TYPE::INTEGERLIKE==src.type_code.base_type_index);
 			// integer literal has no useful type to represent it
+			//! \test if.C99/Error_control22.hpp, if.C99/Error_control22.h
+			//! \test if.C99/Error_control23.hpp, if.C99/Error_control23.h
 			src.flags |= parse_tree::INVALID;
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
@@ -3545,6 +3547,7 @@ static bool _match_pairs(parse_tree& src)
 			brace_stack[brace_idx++] = i;
 			}
 		// introduces sequence points; this causes errors if caught in brackets or parentheses
+		// cannot test within preprocessor expression (trigger is intercepted earlier)
 		else if (token_is_char<';'>(src.data<0>()[i].index_tokens[0].token))
 			{
 			if (0<paren_idx || 0<bracket_idx)
@@ -3635,6 +3638,7 @@ static bool inspect_potential_paren_primary_expression(parse_tree& src)
 		const size_t content_length = src.size<0>();
 		if (0==content_length)
 			{	// ahem...invalid
+				// untestable as a preprocessor expression, balanced-kill gets this first
 			src.flags &= parse_tree::RESERVED_MASK;	// just in case
 			src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION | parse_tree::INVALID);
 			message_header(src.index_tokens[0]);
@@ -3665,6 +3669,7 @@ static bool suppress_naked_brackets_and_braces(parse_tree& src,const char* const
 	if (!(PARSE_OBVIOUS & src.flags) && src.empty<1>() && src.empty<2>())
 		{
 		// top-level [ ] dies regardless of contents
+		// not testable with preprocessor expression (not sure whether reachable with full source code)
 		if 		(robust_token_is_char<'['>(src.index_tokens[0].token))
 			{
 			if (robust_token_is_char<']'>(src.index_tokens[1].token))
@@ -3679,6 +3684,7 @@ static bool suppress_naked_brackets_and_braces(parse_tree& src,const char* const
 				}
 			}
 		// top-level { } dies regardless of contents
+		// not testable with preprocessor expression
 		else if	(robust_token_is_char<'{'>(src.index_tokens[0].token))
 			{
 			if (robust_token_is_char<'}'>(src.index_tokens[1].token))

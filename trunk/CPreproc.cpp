@@ -3185,6 +3185,16 @@ oneTokenExit:
 			}
 		};
 
+	if (pretokenized.empty())
+		{	// if.C99/Error_control24.hpp, if.C99/Error_control24.h
+		message_header(x);
+		INC_INFORM(ERR_STR);
+		INC_INFORM(x.data()+critical_offset,x.size()-critical_offset);
+		INFORM(" : control expression for #if/#elif must evaluate to a single integer constant (C99 6.10.1p1/C++98 16.1p1)");
+		zcc_errors.inc_error();
+		return false;
+		}
+
 	// if there is only one token: it should be a preprocessing number or a character literal.  Handle it or error here
 	if (1==pretokenized.size()) goto oneTokenExit;
 
