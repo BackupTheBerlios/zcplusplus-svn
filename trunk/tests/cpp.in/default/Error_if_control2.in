@@ -1,0 +1,6 @@
+SUFFIXES h hpp
+// check that array dereference of non-pointer by non-pointer is rejected
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+VALID_EXPRESSION 1[1]
+

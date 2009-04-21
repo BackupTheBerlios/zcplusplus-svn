@@ -1,0 +1,7 @@
+SUFFIXES h hpp
+// check that array dereference of pointer by pointer is rejected
+// uses string literal extensions to make it testable in the preprocessor
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+VALID_EXPRESSION "0"["0"]
+

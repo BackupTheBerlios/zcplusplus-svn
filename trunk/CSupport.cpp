@@ -3748,7 +3748,8 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 	if (0<effective_pointer_power_prefix)
 		{
 		if (0<effective_pointer_power_infix)
-			{
+			{	// uses extension to test in preprocessor
+				//! \test default/Error_if_control1.h
 			src.flags |= parse_tree::INVALID;
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
@@ -3767,7 +3768,7 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 			// otherwise, we dereferenced a 1-d static array...fine for now
 			//! \todo change target for implementing multidimensional arrays
 			}
-		else{
+		else{	// not testable from preprocessor yet (need floating-point literals as extension)
 			src.flags |= parse_tree::INVALID;
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
@@ -3792,6 +3793,7 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 			//! \todo change target for implementing multidimensional arrays
 			}
 		else{	// autofails in C
+				// not testable from preprocessor yet (need floating-point literals, would be extension regardless)
 			src.flags |= parse_tree::INVALID;
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
@@ -3801,7 +3803,8 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 			return;
 			}
 		}
-	else{	// autofails in C
+	else{	// autofails in C; uses extension to test in preprocessor
+			//! \test default/Error_if_control2.h
 		src.flags |= parse_tree::INVALID;
 		message_header(src.index_tokens[0]);
 		INC_INFORM(ERR_STR);
@@ -3823,7 +3826,8 @@ static void CPP_array_easy_syntax_check(parse_tree& src, const type_system& type
 	if (0<effective_pointer_power_prefix)
 		{
 		if (0<effective_pointer_power_infix)
-			{
+			{	// uses extension to test in preprocessor
+				//! \test default/Error_if_control1.hpp
 			src.flags |= parse_tree::INVALID;
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
@@ -3842,7 +3846,7 @@ static void CPP_array_easy_syntax_check(parse_tree& src, const type_system& type
 			// otherwise, we dereferenced a 1-d static array...fine for now
 			//! \todo change target for implementing multidimensional arrays
 			}
-		else{
+		else{	// not testable from preprocessor
 			src.flags |= parse_tree::INVALID;
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
@@ -3866,7 +3870,7 @@ static void CPP_array_easy_syntax_check(parse_tree& src, const type_system& type
 			// otherwise, we dereferenced a 1-d static array...fine for now
 			//! \todo change target for implementing multidimensional arrays
 			}
-		else{
+		else{	// not testable from preprocessor
 			src.flags |= parse_tree::INVALID;
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
@@ -3876,7 +3880,8 @@ static void CPP_array_easy_syntax_check(parse_tree& src, const type_system& type
 			return;
 			}
 		}
-	else{
+	else{	// uses extension to test in preprocessor
+			//! \test default/Error_if_control2.hpp
 		src.flags |= parse_tree::INVALID;
 		message_header(src.index_tokens[0]);
 		INC_INFORM(ERR_STR);
