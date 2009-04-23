@@ -3735,8 +3735,9 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 			src.type_code.set_type(C_TYPE::NOT_VOID);
 			src.c_array<0>()[i].type_code.traits |= type_spec::lvalue;
 			assert(is_array_deref(src.data<0>()[i]));
+			return true;
 			}
-		else if (!(parse_tree::INVALID & src.flags))
+		if (!(parse_tree::INVALID & src.flags))
 			{
 			src.flags |= parse_tree::INVALID;
 			message_header(src.index_tokens[0]);
@@ -3744,7 +3745,6 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 			INFORM("array dereference doesn't have valid postfix expression to dereference (C99 6.5.2.1p1)");
 			zcc_errors.inc_error();
 			};
-		return true;
 		}
 	return false;
 }
