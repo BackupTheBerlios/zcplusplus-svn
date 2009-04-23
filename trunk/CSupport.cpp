@@ -3738,7 +3738,27 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 			return true;
 			}
 		if (!(parse_tree::INVALID & src.flags))
-			{
+			{	//! \test default/Error_if_control3.hpp, default/Error_if_control3.h
+				//! \test default/Error_if_control4.hpp, default/Error_if_control4.h
+				//! \test default/Error_if_control5.hpp, default/Error_if_control5.h
+				//! \test default/Error_if_control6.hpp, default/Error_if_control6.h
+				//! \test default/Error_if_control7.hpp, default/Error_if_control7.h
+				//! \test default/Error_if_control8.hpp, default/Error_if_control8.h
+				//! \test default/Error_if_control9.hpp, default/Error_if_control9.h
+				//! \test default/Error_if_control10.hpp, default/Error_if_control10.h
+				//! \test default/Error_if_control11.hpp, default/Error_if_control11.h
+				//! \test default/Error_if_control12.hpp, default/Error_if_control12.h
+				//! \test default/Error_if_control13.hpp, default/Error_if_control13.h
+				//! \test default/Error_if_control14.hpp, default/Error_if_control14.h
+				//! \test default/Error_if_control15.hpp, default/Error_if_control15.h
+				//! \test default/Error_if_control16.hpp, default/Error_if_control16.h
+				//! \test default/Error_if_control17.hpp, default/Error_if_control17.h
+				//! \test default/Error_if_control18.hpp, default/Error_if_control18.h
+				//! \test default/Error_if_control19.hpp, default/Error_if_control19.h
+				//! \test default/Error_if_control20.hpp, default/Error_if_control20.h
+				//! \test default/Error_if_control21.hpp, default/Error_if_control21.h
+				//! \test default/Error_if_control22.hpp, default/Error_if_control22.h
+				//! \test default/Error_if_control23.hpp, default/Error_if_control23.h
 			src.flags |= parse_tree::INVALID;
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
