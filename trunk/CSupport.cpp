@@ -3716,24 +3716,34 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 		return false;
 
 	assert(1<=i);
-	if (   (PARSE_POSTFIX_EXPRESSION & src.data<0>()[i-1].flags)
-		&& 1==src.data<0>()[i].size<0>()
+	if (   1==src.data<0>()[i].size<0>()
 		&& (PARSE_EXPRESSION & src.data<0>()[i].data<0>()->flags))
 		{	// array dereference operator; put preceding argument src.data<0>()[i-1] in src.data<0>()[i].data<1>()[0]
-		parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i]);	// RAM conservation
-		assert(NULL!=tmp);
-		*tmp = src.data<0>()[i-1];
-		src.c_array<0>()[i].fast_set_arg<1>(tmp);
-		src.c_array<0>()[i].core_flag_update();
-		src.c_array<0>()[i].flags |= PARSE_STRICT_POSTFIX_EXPRESSION;
-		src.c_array<0>()[--i].clear();
-		src.DeleteIdx<0>(i);
-		assert(is_array_deref(src.data<0>()[i]));
-		cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-		cancel_outermost_parentheses(src.c_array<0>()[i].c_array<0>()[0]);
-		src.type_code.set_type(C_TYPE::NOT_VOID);
-		src.c_array<0>()[i].type_code.traits |= type_spec::lvalue;
-		assert(is_array_deref(src.data<0>()[i]));
+		if (PARSE_POSTFIX_EXPRESSION & src.data<0>()[i-1].flags)
+			{
+			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i]);	// RAM conservation
+			assert(NULL!=tmp);
+			*tmp = src.data<0>()[i-1];
+			src.c_array<0>()[i].fast_set_arg<1>(tmp);
+			src.c_array<0>()[i].core_flag_update();
+			src.c_array<0>()[i].flags |= PARSE_STRICT_POSTFIX_EXPRESSION;
+			src.c_array<0>()[--i].clear();
+			src.DeleteIdx<0>(i);
+			assert(is_array_deref(src.data<0>()[i]));
+			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
+			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<0>()[0]);
+			src.type_code.set_type(C_TYPE::NOT_VOID);
+			src.c_array<0>()[i].type_code.traits |= type_spec::lvalue;
+			assert(is_array_deref(src.data<0>()[i]));
+			}
+		else if (!(parse_tree::INVALID & src.flags))
+			{
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INFORM("array dereference doesn't have valid postfix expression to dereference (C99 6.5.2.1p1)");
+			zcc_errors.inc_error();
+			};
 		return true;
 		}
 	return false;
