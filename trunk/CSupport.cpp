@@ -3759,6 +3759,8 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 				//! \test default/Error_if_control22.hpp, default/Error_if_control22.h
 				//! \test default/Error_if_control23.hpp, default/Error_if_control23.h
 			src.flags |= parse_tree::INVALID;
+			src.c_array<0>()[i].flags |= PARSE_STRICT_POSTFIX_EXPRESSION;
+			src.type_code.set_type(0);
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INFORM("array dereference doesn't have valid postfix expression to dereference (C99 6.5.2.1p1)");
@@ -4140,20 +4142,14 @@ static bool CPP_literal_converts_to_bool(const parse_tree& src, bool& is_true)
 	return false;
 }
 
-static bool unary_operator_asphyxiates_empty_parentheses_and_brackets(parse_tree& unary_candidate,parse_tree& target)
+static bool unary_operator_asphyxiates_empty_parentheses(parse_tree& unary_candidate,parse_tree& target)
 {
-	if (	robust_token_is_char<'['>(target.index_tokens[0].token)
-		&& 	robust_token_is_char<']'>(target.index_tokens[1].token)
-		&&	target.empty<1>())
-		{	// unary-op [...] won't work
-		unary_candidate.flags |= parse_tree::INVALID;
-		assert(parse_tree::INVALID & target.flags);	// should already have errored
-		return true;
-		};
 	if (	robust_token_is_char<'('>(target.index_tokens[0].token)
 		&& 	robust_token_is_char<')'>(target.index_tokens[1].token)
 		&&	target.empty<0>())
 		{	// evidently intended as a function call
+			//! \todo this really should be caught when function-call operator fails to form (make () an invalid primary expression)
+			// so don't construct testcases for this
 		unary_candidate.flags |= parse_tree::INVALID;
 		if (!(parse_tree::INVALID & target.flags))
 			{
@@ -4202,8 +4198,8 @@ static bool terse_locate_deref(parse_tree& src, size_t& i)
 			assert(is_C99_unary_operator_expression<'*'>(src.data<0>()[i]));
 			return true;
 			};
-		if (unary_operator_asphyxiates_empty_parentheses_and_brackets(src.c_array<0>()[i],src.c_array<0>()[i+1]))
-			return false;	//! \todo lift this into an * expression anyway?
+		if (unary_operator_asphyxiates_empty_parentheses(src.c_array<0>()[i],src.c_array<0>()[i+1]))
+			return false;
 		}
 	return false;
 }
@@ -4266,8 +4262,8 @@ static bool terse_locate_C_logical_NOT(parse_tree& src, size_t& i)
 			assert(is_C99_unary_operator_expression<'!'>(src.data<0>()[i]));
 			return true;
 			};
-		if (unary_operator_asphyxiates_empty_parentheses_and_brackets(src.c_array<0>()[i],src.c_array<0>()[i+1]))
-			return false;	//! \todo lift this into an ! expression anyway?
+		if (unary_operator_asphyxiates_empty_parentheses(src.c_array<0>()[i],src.c_array<0>()[i+1]))
+			return false;
 		}
 	return false;
 }
@@ -4288,8 +4284,8 @@ static bool terse_locate_CPP_logical_NOT(parse_tree& src, size_t& i)
 			assert(is_CPP_logical_NOT_expression(src.data<0>()[i]));
 			return true;
 			};
-		if (unary_operator_asphyxiates_empty_parentheses_and_brackets(src.c_array<0>()[i],src.c_array<0>()[i+1]))
-			return false;	//! \todo lift this into an ! expression anyway?
+		if (unary_operator_asphyxiates_empty_parentheses(src.c_array<0>()[i],src.c_array<0>()[i+1]))
+			return false;
 		}
 	return false;
 }
@@ -4506,8 +4502,8 @@ static bool terse_locate_C99_bitwise_complement(parse_tree& src, size_t& i)
 			assert(is_C99_unary_operator_expression<'~'>(src.data<0>()[i]));
 			return true;
 			};
-		if (unary_operator_asphyxiates_empty_parentheses_and_brackets(src.c_array<0>()[i],src.c_array<0>()[i+1]))
-			return false;	//! \todo lift this into an ~ expression anyway?
+		if (unary_operator_asphyxiates_empty_parentheses(src.c_array<0>()[i],src.c_array<0>()[i+1]))
+			return false;
 		}
 	return false;
 }
@@ -4528,8 +4524,8 @@ static bool terse_locate_CPP_bitwise_complement(parse_tree& src, size_t& i)
 			assert(is_CPP_bitwise_complement_expression(src.data<0>()[i]));
 			return true;
 			};
-		if (unary_operator_asphyxiates_empty_parentheses_and_brackets(src.c_array<0>()[i],src.c_array<0>()[i+1]))
-			return false;	//! \todo lift this into an ~ expression anyway?
+		if (unary_operator_asphyxiates_empty_parentheses(src.c_array<0>()[i],src.c_array<0>()[i+1]))
+			return false;
 		}
 	return false;
 }
@@ -4664,8 +4660,8 @@ static bool terse_locate_unary_plusminus(parse_tree& src, size_t& i)
 			assert((C99_UNARY_SUBTYPE_PLUS==unary_subtype) ? is_C99_unary_operator_expression<'+'>(src.data<0>()[i]) : is_C99_unary_operator_expression<'-'>(src.data<0>()[i]));
 			return true;
 			};
-		if (unary_operator_asphyxiates_empty_parentheses_and_brackets(src.c_array<0>()[i],src.c_array<0>()[i+1]))
-			return false;	//! \todo lift this into a +/- expression anyway?
+		if (unary_operator_asphyxiates_empty_parentheses(src.c_array<0>()[i],src.c_array<0>()[i+1]))
+			return false;
 		}
 	return false;
 }
