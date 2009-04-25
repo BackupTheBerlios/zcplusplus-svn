@@ -3784,7 +3784,7 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 			src.flags |= parse_tree::INVALID;
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
-			INFORM("array dereference of pointer by pointer (C99 6.5.2.1p1)");
+			INFORM("array dereference of pointer by pointer (C99 6.5.2.1p1; C++98 5.2.1p1,13.3.1.2p1)");
 			zcc_errors.inc_error();
 			return;
 			}
@@ -3805,7 +3805,7 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 			INC_INFORM(ERR_STR);
 			INC_INFORM("array dereference of pointer by ");
 			INFORM(types.name(src.data<0>()->type_code.base_type_index));
-			INFORM(" (C99 6.5.2.1p1)");
+			INFORM(" (C99 6.5.2.1p1; C++98 5.2.1p1,13.5.5p1)");
 			zcc_errors.inc_error();
 			return;
 			}
@@ -3830,6 +3830,7 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 			INC_INFORM(ERR_STR);
 			INC_INFORM("array dereference of pointer by ");
 			INFORM(types.name(src.data<1>()->type_code.base_type_index));
+			INFORM(" (C99 6.5.2.1p1; C++98 5.2.1p1,13.5.5p1)");
 			zcc_errors.inc_error();
 			return;
 			}
@@ -3843,83 +3844,7 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 		INC_INFORM(types.name(src.data<1>()->type_code.base_type_index));
 		INC_INFORM(" by ");
 		INFORM(types.name(src.data<0>()->type_code.base_type_index));
-		zcc_errors.inc_error();
-		return;
-		}
-}
-
-static void CPP_array_easy_syntax_check(parse_tree& src, const type_system& types)
-{
-	if (parse_tree::INVALID & src.flags) return;	// cannot optimize to valid
-
-	const size_t effective_pointer_power_prefix = src.data<1>()->type_code.pointer_power_after_array_decay();
-	const size_t effective_pointer_power_infix = src.data<0>()->type_code.pointer_power_after_array_decay();
-	if (0<effective_pointer_power_prefix)
-		{
-		if (0<effective_pointer_power_infix)
-			{	// uses extension to test in preprocessor
-				//! \test default/Error_if_control1.hpp
-			src.flags |= parse_tree::INVALID;
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INFORM("array dereference of pointer by pointer (C++98 5.2.1p1,13.3.1.2p1)");
-			zcc_errors.inc_error();
-			return;
-			}
-		else if (converts_to_integerlike(src.data<0>()->type_code.base_type_index))
-			{
-			src.type_code.base_type_index = src.data<1>()->type_code.base_type_index;
-			if (0<src.data<1>()->type_code.pointer_power)
-				{
-				src.type_code.pointer_power = src.data<1>()->type_code.base_type_index-1U;
-				src.type_code.static_array_size = src.data<1>()->type_code.static_array_size;	//! \todo multi-dimensional array change target
-				};
-			// otherwise, we dereferenced a 1-d static array...fine for now
-			//! \todo change target for implementing multidimensional arrays
-			}
-		else{	// not testable from preprocessor
-			src.flags |= parse_tree::INVALID;
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM("array dereference of pointer by ");
-			INFORM(types.name(src.data<0>()->type_code.base_type_index));
-			INFORM(" (C++98 5.2.1p1,13.5.5p1)");
-			zcc_errors.inc_error();
-			return;
-			}
-		}
-	else if (0<effective_pointer_power_infix)
-		{
-		if (converts_to_integerlike(src.data<1>()->type_code.base_type_index))
-			{
-			src.type_code.base_type_index = src.data<0>()->type_code.base_type_index;
-			if (0<src.data<0>()->type_code.pointer_power)
-				{
-				src.type_code.pointer_power = src.data<0>()->type_code.pointer_power-1U;
-				src.type_code.static_array_size = src.data<0>()->type_code.static_array_size;	//! \todo multi-dimensional array change target
-				};
-			// otherwise, we dereferenced a 1-d static array...fine for now
-			//! \todo change target for implementing multidimensional arrays
-			}
-		else{	// not testable from preprocessor
-			src.flags |= parse_tree::INVALID;
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM("array dereference of pointer by ");
-			INFORM(types.name(src.data<1>()->type_code.base_type_index));
-			zcc_errors.inc_error();
-			return;
-			}
-		}
-	else{	// uses extension to test in preprocessor
-			//! \test default/Error_if_control2.hpp
-		src.flags |= parse_tree::INVALID;
-		message_header(src.index_tokens[0]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM("array dereference of ");
-		INC_INFORM(types.name(src.data<1>()->type_code.base_type_index));
-		INC_INFORM(" by ");
-		INFORM(types.name(src.data<0>()->type_code.base_type_index));
+		INFORM(" (C99 6.5.2.1p1; C++98 5.2.1p1,13.5.5p1)");
 		zcc_errors.inc_error();
 		return;
 		}
@@ -4028,7 +3953,7 @@ static void locate_CPP_postfix_expression(parse_tree& src, size_t& i, const type
 		{
 		if (terse_locate_array_deref(src,i))
 			{	//! \todo handle operator [] overloading
-			CPP_array_easy_syntax_check(src.c_array<0>()[i],types);
+			C_array_easy_syntax_check(src.c_array<0>()[i],types);
 			return;
 			}
 #if 0
@@ -4216,32 +4141,11 @@ static void C_deref_easy_syntax_check(parse_tree& src,const type_system& types)
 		--src.type_code.pointer_power;
 	else if (0<src.type_code.static_array_size)
 		src.type_code.static_array_size = 0;
-	else{
+	else{	//! \test default/Error_if_control24.hpp, default/Error_if_control24.h
 		message_header(src.index_tokens[0]);
 		INC_INFORM(ERR_STR);
 		INC_INFORM(src);
-		INFORM(" is not dereferencing a pointer");
-		zcc_errors.inc_error();
-		}
-}
-
-static void CPP_deref_easy_syntax_check(parse_tree& src,const type_system& types)
-{
-	assert(is_C99_unary_operator_expression<'*'>(src));
-	//! \todo handle *& identity when we have &
-	//! \todo multidimensional array target
-	//! \todo cv-qualified pointer target
-	src.type_code = src.data<2>()->type_code;
-	src.type_code.traits |= type_spec::lvalue;	// result is lvalue
-	if (0<src.type_code.pointer_power)
-		--src.type_code.pointer_power;
-	else if (0<src.type_code.static_array_size)
-		src.type_code.static_array_size = 0;
-	else{
-		message_header(src.index_tokens[0]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM(src);
-		INFORM(" is not dereferencing a pointer");
+		INFORM(" is not dereferencing a pointer (C99 6.5.3.2p2; C++98 5.3.1p1)");
 		zcc_errors.inc_error();
 		}
 }
@@ -4398,7 +4302,7 @@ static bool VM_to_token(const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,c
 	assert(dest.second);
 	if (suffix) strcat(buf,suffix);
 
-	dest.first = reinterpret_cast<char*>(calloc(ZAIMONI_LEN_WITH_NULL(strlen(buf)),1));
+	dest.first = _new_buffer<char>(ZAIMONI_LEN_WITH_NULL(strlen(buf)));
 	if (!dest.first) return false;
 	strcpy(dest.first,buf);
 	return true;
@@ -5085,7 +4989,8 @@ static bool terse_CPP_augment_mult_expression(parse_tree& src, size_t& i, const 
 			return true;
 			}
 		else	// run syntax-checks against unary *
-			CPP_deref_easy_syntax_check(src.c_array<0>()[i],types);
+			//! \todo handle operator overloading
+			C_deref_easy_syntax_check(src.c_array<0>()[i],types);
 		}
 	return false;
 }
