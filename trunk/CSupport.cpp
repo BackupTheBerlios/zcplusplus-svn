@@ -21,6 +21,7 @@
 #include "C_PPDecimalInteger.hpp"
 #include "C_PPHexInteger.hpp"
 #include "C_PPOctalInteger.hpp"
+#include "CheckReturn.hpp"
 
 using namespace zaimoni;
 
@@ -3580,7 +3581,7 @@ static bool CPP_literal_converts_to_integer(const parse_tree& src)
 	//! \todo --do-what-i-mean should try to identify floats that are really integers
 }
 
-static parse_tree* repurpose_inner_parentheses(parse_tree& src)
+static zaimoni::Loki::CheckReturnDisallow<NULL,parse_tree*>::value_type repurpose_inner_parentheses(parse_tree& src)
 {
 	if (1==src.size<0>() && is_naked_parentheses_pair(*src.data<0>()))
 		{
@@ -3593,7 +3594,6 @@ static parse_tree* repurpose_inner_parentheses(parse_tree& src)
 		src.c_array<0>()->destroy();
 		parse_tree* const tmp2 = src.c_array<0>();
 		src.args[0] = tmp;
-
 		return tmp2;
 		};
 	return _new_buffer_nonNULL_throws<parse_tree>(1);
@@ -3722,7 +3722,6 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 		if (PARSE_POSTFIX_EXPRESSION & src.data<0>()[i-1].flags)
 			{
 			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i]);	// RAM conservation
-			assert(NULL!=tmp);
 			*tmp = src.data<0>()[i-1];
 			src.c_array<0>()[i].fast_set_arg<1>(tmp);
 			src.c_array<0>()[i].core_flag_update();
@@ -4148,16 +4147,7 @@ static bool unary_operator_asphyxiates_empty_parentheses_and_brackets(parse_tree
 		&&	target.empty<1>())
 		{	// unary-op [...] won't work
 		unary_candidate.flags |= parse_tree::INVALID;
-		if (!(parse_tree::INVALID & target.flags))
-			{
-			target.flags |= parse_tree::INVALID;
-			message_header(unary_candidate.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(unary_candidate);
-			INC_INFORM(target);
-			INFORM(" won't dereference an array");
-			zcc_errors.inc_error();
-			}
+		assert(parse_tree::INVALID & target.flags);	// should already have errored
 		return true;
 		};
 	if (	robust_token_is_char<'('>(target.index_tokens[0].token)
@@ -4184,7 +4174,6 @@ static void assemble_unary_postfix_arguments(parse_tree& src, size_t& i, const s
 {
 	assert(1<src.size<0>()-i);
 	parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-	assert(NULL!=tmp);
 	*tmp = src.data<0>()[i+1];
 	src.c_array<0>()[i].fast_set_arg<2>(tmp);
 	src.c_array<0>()[i].core_flag_update();
@@ -4196,7 +4185,7 @@ static void assemble_unary_postfix_arguments(parse_tree& src, size_t& i, const s
 }
 
 // no eval_deref because of &* cancellation
-
+// defer syntax check to after resolution of multiply-*, so no C/C++ fork
 static bool terse_locate_deref(parse_tree& src, size_t& i)
 {
 	assert(!src.empty<0>());
@@ -4259,28 +4248,6 @@ static void CPP_deref_easy_syntax_check(parse_tree& src,const type_system& types
 		INFORM(" is not dereferencing a pointer");
 		zcc_errors.inc_error();
 		}
-}
-
-static bool locate_C99_deref(parse_tree& src, size_t& i, const type_system& types)
-{
-	assert(!src.empty<0>());
-	assert(i<src.size<0>());
-	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
-	assert(src.data<0>()[i].is_atomic());
-
-	// defer deref syntax check to failed parse as multiply
-	return terse_locate_deref(src,i);
-}
-
-static bool locate_CPP_deref(parse_tree& src, size_t& i, const type_system& types)
-{
-	assert(!src.empty<0>());
-	assert(i<src.size<0>());
-	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
-	assert(src.data<0>()[i].is_atomic());
-
-	// defer deref syntax check to failed parse as multiply
-	return terse_locate_deref(src,i);
 }
 
 static bool terse_locate_C_logical_NOT(parse_tree& src, size_t& i)
@@ -4944,7 +4911,7 @@ static void locate_C99_unary_expression(parse_tree& src, size_t& i, const type_s
 		||	!src.data<0>()[i].is_atomic())
 		return;
 
-	if (locate_C99_deref(src,i,types)) return;
+	if (terse_locate_deref(src,i)) return;
 	if (locate_C99_logical_NOT(src,i,types)) return;
 	if (locate_C99_bitwise_complement(src,i,types)) return;
 	if (locate_C99_unary_plusminus(src,i,types)) return;
@@ -5023,7 +4990,7 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 		||	!src.data<0>()[i].is_atomic())
 		return;
 
-	if (locate_CPP_deref(src,i,types)) return;
+	if (terse_locate_deref(src,i)) return;
 	if (locate_CPP_logical_NOT(src,i,types)) return;
 	if (locate_CPP_bitwise_complement(src,i,types)) return;
 	if (locate_CPP_unary_plusminus(src,i,types)) return;
@@ -5058,10 +5025,8 @@ static void assemble_binary_infix_arguments(parse_tree& src, size_t& i, const le
 {
 	assert(1<=i && 2<=src.size<0>()-i);
 	parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-	assert(NULL!=tmp);
 	*tmp = src.data<0>()[i-1];
 	parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-	assert(NULL!=tmp2);
 	*tmp2 = src.data<0>()[i+1];
 	src.c_array<0>()[i].fast_set_arg<1>(tmp);
 	src.c_array<0>()[i].fast_set_arg<2>(tmp2);
@@ -5079,7 +5044,6 @@ static void merge_binary_infix_argument(parse_tree& src, size_t& i, const lex_fl
 {
 	assert(1<=i);
 	parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-	assert(NULL!=tmp);
 	*tmp = src.data<0>()[i-1];
 
 	src.c_array<0>()[i].fast_set_arg<1>(tmp);
@@ -8229,13 +8193,10 @@ static bool terse_locate_conditional_op(parse_tree& src, size_t& i)
 				&&	(PARSE_CONDITIONAL_EXPRESSION & src.data<0>()[i+3].flags))
 				{
 				parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-				assert(NULL!=tmp);
 				*tmp = src.data<0>()[i-1];
 				parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-				assert(NULL!=tmp2);
 				*tmp2 = src.data<0>()[i+1];
 				parse_tree* const tmp3 = repurpose_inner_parentheses(src.c_array<0>()[i+3]);	// RAM conservation
-				assert(NULL!=tmp3);
 				*tmp3 = src.data<0>()[i+3];
 				src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+2]);
 				src.c_array<0>()[i].fast_set_arg<0>(tmp2);
