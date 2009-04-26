@@ -4232,7 +4232,7 @@ static void C_logical_NOT_easy_syntax_check(parse_tree& src,const type_system& t
 	if (eval_logical_NOT(src,types,is_C99_unary_operator_expression<'!'>,C99_literal_converts_to_bool)) return;
 
 	if (!converts_to_bool(src.data<2>()->type_code))
-		{
+		{	// can't test this from preprocessor
 		src.flags |= parse_tree::INVALID;
 		message_header(src.index_tokens[0]);
 		INC_INFORM(ERR_STR);
@@ -4250,7 +4250,7 @@ static void CPP_logical_NOT_easy_syntax_check(parse_tree& src,const type_system&
 	if (eval_logical_NOT(src,types,is_CPP_logical_NOT_expression,CPP_literal_converts_to_bool)) return;
 
 	if (!converts_to_bool(src.data<2>()->type_code))
-		{
+		{	// can't test this from preprocessor
 		src.flags |= parse_tree::INVALID;
 		message_header(src.index_tokens[0]);
 		INC_INFORM(ERR_STR);
@@ -4481,7 +4481,7 @@ static void C_bitwise_complement_easy_syntax_check(parse_tree& src,const type_sy
 		src.type_code.set_type(0);
 		src.flags |= parse_tree::INVALID;
 		if (!(parse_tree::INVALID & src.data<2>()->flags))
-			{
+			{	//! \test Error_if_control25.h
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INC_INFORM(src);
@@ -4502,7 +4502,7 @@ static void CPP_bitwise_complement_easy_syntax_check(parse_tree& src,const type_
 		src.type_code.set_type(0);
 		src.flags |= parse_tree::INVALID;
 		if (!(parse_tree::INVALID & src.data<2>()->flags))
-			{
+			{	//! \test Error_if_control25.hpp
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INC_INFORM(src);
