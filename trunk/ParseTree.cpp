@@ -140,6 +140,8 @@ parse_tree::collapse_matched_pair(parse_tree& src, const zaimoni::POD_pair<size_
 		}
 	tmp.index_tokens[0] = src.c_array<0>()[target.first].index_tokens[0];
 	tmp.index_tokens[1] = src.c_array<0>()[target.second].index_tokens[0];
+	tmp.grab_index_token_location_from<0,0>(src.c_array<0>()[target.first]);
+	tmp.grab_index_token_location_from<1,0>(src.c_array<0>()[target.second]);
 	// ownership transfer
 	if (src.data<0>()[target.first].own_index_token<0>())
 		{

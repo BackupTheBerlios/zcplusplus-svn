@@ -1639,7 +1639,7 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 		message_header(tokenlist[0]);
 		INC_INFORM(ERR_STR);
 		INC_INFORM(tokenlist[0].token.first,tokenlist[0].token.second);
-		INC_INFORM(		(1==tokenlist_len && hard_end && right_paren_asphyxiates(tokenlist[0])) ? " as only token doesn't have either of its arguments (C99 6.5.3p1/C++98 5.3p1)"
+		INFORM(		(1==tokenlist_len && hard_end && right_paren_asphyxiates(tokenlist[0])) ? " as only token doesn't have either of its arguments (C99 6.5.3p1/C++98 5.3p1)"
 				   :  	" as first token doesn't have its left argument (C99 6.5.3p1/C++98 5.3p1)");
 		zcc_errors.inc_error();
 		already_errored = 1==tokenlist_len;
@@ -1655,7 +1655,7 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 		message_header(tokenlist[tokenlist_len-1]);
 		INC_INFORM(ERR_STR);
 		INC_INFORM(tokenlist[tokenlist_len-1].token.first,tokenlist[tokenlist_len-1].token.second);
-		INC_INFORM(" as last token doesn't have its right argument (C99 6.5.3p1/C++98 5.3p1)");
+		INFORM(" as last token doesn't have its right argument (C99 6.5.3p1/C++98 5.3p1)");
 		zcc_errors.inc_error();
 		}
 
@@ -3763,7 +3763,11 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 			src.type_code.set_type(0);
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
-			INFORM("array dereference doesn't have valid postfix expression to dereference (C99 6.5.2.1p1)");
+			INC_INFORM("array dereference ");
+			INC_INFORM(src);
+			INC_INFORM(" has invalid postfix expression ");
+			INC_INFORM(src.data<0>()[i-1]);
+			INFORM(" to dereference (C99 6.5.2.1p1)");
 			zcc_errors.inc_error();
 			};
 		}
@@ -4340,6 +4344,7 @@ static void force_unary_negative_literal(parse_tree& dest,const parse_tree& src)
 	dest.core_flag_update();
 	dest.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 	dest.subtype = C99_UNARY_SUBTYPE_NEG;
+	assert(NULL!=dest.index_tokens[0].src_filename);
 	assert(is_C99_unary_operator_expression<'-'>(dest));
 }
 
@@ -4354,6 +4359,7 @@ static void force_unary_positive_literal(parse_tree& dest,const parse_tree& src)
 	dest.core_flag_update();
 	dest.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 	dest.subtype = C99_UNARY_SUBTYPE_PLUS;
+	assert(NULL!=dest.index_tokens[0].src_filename);
 	assert(is_C99_unary_operator_expression<'+'>(dest));
 }
 
@@ -4372,13 +4378,14 @@ static void force_decimal_literal(parse_tree& dest,const char* src,const type_sy
 {
 	assert(NULL!=src);
 	dest.destroy();
+	assert(NULL!=dest.index_tokens[0].src_filename);
 	dest.index_tokens[0].token.first = src;
 	dest.index_tokens[0].token.second = strlen(src);
 	dest.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
 	_label_one_literal(dest,types);
 }
 
-static parse_tree decimal_literal(const char* src,const type_system& types)
+static parse_tree decimal_literal(const char* src,const parse_tree& loc_src,const type_system& types)
 {
 	assert(NULL!=src);
 	parse_tree dest;
@@ -4386,6 +4393,7 @@ static parse_tree decimal_literal(const char* src,const type_system& types)
 	dest.index_tokens[0].token.first = src;
 	dest.index_tokens[0].token.second = strlen(src);
 	dest.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+	dest.grab_index_token_location_from<0,0>(loc_src);
 	_label_one_literal(dest,types);
 	return dest;
 }
@@ -5041,7 +5049,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 			INFORM(" optimized to valid 0");
 			};
 		// construct +0 to defuse 1-0*6
-		parse_tree tmp = decimal_literal("0",types);
+		parse_tree tmp = decimal_literal("0",src,types);
 		src.DeleteIdx<1>(0);
 		force_unary_positive_literal(src,tmp);
 		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
@@ -5206,7 +5214,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 				INFORM(" optimized to valid 0");
 				};
 			// construct +0 to defuse 1-0/6
-			parse_tree tmp = decimal_literal("0",types);
+			parse_tree tmp = decimal_literal("0",src,types);
 			src.DeleteIdx<1>(0);
 			force_unary_positive_literal(src,tmp);
 			if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
@@ -5268,14 +5276,14 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 				{
 				if (rhs_negative==lhs_negative || !bool_options[boolopt::int_neg_div_rounds_away_from_zero])
 					{	// 0
-					parse_tree tmp = decimal_literal("0",types);
+					parse_tree tmp = decimal_literal("0",src,types);
 
 					// convert to parsed + literal
 					src.DeleteIdx<1>(0);
 					force_unary_positive_literal(src,tmp);
 					}
 				else{	// -1
-					parse_tree tmp = decimal_literal("1",types);
+					parse_tree tmp = decimal_literal("1",src,types);
 
 					// convert to parsed - literal
 					src.DeleteIdx<1>(0);
@@ -5384,7 +5392,7 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 				INFORM(" optimized to valid 0");
 				};
 			// construct +0 to defuse 1-0%6
-			parse_tree tmp = decimal_literal("0",types);
+			parse_tree tmp = decimal_literal("0",src,types);
 			src.DeleteIdx<1>(0);
 			force_unary_positive_literal(src,tmp);
 			if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
@@ -5402,7 +5410,7 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 	const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
 	if (rhs_converted && rhs_int==1)
 		{	// __%1 |-> +0
-		parse_tree tmp = decimal_literal("0",types);
+		parse_tree tmp = decimal_literal("0",src,types);
 		src.DeleteIdx<1>(0);
 		force_unary_positive_literal(src,tmp);
 		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
