@@ -3974,14 +3974,17 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 	else{	// autofails in C; uses extension to test in preprocessor
 			//! \test default/Error_if_control2.h
 		src.flags |= parse_tree::INVALID;
-		message_header(src.index_tokens[0]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM("array dereference of ");
-		INC_INFORM(types.name(src.data<1>()->type_code.base_type_index));
-		INC_INFORM(" by ");
-		INFORM(types.name(src.data<0>()->type_code.base_type_index));
-		INFORM(" (C99 6.5.2.1p1; C++98 5.2.1p1,13.5.5p1)");
-		zcc_errors.inc_error();
+		if (!(parse_tree::INVALID & src.data<0>()->flags) && !(parse_tree::INVALID & src.data<1>()->flags))
+			{
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM("array dereference of ");
+			INC_INFORM(types.name(src.data<1>()->type_code.base_type_index));
+			INC_INFORM(" by ");
+			INFORM(types.name(src.data<0>()->type_code.base_type_index));
+			INFORM(" (C99 6.5.2.1p1; C++98 5.2.1p1,13.5.5p1)");
+			zcc_errors.inc_error();
+			}
 		return;
 		}
 }
@@ -4752,7 +4755,21 @@ static void C_unary_plusminus_easy_syntax_check(parse_tree& src,const type_syste
 	assert(C99_UNARY_SUBTYPE_NEG==src.subtype || C99_UNARY_SUBTYPE_PLUS==src.subtype);
 	assert((C99_UNARY_SUBTYPE_PLUS==src.subtype) ? is_C99_unary_operator_expression<'+'>(src) : is_C99_unary_operator_expression<'-'>(src));
 	// return immediately if applied to a pointer type (C++98 would type here)
-	if (0<src.data<2>()->type_code.pointer_power_after_array_decay()) return;
+	if (0<src.data<2>()->type_code.pointer_power_after_array_decay())
+		{
+		src.flags |= parse_tree::INVALID;
+		src.type_code.set_type(0);
+		if (!(parse_tree::INVALID & src.data<2>()->flags))
+			{	// NOTE: unary + on pointer is legal in C++98
+				//! \test default/Error_if_control26.h, default/Error_if_control27.h, default/Error_if_control28.h
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM((C99_UNARY_SUBTYPE_PLUS==src.subtype) ? " applies unary + to a pointer (C99 6.5.3.3p1)" : " applies unary - to a pointer (C99 6.5.3.3p1)");
+			zcc_errors.inc_error();
+			}
+		return;
+		}
 	// can type if result is a primitive arithmetic type
 	if (converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index))
 		src.type_code.set_type(default_promote_type(src.data<2>()->type_code.base_type_index));
@@ -4786,7 +4803,7 @@ static void C_unary_plusminus_easy_syntax_check(parse_tree& src,const type_syste
 			eval_unary_minus(*src.c_array<2>(),types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 		}
 	else{	// if (C99_UNARY_SUBTYPE_NEG==src.subtype)
-		if (0<src.data<2>()->data<2>()->type_code.pointer_power_after_array_decay())
+/*		if (0<src.data<2>()->data<2>()->type_code.pointer_power_after_array_decay())
 			{	// fortunately, binary - also doesn't like a pointer as its right-hand argument.
 			src.flags |= parse_tree::INVALID;
 			src.type_code.set_type(0);
@@ -4800,7 +4817,7 @@ static void C_unary_plusminus_easy_syntax_check(parse_tree& src,const type_syste
 				zcc_errors.inc_error();
 				}
 			return;
-			}
+			} */
 		if 		(C99_UNARY_SUBTYPE_PLUS==arg_unary_subtype)
 			eval_unary_plus(*src.c_array<2>(),types);
 		else	// if (C99_UNARY_SUBTYPE_NEG==arg_unary_subtype)
@@ -4824,6 +4841,7 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 		{
 		if (0<src.data<2>()->type_code.pointer_power_after_array_decay())
 			// C++98 5.3.1p6: pointer type allowed for unary +, not for unary - (C99 errors)
+			//! \test default/Pass_if_control27.hpp
 			src.type_code = src.data<2>()->type_code;
 
 		if 		(is_C99_unary_operator_expression<'+'>(*src.data<2>()))
@@ -4833,13 +4851,28 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 		}
 	else{	// if (C99_UNARY_SUBTYPE_NEG==src.subtype)
 		// return immediately if result is a pointer type; nested application to a pointer type dies
+		if (0<src.data<2>()->type_code.pointer_power_after_array_decay())
+			{
+			src.flags |= parse_tree::INVALID;
+			src.type_code.set_type(0);
+			if (!(parse_tree::INVALID & src.data<2>()->flags))
+				{	//! \test default/Error_if_control26.hpp, default/Error_if_control28.hpp
+				message_header(src.index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(src);
+				INFORM(" applies unary - to a pointer (C++98 5.3.1p7)");
+				zcc_errors.inc_error();
+				}
+			return;
+			}
+
 		if (0<src.data<2>()->type_code.pointer_power_after_array_decay()) return;
 
 		const size_t arg_unary_subtype 	= (is_C99_unary_operator_expression<'-'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_NEG
 										: (is_C99_unary_operator_expression<'+'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_PLUS : 0;
 		if (arg_unary_subtype)
 			{
-			if (0<src.data<2>()->data<2>()->type_code.pointer_power_after_array_decay())
+/*			if (0<src.data<2>()->data<2>()->type_code.pointer_power_after_array_decay())
 				{
 				src.flags |= parse_tree::INVALID;
 				src.type_code.set_type(0);
@@ -4854,7 +4887,7 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 					zcc_errors.inc_error();
 					}
 				return;
-				}
+				} */
 			if 		(C99_UNARY_SUBTYPE_PLUS==arg_unary_subtype)
 				eval_unary_plus(*src.c_array<2>(),types);
 			else	// if (C99_UNARY_SUBTYPE_NEG==arg_unary_subtype)
