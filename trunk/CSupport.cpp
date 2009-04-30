@@ -4782,42 +4782,12 @@ static void C_unary_plusminus_easy_syntax_check(parse_tree& src,const type_syste
 	// 1) if inner +/- is applied to an arithmetic literal, try to crunch it (but handle - signed carefully)
 	if (C99_UNARY_SUBTYPE_PLUS==src.subtype)
 		{
-		if (0<src.data<2>()->data<2>()->type_code.pointer_power_after_array_decay())
-			{
-			src.flags |= parse_tree::INVALID;
-			src.type_code.set_type(0);
-			if (!(parse_tree::INVALID & src.data<2>()->flags))
-				{	// NOTE: unary + on pointer is legal in C++98
-				src.c_array<2>()->flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" applies unary + to a pointer (C99 6.5.3.3p1)");
-				zcc_errors.inc_error();
-				}
-			return;
-			}
 		if 		(C99_UNARY_SUBTYPE_PLUS==arg_unary_subtype)
 			eval_unary_plus(*src.c_array<2>(),types);
 		else	// if (C99_UNARY_SUBTYPE_NEG==arg_unary_subtype)
 			eval_unary_minus(*src.c_array<2>(),types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 		}
 	else{	// if (C99_UNARY_SUBTYPE_NEG==src.subtype)
-/*		if (0<src.data<2>()->data<2>()->type_code.pointer_power_after_array_decay())
-			{	// fortunately, binary - also doesn't like a pointer as its right-hand argument.
-			src.flags |= parse_tree::INVALID;
-			src.type_code.set_type(0);
-			if (!(parse_tree::INVALID & src.data<2>()->flags))
-				{
-				src.c_array<2>()->flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" applies unary - to a pointer (C99 6.5.3.3p1)");
-				zcc_errors.inc_error();
-				}
-			return;
-			} */
 		if 		(C99_UNARY_SUBTYPE_PLUS==arg_unary_subtype)
 			eval_unary_plus(*src.c_array<2>(),types);
 		else	// if (C99_UNARY_SUBTYPE_NEG==arg_unary_subtype)
@@ -4872,22 +4842,6 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 										: (is_C99_unary_operator_expression<'+'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_PLUS : 0;
 		if (arg_unary_subtype)
 			{
-/*			if (0<src.data<2>()->data<2>()->type_code.pointer_power_after_array_decay())
-				{
-				src.flags |= parse_tree::INVALID;
-				src.type_code.set_type(0);
-				if (!(parse_tree::INVALID & src.data<2>()->flags))
-					{	// fortunately, binary - also doesn't like a pointer as its right-hand argument
-						//! \todo rework this when binary - overloading implemented, obj-ptr may be a legitimate overload
-					src.c_array<2>()->flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" applies unary - to a pointer (C++98 5.3.1p7)");
-					zcc_errors.inc_error();
-					}
-				return;
-				} */
 			if 		(C99_UNARY_SUBTYPE_PLUS==arg_unary_subtype)
 				eval_unary_plus(*src.c_array<2>(),types);
 			else	// if (C99_UNARY_SUBTYPE_NEG==arg_unary_subtype)
@@ -5249,7 +5203,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 			if (ub<lhs_test || ub<rhs_test)
 				{
 				if (hard_error)
-					{
+					{	//! \bug catch this in two's-complement specific testing
 					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -5262,9 +5216,9 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 			const bool lhs_lt_rhs = lhs_test<rhs_test;
 			ub /= (lhs_lt_rhs) ? rhs_test : lhs_test;
 			if (ub<(lhs_lt_rhs ? lhs_test : rhs_test))
-				{
+				{	//! \test if.C99/Pass_conditional_op_noeval.hpp, if.C99/Pass_conditional_op_noeval.h
 				if (hard_error)
-					{
+					{	//! \test default/Error_if_control29.hpp, default/Error_if_control29.h
 					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -5328,9 +5282,9 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 	if (converts_to_integerlike(src.type_code))
 		{
 		if 		(literal_converts_to_bool(*src.data<2>(),is_true) && !is_true)
-			{
+			{	//! \test if.C99/Pass_conditional_op_noeval.hpp, if.C99/Pass_conditional_op_noeval.h
 			if (hard_error)
-				{
+				{	//! \test default/Error_if_control30.hpp, default/Error_if_control30.h
 				src.flags |= parse_tree::INVALID;
 				message_header(src.index_tokens[0]);
 				INC_INFORM(ERR_STR);
@@ -5452,7 +5406,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 				return true;
 				}
 			if (ub<lhs_test)
-				{
+				{	//! \bug test this in two's complement code
 				assert(virtual_machine::twos_complement==target_machine->C_signed_int_representation());
 				if (hard_error)
 					{
@@ -5506,14 +5460,14 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 	if (converts_to_integerlike(src.type_code))
 		{
 		if 		(literal_converts_to_bool(*src.data<2>(),is_true) && !is_true)
-			{
+			{	//! \test if.C99/Pass_conditional_op_noeval.hpp, if.C99/Pass_conditional_op_noeval.h
 			if (hard_error)
-				{
+				{	//! \test default/Error_if_control31.hpp, Error_if_control31.h
 				src.flags |= parse_tree::INVALID;
 				message_header(src.index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM(src);
-				INFORM(" division by zero, undefined behavior (C99 6.5.5p5, C++98 5.6p4)");
+				INFORM(" modulo by zero, undefined behavior (C99 6.5.5p5, C++98 5.6p4)");
 				zcc_errors.inc_error();
 				}
 			return false;

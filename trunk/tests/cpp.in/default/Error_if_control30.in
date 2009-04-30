@@ -1,0 +1,6 @@
+SUFFIXES h hpp
+// code coverage: division by zero
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+VALID_EXPRESSION 1/0
+

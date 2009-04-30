@@ -1,0 +1,8 @@
+SUFFIXES h hpp
+// code coverage: integer overflow of * of pointer
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+#include <stdint.h>
+
+VALID_EXPRESSION INTMAX_MAX*INTMAX_MAX
+
