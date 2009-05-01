@@ -50,3 +50,33 @@
 #error 1 ? 1 : 1%0 is false
 #endif
 
+#if 0 ? INTMAX_MAX+INTMAX_MAX : 0
+#error 0 ? INTMAX_MAX+INTMAX_MAX : 0 is true
+#endif
+#if 0 ? INTMAX_MAX+INTMAX_MAX : 1
+#else
+#error 0 ? INTMAX_MAX+INTMAX_MAX : 1 is false
+#endif
+#if 1 ? 0 : INTMAX_MAX+INTMAX_MAX
+#error 1 ? 0 : INTMAX_MAX+INTMAX_MAX is true
+#endif
+#if 1 ? 1 : INTMAX_MAX+INTMAX_MAX
+#else
+#error 1 ? 1 : INTMAX_MAX+INTMAX_MAX is false
+#endif
+
+#if 0 ? -INTMAX_MAX-INTMAX_MAX : 0
+#error 0 ? -INTMAX_MAX-INTMAX_MAX : 0 is true
+#endif
+#if 0 ? -INTMAX_MAX-INTMAX_MAX : 1
+#else
+#error 0 ? -INTMAX_MAX-INTMAX_MAX : 1 is false
+#endif
+#if 1 ? 0 : -INTMAX_MAX-INTMAX_MAX
+#error 1 ? 0 : -INTMAX_MAX-INTMAX_MAX is true
+#endif
+#if 1 ? 1 : -INTMAX_MAX-INTMAX_MAX
+#else
+#error 1 ? 1 : -INTMAX_MAX-INTMAX_MAX is false
+#endif
+

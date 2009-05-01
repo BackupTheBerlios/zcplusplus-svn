@@ -91,7 +91,7 @@ inline unsigned int int_log2(unsigned char* buf, size_t buf_len)
 {
 	assert(NULL!=buf);
 	assert(0<buf_len);
-	_int_log2(buf,buf_len);
+	return _int_log2(buf,buf_len);
 }
 
 inline void bitwise_compl(unsigned char* buf, size_t buf_len)
