@@ -2448,7 +2448,7 @@ macro_is_defined(const char* const x, const size_t x_len, const autovalarray_ptr
 	assert(NULL!=x);
 	assert(0<x_len);
 #ifdef NDEBUG
-	return 0<=binary_find(x,x_len,macros_object) || binary_find(x,x_len,macros_function);
+	return 0<=binary_find(x,x_len,macros_object) || 0<=binary_find(x,x_len,macros_function);
 #else
 	const errr object_macro_index = binary_find(x,x_len,macros_object);
 	const errr function_macro_index = binary_find(x,x_len,macros_function);
