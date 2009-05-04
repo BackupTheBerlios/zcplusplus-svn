@@ -6231,14 +6231,14 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 
 // +: either both are arithmetic, or one is raw pointer and one is integer
 // -: either both are arithmetic, or both are compatible raw pointer, or left is raw pointer and right is integer
-static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system& types)
+static void C_CPP_add_expression_easy_syntax_check(parse_tree& src,const type_system& types,func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert((C99_ADD_SUBTYPE_PLUS==src.subtype && is_C99_add_operator_expression<'+'>(src)) || (C99_ADD_SUBTYPE_MINUS==src.subtype && is_C99_add_operator_expression<'-'>(src)));
 	BOOST_STATIC_ASSERT(1==C99_ADD_SUBTYPE_MINUS-C99_ADD_SUBTYPE_PLUS);
 	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power_after_array_decay();
 	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power_after_array_decay();	
 
-	// pointers to void are disallowed
+	// pointers to void are disallowed; not testable from preprocessor
 	const bool exact_rhs_voidptr = 1==rhs_pointer && C_TYPE::VOID==src.data<2>()->type_code.base_type_index;
 	if (1==lhs_pointer && C_TYPE::VOID==src.data<1>()->type_code.base_type_index)
 		{
@@ -6246,7 +6246,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 		message_header(src.index_tokens[0]);
 		INC_INFORM(ERR_STR);
 		INC_INFORM(src);
-		INFORM(exact_rhs_voidptr ? " uses void* arguments (C99 6.5.6p2,3)" : " uses void* left-hand argument (C99 6.5.6p2,3)");
+		INFORM(exact_rhs_voidptr ? " uses void* arguments (C99 6.5.6p2,3; C++98 5.7p1,2)" : " uses void* left-hand argument (C99 6.5.6p2,3; C++98 5.7p1,2)");
 		zcc_errors.inc_error();
 		return;
 		}
@@ -6256,7 +6256,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 		message_header(src.index_tokens[0]);
 		INC_INFORM(ERR_STR);
 		INC_INFORM(src);
-		INFORM(" uses void* right-hand argument (C99 6.5.6p2,3)");
+		INFORM(" uses void* right-hand argument (C99 6.5.6p2,3; C++98 5.7p1,2)");
 		zcc_errors.inc_error();
 		return;
 		}
@@ -6266,7 +6266,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 #ifndef NDEBUG
 	default: FATAL_CODE("hardware/compiler error: invalid linear combination in C_add_expression_easy_syntax_check",3);
 #endif
-	case 0:	{
+	case 0:	{	// cannot test errors from preprocessor
 			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
 			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index))
 				{
@@ -6274,7 +6274,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				message_header(src.index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM(src);
-				INFORM(rhs_arithmeticlike ? " has non-arithmetic non-pointer right argument (C99 6.5.6p2)" : " has non-arithmetic non-pointer arguments (C99 6.5.6p2)");
+				INFORM(rhs_arithmeticlike ? " has non-arithmetic non-pointer right argument (C99 6.5.6p2; C++98 5.7p1)" : " has non-arithmetic non-pointer arguments (C99 6.5.6p2; C++98 5.7p1)");
 				zcc_errors.inc_error();
 				return;
 				}
@@ -6284,7 +6284,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				message_header(src.index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM(src);
-				INFORM(" has non-arithmetic non-pointer left argument (C99 6.5.6p2)");
+				INFORM(" has non-arithmetic non-pointer left argument (C99 6.5.6p2; C++98 5.7p1)");
 				zcc_errors.inc_error();
 				return;
 				}
@@ -6293,6 +6293,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 			break;
 			}
 	case 1:	{	// ptr + integer, hopefully
+				// requires floating-point literals to test errors from preprocessor
 			src.type_code = src.data<1>()->type_code;
 			if (!converts_to_integerlike(src.data<2>()->type_code.base_type_index))
 				{
@@ -6300,14 +6301,15 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				message_header(src.index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM(src);
-				INFORM(" adds pointer to non-integer (C99 6.5.6p2)");
+				INFORM(" adds pointer to non-integer (C99 6.5.6p2; C++98 5.7p1)");
 				zcc_errors.inc_error();
 				return;
 				}
 			eval_add_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
-	case 2:	{
+	case 2:	{	// integer + ptr, hopefully
+				// requires floating-point literals to test errors from preprocessor
 			src.type_code = src.data<2>()->type_code;
 			if (!converts_to_integerlike(src.data<1>()->type_code.base_type_index))
 				{
@@ -6315,7 +6317,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				message_header(src.index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM(src);
-				INFORM(" adds pointer to non-integer (C99 6.5.6p2)");
+				INFORM(" adds pointer to non-integer (C99 6.5.6p2; C++98 5.7p1)");
 				zcc_errors.inc_error();
 				return;
 				}
@@ -6327,11 +6329,11 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INC_INFORM(src);
-			INFORM(" adds two pointers (C99 6.5.6p2)");
+			INFORM(" adds two pointers (C99 6.5.6p2; C++98 5.7p1)");
 			zcc_errors.inc_error();
 			return;
 			}
-	case 4:	{
+	case 4:	{	// cannot test errors from preprocessor
 			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
 			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index))
 				{
@@ -6339,7 +6341,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				message_header(src.index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM(src);
-				INFORM(rhs_arithmeticlike ? " has non-arithmetic non-pointer right argument (C99 6.5.6p3)" : " has non-arithmetic non-pointer arguments (C99 6.5.6p3)");
+				INFORM(rhs_arithmeticlike ? " has non-arithmetic non-pointer right argument (C99 6.5.6p3; C++98 5.7p2)" : " has non-arithmetic non-pointer arguments (C99 6.5.6p3; C++98 5.7p2)");
 				zcc_errors.inc_error();
 				return;
 				}
@@ -6349,7 +6351,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				message_header(src.index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM(src);
-				INFORM(" has non-arithmetic non-pointer left argument (C99 6.5.6p3)");
+				INFORM(" has non-arithmetic non-pointer left argument (C99 6.5.6p3; C++98 5.7p2)");
 				zcc_errors.inc_error();
 				return;
 				}
@@ -6357,7 +6359,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 			eval_sub_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
-	case 5:	{
+	case 5:	{	// ptr - integer, hopefully; requires floating-point literal to test from preprocessor
 			src.type_code = src.data<1>()->type_code;
 			if (!converts_to_integerlike(src.data<2>()->type_code.base_type_index))
 				{
@@ -6365,7 +6367,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 				message_header(src.index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM(src);
-				INFORM(" subtracts non-integer from pointer (C99 6.5.6p3)");
+				INFORM(" subtracts non-integer from pointer (C99 6.5.6p3; C++98 5.7p2)");
 				zcc_errors.inc_error();
 				return;
 				}
@@ -6377,7 +6379,7 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INC_INFORM(src);
-			INFORM(" subtracts a non-pointer from a pointer (C99 6.5.6p3)");
+			INFORM(" subtracts a non-pointer from a pointer (C99 6.5.6p3; C++98 5.7p2)");
 			zcc_errors.inc_error();
 			return;
 			}
@@ -6397,172 +6399,6 @@ static void C_add_expression_easy_syntax_check(parse_tree& src,const type_system
 	}
 }
 
-static void CPP_add_expression_easy_syntax_check(parse_tree& src,const type_system& types)
-{
-	assert((C99_ADD_SUBTYPE_PLUS==src.subtype && is_C99_add_operator_expression<'+'>(src)) || (C99_ADD_SUBTYPE_MINUS==src.subtype && is_C99_add_operator_expression<'-'>(src)));
-	BOOST_STATIC_ASSERT(1==C99_ADD_SUBTYPE_MINUS-C99_ADD_SUBTYPE_PLUS);
-	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power_after_array_decay();
-	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power_after_array_decay();	
-
-	// pointers to void are disallowed
-	const bool exact_rhs_voidptr = 1==rhs_pointer && C_TYPE::VOID==src.data<2>()->type_code.base_type_index;
-	if (1==lhs_pointer && C_TYPE::VOID==src.data<1>()->type_code.base_type_index)
-		{
-		src.flags |= parse_tree::INVALID;
-		message_header(src.index_tokens[0]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM(src);
-		INFORM(exact_rhs_voidptr ? " uses void* arguments (C++98 5.7p1,2)" : " uses void* left-hand argument (C++98 5.7p1,2)");
-		zcc_errors.inc_error();
-		return;
-		}
-	else if (exact_rhs_voidptr)
-		{
-		src.flags |= parse_tree::INVALID;
-		message_header(src.index_tokens[0]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM(src);
-		INFORM(" uses void* right-hand argument (C++98 5.7p1,2)");
-		zcc_errors.inc_error();
-		return;
-		}
-
-	switch((0<lhs_pointer)+2*(0<rhs_pointer)+4*(src.subtype-C99_ADD_SUBTYPE_PLUS))
-	{
-#ifndef NDEBUG
-	default: FATAL_CODE("hardware/compiler error: invalid linear combination in CPP_add_expression_easy_syntax_check",3);
-#endif
-	case 0:	{
-			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
-			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index))
-				{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(rhs_arithmeticlike ? " has non-arithmetic non-pointer right argument (C++98 5.7p1)" : " has non-arithmetic non-pointer arguments (C++98 5.7p1)");
-				zcc_errors.inc_error();
-				return;
-				}
-			else if (!rhs_arithmeticlike)
-				{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has non-arithmetic non-pointer left argument (C++98 5.7p1)");
-				zcc_errors.inc_error();
-				return;
-				}
-			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
-			eval_add_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
-			break;
-			}
-	case 1:	{
-			src.type_code = src.data<1>()->type_code;
-			if (!converts_to_integerlike(src.data<2>()->type_code.base_type_index))
-				{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" adds pointer to non-integer (C++98 5.7p1)");
-				zcc_errors.inc_error();
-				return;
-				}
-			eval_add_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
-			break;
-			}
-	case 2:	{
-			src.type_code = src.data<2>()->type_code;
-			if (!converts_to_integerlike(src.data<1>()->type_code.base_type_index))
-				{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" adds pointer to non-integer (C++98 5.7p1)");
-				zcc_errors.inc_error();
-				return;
-				}
-			eval_add_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
-			break;
-			}
-	case 3:	{	//	ptr + ptr dies
-			src.flags |= parse_tree::INVALID;
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" adds two pointers (C++98 5.7p1)");
-			zcc_errors.inc_error();
-			return;
-			}
-	case 4:	{
-			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index);
-			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index))
-				{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(rhs_arithmeticlike ? " has non-arithmetic non-pointer right argument (C++98 5.7p2)" : " has non-arithmetic non-pointer arguments (C++98 5.7p2)");
-				zcc_errors.inc_error();
-				return;
-				}
-			else if (!rhs_arithmeticlike)
-				{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" has non-arithmetic non-pointer left argument (C++98 5.7p2)");
-				zcc_errors.inc_error();
-				return;
-				}
-			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index),default_promote_type(src.data<2>()->type_code.base_type_index)));
-			eval_sub_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
-			break;
-			}
-	case 5:	{
-			src.type_code = src.data<1>()->type_code;
-			if (!converts_to_integerlike(src.data<2>()->type_code.base_type_index))
-				{
-				src.flags |= parse_tree::INVALID;
-				message_header(src.index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM(src);
-				INFORM(" subtracts non-integer from pointer (C++98 5.7p2)");
-				zcc_errors.inc_error();
-				return;
-				}
-			eval_sub_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
-			break;
-			}
-	case 6:	{	// non-ptr - ptr dies
-			src.flags |= parse_tree::INVALID;
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" subtracts a non-pointer from a pointer (C++98 5.7p2)");
-			zcc_errors.inc_error();
-			return;
-			}
-	case 7:	{	// ptr - ptr;
-				// type is ptrdiff_t
-			const virtual_machine::std_int_enum tmp = target_machine->ptrdiff_t_type();
-			assert(tmp);
-			src.type_code.set_type((virtual_machine::std_int_char==tmp ? C_TYPE::CHAR
-								:	virtual_machine::std_int_short==tmp ? C_TYPE::SHRT
-								:	virtual_machine::std_int_int==tmp ? C_TYPE::INT
-								:	virtual_machine::std_int_long==tmp ? C_TYPE::LONG
-								:	virtual_machine::std_int_long_long==tmp ? C_TYPE::LLONG : 0));
-			assert(0!=src.type_code.base_type_index);
-			eval_sub_expression(src,types,false,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
-			break;
-			}
-	}
-}
-
 /*
 additive-expression:
 	multiplicative-expression
@@ -6576,7 +6412,7 @@ static void locate_C99_add_expression(parse_tree& src, size_t& i, const type_sys
 
 	if (terse_C99_augment_add_expression(src,i,types))
 		{
-		C_add_expression_easy_syntax_check(src.c_array<0>()[i],types);
+		C_CPP_add_expression_easy_syntax_check(src.c_array<0>()[i],types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 		return;
 		}
 
@@ -6584,7 +6420,8 @@ static void locate_C99_add_expression(parse_tree& src, size_t& i, const type_sys
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_add_expression(src,i)) C_add_expression_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_add_expression(src,i))
+		C_CPP_add_expression_easy_syntax_check(src.c_array<0>()[i],types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 }
 
 /*
@@ -6600,7 +6437,7 @@ static void locate_CPP_add_expression(parse_tree& src, size_t& i, const type_sys
 
 	if (terse_CPP_augment_add_expression(src,i,types))
 		{	//! \todo handle operator overloading
-		CPP_add_expression_easy_syntax_check(src.c_array<0>()[i],types);
+		C_CPP_add_expression_easy_syntax_check(src.c_array<0>()[i],types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 		return;
 		}
 
@@ -6610,7 +6447,7 @@ static void locate_CPP_add_expression(parse_tree& src, size_t& i, const type_sys
 
 	if (terse_locate_add_expression(src,i))
 		//! \todo handle operator overloading
-		CPP_add_expression_easy_syntax_check(src.c_array<0>()[i],types);
+		C_CPP_add_expression_easy_syntax_check(src.c_array<0>()[i],types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 }
 
 static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* standard)
