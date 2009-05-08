@@ -5813,8 +5813,8 @@ static bool C_string_literal_equal_content(const parse_tree& lhs, const parse_tr
 {
 	if (C_TESTFLAG_STRING_LITERAL==lhs.index_tokens[0].flags && C_TESTFLAG_STRING_LITERAL==rhs.index_tokens[0].flags)
 		{
-		const size_t lhs_len = LengthOfCStringLiteral(lhs.index_tokens[0].token.first);
-		if (LengthOfCStringLiteral(rhs.index_tokens[0].token.first)!=lhs_len)
+		const size_t lhs_len = LengthOfCStringLiteral(lhs.index_tokens[0].token.first,lhs.index_tokens[0].token.second);
+		if (LengthOfCStringLiteral(rhs.index_tokens[0].token.first,rhs.index_tokens[0].token.second)!=lhs_len)
 			{	// string literals of different length are necessarily different decayed pointers even if they overlap
 			is_equal = false;
 			return true;

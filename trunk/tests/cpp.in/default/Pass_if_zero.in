@@ -1,0 +1,24 @@
+SUFFIXES h hpp
+// check that we recognize a variety of zero literals as zero
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+/* While string literals are not allowed in integer constant expressions [C99 6.6p6], we are allowed to accept other forms of constant expressions [C99 6.6p10] */
+/* spot-check array-dereferencing end of string literal */
+FALSE_EXPRESSION "A"[1]
+FALSE_EXPRESSION L"A"[1]
+FALSE_EXPRESSION 1["A"]
+FALSE_EXPRESSION 1[L"A"]
+
+/* spot-check array-dereferencing end of empty string literal */
+FALSE_EXPRESSION ""[0]
+FALSE_EXPRESSION L""[0]
+FALSE_EXPRESSION 0[""]
+FALSE_EXPRESSION 0[L""]
+
+/* deference empty string literal */
+FALSE_EXPRESSION *""
+FALSE_EXPRESSION *L""
+
+// hyper-optimizing linker would put identical string literals at identical locations
+FALSE_EXPRESSION "A"-"A"
+FALSE_EXPRESSION L"A"-L"A"
