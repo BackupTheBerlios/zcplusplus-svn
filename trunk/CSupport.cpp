@@ -6269,7 +6269,7 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 				// use this to short-circuit to 0; remember to adjust the preprocessor hacks as well
 			bool is_equal = false;
 			if (C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal) && is_equal)
-				{
+				{	//! \test default/Pass_if_zero.hpp, default/Pass_if_zero.h
 				force_decimal_literal(src,"0",types);
 				src.type_code = old_type;
 				return true;
@@ -6509,8 +6509,20 @@ static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* s
 	if (parse_tree::INVALID & src.flags)	// already invalid, don't make noise
 		return !converts_to_integerlike(src.data<1>()->type_code) || !converts_to_integerlike(src.data<2>()->type_code);
 
+	// hmm... 45-47, 48-50, 51-53, 54-56, 57-59
+	//! \bug need tests for float literal in place of int literal: << >> & ^ |
 	if (!converts_to_integerlike(src.data<1>()->type_code))
-		{
+		{	// tests for string literal in place of integer literal
+			//! \test default/Error_if_control46.hpp, default/Error_if_control46.h
+			//! \test default/Error_if_control47.hpp, default/Error_if_control47.h
+			//! \test default/Error_if_control49.hpp, default/Error_if_control49.h
+			//! \test default/Error_if_control50.hpp, default/Error_if_control50.h
+			//! \test default/Error_if_control52.hpp, default/Error_if_control52.h
+			//! \test default/Error_if_control53.hpp, default/Error_if_control53.h
+			//! \test default/Error_if_control55.hpp, default/Error_if_control55.h
+			//! \test default/Error_if_control56.hpp, default/Error_if_control56.h
+			//! \test default/Error_if_control58.hpp, default/Error_if_control58.h
+			//! \test default/Error_if_control59.hpp, default/Error_if_control59.h
 		src.flags |= parse_tree::INVALID;
 		message_header(src.index_tokens[0]);
 		INC_INFORM(ERR_STR);
@@ -6521,7 +6533,12 @@ static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* s
 		return true;
 		}
 	else if (!converts_to_integerlike(src.data<2>()->type_code))
-		{
+		{	// tests for string literal in place of integer literal
+			//! \test default/Error_if_control45.hpp, default/Error_if_control45.h
+			//! \test default/Error_if_control48.hpp, default/Error_if_control48.h
+			//! \test default/Error_if_control51.hpp, default/Error_if_control51.h
+			//! \test default/Error_if_control54.hpp, default/Error_if_control54.h
+			//! \test default/Error_if_control57.hpp, default/Error_if_control57.h
 		src.flags |= parse_tree::INVALID;
 		message_header(src.index_tokens[0]);
 		INC_INFORM(ERR_STR);
