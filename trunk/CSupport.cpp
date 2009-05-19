@@ -6610,6 +6610,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((old_type.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
 		const bool undefined_behavior = target_machine->C_bit(machine_type)<=rhs_int;
 
+		//! \bug can't test with static test case (need to use bitcount of uintmax_t/intmax_t)
 		if (undefined_behavior)
 			{
 			src.flags |= parse_tree::INVALID;
@@ -6636,7 +6637,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 			// note that incoming negative signed integers are not handled by this code path
 			if (C99_SHIFT_SUBTYPE_LEFT==src.subtype)
 				{
-				// but signed integers do go undefined in C if left-shifted too much; C++ accepts
+				//! \bug but signed integers do go undefined in C if left-shifted too much; C++ accepts
 #if 0
 				if (0==(old_type.base_type_index-C_TYPE::INT)%2 && target_machine->C_bit(machine_type)<=rhs_int.to_uint()+lhs_int.int_log2()+1)
 					{
@@ -6799,127 +6800,80 @@ static bool eval_relation_expression(parse_tree& src, const type_system& types,f
 		force_decimal_literal(src,result,types);
 		return true;
 		};
+	//! \todo: string literals can't handle GTE, LTE; convert to bug when 0.0.1 released
+	//! \todo: string literals handle GT, LT only with respect to zero (NULL constant); convert to bug when 0.0.1 released
 	return false;
+}
+
+static bool C_CPP_relation_expression_core_syntax_ok(parse_tree& src,const type_system& types)
+{
+	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power_after_array_decay())+2*(0<src.data<2>()->type_code.pointer_power_after_array_decay());
+	switch(ptr_case)
+	{
+	case 0:	{	// can't test from preprocessor
+			if (!converts_to_reallike(src.data<1>()->type_code.base_type_index) || !converts_to_reallike(src.data<2>()->type_code.base_type_index))
+				{
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares non-real type(s) (C99 6.5.8p2/C++98 5.9p2)");
+					zcc_errors.inc_error();
+					}
+				return false;
+				}
+			break;
+			}
+	case 1:	{	//! \todo need floating-point literal to test first half
+				//! \todo figure out how to test second half
+			if (!converts_to_integer(src.data<2>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+				{	// oops
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
+					zcc_errors.inc_error();
+					}
+				return false;
+				}
+			break;
+			}
+	case 2:	{	//! \todo need floating-point literal to test first half
+				//! \todo figure out how to test second half
+			if (!converts_to_integer(src.data<1>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
+				{	// oops
+				if (!(parse_tree::INVALID & src.flags))
+					{
+					src.flags |= parse_tree::INVALID;
+					message_header(src.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM(src);
+					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
+					zcc_errors.inc_error();
+					}
+				return false;
+				}
+			break;
+			}
+	}
+	return true;
 }
 
 static void C_relation_expression_easy_syntax_check(parse_tree& src,const type_system& types)
 {
-	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power_after_array_decay())+2*(0<src.data<2>()->type_code.pointer_power_after_array_decay());
-	switch(ptr_case)
-	{
-	case 0:	{
-			if (!converts_to_reallike(src.data<1>()->type_code.base_type_index) || !converts_to_reallike(src.data<2>()->type_code.base_type_index))
-				{
-				if (!(parse_tree::INVALID & src.flags))
-					{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" compares non-real type(s) (C99 6.5.8p2/C++98 5.9p2)");
-					zcc_errors.inc_error();
-					}
-				return;
-				}
-			break;
-			}
-	case 1:	{
-			if (!converts_to_integer(src.data<2>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
-				{	// oops
-				if (!(parse_tree::INVALID & src.flags))
-					{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
-					zcc_errors.inc_error();
-					}
-				return;
-				}
-			break;
-			}
-	case 2:	{
-			if (!converts_to_integer(src.data<1>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
-				{	// oops
-				if (!(parse_tree::INVALID & src.flags))
-					{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
-					zcc_errors.inc_error();
-					}
-				return;
-				}
-			break;
-			}
-	case 3:	{
-			break;
-			}
-	}
-	if (eval_relation_expression(src,types,C99_intlike_literal_to_VM)) return;
+	if (!C_CPP_relation_expression_core_syntax_ok(src,types))
+		eval_relation_expression(src,types,C99_intlike_literal_to_VM);
 }
 
 static void CPP_relation_expression_easy_syntax_check(parse_tree& src,const type_system& types)
 {
-	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power_after_array_decay())+2*(0<src.data<2>()->type_code.pointer_power_after_array_decay());
-	switch(ptr_case)
-	{
-	case 0:	{
-			if (!converts_to_reallike(src.data<1>()->type_code.base_type_index) || !converts_to_reallike(src.data<2>()->type_code.base_type_index))
-				{
-				if (!(parse_tree::INVALID & src.flags))
-					{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" compares non-real type(s) (C99 6.5.8p2/C++98 5.9p2)");
-					zcc_errors.inc_error();
-					}
-				return;
-				}
-			break;
-			}
-	case 1:	{
-			if (!converts_to_integer(src.data<2>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
-				{	// oops
-				if (!(parse_tree::INVALID & src.flags))
-					{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
-					zcc_errors.inc_error();
-					}
-				return;
-				}
-			break;
-			}
-	case 2:	{
-			if (!converts_to_integer(src.data<1>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
-				{	// oops
-				if (!(parse_tree::INVALID & src.flags))
-					{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
-					zcc_errors.inc_error();
-					}
-				return;
-				}
-			break;
-			}
-	case 3:	{
-			break;
-			}
-	}
-	if (eval_relation_expression(src,types,CPP_intlike_literal_to_VM)) return;
+	if (!C_CPP_relation_expression_core_syntax_ok(src,types))
+		eval_relation_expression(src,types,CPP_intlike_literal_to_VM);
 }
 
 /*
