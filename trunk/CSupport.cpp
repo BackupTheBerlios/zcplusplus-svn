@@ -5819,6 +5819,12 @@ static bool C_string_literal_equal_content(const parse_tree& lhs, const parse_tr
 			is_equal = false;
 			return true;
 			};
+		if (('L'==*lhs.index_tokens[0].token.first)!=('L'==*rhs.index_tokens[0].token.first))
+			{	// wide string literals never overlap with narrow string literals with the same character values
+			is_equal = false;
+			return true;
+			};
+
 		size_t i = 0;
 		while(i<lhs_len-1)
 			{
@@ -6986,6 +6992,8 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 	switch(integer_literal_case)
 	{
 	case 0:	{	// string literal == string literal (assume hyper-optimizing linker, this should be true iff the string literals are equal as static arrays of char)
+				//! \test default/Pass_if_nonzero.hpp, default/Pass_if_nonzero.h, 
+				//! \test default/Pass_if_zero.hpp, default/Pass_if_zero.h, 
 			bool is_equal = false;
 			if (C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal))
 				{
@@ -7001,6 +7009,8 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 					{	
 					if (src.data<2>()->type_code.decays_to_nonnull_pointer())
 						{	// string literal != NULL, etc.
+						//! \test default/Pass_if_nonzero.hpp, default/Pass_if_nonzero.h, 
+						//! \test default/Pass_if_zero.hpp, default/Pass_if_zero.h, 
 						force_decimal_literal(src,is_equal_op ? "0" : "1",types);
 						return true;
 						}
@@ -7022,9 +7032,11 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 			if (0<src.data<1>()->type_code.pointer_power_after_array_decay() && literal_converts_to_bool(*src.data<2>(),is_true)) 
 				{
 				if (!is_true)
-					{	// string literal != NULL
+					{
 					if (src.data<1>()->type_code.decays_to_nonnull_pointer())
-						{
+						{	// string literal != NULL
+						//! \test default/Pass_if_nonzero.hpp, default/Pass_if_nonzero.h, 
+						//! \test default/Pass_if_zero.hpp, default/Pass_if_zero.h, 
 						force_decimal_literal(src,is_equal_op ? "0" : "1",types);
 						return true;
 						}

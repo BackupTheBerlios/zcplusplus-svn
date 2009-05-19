@@ -19,6 +19,28 @@ FALSE_EXPRESSION 0[L""]
 FALSE_EXPRESSION *""
 FALSE_EXPRESSION *L""
 
+/* spot-check logical negation of string literal */
+FALSE_EXPRESSION !""
+FALSE_EXPRESSION !L""
+FALSE_EXPRESSION !"A"
+FALSE_EXPRESSION !L"A"
+
 // hyper-optimizing linker would put identical string literals at identical locations
 FALSE_EXPRESSION "A"-"A"
 FALSE_EXPRESSION L"A"-L"A"
+
+FALSE_EXPRESSION "A"!="A"
+FALSE_EXPRESSION "A"=="B"
+FALSE_EXPRESSION L"A"!=L"A"
+FALSE_EXPRESSION L"A"==L"B"
+FALSE_EXPRESSION L"A"=="A"
+FALSE_EXPRESSION L"A"=="B"
+FALSE_EXPRESSION "A"==L"A"
+FALSE_EXPRESSION "A"==L"B"
+
+// spot-check comparison of strings to null pointer constant
+FALSE_EXPRESSION 0=="A"
+FALSE_EXPRESSION 0==L"A"
+FALSE_EXPRESSION "A"==0
+FALSE_EXPRESSION L"A"==0
+

@@ -39,6 +39,20 @@
 #error *L"" is true
 #endif
 
+/* spot-check logical negation of string literal */
+#if !""
+#error !"" is true
+#endif
+#if !L""
+#error !L"" is true
+#endif
+#if !"A"
+#error !"A" is true
+#endif
+#if !L"A"
+#error !L"A" is true
+#endif
+
 // hyper-optimizing linker would put identical string literals at identical locations
 #if "A"-"A"
 #error "A"-"A" is true
@@ -46,3 +60,43 @@
 #if L"A"-L"A"
 #error L"A"-L"A" is true
 #endif
+
+#if "A"!="A"
+#error "A"!="A" is true
+#endif
+#if "A"=="B"
+#error "A"=="B" is true
+#endif
+#if L"A"!=L"A"
+#error L"A"!=L"A" is true
+#endif
+#if L"A"==L"B"
+#error L"A"==L"B" is true
+#endif
+#if L"A"=="A"
+#error L"A"=="A" is true
+#endif
+#if L"A"=="B"
+#error L"A"=="B" is true
+#endif
+#if "A"==L"A"
+#error "A"==L"A" is true
+#endif
+#if "A"==L"B"
+#error "A"==L"B" is true
+#endif
+
+// spot-check comparison of strings to null pointer constant
+#if 0=="A"
+#error 0=="A" is true
+#endif
+#if 0==L"A"
+#error 0==L"A" is true
+#endif
+#if "A"==0
+#error "A"==0 is true
+#endif
+#if L"A"==0
+#error L"A"==0 is true
+#endif
+
