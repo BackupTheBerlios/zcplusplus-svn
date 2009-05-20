@@ -44,3 +44,7 @@ FALSE_EXPRESSION 0==L"A"
 FALSE_EXPRESSION "A"==0
 FALSE_EXPRESSION L"A"==0
 
+// spot-check ? : operator null-pointer coercion
+FALSE_EXPRESSION !!(0 ? "A" : 0)
+FALSE_EXPRESSION !!(1 ? 0 : "A")
+

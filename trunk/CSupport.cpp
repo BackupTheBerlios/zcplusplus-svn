@@ -3337,6 +3337,20 @@ static bool CPP_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 	return true;
 }
 
+/** decides whether the given entry is a null pointer constant
+ * \return 1 : yes, null pointer constant 
+ * \return 0 : no, not null pointer constant 
+ * \return -1 : can't decide quickly whether this is a null 
+ *         pointer constant
+ */
+int is_null_pointer_constant(const parse_tree& src, func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
+{
+	if (!converts_to_integerlike(src.type_code)) return 0;
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp;
+	if (intlike_literal_to_VM(tmp,src)) return tmp==0;
+	return -1;
+}
+
 static void _label_one_literal(parse_tree& src,const type_system& types)
 {
 	assert(src.is_atomic());
@@ -8093,12 +8107,16 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 				src.type_code.set_type(C_TYPE::NOT_VOID);
 				src.type_code.pointer_power = src.data<0>()->type_code.pointer_power_after_array_decay();
 				}
+			else if (is_null_pointer_constant(*src.data<2>(),C99_intlike_literal_to_VM))
+				// actually, could be either 1 (positively is null pointer constant) or -1 (could be).  We do the same thing in either case.
+				src.type_code = src.data<0>()->type_code;
 			else{
 				src.type_code.set_type(0);	// incoherent type
 				if (!(src.flags & parse_tree::INVALID) && !(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
 					{	// (...) ? string : int -- error
 						//! \test default/Error_if_control64.h 
-						//! \todo (...) ? string : 0 -- do *not* error (null pointer); check true/false status
+						// (...) ? string : 0 -- do *not* error (null pointer); check true/false status
+						//! \test default/Pass_if_zero.h, default/Pass_if_zero.hpp 
 					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -8107,6 +8125,7 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 					zcc_errors.inc_error();
 					}
 				}
+			break;
 			}
 	case -1:{	// LHS has less guaranteed indirectability than RHS
 			if (C_TYPE::NOT_VOID==src.data<0>()->type_code.base_type_index)
@@ -8114,12 +8133,16 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 				src.type_code.set_type(C_TYPE::NOT_VOID);
 				src.type_code.pointer_power = src.data<2>()->type_code.pointer_power_after_array_decay();
 				}
+			else if (is_null_pointer_constant(*src.data<0>(),C99_intlike_literal_to_VM))
+				// actually, could be either 1 (positively is null pointer constant) or -1 (could be).  We do the same thing in either case.
+				src.type_code = src.data<2>()->type_code;
 			else{
 				src.type_code.set_type(0);	// incoherent type
 				if (!(src.flags & parse_tree::INVALID) && !(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
 					{	// (...) ? int : string -- error
 						//! \test default/Error_if_control65.h
-						//! \todo (...) ? 0 : string -- do *not* error (null pointer); check true/false status
+						// (...) ? 0 : string -- do *not* error (null pointer); check true/false status
+						//! \test default/Pass_if_zero.h, default/Pass_if_zero.hpp 
 					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -8128,6 +8151,7 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 					zcc_errors.inc_error();
 					}
 				}
+			break;
 			}
 	case 0:	{
 			if (src.data<0>()->type_code.base_type_index==src.data<2>()->type_code.base_type_index)
@@ -8170,6 +8194,7 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 					zcc_errors.inc_error();
 					}
 				}
+			break;
 			}
 	}
 
@@ -8210,12 +8235,16 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 				src.type_code.set_type(C_TYPE::NOT_VOID);
 				src.type_code.pointer_power = src.data<0>()->type_code.pointer_power_after_array_decay();
 				}
+			else if (is_null_pointer_constant(*src.data<2>(),CPP_intlike_literal_to_VM))
+				// actually, could be either 1 (positively is null pointer constant) or -1 (could be).  We do the same thing in either case.
+				src.type_code = src.data<0>()->type_code;
 			else{
 				src.type_code.set_type(0);	// incoherent type
 				if (!(src.flags & parse_tree::INVALID) && !(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
 					{	// (...) ? string : int -- error
 						//! \test default/Error_if_control64.hpp
-						//! \todo (...) ? string : 0 -- do *not* error (null pointer); check true/false status
+						// (...) ? string : 0 -- do *not* error (null pointer); check true/false status
+						//! \test default/Pass_if_zero.h, default/Pass_if_zero.hpp 
 					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -8224,6 +8253,7 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 					zcc_errors.inc_error();
 					}
 				}
+			break;
 			}
 	case -1:{	// LHS has less guaranteed indirectability than RHS
 			if (C_TYPE::NOT_VOID==src.data<0>()->type_code.base_type_index)
@@ -8231,12 +8261,16 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 				src.type_code.set_type(C_TYPE::NOT_VOID);
 				src.type_code.pointer_power = src.data<2>()->type_code.pointer_power_after_array_decay();
 				}
+			else if (is_null_pointer_constant(*src.data<0>(),CPP_intlike_literal_to_VM))
+				// actually, could be either 1 (positively is null pointer constant) or -1 (could be).  We do the same thing in either case.
+				src.type_code = src.data<2>()->type_code;
 			else{
 				src.type_code.set_type(0);	// incoherent type
 				if (!(src.flags & parse_tree::INVALID) && !(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
-					{	//! (...) ? int : string -- error
+					{	// (...) ? int : string -- error
 						//! \test default/Error_if_control65.hpp
-						//! \todo (...) ? 0 : string -- do *not* error (null pointer); check true/false status
+						// (...) ? 0 : string -- do *not* error (null pointer); check true/false status
+						//! \test default/Pass_if_zero.h, default/Pass_if_zero.hpp 
 					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -8245,6 +8279,7 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 					zcc_errors.inc_error();
 					}
 				}
+			break;
 			}
 	case 0:	{
 			if (src.data<0>()->type_code.base_type_index==src.data<2>()->type_code.base_type_index)
@@ -8286,6 +8321,7 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 					zcc_errors.inc_error();
 					}
 				}
+			break;
 			}
 	}
 

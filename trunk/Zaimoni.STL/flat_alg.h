@@ -35,7 +35,7 @@ ZAIMONI_DEFINE_UNSIGNED_SGN(unsigned long)
 
 // cmp function
 template<class T1, class T2>
-inline signed int cmp(T1 x, T2 y) {return (x<y) ? -1 : (x==y ? 0 : -1);}
+inline signed int cmp(T1 x, T2 y) {return (x<y) ? -1 : (x==y ? 0 : 1);}
 
 // -1^N
 template<class T>

@@ -35,3 +35,6 @@ TRUE_EXPRESSION 0!=L"A"
 TRUE_EXPRESSION "A"!=0
 TRUE_EXPRESSION L"A"!=0
 
+// spot-check ? : operator null-pointer coercion
+TRUE_EXPRESSION !!(1 ? "A" : 0)
+TRUE_EXPRESSION !!(0 ? 0 : "A")

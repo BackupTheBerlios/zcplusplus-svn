@@ -100,3 +100,11 @@
 #error L"A"==0 is true
 #endif
 
+// spot-check ? : operator null-pointer coercion
+#if !!(0 ? "A" : 0)
+#error !!(0 ? "A" : 0) is true
+#endif
+#if !!(1 ? 0 : "A")
+#error !!(1 ? 0 : "A") is true
+#endif
+
