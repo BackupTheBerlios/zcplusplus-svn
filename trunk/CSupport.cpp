@@ -5821,6 +5821,8 @@ static bool C_string_literal_equal_content(const parse_tree& lhs, const parse_tr
 			};
 		if (('L'==*lhs.index_tokens[0].token.first)!=('L'==*rhs.index_tokens[0].token.first))
 			{	// wide string literals never overlap with narrow string literals with the same character values
+				//! \todo check language standards: is it implementation-defined whether a wide-string character literal 
+				//! can overlap a narrow-string character literal with a suitable placement of NUL bytes?
 			is_equal = false;
 			return true;
 			};
@@ -7016,7 +7018,8 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 						}
 					}
 				else if (!(parse_tree::INVALID & src.flags))
-					{
+					{   //! \test default/Error_if_control60.hpp, default/Error_if_control60.h 
+						//! \test default/Error_if_control61.hpp, default/Error_if_control61.h
 					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -7042,7 +7045,8 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 						}
 					}
 				else if (!(parse_tree::INVALID & src.flags))
-					{
+					{   //! \test default/Error_if_control62.hpp, default/Error_if_control62.h 
+						//! \test default/Error_if_control63.hpp, default/Error_if_control63.h
 					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);

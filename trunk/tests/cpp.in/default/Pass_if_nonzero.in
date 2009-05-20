@@ -1,0 +1,37 @@
+SUFFIXES h hpp
+// check that we recognize a variety of nonzero literals as nonzero
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+/* While string literals are not allowed in integer constant expressions [C99 6.6p6], we are allowed to accept other forms of constant expressions [C99 6.6p10] */
+/* spot-check array-dereferencing start of non-empty string literal */
+TRUE_EXPRESSION "A"[0]
+TRUE_EXPRESSION L"A"[0]
+TRUE_EXPRESSION 0["A"]
+TRUE_EXPRESSION 0[L"A"]
+
+/* spot-check deferencing non-empty string literal */
+TRUE_EXPRESSION *"A"
+TRUE_EXPRESSION *L"A"
+
+/* spot-check double logical negation of string literal (string literal is still illegal even with extensions) */
+TRUE_EXPRESSION !!""
+TRUE_EXPRESSION !!L""
+TRUE_EXPRESSION !!"A"
+TRUE_EXPRESSION !!L"A"
+
+// hyper-optimizing linker would put identical string literals at identical locations
+TRUE_EXPRESSION "A"=="A"
+TRUE_EXPRESSION "A"!="B"
+TRUE_EXPRESSION L"A"==L"A"
+TRUE_EXPRESSION L"A"!=L"B"
+TRUE_EXPRESSION L"A"!="A"
+TRUE_EXPRESSION L"A"!="B"
+TRUE_EXPRESSION "A"!=L"A"
+TRUE_EXPRESSION "A"!=L"B"
+
+// spot-check comparison of strings to null pointer constant
+TRUE_EXPRESSION 0!="A"
+TRUE_EXPRESSION 0!=L"A"
+TRUE_EXPRESSION "A"!=0
+TRUE_EXPRESSION L"A"!=0
+
