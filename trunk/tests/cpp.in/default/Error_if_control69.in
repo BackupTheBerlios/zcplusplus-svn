@@ -1,0 +1,6 @@
+SUFFIXES h hpp
+// code coverage: out-of-bounds string dereference
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+VALID_EXPRESSION 2["A"]
+
