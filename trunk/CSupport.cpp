@@ -6519,6 +6519,7 @@ static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* s
 
 	// hmm... 45-47, 48-50, 51-53, 54-56, 57-59
 	//! \bug need tests for float literal in place of int literal: << >> & ^ |
+	const bool rhs_integerlike = converts_to_integerlike(src.data<2>()->type_code);
 	if (!converts_to_integerlike(src.data<1>()->type_code))
 		{	// tests for string literal in place of integer literal
 			//! \test default/Error_if_control46.hpp, default/Error_if_control46.h
@@ -6535,12 +6536,12 @@ static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* s
 		message_header(src.index_tokens[0]);
 		INC_INFORM(ERR_STR);
 		INC_INFORM(src);
-		INC_INFORM(converts_to_integerlike(src.data<2>()->type_code) ? " has nonintegral LHS " : " has nonintegral LHS and RHS ");
+		INC_INFORM(rhs_integerlike ? " has nonintegral LHS " : " has nonintegral LHS and RHS ");
 		INFORM(standard);
 		zcc_errors.inc_error();
 		return true;
 		}
-	else if (!converts_to_integerlike(src.data<2>()->type_code))
+	else if (!rhs_integerlike)
 		{	// tests for string literal in place of integer literal
 			//! \test default/Error_if_control45.hpp, default/Error_if_control45.h
 			//! \test default/Error_if_control48.hpp, default/Error_if_control48.h
@@ -6879,7 +6880,7 @@ static void C_relation_expression_easy_syntax_check(parse_tree& src,const type_s
 }
 
 static void CPP_relation_expression_easy_syntax_check(parse_tree& src,const type_system& types)
-{
+{	//! \todo handle operator overloading
 	if (!C_CPP_relation_expression_core_syntax_ok(src,types))
 		eval_relation_expression(src,types,CPP_intlike_literal_to_VM);
 }
@@ -7069,7 +7070,7 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 	return false;
 }
 
-static void C_equality_expression_easy_syntax_check(parse_tree& src,const type_system& types)
+static bool C_CPP_equality_expression_syntax_ok_core(parse_tree& src,const type_system& types)
 {	// admit legality of:
 	// numeric == numeric
 	// string literal == string literal
@@ -7079,7 +7080,7 @@ static void C_equality_expression_easy_syntax_check(parse_tree& src,const type_s
 	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power_after_array_decay())+2*(0<src.data<2>()->type_code.pointer_power_after_array_decay());
 	switch(ptr_case)
 	{
-	case 0:	{
+	case 0:	{	// can't test from preprocessor
 			if (C_TYPE::VOID>=src.data<1>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index)
 				{
 				if (!(parse_tree::INVALID & src.flags))
@@ -7091,11 +7092,11 @@ static void C_equality_expression_easy_syntax_check(parse_tree& src,const type_s
 					INFORM(" can't use a void or indeterminately typed argument");
 					zcc_errors.inc_error();
 					}
-				return;
+				return false;
 				}
 			break;
 			}
-	case 1:	{
+	case 1:	{	// need floating-point literal to test from preprocessor
 			if (!converts_to_integer(src.data<2>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
 				{	// oops
 				if (!(parse_tree::INVALID & src.flags))
@@ -7107,11 +7108,11 @@ static void C_equality_expression_easy_syntax_check(parse_tree& src,const type_s
 					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
 					zcc_errors.inc_error();
 					}
-				return;
+				return false;
 				}
 			break;
 			}
-	case 2:	{
+	case 2:	{	// need floating-point literal to test from preprocessor
 			if (!converts_to_integer(src.data<1>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
 				{	// oops
 				if (!(parse_tree::INVALID & src.flags))
@@ -7123,80 +7124,24 @@ static void C_equality_expression_easy_syntax_check(parse_tree& src,const type_s
 					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
 					zcc_errors.inc_error();
 					}
-				return;
+				return false;
 				}
 			break;
 			}
-	case 3:	{
-			break;
-			}
 	}
-	if (eval_equality_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
+	return true;
+}
+
+static void C_equality_expression_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	if (!C_CPP_equality_expression_syntax_ok_core(src,types)) return;
+	eval_equality_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 }
 
 static void CPP_equality_expression_easy_syntax_check(parse_tree& src,const type_system& types)
-{	// admit legality of
-	// numeric == numeric
-	// string literal == string literal
-	// string literal == integer literal zero
-	// deny legality of : string literal == integer/float
-	// more to come later
-	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power_after_array_decay())+2*(0<src.data<2>()->type_code.pointer_power_after_array_decay());
-	switch(ptr_case)
-	{
-	case 0:	{
-			if (C_TYPE::VOID>=src.data<1>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index)
-				{
-				if (!(parse_tree::INVALID & src.flags))
-					{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" can't use a void or indeterminately typed argument");
-					zcc_errors.inc_error();
-					}
-				return;
-				}
-			break;
-			}
-	case 1:	{
-			if (!converts_to_integer(src.data<2>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
-				{	// oops
-				if (!(parse_tree::INVALID & src.flags))
-					{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
-					zcc_errors.inc_error();
-					}
-				return;
-				}
-			break;
-			}
-	case 2:	{
-			if (!converts_to_integer(src.data<1>()->type_code) || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
-				{	// oops
-				if (!(parse_tree::INVALID & src.flags))
-					{
-					src.flags |= parse_tree::INVALID;
-					message_header(src.index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM(src);
-					INFORM(" compares pointer to something not an integer literal or pointer (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
-					zcc_errors.inc_error();
-					}
-				return;
-				}
-			break;
-			}
-	case 3:	{
-			break;
-			}
-	}
-	if (eval_equality_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM)) return;
+{	//! \todo check for operator overloading
+	if (!C_CPP_equality_expression_syntax_ok_core(src,types)) return;
+	eval_equality_expression(src,types,CPP_literal_converts_to_bool,CPP_intlike_literal_to_VM);
 }
 
 /*
@@ -7743,6 +7688,7 @@ static void locate_CPP_bitwise_OR(parse_tree& src, size_t& i, const type_system&
 
 static bool binary_infix_failed_boolean_arguments(parse_tree& src, const char* standard)
 {	//! \todo so the error message isn't technically right...convertible to bool in C++ is morally equivalent to scalar in C
+	// cannot test this within preprocessor
 	assert(NULL!=standard);
 	if (parse_tree::INVALID & src.flags)	// already invalid, don't make noise
 		return !converts_to_bool(src.data<1>()->type_code) || !converts_to_bool(src.data<2>()->type_code);
@@ -8149,9 +8095,11 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 				}
 			else{
 				src.type_code.set_type(0);	// incoherent type
-				src.flags |= parse_tree::INVALID;
-				if (!(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
-					{
+				if (!(src.flags & parse_tree::INVALID) && !(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
+					{	// (...) ? string : int -- error
+						//! \test default/Error_if_control64.h 
+						//! \todo (...) ? string : 0 -- do *not* error (null pointer); check true/false status
+					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM(src);
@@ -8168,9 +8116,11 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 				}
 			else{
 				src.type_code.set_type(0);	// incoherent type
-				src.flags |= parse_tree::INVALID;
-				if (!(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
-					{
+				if (!(src.flags & parse_tree::INVALID) && !(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
+					{	// (...) ? int : string -- error
+						//! \test default/Error_if_control65.h
+						//! \todo (...) ? 0 : string -- do *not* error (null pointer); check true/false status
+					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM(src);
@@ -8188,9 +8138,9 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 			else if (0==src.data<0>()->type_code.pointer_power_after_array_decay() && (C_TYPE::VOID>=src.data<0>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index))
 				{
 				src.type_code.set_type(0);	// incoherent type
-				src.flags |= parse_tree::INVALID;
-				if (!(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
-					{
+				if (!(src.flags & parse_tree::INVALID) && !(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
+					{	// can't test this from preprocessor
+					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM(src);
@@ -8210,9 +8160,9 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 				}
 			else{
 				src.type_code.set_type(0);	// incoherent type
-				src.flags |= parse_tree::INVALID;
-				if (!(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
-					{
+				if (!(src.flags & parse_tree::INVALID) && !(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
+					{	// can't test this from preprocessor
+					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM(src);
@@ -8225,13 +8175,16 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 
 	// 2) prefix arg type convertible to _Bool (control whether expression is evaluatable at all)
 	if (!converts_to_bool(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		message_header(src.index_tokens[0]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM(src);
-		INFORM(" has nonscalar control expression");
-		zcc_errors.inc_error();
+		{	// can't test this from preprocessor
+		if (!(src.flags & parse_tree::INVALID) && !(src.data<1>()->flags & parse_tree::INVALID))
+			{
+			src.flags |= parse_tree::INVALID;
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM(src);
+			INFORM(" has nonscalar control expression");
+			zcc_errors.inc_error();
+			}
 		return;
 		}
 	// 3) RAM conservation: if we have a suitable literal Do It Now
@@ -8248,6 +8201,7 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 	// \todo change target for multidimensional arrays
 	// \todo change target for const/volatile/restricted pointers
 	// NOTE: result is an lvalue if both are lvalues of identical type (C++98 5.16p4)
+	// NOTE: throw expressions play nice (they always have the type of the other half)
 	switch(cmp(src.data<0>()->type_code.pointer_power_after_array_decay(),src.data<2>()->type_code.pointer_power_after_array_decay()))
 	{
 	case 1:	{	// LHS has more guaranteed indirectability than RHS
@@ -8258,9 +8212,11 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 				}
 			else{
 				src.type_code.set_type(0);	// incoherent type
-				src.flags |= parse_tree::INVALID;
-				if (!(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
-					{
+				if (!(src.flags & parse_tree::INVALID) && !(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
+					{	// (...) ? string : int -- error
+						//! \test default/Error_if_control64.hpp
+						//! \todo (...) ? string : 0 -- do *not* error (null pointer); check true/false status
+					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM(src);
@@ -8277,9 +8233,11 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 				}
 			else{
 				src.type_code.set_type(0);	// incoherent type
-				src.flags |= parse_tree::INVALID;
-				if (!(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
-					{
+				if (!(src.flags & parse_tree::INVALID) && !(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
+					{	//! (...) ? int : string -- error
+						//! \test default/Error_if_control65.hpp
+						//! \todo (...) ? 0 : string -- do *not* error (null pointer); check true/false status
+					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM(src);
@@ -8297,9 +8255,9 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 			else if (0==src.data<0>()->type_code.pointer_power_after_array_decay() && (C_TYPE::VOID>=src.data<0>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index))
 				{
 				src.type_code.set_type(0);	// incoherent type
-				src.flags |= parse_tree::INVALID;
-				if (!(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
-					{
+				if (!(src.flags & parse_tree::INVALID) && !(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
+					{	// can't test this from preprocessor
+					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM(src);
@@ -8318,9 +8276,9 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 				}
 			else{
 				src.type_code.set_type(0);	// incoherent type
-				src.flags |= parse_tree::INVALID;
-				if (!(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
-					{
+				if (!(src.flags & parse_tree::INVALID) && !(src.data<0>()->flags & parse_tree::INVALID) && !(src.data<2>()->flags & parse_tree::INVALID))
+					{	// can't test this from preprocessor
+					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM(src);
@@ -8333,10 +8291,10 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 
 	// 2) prefix arg type convertible to bool (control whether expression is evaluatable at all)
 	if (!converts_to_bool(src.data<1>()->type_code))
-		{
-		src.flags |= parse_tree::INVALID;
-		if (!(src.data<1>()->flags & parse_tree::INVALID))
+		{	// can't test this from preprocessor
+		if (!(src.flags & parse_tree::INVALID) && !(src.data<1>()->flags & parse_tree::INVALID))
 			{
+			src.flags |= parse_tree::INVALID;
 			message_header(src.index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INC_INFORM(src);
