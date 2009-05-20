@@ -3827,6 +3827,7 @@ static bool suppress_naked_brackets_and_braces(parse_tree& src,const char* const
 				INC_INFORM(ERR_STR);
 				INC_INFORM(err_prefix,err_len);
 				INFORM(" [ ... ] has no context to interpret (C99 6.5.2p1/C++98 5.2p1)");
+				zcc_errors.inc_error();
 				return true;
 				}
 			}
@@ -3842,6 +3843,7 @@ static bool suppress_naked_brackets_and_braces(parse_tree& src,const char* const
 				INC_INFORM(ERR_STR);
 				INC_INFORM(err_prefix,err_len);
 				INFORM(" { ... } has no context to interpret (C99 6.5.2p1/C++98 5.2p1)");
+				zcc_errors.inc_error();
 				return true;
 				}
 			}
@@ -8463,14 +8465,11 @@ static void C99_locate_expressions(parse_tree& src,const size_t parent_identifie
 	// top-level [ ] and { } die regardless of contents
 	// note that top-level [ ] should be asphyxiating now
 	if (top_level && suppress_naked_brackets_and_braces(src,"top-level",sizeof("top-level")-1))
-		{
-		zcc_errors.inc_error();
 		return;
-		}
 
 	if (!src.empty<0>())
 		{
-		if (suppress_naked_brackets_and_braces(*src.c_array<0>(),"top-level",sizeof("top-level")-1)) zcc_errors.inc_error();
+		suppress_naked_brackets_and_braces(*src.c_array<0>(),"top-level",sizeof("top-level")-1);
 		parse_forward(src,types,locate_C99_postfix_expression);
 		parse_backward(src,types,locate_C99_unary_expression);
 		parse_forward(src,types,locate_C99_mult_expression);
@@ -8533,14 +8532,11 @@ static void CPP_locate_expressions(parse_tree& src,const size_t parent_identifie
 
 	// top-level [ ] and { } die regardless of contents
 	if (top_level && suppress_naked_brackets_and_braces(src,"top-level",sizeof("top-level")-1))
-		{
-		zcc_errors.inc_error();
 		return;
-		}
 
 	if (!src.empty<0>())
 		{
-		if (suppress_naked_brackets_and_braces(*src.c_array<0>(),"top-level",sizeof("top-level")-1)) zcc_errors.inc_error();
+		suppress_naked_brackets_and_braces(*src.c_array<0>(),"top-level",sizeof("top-level")-1);
 		parse_forward(src,types,locate_CPP_postfix_expression);
 		parse_backward(src,types,locate_CPP_unary_expression);
 #if 0
