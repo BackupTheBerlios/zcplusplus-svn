@@ -4,7 +4,6 @@
 # (C)2009 Kenneth Boyd, license: MIT.txt
 
 from sys import argv,exit;
-import fileinput
 
 def SpawnTestDrivers(filename):
 	shell_lines = ['#!/bin/sh\n']
@@ -64,6 +63,13 @@ def SpawnTestDrivers(filename):
 					shell_lines.append('\tfor F in '+desc[1]+'.'+suffix+'; do let ++ACCEPT_TEST; echo $'+desc[0]+' $F; if $'+desc[0]+' $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;\n');
 					batch_lines.append('@for %%f in ('+batch_desc[1]+'.'+suffix+') do @echo %'+batch_desc[0]+'% %%f & @%'+batch_desc[0]+'% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)\n')
 					batch_lines.append('@for %%f in ('+batch_desc[1]+'.'+suffix+') do @set /a ACCEPT_TEST=ACCEPT_TEST+1\n')
+			elif line.startswith('TEXTTRANSFORM '):
+				desc = line[14:].strip().split(None,1)
+				batch_desc = [desc[0].replace('/','\\'),desc[1].replace('/','\\')]
+				for suffix in suffixes:
+					shell_lines.append('\tfor F in '+desc[1]+'.'+suffix+'; do let ++ACCEPT_TEST; echo $'+desc[0]+' $F; if $'+desc[0]+' $F | cmp - $F.txt; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;\n');
+#					batch_lines.append('@for %%f in ('+batch_desc[1]+'.'+suffix+') do @echo %'+batch_desc[0]+'% %%f & @%'+batch_desc[0]+'% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)\n')
+#					batch_lines.append('@for %%f in ('+batch_desc[1]+'.'+suffix+') do @set /a ACCEPT_TEST=ACCEPT_TEST+1\n')
 			elif line.startswith('WARN '):
 				desc = line[5:].strip().split(None,1)
 				batch_desc = [desc[0].replace('/','\\'),desc[1].replace('/','\\')]

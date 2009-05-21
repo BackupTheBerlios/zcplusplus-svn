@@ -62,6 +62,11 @@ function run_tests {
 	for F in default.nonconforming/Error*.h; do let ++REJECT_TEST; echo $CPP $F; if $CPP $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
 	for F in default.nonconforming/Error*.hpp; do let ++REJECT_TEST; echo $CPP $F; if $CPP $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
 
+	echo Checking ZCC content transforms
+	echo ====
+	for F in default/Preprocess*.h; do let ++ACCEPT_TEST; echo $CPP $F; if $CPP $F | cmp - $F.txt; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/Preprocess*.hpp; do let ++ACCEPT_TEST; echo $CPP $F; if $CPP $F | cmp - $F.txt; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+
 	echo -E $BAD_PASS of $REJECT_TEST rejection tests accepted
 	if test -n "$BAD_PASS_NAME"; then echo -E $BAD_PASS_NAME; fi
 	echo -E $FAILED of $ACCEPT_TEST acceptance tests rejected

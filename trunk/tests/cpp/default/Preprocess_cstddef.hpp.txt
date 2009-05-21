@@ -1,0 +1,7 @@
+typedef int ptrdiff_t;
+typedef unsigned int size_t;
+namespace std{
+typedef int ptrdiff_t;
+typedef unsigned int size_t;
+}
+0
