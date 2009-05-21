@@ -8797,44 +8797,52 @@ bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const le
 #endif
 }
 
-static void eval_string_literal_deref(parse_tree& src,const type_system& types,const POD_pair<const char*,size_t>& str_lit,const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& tmp, bool is_negative,bool index_src_is_char)
+static void eval_string_literal_deref(parse_tree& src,const type_system& types,const POD_pair<const char*,size_t>& str_lit,const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& tmp,bool is_negative,bool index_src_is_char)
 {
 	const size_t strict_ub = LengthOfCStringLiteral(str_lit.first,str_lit.second);
 	// C99 6.2.6.2p3 -0 is not actually allowed to generate the bitpattern -0, so no trapping
-	if (is_negative && 0==tmp) is_negative = false;
+	if (is_negative && tmp==0) is_negative = false;
 	if (is_negative)
-		{
-		message_header(src.index_tokens[0]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM("undefined behavior: ");
-		INC_INFORM(src);
-		INFORM("dereferences string literal with negative index");
-		if (index_src_is_char)
-			INFORM("(does this source code want char to act like unsigned char?)");
-		src.flags |= parse_tree::INVALID;
-		zcc_errors.inc_error();
+		{	//! \test default/Error_if_control66.hpp, default/Error_if_control66.h
+			//! \test default/Error_if_control67.hpp, default/Error_if_control67.h
+		if (!(src.flags & parse_tree::INVALID))
+			{
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM("undefined behavior: ");
+			INC_INFORM(src);
+			INFORM(" dereferences string literal with negative index");
+			if (index_src_is_char)
+				INFORM("(does this source code want char to act like unsigned char?)");
+			src.flags |= parse_tree::INVALID;
+			zcc_errors.inc_error();
+			}
 		return;
 		}
 	else if (strict_ub <= tmp)
-		{
-		message_header(src.index_tokens[0]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM("undefined behavior: ");
-		INC_INFORM(src);
-		INFORM("dereferences string literal past its end");
-		if (index_src_is_char && target_machine->signed_max<virtual_machine::std_int_char>()<tmp)
+		{	//! \test default/Error_if_control68.hpp, default/Error_if_control68.h
+			//! \test default/Error_if_control69.hpp, default/Error_if_control69.h
+		if (!(src.flags & parse_tree::INVALID))
 			{
-			if (tmp.to_uint()-1==target_machine->signed_max<virtual_machine::std_int_char>())
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM("undefined behavior: ");
+			INC_INFORM(src);
+			INFORM(" dereferences string literal past its end");
+			if (index_src_is_char && target_machine->signed_max<virtual_machine::std_int_char>()<tmp)
 				{
-				INFORM("(does this source code want char to act like signed char, with integer representation sign-and-magnitude?)");
+				if (tmp.to_uint()-1==target_machine->signed_max<virtual_machine::std_int_char>())
+					{
+					INFORM("(does this source code want char to act like signed char, with integer representation sign-and-magnitude?)");
+					}
+				else if (tmp==target_machine->unsigned_max<virtual_machine::std_int_char>())
+					{
+					INFORM("(does this source code want char to act like signed char, with integer representation one's complement?)");
+					}
 				}
-			else if (tmp==target_machine->unsigned_max<virtual_machine::std_int_char>())
-				{
-				INFORM("(does this source code want char to act like signed char, with integer representation one's complement?)");
-				}
+			src.flags |= parse_tree::INVALID;
+			zcc_errors.inc_error();
 			}
-		src.flags |= parse_tree::INVALID;
-		zcc_errors.inc_error();
 		return;
 		};
 	char* tmp2 = NULL;
@@ -8850,26 +8858,26 @@ static bool
 eval_array_deref(parse_tree& src,const type_system& types,
 				 func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 				 func_traits<bool (*)(const parse_tree&)>::function_ref_type literal_converts_to_integer,
-				 func_traits<bool (*)(const parse_tree&,unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,bool&)>::function_ref_type convert_literal_to_integer)
+				 func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
-	if (is_array_deref(src))	// crunch __[...]
-		{	// canonical definition: *((__)+(...))
-		EvalParseTree(*src.c_array<0>(),types);
-		EvalParseTree(*src.c_array<1>(),types);
-		if (parse_tree::CONSTANT_EXPRESSION & src.flags)
+	if (!is_array_deref(src)) return false;
+	// crunch __[...]
+	// canonical definition: *((__)+(...))
+	EvalParseTree(*src.c_array<0>(),types);
+	EvalParseTree(*src.c_array<1>(),types);
+	if (parse_tree::CONSTANT_EXPRESSION & src.flags)
+		{
+		const unsigned int str_index = 	(C_TESTFLAG_STRING_LITERAL==src.data<0>()->index_tokens[0].flags) ? 0 :
+										(C_TESTFLAG_STRING_LITERAL==src.data<1>()->index_tokens[0].flags) ? 1 : UINT_MAX;
+		if (UINT_MAX>str_index)
 			{
-			const unsigned int str_index = 	(C_TESTFLAG_STRING_LITERAL==src.data<0>()->index_tokens[0].flags) ? 0 :
-											(C_TESTFLAG_STRING_LITERAL==src.data<1>()->index_tokens[0].flags) ? 1 : UINT_MAX;
-			if (UINT_MAX>str_index && literal_converts_to_integer(*src.data(1-str_index)))
-				{
-				unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp; 
-				bool is_negative = false;
-				if (!convert_literal_to_integer(*src.data(1-str_index),tmp,is_negative)) return true;
-				eval_string_literal_deref(src,types,src.data(str_index)->index_tokens[0].token,tmp,is_negative,C_TESTFLAG_CHAR_LITERAL==src.data<0>()->index_tokens[0].flags);
-				return true;
-				}
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp; 
+			if (!intlike_literal_to_VM(tmp,*src.data(1-str_index))) return false;
+			const size_t promoted_type = default_promote_type(src.type_code.base_type_index);
+			const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((promoted_type-C_TYPE::INT)/2+virtual_machine::std_int_int);
+			eval_string_literal_deref(src,types,src.data(str_index)->index_tokens[0].token,tmp,tmp.test(target_machine->C_bit(machine_type)-1),C_TESTFLAG_CHAR_LITERAL==src.data(1-str_index)->index_tokens[0].flags);
+			return true;
 			}
-		return true;
 		}
 	return false;
 }
@@ -9172,7 +9180,7 @@ static bool C99_EvalParseTree(parse_tree& src,const type_system& types)
 	const size_t starting_errors = zcc_errors.err_count();
 RestartEval:
 	if (src.is_atomic() || (parse_tree::INVALID & src.flags)) return starting_errors==zcc_errors.err_count();
-	if (eval_array_deref(src,types,C99_EvalParseTree,C99_literal_converts_to_integer,C99_convert_literal_to_integer)) goto RestartEval;
+	if (eval_array_deref(src,types,C99_EvalParseTree,C99_literal_converts_to_integer,C99_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_conditional_operator(src,types,C99_EvalParseTree,C99_literal_converts_to_bool)) goto RestartEval;
 	if (eval_logical_OR(src,types,C99_EvalParseTree,is_C99_logical_OR_expression,C99_literal_converts_to_bool)) goto RestartEval;
 	if (eval_logical_AND(src,types,C99_EvalParseTree,is_C99_logical_AND_expression,C99_literal_converts_to_bool)) goto RestartEval;
@@ -9200,7 +9208,7 @@ static bool CPP_EvalParseTree(parse_tree& src,const type_system& types)
 	const size_t starting_errors = zcc_errors.err_count();
 RestartEval:
 	if (src.is_atomic() || (parse_tree::INVALID & src.flags)) return starting_errors==zcc_errors.err_count();
-	if (eval_array_deref(src,types,CPP_EvalParseTree,CPP_literal_converts_to_integer,CPlusPlus_convert_literal_to_integer)) goto RestartEval;
+	if (eval_array_deref(src,types,CPP_EvalParseTree,CPP_literal_converts_to_integer,CPP_intlike_literal_to_VM)) goto RestartEval;
 	if (eval_conditional_operator(src,types,CPP_EvalParseTree,CPP_literal_converts_to_bool)) goto RestartEval;
 	if (eval_logical_OR(src,types,CPP_EvalParseTree,is_CPP_logical_OR_expression,CPP_literal_converts_to_bool)) goto RestartEval;
 	if (eval_logical_AND(src,types,CPP_EvalParseTree,is_CPP_logical_AND_expression,CPP_literal_converts_to_bool)) goto RestartEval;
