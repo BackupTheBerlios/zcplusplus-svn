@@ -628,9 +628,9 @@ void CPreprocessor::detailed_UNICODE_syntax(Token<char>& x) const
 			else if (Lang::C==lang_code)
 				{	// C rejects anything escapeish, or in the source character set
 					//! \test UNICODE.C99/Error_Source.h
-					//! \test UNICODE.C99/Error_Source2.hpp
+					//! \test UNICODE.C99/Error_Source2.h
 				if ('$'!=tmp && '@'!=tmp && '`'!=tmp)	//! \todo deal with ASCII dependence
-					{	//! \bug need testcase
+					{
 					message_header(x);
 					INC_INFORM(ERR_STR);
 					INFORM("UNICODE escape is in the source character set (C99 6.4.3p1)");
@@ -1081,8 +1081,8 @@ RestartAfterInclude:
 ObjectLikeMacroEmptyString:
 							if (	 0<=function_macro_index
 								|| 	(0<=object_macro_index && NULL!=macros_object_expansion[object_macro_index]))
-								{	//! \test Error_define_dup1.hpp
-									//! \test Error_define_dup2.hpp
+								{	//! \test define.C99/Error_dup1.hpp, define.C99/Error_dup1.h
+									//! \test define.C99/Error_dup2.hpp, define.C99/Error_dup2.h
 								discard_duplicate_define(TokenList,i,critical_offset,first_token_len);
 								if (0==i) goto Restart;
 								--i;
@@ -1090,7 +1090,7 @@ ObjectLikeMacroEmptyString:
 								};
 							if (0<=object_macro_index)
 								{	// already present: discard silently
-									//! \test Pass_define_dup1.hpp
+									//! \test define.C99/Pass_dup1.hpp, define.C99/Pass_dup1.h
 								TokenList.DeleteIdx(i);	// discard silently
 								if (0==i) goto Restart;
 								--i;
@@ -1109,9 +1109,9 @@ ObjectLikeMacroEmptyString:
 							{	// object-like, not empty string
 							if (	0<=function_macro_index
 								|| 	(0<=object_macro_index && NULL==macros_object_expansion[object_macro_index]))
-								{	//! \test Error_define_dup3.hpp
-									//! \test Error_define_dup4.hpp
-									//! \test Pass_define_dup2.hpp
+								{	//! \test define.C99/Error_dup3.hpp, define.C99/Error_dup3.h
+									//! \test define.C99/Error_dup4.hpp, define.C99/Error_dup4.h
+									//! \test define.C99/Pass_dup2.hpp, define.C99/Pass_dup2.h
 								discard_duplicate_define(TokenList,i,critical_offset,first_token_len);
 								if (0==i) goto Restart;
 								--i;
@@ -1119,14 +1119,14 @@ ObjectLikeMacroEmptyString:
 								}
 							Token<char> expansion(*TokenList[i],critical_offset+first_token_len,TokenList[i]->size()-(critical_offset+first_token_len),0);
 							normalize_macro_expansion(expansion,*TokenList[i],critical_offset,first_token_len);
-							//! \test Pass_define_dup2.hpp
-							//! \test Error_define_concatenate1.hpp
-							//! \test Error_define_concatenate2.hpp
+							//! \test define.C99/Pass_dup2.hpp, define.C99/Pass_dup2.h
+							//! \test define.C99/Error_concatenate1.hpp, define.C99/Error_concatenate1.h
+							//! \test define.C99/Error_concatenate2.hpp, define.C99/Error_concatenate2.h
 							if (discard_leading_trailing_concatenate_op(expansion))
 								goto ObjectLikeMacroEmptyString;
 							if (0<=object_macro_index)
-								{	//! \test Error_define_dup5.hpp
-									//! \test Pass_define_dup2.hpp
+								{	//! \test define.C99/Error_dup5.hpp, define.C99/Error_dup5.h
+									//! \test define.C99/Pass_dup2.hpp, define.C99/Pass_dup2.h
 								if (strcmp(expansion.data(),macros_object_expansion[object_macro_index]->data()))
 									discard_duplicate_define(TokenList,i,critical_offset,first_token_len);
 								else
@@ -1136,7 +1136,7 @@ ObjectLikeMacroEmptyString:
 								continue;
 								};
 							if (C99_VA_ARGS_flinch(expansion,0))
-								{	//! \test Error_define_VA_ARGS.hpp
+								{	//! \test define.C99/Error_VA_ARGS.hpp, define.C99/Error_VA_ARGS.h
 								message_header(expansion);
 								INFORM("discarding macro");
 								TokenList.DeleteIdx(i);
@@ -1160,7 +1160,7 @@ ObjectLikeMacroEmptyString:
 							expansion.MoveInto(*macros_object_expansion[object_macro_insertion_index]);
 							object_macro_concatenate(*macros_object_expansion_pre_eval[object_macro_insertion_index]);
 							if (C99_VA_ARGS_flinch(*macros_object_expansion_pre_eval[object_macro_insertion_index],0))
-								{	//! \test Error_define_concatenate5.hpp
+								{	//! \test define.C99/Error_concatenate5.hpp, define.C99/Error_concatenate5.h
 								message_header(*macros_object_expansion_pre_eval[object_macro_insertion_index]);
 								INFORM("discarding macro");
 								macros_object.DeleteIdx(object_macro_insertion_index);
@@ -1189,7 +1189,7 @@ ObjectLikeMacroEmptyString:
 								continue;
 								};
 							if (0<=object_macro_index)
-								{	//! \test Error_define_dup6.hpp
+								{	//! \test define.C99/Error_dup6.hpp, define.C99/Error_dup6.h
 								discard_duplicate_define(TokenList,i,critical_offset,first_token_len);
 								if (0==i) goto Restart;
 								--i;
@@ -1198,7 +1198,7 @@ ObjectLikeMacroEmptyString:
 							Token<char> arglist(*TokenList[i],critical_offset+first_token_len,argspan,0);
 							normalize_macro_expansion(arglist,*TokenList[i],critical_offset,first_token_len);	// should be no string literals here, so should be no errors here
 							if (0<=function_macro_index && strcmp(arglist.data(),macros_function_arglist[function_macro_index]->data()))
-								{	//! \test Error_define_dup7.hpp
+								{	//! \test define.C99/Error_dup7.hpp, define.C99/Error_dup7.h
 								discard_duplicate_define(TokenList,i,critical_offset,first_token_len);
 								if (0==i) goto Restart;
 								--i;
@@ -1213,8 +1213,8 @@ ObjectLikeMacroEmptyString:
 							if (TokenList[i]->size()-(critical_offset+first_token_len)<=argspan)
 								{	// empty expansion
 FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
-									{	//! \test Error_define_dup9.hpp
-										//! \test Pass_define_dup4.hpp
+									{	//! \test define.C99/Error_dup9.hpp, define.C99/Error_dup9.h
+										//! \test define.C99/Pass_dup4.h, define.C99/Pass_dup4.h
 									if (NULL!=macros_function_expansion[function_macro_index])
 										discard_duplicate_define(TokenList,i,critical_offset,first_token_len);
 									else
@@ -1247,8 +1247,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 							if (discard_leading_trailing_concatenate_op(expansion))
 								goto FunctionLikeMacroEmptyString;
 							if (0<=function_macro_index)
-								{	//! \test Error_define_dup8.hpp
-									//! \test Pass_define_dup3.hpp
+								{	//! \test define.C99/Error_dup8.hpp, define.C99/Error_dup8.h
+									//! \test define.C99/Pass_dup3.h, define.C99/Pass_dup3.h
 								if (strcmp(expansion.data(),macros_function_expansion[function_macro_index]->data()))
 									discard_duplicate_define(TokenList,i,critical_offset,first_token_len);
 								else
@@ -1258,8 +1258,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								continue;
 								};
 							if ((5>arglist.size() || strcmp(arglist.end()-(sizeof("...)")-1),"...)")) && C99_VA_ARGS_flinch(expansion,0))
-								{	//! \test Error_define_VA_ARGS2.hpp
-									//! \test Pass_define_VA_ARGS.hpp
+								{	//! \test define.C99/Error_VA_ARGS2.hpp, define.C99/Error_VA_ARGS2.h
+									//! \test define.C99/Pass_VA_ARGS.hpp, define.C99/Pass_VA_ARGS.h
 								message_header(expansion);
 								INFORM("discarding macro");
 								TokenList.DeleteIdx(i);
@@ -1293,8 +1293,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								{
 								function_macro_concatenate_novars(*macros_function_expansion_pre_eval[function_macro_insertion_index], *macros_function_arglist[function_macro_insertion_index]);
 								if ((5>macros_function_arglist[function_macro_insertion_index]->size() || strcmp(macros_function_arglist[function_macro_insertion_index]->end()-(sizeof("...)")-1),"...)")) && C99_VA_ARGS_flinch(*macros_function_expansion_pre_eval[function_macro_insertion_index],0))
-									{	//! \test Error_define_concatenate6.hpp
-										//! \test Pass_define_concatenate3.hpp
+									{	//! \test define.C99/Error_concatenate6.hpp, define.C99/Error_concatenate6.h
+										//! \test define.C99/Pass_concatenate3.hpp, define.C99/Pass_concatenate3.h
 									message_header(*macros_function_expansion_pre_eval[function_macro_insertion_index]);
 									INFORM("discarding macro");
 									macros_function.DeleteIdx(function_macro_insertion_index);
@@ -2919,7 +2919,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 		if ((sizeof("defined")-1)==pretokenized[i].second && !strncmp(x.data()+pretokenized[i].first,"defined",(sizeof("defined")-1)))
 			{
 			if (i+1>=pretokenized.size())
-				{	//! \test Error_defined_malformed1.hpp (#if)
+				{	//! \test defined.C99/Error_malformed1.hpp, defined.C99/Error_malformed1.h
 				message_header(x);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("malformed defined operator application (C99 6.10.1p1/C++98 16.1p1)");
@@ -2957,7 +2957,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 			else if (token_is_char<'('>(x.data(),pretokenized[i+1]))
 				{	// defined(IDENTIFIER) [hopefully]
 				if (i+3>=pretokenized.size())
-					{	//! \test Error_defined_malformed3.hpp (#if)
+					{	//! \test defined.C99/Error_malformed3.hpp, defined.C99/Error_malformed3.h
 					message_header(x);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("malformed defined operator application  (C99 6.10.1p1/C++98 16.1p1)");
@@ -2994,8 +2994,8 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 					STL_translate_first(critical_offset,pretokenized);	// coordinate fixup
 					continue;
 					};
-				//! \test Error_defined_nonidentifier.hpp (#if)
-				//! \test Error_defined_excess_tokens.hpp (#if)
+				//! \test defined.C99/Error_nonidentifier.hpp, defined.C99/Error_nonidentifier.h
+				//! \test defined.C99/Error_excess_tokens.hpp, defined.C99/Error_excess_tokens.h
 				message_header(x);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("malformed defined operator application  (C99 6.10.1p1/C++98 16.1p1)");
@@ -3004,7 +3004,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 				bad_control = true;
 				continue;
 				};
-			//! \test Error_defined_malformed2.hpp (#if)
+			//! \test defined.C99/Error_malformed2.hpp, defined.C99/Error_malformed2.h
 			message_header(x);
 			INC_INFORM(ERR_STR);
 			INC_INFORM("malformed defined operator application  (C99 6.10.1p1/C++98 16.1p1)");
@@ -3620,8 +3620,8 @@ static bool _concatenate_single(Token<char>& x,const POD_triple<size_t,size_t,le
 	lex_flags scratch_flags;
 	const size_t new_token_len = lang.UnfilteredNextToken(new_token.data(),scratch_flags);
 	if (new_token_len!=new_token.size())
-		{	//! \test Error_define_concatenate3.hpp
-			//! \test Error_define_concatenate4.hpp
+		{	//! \test define.C99/Error_concatenate3.hpp, define.C99/Error_concatenate3.h
+			//! \test define.C99/Error_concatenate4.hpp, define.C99/Error_concatenate4.h
 		message_header(x);
 		INC_INFORM(ERR_STR);
 		INC_INFORM("## concatenation result ");
@@ -3637,8 +3637,8 @@ static bool _concatenate_single(Token<char>& x,const POD_triple<size_t,size_t,le
 		return false;
 		};
 	// splice it
-	//! \test Pass_define_concatenate1.hpp
-	//! \test Pass_define_concatenate2.hpp
+	//! \test define.C99/Pass_concatenate1.hpp, define.C99/Pass_concatenate1.h
+	//! \test define.C99/Pass_concatenate2.hpp, define.C99/Pass_concatenate2.h
 	x.replace_once(pretokenized[0].first,(pretokenized[2].first-pretokenized[0].first)+pretokenized[2].second,new_token.data());
 	return true;
 }
@@ -3830,12 +3830,12 @@ CPreprocessor::normalize_macro_expansion(Token<char>& x, const Token<char>& src,
 		if (x.size()<=offset)
 			{
 			if 		(C_TESTFLAG_STRING_LITERAL==token_flags)
-				//! \test Error_define_unterminated3.hpp
-				//! \test Error_define_unterminated4.hpp
+				//! \test define.C99/Error_unterminated3.hpp, define.C99/Error_unterminated3.h
+				//! \test define.C99/Error_unterminated4.hpp, define.C99/Error_unterminated4.h
 				_complete_string_character_literal_define(x,src,critical_offset,first_token_len,'"'," string literal.  Terminating. (C99 6.4.5p1/C++98 2.13.4)");
 			else if (C_TESTFLAG_CHAR_LITERAL  ==token_flags)
-				//! \test Error_define_unterminated1.hpp
-				//! \test Error_define_unterminated2.hpp
+				//! \test define.C99/Error_unterminated1.hpp, define.C99/Error_unterminated1.h
+				//! \test define.C99/Error_unterminated2.hpp, define.C99/Error_unterminated2.h
 				_complete_string_character_literal_define(x,src,critical_offset,first_token_len,'\''," character literal.  Terminating. (C99 6.4.4.4p1/C++98 2.13.2)");
 			return;
 			}
@@ -3843,11 +3843,11 @@ CPreprocessor::normalize_macro_expansion(Token<char>& x, const Token<char>& src,
 		if (0<skip_ws)
 			{
 			if (x.size()-offset<=skip_ws)
-				{	//! \test Pass_define_dup5.hpp
+				{	//! \test define.C99/Pass_dup5.hpp, define.C99/Pass_dup5.h
 				x.lslice(offset);
 				return;
 				};
-			//! \test Pass_define_dup6.hpp
+			//! \test define.C99/Pass_dup6.hpp, define.C99/Pass_dup6.h
 			x.replace_once(std::nothrow,offset,skip_ws,' ');
 			++offset;
 			};
@@ -4255,13 +4255,13 @@ CPreprocessor::function_macro_argument_span(const char* const x) const
 	while(x_len>span)
 		{
 		if (lang.IsWS_NotFirst(x[span]))
-			{	//! \test Error_define_arglist4.hpp
-				//! \test Error_define_arglist8.hpp
+			{	//! \test define.C99/Error_arglist4.hpp, define.C99/Error_arglist4.h
+				//! \test define.C99/Error_arglist8.hpp, define.C99/Error_arglist8.h
 			span += strspn(x+span,lang.WhiteSpace+1);
 			continue;
 			};
 		if (')'==x[span])
-			{	//! \test Error_define_arglist5.hpp
+			{	//! \test define.C99/Error_arglist5.hpp, define.C99/Error_arglist5.h
 			if (!any_identifier || any_ellipsis || !identifier_next) return span+1;
 			INFORM(") after , in function-like macro argument list.");
 			return 0;
@@ -4269,12 +4269,12 @@ CPreprocessor::function_macro_argument_span(const char* const x) const
 		if (','==x[span])
 			{
 			if (identifier_next)
-				{	//! \test Error_define_arglist6.hpp
+				{	//! \test define.C99/Error_arglist6.hpp, define.C99/Error_arglist6.h
 				INFORM(", when identifier or ... expected in function-like macro argument list.");
 				return 0;
 				}
 			if (any_ellipsis)
-				{	//! \test Error_define_arglist7.hpp
+				{	//! \test define.C99/Error_arglist7.hpp, define.C99/Error_arglist7.h
 				INFORM(", after ... in function-like macro argument list.");
 				return 0;
 				}
@@ -4296,7 +4296,7 @@ CPreprocessor::function_macro_argument_span(const char* const x) const
 				any_identifier = true;
 				continue;
 				};
-			//! \test Error_define_arglist8.hpp
+			//! \test define.C99/Error_arglist8.hpp, define.C99/Error_arglist8.h
 			INC_INFORM("Missing comma in function-like macro argument list before placeholder ");
 			INC_INFORM(x+span,token_len);
 			INFORM(".");
@@ -4305,24 +4305,24 @@ CPreprocessor::function_macro_argument_span(const char* const x) const
 		else if (C_TESTFLAG_NONATOMIC_PP_OP_PUNC==scratch_flags && 3==token_len && !strncmp(x+span,"...",3))
 			{
 			if (identifier_next)
-				{	//! \test Pass_define_arglist.hpp
+				{	//! \test define.C99/Pass_arglist.hpp, define.C99/Pass_arglist.h
 				span += token_len;
 				identifier_next = false;
 				any_ellipsis = true;
 				continue;
 				};
-			//! \test Error_define_arglist3.hpp
-			//! \test Error_define_arglist4.hpp
+			//! \test define.C99/Error_arglist3.hpp, define.C99/Error_arglist3.h
+			//! \test define.C99/Error_arglist4.hpp, define.C99/Error_arglist4.h
 			INFORM("Missing comma in function-like macro argument list before ...");
 			return 0;
 			};
-		//! \test Error_define_arglist2.hpp
+		//! \test define.C99/Error_arglist2.hpp, define.C99/Error_arglist2.h
 		INC_INFORM("Unexpected token ");
 		INC_INFORM(x+span,token_len);
 		INFORM(" in function-like macro argument list.");
 		return 0;
 		};
-	//! \test Error_define_arglist1.hpp
+	//! \test define.C99/Error_arglist1.hpp, define.C99/Error_arglist1.h
 	return 0;
 }
 
@@ -4504,7 +4504,7 @@ CPreprocessor::flush_bad_stringize(Token<char>& x, const Token<char>& arglist)
 			if (detect_C_stringize_op(x.data()+pretokenized[i].first,pretokenized[i].second))
 				{
 				if (pretokenized[i].first+pretokenized[i].second!=pretokenized[i+1].first)
-					{	//! \test Error_define_stringize2.hpp
+					{	//! \test define.C99/Error_stringize2.hpp, define.C99/Error_stringize2.h
 					message_header(x);
 					INC_INFORM(ERR_STR);
 					INFORM("# followed by whitespace; excising and continuing (C99 6.10.3.2p1/C++98 16.3.2p1)");
@@ -4516,7 +4516,7 @@ CPreprocessor::flush_bad_stringize(Token<char>& x, const Token<char>& arglist)
 					}
 				if (   C_TESTFLAG_IDENTIFIER!=pretokenized[i+1].third
 					|| SIZE_MAX==lang.lex_find(arglist.data(),arglist.size(),x.data()+pretokenized[i+1].first,pretokenized[i+1].second))
-					{	//! \test Error_define_stringize3.hpp
+					{	//! \test define.C99/Error_stringize3.hpp, define.C99/Error_stringize3.h
 					message_header(x);
 					INC_INFORM(ERR_STR);
 					INFORM("# not followed by macro parameter; excising and continuing (C99 6.10.3.2p1/C++98 16.3.2p1)");
@@ -4531,7 +4531,7 @@ CPreprocessor::flush_bad_stringize(Token<char>& x, const Token<char>& arglist)
 			}
 
 		if (detect_C_stringize_op(x.data()+pretokenized.back().first,pretokenized.back().second))
-			{	//! \test Error_define_stringize1.hpp
+			{	//! \test define.C99/Error_stringize1.hpp, define.C99/Error_stringize1.h
 			message_header(x);
 			INC_INFORM(ERR_STR);
 			INFORM("# terminates macro replacement list; truncating and continuing (C99 6.10.3.2p1/C++98 16.3.2p1)");
