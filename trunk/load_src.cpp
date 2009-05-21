@@ -170,8 +170,7 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 }
 
 // can throw std::bad_alloc.
-bool
-load_raw_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const char* const filename)
+bool load_raw_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const char* const filename)
 {
 	char* Buffer = NULL;
 #ifndef ZAIMONI_FORCE_ISO
@@ -213,6 +212,20 @@ load_raw_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList
 		}
 	}
 
+	SUCCEED_OR_DIE(TokenList.InsertNSlotsAt(1,0));
+#ifndef ZAIMONI_FORCE_ISO
+	TokenList[0] = new(std::nothrow) Token<char>(Buffer,filename);
+#else
+	TokenList[0] = new(std::nothrow) Token<char>(Buffer,Buffer_size,filename);
+	Buffer_size = 0;
+#endif
+	if (NULL==TokenList[0])
+		{
+		free(Buffer);
+		TokenList.clear();
+		return false;
+		}
+
 	char* newline_where = strchr(TokenList.back()->data(),'\n');
 	while(NULL!=newline_where)
 	{
@@ -228,7 +241,6 @@ load_raw_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList
 		}
 		newline_where = strchr(TokenList.back()->data(),'\n');
 	}
-
 	return true;
 }
 

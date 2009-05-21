@@ -9417,11 +9417,14 @@ PP_auxfunc CPlusPlus_aux
 	ConcatenateCStringLiterals
 	};
 
+#if 0
+// this is causing crashes post-exit
 static void clear_lexer_defs(void)
 {
 	delete CLexer;
 	delete CPlusPlusLexer;
 }
+#endif
 
 void
 InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
@@ -9483,7 +9486,9 @@ InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
 	CPlusPlusLexer->InstallTokenizer(&LengthOfCIdentifier,CPP_FLAG_IDENTIFIER);
 	CPlusPlusLexer->InstallTokenizer(&LengthOfCPreprocessingNumber,CPP_FLAG_PP_NUMERAL);
 
+#if 0
 	if (atexit(clear_lexer_defs)) FATAL("atexit handler not installed");
+#endif
 
 	// integrity checks on the data definitions
 	// do the constants match the function calls
