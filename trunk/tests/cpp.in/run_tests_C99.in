@@ -7,12 +7,15 @@ VAR CPP ../../z_cpp --pedantic
 ECHO Checking ISO error requirements
 ERROR CPP Error*
 ERROR CPP UNICODE.C99/Error*
+ERROR CPP define.C99/Error*
+ERROR CPP defined.C99/Error*
 ERROR CPP ifdef.C99/Error*
 ERROR CPP if.C99/Error*
 
 ECHO Checking ISO acceptance requirements
 PASS CPP Warn*
 PASS CPP Pass*
+PASS CPP define.C99/Pass*
 PASS CPP if.C99/Pass*
 
 EPILOG

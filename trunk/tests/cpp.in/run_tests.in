@@ -9,6 +9,8 @@ VAR CPP_ISO ../../z_cpp --pedantic
 ECHO Checking ISO error requirements
 ERROR CPP_ISO Error*
 ERROR CPP_ISO UNICODE.C99/Error*
+ERROR CPP_ISO define.C99/Error*
+ERROR CPP_ISO defined.C99/Error*
 ERROR CPP_ISO ifdef.C99/Error*
 ERROR CPP_ISO if.C99/Error*
 
@@ -17,6 +19,7 @@ WARN CPP_ISO Warn*
 
 ECHO Checking ISO acceptance requirements
 PASS CPP_ISO Pass*
+PASS CPP_ISO define.C99/Pass*
 PASS CPP_ISO if.C99/Pass*
 
 ECHO Checking ZCC implementation-defined errors and features

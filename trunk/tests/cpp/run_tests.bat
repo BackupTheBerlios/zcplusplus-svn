@@ -22,6 +22,14 @@
 @for %%f in (UNICODE.C99\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
 @for %%f in (UNICODE.C99\Error*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (UNICODE.C99\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (define.C99\Error*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (define.C99\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (define.C99\Error*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (define.C99\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (defined.C99\Error*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (defined.C99\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (defined.C99\Error*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (defined.C99\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
 @for %%f in (ifdef.C99\Error*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (ifdef.C99\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
 @for %%f in (ifdef.C99\Error*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
@@ -46,6 +54,10 @@
 @for %%f in (Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 @for %%f in (Pass*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (define.C99\Pass*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (define.C99\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (define.C99\Pass*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (define.C99\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 @for %%f in (if.C99\Pass*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (if.C99\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 @for %%f in (if.C99\Pass*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
