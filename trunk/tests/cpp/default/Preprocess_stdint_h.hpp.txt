@@ -1,0 +1,549 @@
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
+typedef unsigned long long uint64_t;
+typedef signed char int8_t;
+typedef short int16_t;
+typedef int int32_t;
+typedef long long int64_t;
+typedef int intptr_t;
+typedef unsigned int uintptr_t;
+typedef long long intmax_t;
+typedef unsigned long long uintmax_t;
+typedef signed char int_fast8_t;
+typedef unsigned int uint_fast8_t;
+typedef signed char int_least8_t;
+typedef unsigned char uint_least8_t;
+typedef short int_fast9_t;
+typedef unsigned int uint_fast9_t;
+typedef short int_least9_t;
+typedef unsigned short uint_least9_t;
+typedef short int_fast10_t;
+typedef unsigned int uint_fast10_t;
+typedef short int_least10_t;
+typedef unsigned short uint_least10_t;
+typedef short int_fast11_t;
+typedef unsigned int uint_fast11_t;
+typedef short int_least11_t;
+typedef unsigned short uint_least11_t;
+typedef short int_fast12_t;
+typedef unsigned int uint_fast12_t;
+typedef short int_least12_t;
+typedef unsigned short uint_least12_t;
+typedef short int_fast13_t;
+typedef unsigned int uint_fast13_t;
+typedef short int_least13_t;
+typedef unsigned short uint_least13_t;
+typedef short int_fast14_t;
+typedef unsigned int uint_fast14_t;
+typedef short int_least14_t;
+typedef unsigned short uint_least14_t;
+typedef short int_fast15_t;
+typedef unsigned int uint_fast15_t;
+typedef short int_least15_t;
+typedef unsigned short uint_least15_t;
+typedef short int_fast16_t;
+typedef unsigned int uint_fast16_t;
+typedef short int_least16_t;
+typedef unsigned short uint_least16_t;
+typedef int int_fast17_t;
+typedef unsigned int uint_fast17_t;
+typedef int int_least17_t;
+typedef unsigned int uint_least17_t;
+typedef int int_fast18_t;
+typedef unsigned int uint_fast18_t;
+typedef int int_least18_t;
+typedef unsigned int uint_least18_t;
+typedef int int_fast19_t;
+typedef unsigned int uint_fast19_t;
+typedef int int_least19_t;
+typedef unsigned int uint_least19_t;
+typedef int int_fast20_t;
+typedef unsigned int uint_fast20_t;
+typedef int int_least20_t;
+typedef unsigned int uint_least20_t;
+typedef int int_fast21_t;
+typedef unsigned int uint_fast21_t;
+typedef int int_least21_t;
+typedef unsigned int uint_least21_t;
+typedef int int_fast22_t;
+typedef unsigned int uint_fast22_t;
+typedef int int_least22_t;
+typedef unsigned int uint_least22_t;
+typedef int int_fast23_t;
+typedef unsigned int uint_fast23_t;
+typedef int int_least23_t;
+typedef unsigned int uint_least23_t;
+typedef int int_fast24_t;
+typedef unsigned int uint_fast24_t;
+typedef int int_least24_t;
+typedef unsigned int uint_least24_t;
+typedef int int_fast25_t;
+typedef unsigned int uint_fast25_t;
+typedef int int_least25_t;
+typedef unsigned int uint_least25_t;
+typedef int int_fast26_t;
+typedef unsigned int uint_fast26_t;
+typedef int int_least26_t;
+typedef unsigned int uint_least26_t;
+typedef int int_fast27_t;
+typedef unsigned int uint_fast27_t;
+typedef int int_least27_t;
+typedef unsigned int uint_least27_t;
+typedef int int_fast28_t;
+typedef unsigned int uint_fast28_t;
+typedef int int_least28_t;
+typedef unsigned int uint_least28_t;
+typedef int int_fast29_t;
+typedef unsigned int uint_fast29_t;
+typedef int int_least29_t;
+typedef unsigned int uint_least29_t;
+typedef int int_fast30_t;
+typedef unsigned int uint_fast30_t;
+typedef int int_least30_t;
+typedef unsigned int uint_least30_t;
+typedef int int_fast31_t;
+typedef unsigned int uint_fast31_t;
+typedef int int_least31_t;
+typedef unsigned int uint_least31_t;
+typedef int int_fast32_t;
+typedef unsigned int uint_fast32_t;
+typedef int int_least32_t;
+typedef unsigned int uint_least32_t;
+typedef long long int_fast33_t;
+typedef unsigned long long uint_fast33_t;
+typedef long long int_least33_t;
+typedef unsigned long long uint_least33_t;
+typedef long long int_fast34_t;
+typedef unsigned long long uint_fast34_t;
+typedef long long int_least34_t;
+typedef unsigned long long uint_least34_t;
+typedef long long int_fast35_t;
+typedef unsigned long long uint_fast35_t;
+typedef long long int_least35_t;
+typedef unsigned long long uint_least35_t;
+typedef long long int_fast36_t;
+typedef unsigned long long uint_fast36_t;
+typedef long long int_least36_t;
+typedef unsigned long long uint_least36_t;
+typedef long long int_fast37_t;
+typedef unsigned long long uint_fast37_t;
+typedef long long int_least37_t;
+typedef unsigned long long uint_least37_t;
+typedef long long int_fast38_t;
+typedef unsigned long long uint_fast38_t;
+typedef long long int_least38_t;
+typedef unsigned long long uint_least38_t;
+typedef long long int_fast39_t;
+typedef unsigned long long uint_fast39_t;
+typedef long long int_least39_t;
+typedef unsigned long long uint_least39_t;
+typedef long long int_fast40_t;
+typedef unsigned long long uint_fast40_t;
+typedef long long int_least40_t;
+typedef unsigned long long uint_least40_t;
+typedef long long int_fast41_t;
+typedef unsigned long long uint_fast41_t;
+typedef long long int_least41_t;
+typedef unsigned long long uint_least41_t;
+typedef long long int_fast42_t;
+typedef unsigned long long uint_fast42_t;
+typedef long long int_least42_t;
+typedef unsigned long long uint_least42_t;
+typedef long long int_fast43_t;
+typedef unsigned long long uint_fast43_t;
+typedef long long int_least43_t;
+typedef unsigned long long uint_least43_t;
+typedef long long int_fast44_t;
+typedef unsigned long long uint_fast44_t;
+typedef long long int_least44_t;
+typedef unsigned long long uint_least44_t;
+typedef long long int_fast45_t;
+typedef unsigned long long uint_fast45_t;
+typedef long long int_least45_t;
+typedef unsigned long long uint_least45_t;
+typedef long long int_fast46_t;
+typedef unsigned long long uint_fast46_t;
+typedef long long int_least46_t;
+typedef unsigned long long uint_least46_t;
+typedef long long int_fast47_t;
+typedef unsigned long long uint_fast47_t;
+typedef long long int_least47_t;
+typedef unsigned long long uint_least47_t;
+typedef long long int_fast48_t;
+typedef unsigned long long uint_fast48_t;
+typedef long long int_least48_t;
+typedef unsigned long long uint_least48_t;
+typedef long long int_fast49_t;
+typedef unsigned long long uint_fast49_t;
+typedef long long int_least49_t;
+typedef unsigned long long uint_least49_t;
+typedef long long int_fast50_t;
+typedef unsigned long long uint_fast50_t;
+typedef long long int_least50_t;
+typedef unsigned long long uint_least50_t;
+typedef long long int_fast51_t;
+typedef unsigned long long uint_fast51_t;
+typedef long long int_least51_t;
+typedef unsigned long long uint_least51_t;
+typedef long long int_fast52_t;
+typedef unsigned long long uint_fast52_t;
+typedef long long int_least52_t;
+typedef unsigned long long uint_least52_t;
+typedef long long int_fast53_t;
+typedef unsigned long long uint_fast53_t;
+typedef long long int_least53_t;
+typedef unsigned long long uint_least53_t;
+typedef long long int_fast54_t;
+typedef unsigned long long uint_fast54_t;
+typedef long long int_least54_t;
+typedef unsigned long long uint_least54_t;
+typedef long long int_fast55_t;
+typedef unsigned long long uint_fast55_t;
+typedef long long int_least55_t;
+typedef unsigned long long uint_least55_t;
+typedef long long int_fast56_t;
+typedef unsigned long long uint_fast56_t;
+typedef long long int_least56_t;
+typedef unsigned long long uint_least56_t;
+typedef long long int_fast57_t;
+typedef unsigned long long uint_fast57_t;
+typedef long long int_least57_t;
+typedef unsigned long long uint_least57_t;
+typedef long long int_fast58_t;
+typedef unsigned long long uint_fast58_t;
+typedef long long int_least58_t;
+typedef unsigned long long uint_least58_t;
+typedef long long int_fast59_t;
+typedef unsigned long long uint_fast59_t;
+typedef long long int_least59_t;
+typedef unsigned long long uint_least59_t;
+typedef long long int_fast60_t;
+typedef unsigned long long uint_fast60_t;
+typedef long long int_least60_t;
+typedef unsigned long long uint_least60_t;
+typedef long long int_fast61_t;
+typedef unsigned long long uint_fast61_t;
+typedef long long int_least61_t;
+typedef unsigned long long uint_least61_t;
+typedef long long int_fast62_t;
+typedef unsigned long long uint_fast62_t;
+typedef long long int_least62_t;
+typedef unsigned long long uint_least62_t;
+typedef long long int_fast63_t;
+typedef unsigned long long uint_fast63_t;
+typedef long long int_least63_t;
+typedef unsigned long long uint_least63_t;
+typedef long long int_fast64_t;
+typedef unsigned long long uint_fast64_t;
+typedef long long int_least64_t;
+typedef unsigned long long uint_least64_t;
+namespace std{
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
+typedef unsigned long long uint64_t;
+typedef signed char int8_t;
+typedef short int16_t;
+typedef int int32_t;
+typedef long long int64_t;
+typedef int intptr_t;
+typedef unsigned int uintptr_t;
+typedef int int_fast8_t;
+typedef unsigned int uint_fast8_t;
+typedef signed char int_least8_t;
+typedef unsigned char uint_least8_t;
+typedef int int_fast9_t;
+typedef unsigned int uint_fast9_t;
+typedef short int_least9_t;
+typedef unsigned short uint_least9_t;
+typedef int int_fast10_t;
+typedef unsigned int uint_fast10_t;
+typedef short int_least10_t;
+typedef unsigned short uint_least10_t;
+typedef int int_fast11_t;
+typedef unsigned int uint_fast11_t;
+typedef short int_least11_t;
+typedef unsigned short uint_least11_t;
+typedef int int_fast12_t;
+typedef unsigned int uint_fast12_t;
+typedef short int_least12_t;
+typedef unsigned short uint_least12_t;
+typedef int int_fast13_t;
+typedef unsigned int uint_fast13_t;
+typedef short int_least13_t;
+typedef unsigned short uint_least13_t;
+typedef int int_fast14_t;
+typedef unsigned int uint_fast14_t;
+typedef short int_least14_t;
+typedef unsigned short uint_least14_t;
+typedef int int_fast15_t;
+typedef unsigned int uint_fast15_t;
+typedef short int_least15_t;
+typedef unsigned short uint_least15_t;
+typedef int int_fast16_t;
+typedef unsigned int uint_fast16_t;
+typedef short int_least16_t;
+typedef unsigned short uint_least16_t;
+typedef int int_fast17_t;
+typedef unsigned int uint_fast17_t;
+typedef int int_least17_t;
+typedef unsigned int uint_least17_t;
+typedef int int_fast18_t;
+typedef unsigned int uint_fast18_t;
+typedef int int_least18_t;
+typedef unsigned int uint_least18_t;
+typedef int int_fast19_t;
+typedef unsigned int uint_fast19_t;
+typedef int int_least19_t;
+typedef unsigned int uint_least19_t;
+typedef int int_fast20_t;
+typedef unsigned int uint_fast20_t;
+typedef int int_least20_t;
+typedef unsigned int uint_least20_t;
+typedef int int_fast21_t;
+typedef unsigned int uint_fast21_t;
+typedef int int_least21_t;
+typedef unsigned int uint_least21_t;
+typedef int int_fast22_t;
+typedef unsigned int uint_fast22_t;
+typedef int int_least22_t;
+typedef unsigned int uint_least22_t;
+typedef int int_fast23_t;
+typedef unsigned int uint_fast23_t;
+typedef int int_least23_t;
+typedef unsigned int uint_least23_t;
+typedef int int_fast24_t;
+typedef unsigned int uint_fast24_t;
+typedef int int_least24_t;
+typedef unsigned int uint_least24_t;
+typedef int int_fast25_t;
+typedef unsigned int uint_fast25_t;
+typedef int int_least25_t;
+typedef unsigned int uint_least25_t;
+typedef int int_fast26_t;
+typedef unsigned int uint_fast26_t;
+typedef int int_least26_t;
+typedef unsigned int uint_least26_t;
+typedef int int_fast27_t;
+typedef unsigned int uint_fast27_t;
+typedef int int_least27_t;
+typedef unsigned int uint_least27_t;
+typedef int int_fast28_t;
+typedef unsigned int uint_fast28_t;
+typedef int int_least28_t;
+typedef unsigned int uint_least28_t;
+typedef int int_fast29_t;
+typedef unsigned int uint_fast29_t;
+typedef int int_least29_t;
+typedef unsigned int uint_least29_t;
+typedef int int_fast30_t;
+typedef unsigned int uint_fast30_t;
+typedef int int_least30_t;
+typedef unsigned int uint_least30_t;
+typedef int int_fast31_t;
+typedef unsigned int uint_fast31_t;
+typedef int int_least31_t;
+typedef unsigned int uint_least31_t;
+typedef int int_fast32_t;
+typedef unsigned int uint_fast32_t;
+typedef int int_least32_t;
+typedef unsigned int uint_least32_t;
+typedef long long int_fast33_t;
+typedef unsigned long long uint_fast33_t;
+typedef long long int_least33_t;
+typedef unsigned long long uint_least33_t;
+typedef long long int_fast34_t;
+typedef unsigned long long uint_fast34_t;
+typedef long long int_least34_t;
+typedef unsigned long long uint_least34_t;
+typedef long long int_fast35_t;
+typedef unsigned long long uint_fast35_t;
+typedef long long int_least35_t;
+typedef unsigned long long uint_least35_t;
+typedef long long int_fast36_t;
+typedef unsigned long long uint_fast36_t;
+typedef long long int_least36_t;
+typedef unsigned long long uint_least36_t;
+typedef long long int_fast37_t;
+typedef unsigned long long uint_fast37_t;
+typedef long long int_least37_t;
+typedef unsigned long long uint_least37_t;
+typedef long long int_fast38_t;
+typedef unsigned long long uint_fast38_t;
+typedef long long int_least38_t;
+typedef unsigned long long uint_least38_t;
+typedef long long int_fast39_t;
+typedef unsigned long long uint_fast39_t;
+typedef long long int_least39_t;
+typedef unsigned long long uint_least39_t;
+typedef long long int_fast40_t;
+typedef unsigned long long uint_fast40_t;
+typedef long long int_least40_t;
+typedef unsigned long long uint_least40_t;
+typedef long long int_fast41_t;
+typedef unsigned long long uint_fast41_t;
+typedef long long int_least41_t;
+typedef unsigned long long uint_least41_t;
+typedef long long int_fast42_t;
+typedef unsigned long long uint_fast42_t;
+typedef long long int_least42_t;
+typedef unsigned long long uint_least42_t;
+typedef long long int_fast43_t;
+typedef unsigned long long uint_fast43_t;
+typedef long long int_least43_t;
+typedef unsigned long long uint_least43_t;
+typedef long long int_fast44_t;
+typedef unsigned long long uint_fast44_t;
+typedef long long int_least44_t;
+typedef unsigned long long uint_least44_t;
+typedef long long int_fast45_t;
+typedef unsigned long long uint_fast45_t;
+typedef long long int_least45_t;
+typedef unsigned long long uint_least45_t;
+typedef long long int_fast46_t;
+typedef unsigned long long uint_fast46_t;
+typedef long long int_least46_t;
+typedef unsigned long long uint_least46_t;
+typedef long long int_fast47_t;
+typedef unsigned long long uint_fast47_t;
+typedef long long int_least47_t;
+typedef unsigned long long uint_least47_t;
+typedef long long int_fast48_t;
+typedef unsigned long long uint_fast48_t;
+typedef long long int_least48_t;
+typedef unsigned long long uint_least48_t;
+typedef long long int_fast49_t;
+typedef unsigned long long uint_fast49_t;
+typedef long long int_least49_t;
+typedef unsigned long long uint_least49_t;
+typedef long long int_fast50_t;
+typedef unsigned long long uint_fast50_t;
+typedef long long int_least50_t;
+typedef unsigned long long uint_least50_t;
+typedef long long int_fast51_t;
+typedef unsigned long long uint_fast51_t;
+typedef long long int_least51_t;
+typedef unsigned long long uint_least51_t;
+typedef long long int_fast52_t;
+typedef unsigned long long uint_fast52_t;
+typedef long long int_least52_t;
+typedef unsigned long long uint_least52_t;
+typedef long long int_fast53_t;
+typedef unsigned long long uint_fast53_t;
+typedef long long int_least53_t;
+typedef unsigned long long uint_least53_t;
+typedef long long int_fast54_t;
+typedef unsigned long long uint_fast54_t;
+typedef long long int_least54_t;
+typedef unsigned long long uint_least54_t;
+typedef long long int_fast55_t;
+typedef unsigned long long uint_fast55_t;
+typedef long long int_least55_t;
+typedef unsigned long long uint_least55_t;
+typedef long long int_fast56_t;
+typedef unsigned long long uint_fast56_t;
+typedef long long int_least56_t;
+typedef unsigned long long uint_least56_t;
+typedef long long int_fast57_t;
+typedef unsigned long long uint_fast57_t;
+typedef long long int_least57_t;
+typedef unsigned long long uint_least57_t;
+typedef long long int_fast58_t;
+typedef unsigned long long uint_fast58_t;
+typedef long long int_least58_t;
+typedef unsigned long long uint_least58_t;
+typedef long long int_fast59_t;
+typedef unsigned long long uint_fast59_t;
+typedef long long int_least59_t;
+typedef unsigned long long uint_least59_t;
+typedef long long int_fast60_t;
+typedef unsigned long long uint_fast60_t;
+typedef long long int_least60_t;
+typedef unsigned long long uint_least60_t;
+typedef long long int_fast61_t;
+typedef unsigned long long uint_fast61_t;
+typedef long long int_least61_t;
+typedef unsigned long long uint_least61_t;
+typedef long long int_fast62_t;
+typedef unsigned long long uint_fast62_t;
+typedef long long int_least62_t;
+typedef unsigned long long uint_least62_t;
+typedef long long int_fast63_t;
+typedef unsigned long long uint_fast63_t;
+typedef long long int_least63_t;
+typedef unsigned long long uint_least63_t;
+typedef long long int_fast64_t;
+typedef unsigned long long uint_fast64_t;
+typedef long long int_least64_t;
+typedef unsigned long long uint_least64_t;
+typedef long long intmax_t;
+typedef unsigned long long uintmax_t;
+}
+-128
+127
+255U
+-32768
+32767
+65535U
+-2147483648
+2147483647
+4294967295U
+(-1-9223372036854775807LL)
+9223372036854775807LL
+18446744073709551615ULL
+-2147483648
+2147483647
+4294967295U
+(-1-9223372036854775807LL)
+9223372036854775807LL
+18446744073709551615ULL
+0LL
+1LL
+0ULL
+1ULL
+-2147483648
+2147483647
+4294967295U
+0
+4294967295U
+-128
+127
+255U
+-2147483648
+2147483647
+4294967295U
+0
+1
+0
+1
+-32768
+32767
+65535U
+-2147483648
+2147483647
+4294967295U
+0
+1
+0
+1
+-2147483648
+2147483647
+4294967295U
+-2147483648
+2147483647
+4294967295U
+0
+1
+0U
+1U
+(-1-9223372036854775807LL)
+9223372036854775807LL
+18446744073709551615ULL
+(-1-9223372036854775807LL)
+9223372036854775807LL
+18446744073709551615ULL
+0LL
+1LL
+0ULL
+1ULL

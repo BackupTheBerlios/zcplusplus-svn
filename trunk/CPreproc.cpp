@@ -1506,6 +1506,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					assert(0<pp_code);
 					if (C_DISALLOW_POSTPROCESSED_SOURCE & lang.pp_support->GetPPOpPuncFlags(pp_code))
 						{	//! \todo need test cases
+							// actually, this might need to be language-sensitive (e.g., Perl)
 						message_header(*TokenList[i]);
 						INC_INFORM(ERR_STR);
 						INC_INFORM("Forbidden token '");
@@ -1581,158 +1582,149 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						--i;
 						continue;
 						}
-					else{
-//						bool resync_token_end = (i+1<TokenList.size()) ? TokenList[i]->logical_line.first==TokenList[i+1]->logical_line.first && '('==TokenList[i+1]->front() && TokenList[i]->logical_line.second+TokenList[i]->size()==TokenList[i+1]->logical_line.second : false;
-//						size_t force_token_end = resync_token_end ? TokenList[i+1]->logical_line.second : 0;
-						const errr object_macro_index = binary_find(TokenList[i]->data(),TokenList[i]->size(),macros_object);
-						const errr function_macro_index = binary_find(TokenList[i]->data(),TokenList[i]->size(),macros_function);
-						assert(0>object_macro_index || 0>function_macro_index);
-						if (0<=object_macro_index)
-							{	// object-like macro
-								//! \bug need data-transform test case
-							if (NULL==macros_object_expansion_pre_eval[object_macro_index])
-								{	// expands to nothing
-								TokenList.DeleteIdx(i);
-								if (0==i) goto Restart;
-								--i;
-								continue;
-								}
-							assert(!macros_object_expansion_pre_eval[object_macro_index]->empty());
-							{	//! \bug need test cases
-							Token<char>* Tmp = new Token<char>(*macros_object_expansion_pre_eval[object_macro_index]);
-							Tmp->logical_line = TokenList[i]->logical_line;
-							if (!nonrecursive_macro_replacement_list(Tmp->data()))
-								{
-								size_t discard = 0;
-								predefined_macro_replace_once(*Tmp,discard,Tmp->size());
-								discard = 0;
-								dynamic_macro_replace_once(*Tmp,discard,Tmp->size(),macros_object,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion_pre_eval,NULL);
-								}
-							delete TokenList[i];
-							TokenList[i] = Tmp;
+
+					const errr object_macro_index = binary_find(TokenList[i]->data(),TokenList[i]->size(),macros_object);
+					const errr function_macro_index = binary_find(TokenList[i]->data(),TokenList[i]->size(),macros_function);
+					assert(0>object_macro_index || 0>function_macro_index);
+					if (0<=object_macro_index)
+						{	// object-like macro
+							//! \bug need data-transform test case
+						if (NULL==macros_object_expansion_pre_eval[object_macro_index])
+							{	// expands to nothing
+							TokenList.DeleteIdx(i);
+							if (0==i) goto Restart;
+							--i;
+							continue;
 							}
-							size_t actual_tokens = tokenize_line(TokenList,i);
-							assert(0<actual_tokens);
-							i += actual_tokens-1;
-							}
-						else if (0<=function_macro_index)
-							{	//! \bug need test cases
-								// could be function-like macro
-							if (	TokenList.size()>i+1 && TokenList[i]->logical_line.first==TokenList[i+1]->logical_line.first
-								&& 	TokenList[i]->logical_line.second+TokenList[i]->size()==TokenList[i+1]->logical_line.second
-								&&	'('==TokenList[i+1]->front())
-								{
-								size_t paren_depth = 1;
-								size_t comma_count = 0;
-								size_t j = i+1;
-								do	{
-									if (TokenList.size()<=j+1)
-										{	//! \bug need test case
-											// error out, incomplete function-like macro
+						assert(!macros_object_expansion_pre_eval[object_macro_index]->empty());
+						{	//! \test the cpp/default/Preprocess_*.h/hpp test cases
+						size_t discard = 0;
+						dynamic_macro_replace_once(*TokenList[i],discard,TokenList[i]->size(),macros_object,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion_pre_eval,NULL);
+						}
+						size_t actual_tokens = tokenize_line(TokenList,i);
+						assert(0<actual_tokens);
+						i += actual_tokens-1;
+						}
+					else if (0<=function_macro_index)
+						{	//! \bug need test cases
+							// could be function-like macro
+						if (	TokenList.size()>i+1 && TokenList[i]->logical_line.first==TokenList[i+1]->logical_line.first
+							&& 	TokenList[i]->logical_line.second+TokenList[i]->size()==TokenList[i+1]->logical_line.second
+							&&	'('==TokenList[i+1]->front())
+							{
+							size_t paren_depth = 1;
+							size_t comma_count = 0;
+							size_t j = i+1;
+							do	{
+								if (TokenList.size()<=j+1)
+									{	//! \bug need test case
+										// error out, incomplete function-like macro
+									message_header2(*TokenList[i],TokenList[i]->logical_line.second);
+									INC_INFORM(ERR_STR);
+									INC_INFORM("macro ");
+									INC_INFORM(TokenList[i]->data(),TokenList[i]->size());
+									INFORM(" did not close its argument list in time. (C99 6.10p1/C++98 16.1p1)");
+									zcc_errors.inc_error();
+									i = j;
+									break;
+									}
+								if (TokenList[j]->logical_line.first<TokenList[j+1]->logical_line.first)
+									{	// line advance; check for pp-directives (undefined behavior), then tokenize
+									if (line_is_preprocessing_directive(*TokenList[j+1]))
+										{	//! \bug: need test case
+											// error out, undefined behavior
 										message_header2(*TokenList[i],TokenList[i]->logical_line.second);
 										INC_INFORM(ERR_STR);
-										INC_INFORM("macro ");
-										INC_INFORM(TokenList[i]->data(),TokenList[i]->size());
-										INFORM(" did not close its argument list in time. (C99 6.10p1/C++98 16.1p1)");
+										INFORM("macro invocation contains preprocessing directive.  Defining undefined behavior as ignoring macro invocation. (C99 6.10.3p11/C++98 16.3p10)");
 										zcc_errors.inc_error();
 										i = j;
 										break;
 										}
-									if (TokenList[j]->logical_line.first<TokenList[j+1]->logical_line.first)
-										{	// line advance; check for pp-directives (undefined behavior), then tokenize
-										if (line_is_preprocessing_directive(*TokenList[j+1]))
-											{	//! \bug: need test case
-												// error out, undefined behavior
-											message_header2(*TokenList[i],TokenList[i]->logical_line.second);
-											INC_INFORM(ERR_STR);
-											INFORM("macro invocation contains preprocessing directive.  Defining undefined behavior as ignoring macro invocation. (C99 6.10.3p11/C++98 16.3p10)");
-											zcc_errors.inc_error();
-											i = j;
-											break;
-											}
-										if (!tokenize_line(TokenList,j+1)) continue;
-										}
-									if (1==TokenList[++j]->size())
-										{
-										switch(TokenList[j]->front())
-										{
-										case '(':	{
-													++paren_depth;
-													break;
-													}
-										case ',':	{
-													++comma_count;
-													break;
-													}
-										case ')':	{
-													--paren_depth;
-													//	break;
-													}
-										};
-										}
+									if (!tokenize_line(TokenList,j+1)) continue;
 									}
-								while(0<paren_depth);
-								if (0==paren_depth)
+								if (1==TokenList[++j]->size())
 									{
-									assert(NULL!=macros_function_arglist[function_macro_index]);
-									assert('('==macros_function_arglist[function_macro_index]->front());
-									assert(')'==macros_function_arglist[function_macro_index]->back());
-									const size_t formal_arg_span = macros_function_arglist[function_macro_index]->size();
-									const size_t formal_arg_count = (2<formal_arg_span) ? std::count(macros_function_arglist[function_macro_index]->begin(),macros_function_arglist[function_macro_index]->end(),',')+1 : 0;
-									const bool formal_varadic = 5<=formal_arg_span && !strncmp(macros_function_arglist[function_macro_index]->data()+(formal_arg_span-4),"...",sizeof("...")-1);
-									const size_t arg_count = (i+2==j) ? 0 : comma_count+1;
-									if (arg_count<formal_arg_count || (arg_count>formal_arg_count && !formal_varadic))
-										{	//! \bug need test cases
-										message_header2(*TokenList[i],TokenList[i]->logical_line.second);
-										INC_INFORM(ERR_STR);
-										INC_INFORM("macro ");
-										INC_INFORM(TokenList[i]->data(),TokenList[i]->size());
-										INC_INFORM(" had ");
-										INC_INFORM(arg_count);
-										INC_INFORM(" argument");
-										INC_INFORM((1==arg_count) ? "" : "s");
-										INC_INFORM(", needed ");
-										if (formal_varadic) INC_INFORM("at least ");
-										INC_INFORM(formal_arg_count);
-										INFORM(". (C99 6.10p1/C++0x 16.1p1)");
-										zcc_errors.inc_error();
-										i = j;
-										continue;
-										}
-									if (NULL==macros_function_expansion_pre_eval[function_macro_index])
-										{	//! \bug need data-transform test case
-											// expands to nothing
-										TokenList.DeleteNSlotsAt(j-i+1,i);
-										if (0==i) goto Restart;
-										--i;
-										continue;
-										}
-									assert(!macros_function_expansion_pre_eval[function_macro_index]->empty());
-									{	//! \bug need test cases
-									Token<char>* Tmp = new Token<char>(*macros_function_expansion_pre_eval[function_macro_index]);
-									Tmp->logical_line = TokenList[i]->logical_line;
-									if (!nonrecursive_macro_replacement_list(Tmp->data()))
-										{
-										size_t discard = 0;
-										predefined_macro_replace_once(*Tmp,discard,Tmp->size());
-										discard = 0;
-										dynamic_macro_replace_once(*Tmp,discard,Tmp->size(),macros_object,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion_pre_eval,NULL);
-										}
-									TokenList.DeleteNSlotsAt(j-i,i+1);
-									delete TokenList[i];
-									TokenList[i] = Tmp;
-									}
-									size_t actual_tokens = tokenize_line(TokenList,i);
-									assert(0<actual_tokens);
-									i += actual_tokens-1;
+									switch(TokenList[j]->front())
+									{
+									case '(':	{
+												++paren_depth;
+												break;
+												}
+									case ',':	{
+												++comma_count;
+												break;
+												}
+									case ')':	{
+												--paren_depth;
+												//	break;
+												}
 									};
+									}
 								}
+							while(0<paren_depth);
+							if (0==paren_depth)
+								{
+								assert(NULL!=macros_function_arglist[function_macro_index]);
+								assert('('==macros_function_arglist[function_macro_index]->front());
+								assert(')'==macros_function_arglist[function_macro_index]->back());
+								const size_t formal_arg_span = macros_function_arglist[function_macro_index]->size();
+								const size_t formal_arg_count = (2<formal_arg_span) ? std::count(macros_function_arglist[function_macro_index]->begin(),macros_function_arglist[function_macro_index]->end(),',')+1 : 0;
+								const bool formal_varadic = 5<=formal_arg_span && !strncmp(macros_function_arglist[function_macro_index]->data()+(formal_arg_span-4),"...",sizeof("...")-1);
+								const size_t arg_count = (i+2==j) ? 0 : comma_count+1;
+								if (arg_count<formal_arg_count || (arg_count>formal_arg_count && !formal_varadic))
+									{	//! \bug need test cases
+									message_header2(*TokenList[i],TokenList[i]->logical_line.second);
+									INC_INFORM(ERR_STR);
+									INC_INFORM("macro ");
+									INC_INFORM(TokenList[i]->data(),TokenList[i]->size());
+									INC_INFORM(" had ");
+									INC_INFORM(arg_count);
+									INC_INFORM(" argument");
+									INC_INFORM((1==arg_count) ? "" : "s");
+									INC_INFORM(", needed ");
+									if (formal_varadic) INC_INFORM("at least ");
+									INC_INFORM(formal_arg_count);
+									INFORM(". (C99 6.10p1/C++0x 16.1p1)");
+									zcc_errors.inc_error();
+									i = j;
+									continue;
+									}
+								if (NULL==macros_function_expansion_pre_eval[function_macro_index])
+									{	//! \bug need data-transform test case
+										// expands to nothing
+									TokenList.DeleteNSlotsAt(j-i+1,i);
+									if (0==i) goto Restart;
+									--i;
+									continue;
+									}
+								assert(!macros_function_expansion_pre_eval[function_macro_index]->empty());
+								{	//! \test default/Preprocess_... family of test cases
+								Token<char>* Tmp = new Token<char>(*macros_function_expansion_pre_eval[function_macro_index]);
+								Tmp->logical_line = TokenList[i]->logical_line;
+								if (!nonrecursive_macro_replacement_list(Tmp->data()))
+									{	// XXX trashes line information to reuse intrapreprocessing stuff
+									size_t discard = i;
+									Token<char>* Tmp2 = new Token<char>(*TokenList[i]);
+									while(++discard <= j) Tmp2->append(TokenList[discard]->data());
+									discard = 0;
+									dynamic_macro_replace_once(*Tmp2,discard,TokenList[i]->size(),macros_object,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion_pre_eval,NULL);
+									delete Tmp;
+									Tmp = Tmp2;
+									}
+								TokenList.DeleteNSlotsAt(j-i,i+1);
+								delete TokenList[i];
+								TokenList[i] = Tmp;
+								}
+								size_t actual_tokens = tokenize_line(TokenList,i);
+								assert(0<actual_tokens);
+								i += actual_tokens-1;
+								};
 							}
-						else{	// replace predefined macros, if they are here
-								//! \bug need data-transform test cases
-							size_t discard = 0;
-							predefined_macro_replacement(*TokenList[i],discard);
-							}
+						}
+					else{	// replace predefined macros, if they are here
+							//! \bug need data-transform test cases
+						size_t discard = 0;
+						predefined_macro_replacement(*TokenList[i],discard);
 						}
 					}
 				}
@@ -3538,7 +3530,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 			zcc_errors.inc_error();
 			return false;
 			}
-		if (NULL==macros_function_expansion[object_macro_index])
+		if (NULL==macros_function_expansion[function_macro_index])
 			{
 			_macro_replace(x,critical_offset,token_len+arg_span,"");
 			return true;
@@ -3779,7 +3771,7 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 				_macro_replace(x,pretokenized[j-1].first,pretokenized[j-1].second,actual_arguments[j3]->data());
 				lang.line_lex(x.data(),x.size(),pretokenized);
 				j += pretokenized_alt.size()-1;
-				assert(detect_C_concatenation_op(x.data()+pretokenized[j-1].first,pretokenized[j-1].second));
+				assert(detect_C_concatenation_op(x.data()+pretokenized[j].first,pretokenized[j].second));
 				};
 			if (_concatenate_single(x,pretokenized.data()+(j-1),lang)) --j;
 			}
