@@ -4170,7 +4170,7 @@ static void locate_CPP_postfix_expression(parse_tree& src, size_t& i, const type
 		}
 }
 
-// Closely related to CPreprocessor::if_elif_control_is_zero
+// Closely related to if_elif_control_is_zero/CPreproc.cpp
 static bool _C99_literal_converts_to_bool(const parse_tree& src, bool& is_true)
 {
 	assert(src.is_atomic());

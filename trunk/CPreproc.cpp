@@ -777,6 +777,26 @@ pragma_locked_macro(const char* const x,const size_t x_len,const autovalarray_pt
 	return 0<=binary_find(x,x_len,locked_macros);
 }
 
+static bool line_is_preprocessing_directive(Token<char>& x)
+{	// normalize leading %: to # to handle equivalency of these tokens
+	//! \bug need test case
+	if ((sizeof("%:")-1)<=x.size() && !strncmp(x.data(),"%:",sizeof("%:")-1)) x.replace_once(std::nothrow,0,sizeof("%:")-1,"#");
+	return '#'==x.front();
+}
+
+static void discard_locked_macro(autovalarray_ptr<Token<char>* >& TokenList, const size_t i,const int directive_type)
+{
+	message_header(*TokenList[i]);
+	INC_INFORM(ERR_STR);
+	INC_INFORM("#");
+	INC_INFORM(valid_directives[directive_type].first);
+	INC_INFORM(" applied to locked macro ");
+	INC_INFORM(TokenList[i]->data()+valid_directives[directive_type].second+2);
+	INFORM("; discarding directive. (ZCPP pragma effect)");
+	TokenList.DeleteIdx(i);
+	zcc_errors.inc_error();
+}
+
 void
 CPreprocessor::_preprocess(autovalarray_ptr<Token<char>* >& TokenList, autovalarray_ptr<char*>& locked_macros, autovalarray_ptr<char*>& macros_object, autovalarray_ptr<Token<char>*>& macros_object_expansion, autovalarray_ptr<Token<char>*>& macros_object_expansion_pre_eval, autovalarray_ptr<char*>& macros_function, autovalarray_ptr<Token<char>*>& macros_function_arglist, autovalarray_ptr<Token<char>*>& macros_function_expansion, autovalarray_ptr<Token<char>*>& macros_function_expansion_pre_eval, autovalarray_ptr<POD_triple<const char*, const char*,uintptr_t> >& include_file_index, autovalarray_ptr<POD_pair<const char*,autovalarray_ptr<Token<char>*>* > >& include_file_cache, const type_system& min_types)
 {
@@ -1588,9 +1608,9 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					assert(0>object_macro_index || 0>function_macro_index);
 					if (0<=object_macro_index)
 						{	// object-like macro
-							//! \bug need data-transform test case
 						if (NULL==macros_object_expansion_pre_eval[object_macro_index])
 							{	// expands to nothing
+								//! \test cpp/default/Preprocess_empty_macros.hpp, cpp/default/Preprocess_empty_macros.h
 							TokenList.DeleteIdx(i);
 							if (0==i) goto Restart;
 							--i;
@@ -1617,7 +1637,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 							size_t j = i+1;
 							do	{
 								if (TokenList.size()<=j+1)
-									{	//! \bug need test case
+									{	//! \test cpp/Error_macro_arglist4.hpp
 										// error out, incomplete function-like macro
 									message_header2(*TokenList[i],TokenList[i]->logical_line.second);
 									INC_INFORM(ERR_STR);
@@ -1631,7 +1651,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								if (TokenList[j]->logical_line.first<TokenList[j+1]->logical_line.first)
 									{	// line advance; check for pp-directives (undefined behavior), then tokenize
 									if (line_is_preprocessing_directive(*TokenList[j+1]))
-										{	//! \bug: need test case
+										{	//! \test cpp/Error_macro_arglist7.hpp
 											// error out, undefined behavior
 										message_header2(*TokenList[i],TokenList[i]->logical_line.second);
 										INC_INFORM(ERR_STR);
@@ -1672,7 +1692,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								const bool formal_varadic = 5<=formal_arg_span && !strncmp(macros_function_arglist[function_macro_index]->data()+(formal_arg_span-4),"...",sizeof("...")-1);
 								const size_t arg_count = (i+2==j) ? 0 : comma_count+1;
 								if (arg_count<formal_arg_count || (arg_count>formal_arg_count && !formal_varadic))
-									{	//! \bug need test cases
+									{	//! \test cpp/Error_macro_arglist5.hpp
+										//! \test cpp/Error_macro_arglist6.hpp
 									message_header2(*TokenList[i],TokenList[i]->logical_line.second);
 									INC_INFORM(ERR_STR);
 									INC_INFORM("macro ");
@@ -1690,8 +1711,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 									continue;
 									}
 								if (NULL==macros_function_expansion_pre_eval[function_macro_index])
-									{	//! \bug need data-transform test case
-										// expands to nothing
+									{	// expands to nothing
+										//! \test cpp/default/Preprocess_empty_macros.hpp, cpp/default/Preprocess_empty_macros.h
 									TokenList.DeleteNSlotsAt(j-i+1,i);
 									if (0==i) goto Restart;
 									--i;
@@ -2109,15 +2130,6 @@ CPreprocessor::raw_system_include(const char* const look_for, autovalarray_ptr<T
 	return false;
 }
 
-bool
-CPreprocessor::line_is_preprocessing_directive(Token<char>& x) const
-{
-	// normalize leading %: to # to handle equivalency of these tokens
-	//! \bug need test case
-	if ((sizeof("%:")-1)<=x.size() && !strncmp(x.data(),"%:",sizeof("%:")-1)) x.replace_once(std::nothrow,0,sizeof("%:")-1,"#");
-	return '#'==x.front();
-}
-
 void
 CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_ptr<char*>& locked_macros)
 {
@@ -2189,6 +2201,32 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 	//! \todo: fix return value situation when enabling code-generation affecting pragmas
 }
 
+static void _complete_string_character_literal(Token<char>& x,const char delim, const char* const end_error)
+{
+	if (delim!=x.back())
+		{
+		message_header2(x,x.original_line.second);
+		INC_INFORM(ERR_STR);
+		INC_INFORM("unterminated");
+		if ('L'==x.front()) INC_INFORM(" wide");
+		INFORM(end_error);
+		zcc_errors.inc_error();
+		x.append(delim);
+		}
+}
+
+static void complete_string_character_literal(Token<char>& x)
+{
+	if (C_TESTFLAG_STRING_LITERAL==x.flags)
+		//! \test Error_unterminated1.hpp
+		//! \test Error_unterminated2.hpp
+		_complete_string_character_literal(x,'"'," string literal.  Terminating. (C99 6.4.5p1/C++98 2.13.4)");
+	else if (C_TESTFLAG_CHAR_LITERAL==x.flags)
+		//! \test Error_unterminated3.hpp
+		//! \test Error_unterminated4.hpp
+		_complete_string_character_literal(x,'\''," character literal.  Terminating. (C99 6.4.4.4p1/C++98 2.13.2)");
+}
+
 size_t
 CPreprocessor::tokenize_line(autovalarray_ptr<Token<char>* >& TokenList, size_t i) const
 {
@@ -2253,33 +2291,6 @@ CPreprocessor::tokenize_line(autovalarray_ptr<Token<char>* >& TokenList, size_t 
 #endif
 		}
 	return pretokenized.size();
-}
-
-static void _complete_string_character_literal(Token<char>& x,const char delim, const char* const end_error)
-{
-	if (delim!=x.back())
-		{
-		message_header2(x,x.original_line.second);
-		INC_INFORM(ERR_STR);
-		INC_INFORM("unterminated");
-		if ('L'==x.front()) INC_INFORM(" wide");
-		INFORM(end_error);
-		zcc_errors.inc_error();
-		x.append(delim);
-		}
-}
-
-void
-CPreprocessor::complete_string_character_literal(Token<char>& x) const
-{
-	if (C_TESTFLAG_STRING_LITERAL==x.flags)
-		//! \test Error_unterminated1.hpp
-		//! \test Error_unterminated2.hpp
-		_complete_string_character_literal(x,'"'," string literal.  Terminating. (C99 6.4.5p1/C++98 2.13.4)");
-	else if (C_TESTFLAG_CHAR_LITERAL==x.flags)
-		//! \test Error_unterminated3.hpp
-		//! \test Error_unterminated4.hpp
-		_complete_string_character_literal(x,'\''," character literal.  Terminating. (C99 6.4.4.4p1/C++98 2.13.2)");
 }
 
 /*! 
@@ -2870,6 +2881,36 @@ _bad_syntax_pretokenized(const Token<char>& x,const LangConf& lang,POD_triple<si
 	return false;
 }
 
+// Closely related to _C99_literal_converts_to_bool/CSupport.cpp
+/*! 
+ * examines a proposed token for whether it is suitable for an #if/#elif control expression, and if so 
+ * 
+ * \param x #if/#elif line
+ * \param lexed_token where the token is
+ * \param is_zero if suitable, set this to true iff token is 0 for purposes of preprocessing
+ * 
+ * \return true iff suitable for an #if/#elif control expression
+ */
+static bool if_elif_control_is_zero(const Token<char>& x, const POD_triple<size_t,size_t,lex_flags>& lexed_token, bool& is_zero)
+{
+	const lex_flags flags = lexed_token.third;
+	if (C_TESTFLAG_CHAR_LITERAL==flags)
+		{	//! \test if.C99/Pass_zero.hpp, if.C99/Pass_zero.h
+			//! \test if.C99/Pass_nonzero.hpp, if.C99/Pass_nonzero.h
+		is_zero = CCharLiteralIsFalse(x.data()+lexed_token.first,lexed_token.second);
+		return true;
+		};
+
+	//! \todo --do-what-i-mean will handle floats as well
+	if (!(C_TESTFLAG_PP_NUMERAL & flags)) return false;
+	C_REALITY_CHECK_PP_NUMERAL_FLAGS(flags);
+	if (C_TESTFLAG_FLOAT & flags) return false;
+	// zeros go to zero, everything else canonicalizes to one
+	//! \test if.C99/Pass_if_zero.hpp, if.C99/Pass_if_zero.h
+	is_zero = C99_integer_literal_is_zero(x.data()+lexed_token.first,lexed_token.second,flags);
+	return true;
+}
+
 /*
  * we use goto in CPreprocessor::if_elif_syntax_ok contrary to readable style guidelines
  *	RetryStringMerge: restart the string-merge stage (should happen only if running short on memory
@@ -3239,37 +3280,6 @@ oneTokenExit:
 	return true;
 }
 
-// Closely related to C99_literal_converts_to_bool/CSupport.cpp
-/*! 
- * examines a proposed token for whether it is suitable for an #if/#elif control expression, and if so 
- * 
- * \param x #if/#elif line
- * \param lexed_token where the token is
- * \param is_zero if suitable, set this to true iff token is 0 for purposes of preprocessing
- * 
- * \return true iff suitable for an #if/#elif control expression
- */
-bool
-CPreprocessor::if_elif_control_is_zero(const Token<char>& x, const POD_triple<size_t,size_t,lex_flags>& lexed_token, bool& is_zero) const
-{
-	const lex_flags flags = lexed_token.third;
-	if (C_TESTFLAG_CHAR_LITERAL==flags)
-		{	//! \test if.C99/Pass_zero.hpp, if.C99/Pass_zero.h
-			//! \test if.C99/Pass_nonzero.hpp, if.C99/Pass_nonzero.h
-		is_zero = CCharLiteralIsFalse(x.data()+lexed_token.first,lexed_token.second);
-		return true;
-		};
-
-	//! \todo --do-what-i-mean will handle floats as well
-	if (!(C_TESTFLAG_PP_NUMERAL & flags)) return false;
-	C_REALITY_CHECK_PP_NUMERAL_FLAGS(flags);
-	if (C_TESTFLAG_FLOAT & flags) return false;
-	// zeros go to zero, everything else canonicalizes to one
-	//! \test if.C99/Pass_if_zero.hpp, if.C99/Pass_if_zero.h
-	is_zero = C99_integer_literal_is_zero(x.data()+lexed_token.first,lexed_token.second,flags);
-	return true;
-}
-
 #undef ULONG_BIT
 #undef PREPROCESSING_DIRECTIVE_FLAG
 #undef PACK_DIRECTIVE
@@ -3316,9 +3326,8 @@ CPreprocessor::predefined_macro_replace_once(Token<char>& x, size_t& critical_of
 		char Buffer[10];
 		char FileBuffer[MAX_PATH+2];
 		if (NULL!=macro_identifier_default[macro_index].second)
-			{	// value known, substitute in
+			// value known, substitute in
 			macro_value = macro_identifier_default[macro_index].second;
-			}
 		// special
 		else if (!strcmp(macro_identifier_default[macro_index].first,"__FILE__"))
 			{
@@ -3330,13 +3339,9 @@ CPreprocessor::predefined_macro_replace_once(Token<char>& x, size_t& critical_of
 			macro_value = FileBuffer;
 			}
 		else if (!strcmp(macro_identifier_default[macro_index].first,"__LINE__"))
-			{
 			macro_value = ltoa((long)(x.logical_line.second),Buffer,10);
-			}
 		else if (!strcmp(macro_identifier_default[macro_index].first,"__TIME__"))
-			{
 			macro_value = time_buffer;
-			}
 		else{
 			assert(!strcmp(macro_identifier_default[macro_index].first,"__DATE__"));
 			macro_value = date_buffer;
@@ -3441,9 +3446,8 @@ CPreprocessor::instantiate_function_macro_arguments(autovalarray_ptr<Token<char>
 			++offset;
 			++count_args;
 			}
-		else{
+		else
 			offset += lang.UnfilteredNextToken(arglist.data()+offset,scratch_flags);
-			}
 		}
 }
 
@@ -3897,8 +3901,7 @@ CPreprocessor::intradirective_flush_identifiers_to_zero(Token<char>& x, size_t c
 		};
 }
 
-void
-CPreprocessor::die_on_pp_errors(void) const
+void CPreprocessor::die_on_pp_errors() const
 {
 	if (0<zcc_errors.err_count())
 		{
@@ -3908,16 +3911,6 @@ CPreprocessor::die_on_pp_errors(void) const
 		INFORM((1==zcc_errors.err_count()) ? "\n" : "s\n");
 		exit(EXIT_FAILURE);
 		};
-}
-
-void
-CPreprocessor::weak_tokenize(const Token<char>& x,autovalarray_ptr<weak_token>& weaktoken_list) const
-{
-	assert(!x.empty());
-	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
-	lang.line_lex(x.data(), x.size(), pretokenized);
-	assert(!pretokenized.empty());
-	_weak_tokenize_aux(x,pretokenized,weaktoken_list);
 }
 
 void
@@ -4013,20 +4006,6 @@ CPreprocessor::C99_VA_ARGS_flinch(const Token<char>& x, const size_t critical_of
 		return true;
 		}
 	return false;
-}
-
-void
-CPreprocessor::discard_locked_macro(autovalarray_ptr<Token<char>* >& TokenList, const size_t i,const int directive_type)
-{
-	message_header(*TokenList[i]);
-	INC_INFORM(ERR_STR);
-	INC_INFORM("#");
-	INC_INFORM(valid_directives[directive_type].first);
-	INC_INFORM(" applied to locked macro ");
-	INC_INFORM(TokenList[i]->data()+valid_directives[directive_type].second+2);
-	INFORM("; discarding directive. (ZCPP pragma effect)");
-	TokenList.DeleteIdx(i);
-	zcc_errors.inc_error();
 }
 
 void
@@ -4354,29 +4333,28 @@ CPreprocessor::defined_span(const Token<char>& x, const size_t logical_offset, P
  * test whether two characters will glue two non-whitespace preprocessing tokens into one.
  * This can tolerate false positives, but not false negatives.
  * 
- * \param LHS: left-hand character
- * \param RHS: right-hand character
+ * \param lhs: left-hand character
+ * \param rhs: right-hand character
  * 
  * \return bool true iff they will glue tokens
  */
-bool
-CPreprocessor::require_padding(char LHS, char RHS) const
+bool CPreprocessor::require_padding(char lhs, char rhs) const
 {
-	if (strchr(lang.WhiteSpace+1,LHS)) return false;	// whitespace is fine
-	if (strchr(lang.WhiteSpace+1,RHS)) return false;
-	if (strchr(lang.AtomicSymbols,LHS)) return false;	// atomic characters are fine
-	if (strchr(lang.AtomicSymbols,RHS)) return false;
-	if ('\''==LHS || '"'==LHS) return false;	// string/character literals are fine
-	if ('\''==RHS || '"'==RHS) return false;
+	if (strchr(lang.WhiteSpace+1,lhs)) return false;	// whitespace is fine
+	if (strchr(lang.WhiteSpace+1,rhs)) return false;
+	if (strchr(lang.AtomicSymbols,lhs)) return false;	// atomic characters are fine
+	if (strchr(lang.AtomicSymbols,rhs)) return false;
+	if ('\''==lhs || '"'==lhs) return false;	// string/character literals are fine
+	if ('\''==rhs || '"'==rhs) return false;
 	// word-chars glue to word-chars
 	// symbol-chars glue to symbol-chars
 	// universal-char-names will glue as well as normal word-chars
-	if (lang.IsWordChar(LHS))
+	if (lang.IsWordChar(lhs))
 		{
-		if ('\\'==RHS || lang.IsWordChar(RHS)) return true;
+		if ('\\'==rhs || lang.IsWordChar(rhs)) return true;
 		return false;
 		};
-	return !lang.IsWordChar(RHS);
+	return !lang.IsWordChar(rhs);
 }
 
 /*! 

@@ -41,7 +41,7 @@ public:
 	void set_debug(bool _debug_mode) {debug_mode = _debug_mode;};
 	static const char* echo_valid_lang(const char* const x);
 	void stringize(zaimoni::autovalarray_ptr<char>& stringized_actual,const zaimoni::Token<char>* const & src);
-	bool require_padding(char LHS, char RHS) const;
+	bool require_padding(char lhs, char rhs) const;
 private:
 	size_t lang_code;
 	zaimoni::LangConf& lang;					//!< lexer corresponding to the language being preprocessed
@@ -54,7 +54,7 @@ private:
 	char time_buffer[11];	//!< for __TIME__ predefined macro
 	bool debug_mode;		//!< triggers some diagnostics
 
-	void die_on_pp_errors(void) const;
+	void die_on_pp_errors() const;
 	void debug_to_stderr(const zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion, const zaimoni::autovalarray_ptr<char*>& macros_function, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_arglist, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion) const;
 	bool C99_VA_ARGS_flinch(const zaimoni::Token<char>& x, const size_t critical_offset) const;
 	void detailed_UNICODE_syntax(zaimoni::Token<char>& x) const;
@@ -66,11 +66,7 @@ private:
 	bool find_system_include(const char* const src, char* const filepath_buf) const;
 
 	// alter token list
-	void weak_tokenize(const zaimoni::Token<char>& x,zaimoni::autovalarray_ptr<weak_token>& weaktoken_list) const;
-	bool line_is_preprocessing_directive(zaimoni::Token<char>& x) const;
 	size_t tokenize_line(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, size_t i) const;
-	void complete_string_character_literal(zaimoni::Token<char>& x) const;
-	void discard_locked_macro(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i, const int directive_type);
 	void discard_duplicate_define(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i, const size_t critical_offset, const size_t first_token_len);
 	bool discard_leading_trailing_concatenate_op(zaimoni::Token<char>& x);
 	void use_line_directive_and_discard(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i);
@@ -85,7 +81,6 @@ private:
 	int context_free_defined(const char* const x, size_t x_len) const;
 	bool ifdef_ifndef_syntax_ok(zaimoni::Token<char>& x, const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<char*>& macros_function);
 	bool if_elif_syntax_ok(zaimoni::Token<char>& x, const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion, const zaimoni::autovalarray_ptr<char*>& macros_function, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_arglist, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion,const type_system& min_types);
-	bool if_elif_control_is_zero(const zaimoni::Token<char>& x, const zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags>& lexed_token, bool& is_zero) const;
 	void predefined_macro_replacement(zaimoni::Token<char>& x, size_t critical_offset);
 	bool predefined_macro_replace_once(zaimoni::Token<char>& x, size_t& critical_offset, const size_t token_len);
 	void _macro_replace(zaimoni::Token<char>& x, size_t& critical_offset, const size_t token_len,const char* const macro_value) const;
