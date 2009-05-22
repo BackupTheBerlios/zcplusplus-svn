@@ -40,7 +40,6 @@ public:
 
 	void set_debug(bool _debug_mode) {debug_mode = _debug_mode;};
 	static const char* echo_valid_lang(const char* const x);
-	void stringize(zaimoni::autovalarray_ptr<char>& stringized_actual,const zaimoni::Token<char>* const & src);
 	bool require_padding(char lhs, char rhs) const;
 private:
 	size_t lang_code;
@@ -70,6 +69,7 @@ private:
 	void discard_duplicate_define(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i, const size_t critical_offset, const size_t first_token_len);
 	bool discard_leading_trailing_concatenate_op(zaimoni::Token<char>& x);
 	void use_line_directive_and_discard(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const size_t i);
+	void stringize(zaimoni::autovalarray_ptr<char>& dest,const zaimoni::Token<char>* const & src);
 	// moved to CPreproc_autogen.cpp
 	void create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const;
 	void create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const;

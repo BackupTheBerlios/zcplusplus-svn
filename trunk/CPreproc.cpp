@@ -241,8 +241,7 @@ static const POD_pair<const char*,Lang::LangTypes> LegalLanguages[]
  * 
  * \return NULL if x is unacceptable, x if x acceptable
  */
-const char*
-CPreprocessor::echo_valid_lang(const char* const x)
+const char* CPreprocessor::echo_valid_lang(const char* const x)
 {
 	if (!is_empty_string(x))
 		{
@@ -274,8 +273,7 @@ static unsigned int lang_index(const char* const lang)
 	FATAL("'");
 }
 
-LangConf&
-lexer_from_string(const char* const lang)
+LangConf& lexer_from_string(const char* const lang)
 {
 	return lexer_from_lang(lang_index(lang));
 }
@@ -424,8 +422,7 @@ STL_translate_first(IntType origin, Iterator iter, const Iterator iter_end)
 }
 
 template<class IntType,class T>
-inline void
-STL_translate_first(IntType origin, T& x)
+inline void STL_translate_first(IntType origin, T& x)
 {
 	assert(!x.empty());
 	STL_translate_first(origin,x.begin(),x.end());
@@ -639,7 +636,7 @@ void CPreprocessor::detailed_UNICODE_syntax(Token<char>& x) const
 					}
 				};
 			if (down_convert)
-				{	//! \bug need data-transform testcase
+				{	//! \test cpp/default/Preprocess_UNICODE_deastral.hpp, cpp/default/Preprocess_UNICODE_deastral.h
 				const size_t offset = UNICODE_escape-x.data();
 				x.replace_once(std::nothrow,offset,6,tmp);
 				UNICODE_escape = (8U<=tail) ? strstr(x.data()+offset+1,"\\u") : NULL;
@@ -666,8 +663,7 @@ void CPreprocessor::detailed_UNICODE_syntax(Token<char>& x) const
  * 
  * \return bool
  */
-bool
-CPreprocessor::preprocess(autovalarray_ptr<Token<char>* >& TokenList)
+bool CPreprocessor::preprocess(autovalarray_ptr<Token<char>* >& TokenList)
 {
 	autovalarray_ptr<char*> locked_macros;
 	autovalarray_ptr<char*> macros_object;
@@ -779,7 +775,7 @@ pragma_locked_macro(const char* const x,const size_t x_len,const autovalarray_pt
 
 static bool line_is_preprocessing_directive(Token<char>& x)
 {	// normalize leading %: to # to handle equivalency of these tokens
-	//! \bug need test case
+	//! \test cpp/Error_error_directive2.hpp
 	if ((sizeof("%:")-1)<=x.size() && !strncmp(x.data(),"%:",sizeof("%:")-1)) x.replace_once(std::nothrow,0,sizeof("%:")-1,"#");
 	return '#'==x.front();
 }
@@ -820,7 +816,7 @@ RestartAfterInclude:
 				if (0==i) goto Restart;
 				--i;
 				continue;
-				}
+				};
 			const size_t whitespace_size = strspn(TokenList[i]->data()+1,lang.WhiteSpace+1);
 			if (token_size-1 == whitespace_size)
 				{
@@ -828,7 +824,7 @@ RestartAfterInclude:
 				if (0==i) goto Restart;
 				--i;
 				continue;
-				}
+				};
 
 			TokenList[i]->flags |= PREPROCESSING_DIRECTIVE_FLAG;
 			if (0<whitespace_size)
@@ -837,7 +833,7 @@ RestartAfterInclude:
 				TokenList[i]->ltrim(whitespace_size);
 				assert(!TokenList[i]->empty());
 				assert('#'==TokenList[i]->front());
-				}
+				};
 			}	// end scoping brace
 			const errr directive_type = find_directive(TokenList[i]->data()+1,lang);
 			if (0>directive_type && 0==if_depth)
@@ -875,9 +871,8 @@ RestartAfterInclude:
 									{
 									const size_t intra_WS = strspn(TokenList[i]->data()+critical_offset,lang.WhiteSpace+1);
 									if (0==intra_WS)
-										{	//! \todo really should be a bit more clever about this
+										//! \todo really should be a bit more clever about this
 										TokenList[i]->replace_once(critical_offset,0,' ');
-										}
 									else if (TokenList[i]->size()-critical_offset<=intra_WS)
 										{
 										if (PP::PRAGMA==directive_type)
@@ -911,7 +906,8 @@ RestartAfterInclude:
 				size_t first_token_len = 0;
 				if (PP::ERROR==directive_type)
 					{	// an error by fiat
-						//! \test Error_error_directive.hpp : #error directive
+						//! \test cpp/Error_error_directive.hpp
+						//! \test cpp/Error_error_directive2.hpp
 					message_header(*TokenList[i]);
 					INC_INFORM(ERR_STR);
 					INFORM(TokenList[i]->data()+(sizeof("#error ")-1));
@@ -997,7 +993,7 @@ RestartAfterInclude:
 					if (	0==include_where && 0==restart_full_scan
 						&&	pragma_locked_macro(TokenList[i]->data()+critical_offset,first_token_len,locked_macros))
 						{	// here so we don't recalculate the above
-						//! \bug need test case
+						//! \test cpp/Error_undef_locked_macro.hpp
 						discard_locked_macro(TokenList,i,directive_type);
 						if (0==i) goto Restart;
 						--i;
@@ -1626,8 +1622,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						i += actual_tokens-1;
 						}
 					else if (0<=function_macro_index)
-						{	//! \bug need test cases
-							// could be function-like macro
+						{	// could be function-like macro
 						if (	TokenList.size()>i+1 && TokenList[i]->logical_line.first==TokenList[i+1]->logical_line.first
 							&& 	TokenList[i]->logical_line.second+TokenList[i]->size()==TokenList[i+1]->logical_line.second
 							&&	'('==TokenList[i+1]->front())
@@ -1743,7 +1738,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 							}
 						}
 					else{	// replace predefined macros, if they are here
-							//! \bug need data-transform test cases
+							//! \test cpp/default/Preprocess_STDC_defines.hpp, cpp/default/Preprocess_STDC_defines.h
 						size_t discard = 0;
 						predefined_macro_replacement(*TokenList[i],discard);
 						}
@@ -2062,8 +2057,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 				}
 			}
 #undef CPP_INCLUDE_NOT_FOUND
-		//! \bug need data-transform test cases
-		//! \test Pass13.hpp
+		//! also tested in a number of data transform test cases
 		//! \test Pass_include_local.hpp
 		if (!IncludeTokenList.empty())
 			{	// not sure whether C99 5.1.1.2 4 requires preprocessing the whole header before pasting, but it permits it
@@ -2141,10 +2135,10 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 		{
 		if (1<pretokenized.size())
 			{
-			const errr ZCC_pragma =  linear_find_lencached(x+pretokenized[0].first, pretokenized[0].second, pragma_ZCC_keywords, STATIC_SIZE(pragma_ZCC_keywords));
+			const errr ZCC_pragma =  linear_find_lencached(x+pretokenized[1].first, pretokenized[1].second, pragma_ZCC_keywords, STATIC_SIZE(pragma_ZCC_keywords));
 			switch(ZCC_pragma)
 			{
-			case PRAGMA_ZCC_LOCK:	{	//! \bug need test cases
+			case PRAGMA_ZCC_LOCK:	{	//! \test Error_undef_locked_macro.hpp
 									size_t j = pretokenized.size();
 									while(2<j)
 										{
@@ -2188,12 +2182,9 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 				};
 			// no escapes, or formatting failed: do something
 			if (wide_str)
-				{
 				INFORM(x+pretokenized[2].first+2,pretokenized[2].second-3);
-				}
-			else{
+			else
 				INFORM(x+pretokenized[2].first+1,pretokenized[2].second-2);
-				}
 			}
 		return;
 		}
@@ -2766,7 +2757,7 @@ token_is_char<'}'>(const char* const x, const POD_triple<size_t,size_t,lex_flags
 
 static bool
 _bad_syntax_pretokenized(const Token<char>& x,const LangConf& lang,POD_triple<size_t,size_t,lex_flags>& pretoken)
-{
+{	//! \bug need testcases
 	assert((C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_PP_OP_PUNC | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_IDENTIFIER) & pretoken.third);
 	assert(x.size()>pretoken.first);
 	assert(x.size()-pretoken.first>=pretoken.second);
@@ -2948,8 +2939,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 
 	// analyze the defined operators
 	size_t i = 0;
-	do	{
-		if ((sizeof("defined")-1)==pretokenized[i].second && !strncmp(x.data()+pretokenized[i].first,"defined",(sizeof("defined")-1)))
+	do	if ((sizeof("defined")-1)==pretokenized[i].second && !strncmp(x.data()+pretokenized[i].first,"defined",(sizeof("defined")-1)))
 			{
 			if (i+1>=pretokenized.size())
 				{	//! \test defined.C99/Error_malformed1.hpp, defined.C99/Error_malformed1.h
@@ -3003,6 +2993,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 					&& token_is_char<')'>(x.data(),pretokenized[i+3]))
 					{	// defined(IDENTIFIER)
 						//! \bug need test cases
+						// handle this by putting in #ifdef/#if defined(__)/#if defined __ rotator
 					int know_it_now = context_free_defined(x.data()+pretokenized[i+2].first, pretokenized[i+2].second);
 					if (0==know_it_now)
 						know_it_now = (macro_is_defined(x.data()+pretokenized[i+2].first, pretokenized[i+2].second, macros_object, macros_function)) ? 1 : -1;
@@ -3046,7 +3037,6 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 			bad_control = true;
 			continue;
 			}
-		}
 	while(pretokenized.size() > ++i);
 
 	// if any identifiers survive, we have to do macro preprocessing to get further
@@ -3055,7 +3045,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 	intradirective_preprocess(x,valid_directives[if_directive].second+2,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion);
 	intradirective_flush_identifiers_to_zero(x,valid_directives[if_directive].second+2);
 
-	//! \bug ZCC should actually calculate the control expression completely to 0/1  Error reporting for this isn't particularly compatible with destructive-evaluate.
+	// ZCC should actually calculate the control expression completely to 0/1  Error reporting for this isn't particularly compatible with destructive-evaluate.
 	// this is for both #if and #elif directives at depth 1
 	// cf. USENET discussion with Eric Sosman @ sun.com on comp.lang.c at Rationale.XXX/comp.lang.c_must_fully_process_depth1_elif_20080827.htm
 	// note that integer literals are always parsed as of type intmax_t or uintmax_t
@@ -3063,7 +3053,6 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 	STL_translate_first(critical_offset,pretokenized);	// coordinate fixup
 
 	// error the illegal preprocessing number tokens here
-	//! \bug need testcase
 	size_t err_count = 0;
 	i = pretokenized.size();
 	do	err_count += _bad_syntax_pretokenized(x,lang,pretokenized[--i]);
@@ -3703,8 +3692,7 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 				size_t k = pretokenized.size();
 				if (3<=k)
 					{
-					do	{
-						if (C_TESTFLAG_NONATOMIC_PP_OP_PUNC==pretokenized[--k].third && detect_C_concatenation_op(x.data()+pretokenized[k].first,pretokenized[k].second))
+					do	if (C_TESTFLAG_NONATOMIC_PP_OP_PUNC==pretokenized[--k].third && detect_C_concatenation_op(x.data()+pretokenized[k].first,pretokenized[k].second))
 							{
 							if (C_TESTFLAG_IDENTIFIER==pretokenized[k+1].third)
 								{
@@ -3734,7 +3722,6 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 									}
 								};
 							}
-						}
 					while(0<k);
 					};
 				}
@@ -3927,12 +3914,9 @@ CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,
 				INC_INFORM(' ');
 
 			if (list_size<=i+1 || TokenList[i]->logical_line.first!=TokenList[i+1]->logical_line.first || strcmp(TokenList[i]->src_filename,TokenList[i+1]->src_filename))
-				{
 				INFORM(TokenList[i]->data());
-				}
-			else{
+			else
 				INC_INFORM(TokenList[i]->data());
-				}
 			++i;
 			};
 		// dump macros and locked macros
@@ -4027,8 +4011,7 @@ CPreprocessor::discard_duplicate_define(autovalarray_ptr<Token<char>* >& TokenLi
  * 
  * \return bool : true iff truncated to empty
  */
-bool
-CPreprocessor::discard_leading_trailing_concatenate_op(Token<char>& x)
+bool CPreprocessor::discard_leading_trailing_concatenate_op(Token<char>& x)
 {
 	if ((sizeof("##")-1)>x.size()) return false;
 	assert(!strpbrk(x.data(),lang.WhiteSpace+2));	// check for normalization
@@ -4438,20 +4421,20 @@ CPreprocessor::function_macro_invocation_argspan(const char* const src,const siz
  * \param src to be stringized
  */
 void
-CPreprocessor::stringize(autovalarray_ptr<char>& stringized_actual,const Token<char>* const & src)
+CPreprocessor::stringize(autovalarray_ptr<char>& dest,const Token<char>* const & src)
 {
 	if (NULL==src || src->empty())
 		{	// empty string
-		stringized_actual.resize(2);
-		strcpy(stringized_actual.c_array(),"\"\"");
+		dest.resize(2);
+		strcpy(dest.c_array(),"\"\"");
 		return;
 		}
 	
-	stringized_actual.resize(2+lang.EscapeStringLength(src->data(),src->size()));
-	stringized_actual.front()='"';
-	stringized_actual.back()='"';
+	dest.resize(2+lang.EscapeStringLength(src->data(),src->size()));
+	dest.front()='"';
+	dest.back()='"';
 
-	lang.EscapeString(stringized_actual.c_array()+1,src->data(),src->size());
+	lang.EscapeString(dest.c_array()+1,src->data(),src->size());
 }
 
 /*! 
@@ -4521,7 +4504,7 @@ CPreprocessor::flush_bad_stringize(Token<char>& x, const Token<char>& arglist)
 void
 CPreprocessor::object_macro_concatenate(Token<char>& x)
 {	//! \pre: x is normalized
-	//! \bug need data-transform test cases
+	//! \test cpp/default/Preprocess_macro_novar_concatenate.hpp, cpp/default/Preprocess_macro_novar_concatenate.h
 	if (4>x.size()) return;
 	assert(!strpbrk(x.data(),lang.WhiteSpace+2));	// check for normalization
 	assert(!strchr(x.data(),'\n'));					// check for normalization
@@ -4547,7 +4530,7 @@ CPreprocessor::object_macro_concatenate(Token<char>& x)
 void
 CPreprocessor::function_macro_concatenate_novars(Token<char>& x, const Token<char>& arglist)
 {	//! \pre: x is normalized
-	//! \bug need data-transform test cases
+	//! \test cpp/default/Preprocess_macro_novar_concatenate.hpp, cpp/default/Preprocess_macro_novar_concatenate.h
 	if (4>x.size()) return;
 	assert(!strpbrk(x.data(),lang.WhiteSpace+2));	// check for normalization
 	assert(!strchr(x.data(),'\n'));	// check for normalization
@@ -4616,10 +4599,9 @@ CPreprocessor::function_macro_concatenate_novars(Token<char>& x, const Token<cha
 							INC_INFORM(x.data()+pretokenized[i+1].first,pretokenized[i+1].second);
 							INC_INFORM(" is not empty.");
 							}
-						else{	//! \test Warn_empty_parameter_concatenation2.hpp
+						else	//! \test Warn_empty_parameter_concatenation2.hpp
 								//! \test default.nonconforming/Error_empty_parameter_concatenation2.hpp
 							INC_INFORM("concatenation automatically fails at macro invocation.");
-							};
 						INFORM((bool_options[boolopt::pedantic]) ? "" : " (ZCPP nonconforming pragmatism)");
 						// defer to here so we get the full messages out
 						if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();										// for order-of-evaluation
