@@ -3802,19 +3802,22 @@ static bool inspect_potential_paren_primary_expression(parse_tree& src)
 			zcc_errors.inc_error();
 			return true;
 			};
-		if (1==content_length && (PARSE_PRIMARY_EXPRESSION & src.data<0>()->flags))
-			{	// primary expression that got parenthesized
-			src.eval_to_arg<0>(0);
-			return true;
-			}
-		if (1==content_length && (PARSE_EXPRESSION & src.data<0>()->flags))
-			{	// normal expression that got parenthesized
-			src.flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.flags |= PARSE_PRIMARY_EXPRESSION;
-			src.flags |= (PARSE_PAREN_PRIMARY_PASSTHROUGH & src.data<0>()->flags);
-			src.type_code = src.data<0>()->type_code;
-			return true;
-			}
+		if (1==content_length)
+			{
+			if (PARSE_PRIMARY_EXPRESSION & src.data<0>()->flags)
+				{	// primary expression that got parenthesized
+				src.eval_to_arg<0>(0);
+				return true;
+				}
+			else if (PARSE_EXPRESSION & src.data<0>()->flags)
+				{	// normal expression that got parenthesized
+				src.flags &= parse_tree::RESERVED_MASK;	// just in case
+				src.flags |= PARSE_PRIMARY_EXPRESSION;
+				src.flags |= (PARSE_PAREN_PRIMARY_PASSTHROUGH & src.data<0>()->flags);
+				src.type_code = src.data<0>()->type_code;
+				return true;
+				}
+			};
 		}
 	return false;
 }
@@ -4202,8 +4205,7 @@ static bool _C99_literal_converts_to_bool(const parse_tree& src, bool& is_true)
 }
 
 static bool C99_literal_converts_to_bool(const parse_tree& src, bool& is_true)
-{
-	// deal with -1 et. al.
+{	// deal with -1 et. al.
 	if (is_C99_unary_operator_expression<'-'>(src) && src.data<2>()->is_atomic()) return _C99_literal_converts_to_bool(*src.data<2>(),is_true);
 
 	if (!src.is_atomic()) return false;
@@ -5141,9 +5143,9 @@ static bool terse_C99_augment_mult_expression(parse_tree& src, size_t& i, const 
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
 			return true;
-			}
-		else	// run syntax-checks against unary *
-			C_deref_easy_syntax_check(src.c_array<0>()[i],types);
+			};
+		// run syntax-checks against unary *
+		C_deref_easy_syntax_check(src.c_array<0>()[i],types);
 		}
 	return false;
 }
@@ -5161,10 +5163,10 @@ static bool terse_CPP_augment_mult_expression(parse_tree& src, size_t& i, const 
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
 			return true;
-			}
-		else	// run syntax-checks against unary *
-			//! \todo handle operator overloading
-			C_deref_easy_syntax_check(src.c_array<0>()[i],types);
+			};
+		// run syntax-checks against unary *
+		//! \todo handle operator overloading
+		C_deref_easy_syntax_check(src.c_array<0>()[i],types);
 		}
 	return false;
 }
@@ -5257,15 +5259,9 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 
 		// handle sign-extension of lhs, rhs
 		if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-			{
-			target_machine->signed_additive_inverse(res_int,machine_type_lhs);
-			target_machine->signed_additive_inverse(res_int,machine_type_old);
-			}
+			target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
 		if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-			{
-			target_machine->signed_additive_inverse(rhs_int,machine_type_rhs);
-			target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-			}
+			target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
 		const bool lhs_negative = res_int.test(bitcount_old-1);
 		const bool rhs_negative = rhs_int.test(bitcount_old-1);
 		if (0==(promoted_type_old-C_TYPE::INT)%2)
@@ -5323,19 +5319,8 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 			res_int = lhs_test;
 			}
 		else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-			if (virtual_machine::twos_complement!=target_machine->C_signed_int_representation())
-				{
-				if (lhs_negative) 
-					{
-					target_machine->signed_additive_inverse(res_int,machine_type_old);
-					target_machine->unsigned_additive_inverse(res_int,machine_type_old);
-					};
-				if (rhs_negative)
-					{
-					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-					target_machine->unsigned_additive_inverse(rhs_int,machine_type_old);
-					};
-				};
+			target_machine->C_cast_signed_to_unsigned(res_int,machine_type_old);
+			target_machine->C_cast_signed_to_unsigned(rhs_int,machine_type_old);
 			res_int *= rhs_int;
 			}
 		// convert to parsed + literal
@@ -5421,15 +5406,9 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 
 		// handle sign-extension of lhs, rhs
 		if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-			{
-			target_machine->signed_additive_inverse(res_int,machine_type_lhs);
-			target_machine->signed_additive_inverse(res_int,machine_type_old);
-			}
+			target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
 		if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-			{
-			target_machine->signed_additive_inverse(rhs_int,machine_type_rhs);
-			target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-			}
+			target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
 		const bool lhs_negative = res_int.test(bitcount_old-1);
 		const bool rhs_negative = rhs_int.test(bitcount_old-1);
 		if (0==(promoted_type_old-C_TYPE::INT)%2)
@@ -5500,19 +5479,8 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 			res_int = lhs_test;
 			}
 		else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-			if (virtual_machine::twos_complement!=target_machine->C_signed_int_representation())
-				{
-				if (lhs_negative) 
-					{
-					target_machine->signed_additive_inverse(res_int,machine_type_old);
-					target_machine->unsigned_additive_inverse(res_int,machine_type_old);
-					};
-				if (rhs_negative)
-					{
-					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-					target_machine->unsigned_additive_inverse(rhs_int,machine_type_old);
-					};
-				};
+			target_machine->C_cast_signed_to_unsigned(res_int,machine_type_old);
+			target_machine->C_cast_signed_to_unsigned(rhs_int,machine_type_old);
 			res_int /= rhs_int;
 			}
 
@@ -5601,15 +5569,9 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 
 		// handle sign-extension of lhs, rhs
 		if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-			{
-			target_machine->signed_additive_inverse(res_int,machine_type_lhs);
-			target_machine->signed_additive_inverse(res_int,machine_type_old);
-			}
+			target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
 		if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-			{
-			target_machine->signed_additive_inverse(rhs_int,machine_type_rhs);
-			target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-			}
+			target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
 		const bool lhs_negative = res_int.test(bitcount_old-1);
 		const bool rhs_negative = rhs_int.test(bitcount_old-1);
 		if (0==(promoted_type_old-C_TYPE::INT)%2)
@@ -5644,19 +5606,8 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 			res_int = lhs_test;
 			}
 		else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-			if (virtual_machine::twos_complement!=target_machine->C_signed_int_representation())
-				{
-				if (lhs_negative) 
-					{
-					target_machine->signed_additive_inverse(res_int,machine_type_old);
-					target_machine->unsigned_additive_inverse(res_int,machine_type_old);
-					};
-				if (rhs_negative)
-					{
-					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-					target_machine->unsigned_additive_inverse(rhs_int,machine_type_old);
-					};
-				};
+			target_machine->C_cast_signed_to_unsigned(res_int,machine_type_old);
+			target_machine->C_cast_signed_to_unsigned(rhs_int,machine_type_old);
 			res_int %= rhs_int;
 			}
 
@@ -5994,15 +5945,9 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 
 				// handle sign-extension of lhs, rhs
 				if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-					{
-					target_machine->signed_additive_inverse(res_int,machine_type_lhs);
-					target_machine->signed_additive_inverse(res_int,machine_type_old);
-					}
+					target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
 				if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-					{
-					target_machine->signed_additive_inverse(rhs_int,machine_type_rhs);
-					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-					}
+					target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
 				const bool lhs_negative = res_int.test(bitcount_old-1);
 				const bool rhs_negative = rhs_int.test(bitcount_old-1);
 				if (0==(promoted_type_old-C_TYPE::INT)%2)
@@ -6070,19 +6015,8 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 					res_int = lhs_test;
 					}
 				else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-					if (virtual_machine::twos_complement!=target_machine->C_signed_int_representation())
-						{
-						if (lhs_negative) 
-							{
-							target_machine->signed_additive_inverse(res_int,machine_type_old);
-							target_machine->unsigned_additive_inverse(res_int,machine_type_old);
-							};
-						if (rhs_negative)
-							{
-							target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-							target_machine->unsigned_additive_inverse(rhs_int,machine_type_old);
-							};
-						};
+					target_machine->C_cast_signed_to_unsigned(res_int,machine_type_old);
+					target_machine->C_cast_signed_to_unsigned(rhs_int,machine_type_old);
 					res_int += rhs_int;
 					}
 
@@ -6180,15 +6114,9 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 
 				// handle sign-extension of lhs, rhs
 				if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-					{
-					target_machine->signed_additive_inverse(res_int,machine_type_lhs);
-					target_machine->signed_additive_inverse(res_int,machine_type_old);
-					}
+					target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
 				if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-					{
-					target_machine->signed_additive_inverse(rhs_int,machine_type_rhs);
-					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-					}
+					target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
 				const bool lhs_negative = res_int.test(bitcount_old-1);
 				const bool rhs_negative = rhs_int.test(bitcount_old-1);
 				if (0==(promoted_type_old-C_TYPE::INT)%2)
@@ -6256,19 +6184,8 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 					res_int = lhs_test;
 					}
 				else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-					if (virtual_machine::twos_complement!=target_machine->C_signed_int_representation())
-						{
-						if (lhs_negative) 
-							{
-							target_machine->signed_additive_inverse(res_int,machine_type_old);
-							target_machine->unsigned_additive_inverse(res_int,machine_type_old);
-							};
-						if (rhs_negative)
-							{
-							target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-							target_machine->unsigned_additive_inverse(rhs_int,machine_type_old);
-							};
-						};
+					target_machine->C_cast_signed_to_unsigned(res_int,machine_type_old);
+					target_machine->C_cast_signed_to_unsigned(rhs_int,machine_type_old);
 					res_int -= rhs_int;
 					}
 
@@ -9179,15 +9096,9 @@ void C99_PPHackTree(parse_tree& src,const type_system& types)
 
 				// handle sign-extension of lhs, rhs
 				if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-					{
-					target_machine->signed_additive_inverse(res_int,machine_type_lhs);
-					target_machine->signed_additive_inverse(res_int,machine_type_old);
-					}
+					target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
 				if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-					{
-					target_machine->signed_additive_inverse(rhs_int,machine_type_rhs);
-					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-					}
+					target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
 #ifndef NDEBUG
 				const bool lhs_negative = res_int.test(bitcount_old-1);
 				const bool rhs_negative = rhs_int.test(bitcount_old-1);
@@ -9258,15 +9169,9 @@ void CPP_PPHackTree(parse_tree& src,const type_system& types)
 
 				// handle sign-extension of lhs, rhs
 				if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-					{
-					target_machine->signed_additive_inverse(res_int,machine_type_lhs);
-					target_machine->signed_additive_inverse(res_int,machine_type_old);
-					}
+					target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
 				if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-					{
-					target_machine->signed_additive_inverse(rhs_int,machine_type_rhs);
-					target_machine->signed_additive_inverse(rhs_int,machine_type_old);
-					}
+					target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
 #ifndef NDEBUG
 				const bool lhs_negative = res_int.test(bitcount_old-1);
 				const bool rhs_negative = rhs_int.test(bitcount_old-1);

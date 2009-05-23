@@ -105,6 +105,19 @@ public:
 	bool trap_int(const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,std_int_enum machine_type) const;
 	void signed_additive_inverse(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,std_int_enum machine_type) const;
 	void unsigned_additive_inverse(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,std_int_enum machine_type) const;
+	void sign_extend(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,std_int_enum machine_type_from,std_int_enum machine_type_to) const
+		{
+		signed_additive_inverse(src_int,machine_type_from);
+		signed_additive_inverse(src_int,machine_type_to);
+		};
+	void C_cast_signed_to_unsigned(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,std_int_enum machine_type) const
+		{	// C99 6.3.1.3p2 dictates modulo conversion to unsigned
+		if (twos_complement!=C_signed_int_representation() && src_int.test(C_bit(machine_type)-1))
+			{
+			signed_additive_inverse(src_int,machine_type);
+			unsigned_additive_inverse(src_int,machine_type);
+			}
+		};
 
 	bool char_is_signed_char() const {return (signed_int_representation & 4U);};
 	std_int_enum UNICODE_wchar_t() const {return (std_int_enum)((signed_int_representation>>3) & 7U);};
