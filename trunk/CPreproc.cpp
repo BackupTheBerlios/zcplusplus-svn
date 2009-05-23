@@ -2167,7 +2167,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 			const bool wide_str = 'L'==x[pretokenized[2].first];
 			if (0<std::count(x+pretokenized[2].first,x+pretokenized[2].first+pretokenized[2].second,'\\'))
 				{	// no escapes
-				if (wide_str) return; //! \bug this should do a proper unescape to UNICODE, then use a wrapper library to push the UNICODE to whatever wide-char support there is
+				if (wide_str) return; //! \todo this should do a proper unescape to UNICODE, then use a wrapper library to push the UNICODE to whatever wide-char support there is
 
 				//! \todo change target, this only handles target CHAR_BIT<=host CHAR_BIT
 				const size_t tmp_len = lang.UnescapeStringLength(x+pretokenized[2].first,pretokenized[2].second);
@@ -2942,7 +2942,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 	do	if ((sizeof("defined")-1)==pretokenized[i].second && !strncmp(x.data()+pretokenized[i].first,"defined",(sizeof("defined")-1)))
 			{
 			if (i+1>=pretokenized.size())
-				{	//! \test defined.C99/Error_malformed1.hpp, defined.C99/Error_malformed1.h
+				{	//! \test cpp/defined.C99/Error_malformed1.hpp, cpp/defined.C99/Error_malformed1.h
 				message_header(x);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("malformed defined operator application (C99 6.10.1p1/C++98 16.1p1)");
@@ -2953,7 +2953,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 				};
 			if (C_TESTFLAG_IDENTIFIER==pretokenized[i+1].third)
 				{	// defined IDENTIFIER -- will evaluate to 0 or 1
-					//! \bug need test cases
+					//! \test cpp/defined.C99/Pass_defined_op.hpp, cpp/defined.C99/Pass_defined_op.h
 				int know_it_now = context_free_defined(x.data()+pretokenized[i+1].first, pretokenized[i+1].second);
 				if (0==know_it_now)
 					know_it_now = (macro_is_defined(x.data()+pretokenized[i+1].first, pretokenized[i+1].second, macros_object, macros_function)) ? 1 : -1;
@@ -2992,8 +2992,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 				if (   C_TESTFLAG_IDENTIFIER==pretokenized[i+2].third
 					&& token_is_char<')'>(x.data(),pretokenized[i+3]))
 					{	// defined(IDENTIFIER)
-						//! \bug need test cases
-						// handle this by putting in #ifdef/#if defined(__)/#if defined __ rotator
+						//! \test cpp/defined.C99/Pass_defined_op.hpp, cpp/defined.C99/Pass_defined_op.h
 					int know_it_now = context_free_defined(x.data()+pretokenized[i+2].first, pretokenized[i+2].second);
 					if (0==know_it_now)
 						know_it_now = (macro_is_defined(x.data()+pretokenized[i+2].first, pretokenized[i+2].second, macros_object, macros_function)) ? 1 : -1;

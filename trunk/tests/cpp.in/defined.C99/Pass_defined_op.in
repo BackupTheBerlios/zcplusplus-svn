@@ -1,0 +1,15 @@
+SUFFIXES h hpp
+// check that defined operator works
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+TRUE_EXPRESSION defined __STDC__
+TRUE_EXPRESSION defined(__STDC__)
+
+#define TEST 1
+
+TRUE_EXPRESSION defined TEST
+TRUE_EXPRESSION defined(TEST)
+
+FALSE_EXPRESSION defined TEST2
+FALSE_EXPRESSION defined(TEST2)
+
