@@ -1366,7 +1366,7 @@ static bool C_like_BalancingCheck(const weak_token* tokenlist,size_t tokenlist_l
 
 	// responsible for context-free error checking	
 	if (hard_start && hard_end)
-		{	//! \bug need test cases
+		{	// other test cases cannot be done from preprocessor
 		construct_matched_pairs<'(',')'>(tokenlist,tokenlist_len,parenpair_stack);
 		construct_matched_pairs<'[',']'>(tokenlist,tokenlist_len,bracketpair_stack);
 		construct_matched_pairs<'{','}'>(tokenlist,tokenlist_len,bracepair_stack);
@@ -1391,6 +1391,8 @@ static bool C_like_BalancingCheck(const weak_token* tokenlist,size_t tokenlist_l
 						break;
 						}
 			case 3:		{	// paren and bracket
+							//! \test cpp/default/Error_if_control70.hpp, cpp/default/Error_if_control70.h
+							//! \test cpp/default/Error_if_control71.hpp, cpp/default/Error_if_control71.h
 						find_sliced_pairs(tokenlist,parenpair_stack,bracketpair_stack,std::pair<char,char>('(',')'),std::pair<char,char>('[',']'));
 						break;
 						}
@@ -5272,7 +5274,7 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 			if (ub<lhs_test || ub<rhs_test)
 				{
 				if (hard_error)
-					{	//! \bug catch this in two's-complement specific testing
+					{	//! \todo catch this in two's-complement specific testing
 					src.flags |= parse_tree::INVALID;
 					message_header(src.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -5475,7 +5477,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 				return true;
 				}
 			if (ub<lhs_test)
-				{	//! \bug test this in two's complement code
+				{	//! \todo test this in two's complement code
 				assert(virtual_machine::twos_complement==target_machine->C_signed_int_representation());
 				if (hard_error)
 					{
@@ -6534,7 +6536,7 @@ static bool binary_infix_failed_integer_arguments(parse_tree& src, const char* s
 		return !converts_to_integerlike(src.data<1>()->type_code) || !converts_to_integerlike(src.data<2>()->type_code);
 
 	// hmm... 45-47, 48-50, 51-53, 54-56, 57-59
-	//! \bug need tests for float literal in place of int literal: << >> & ^ |
+	//! \todo need tests for float literal in place of int literal: << >> & ^ |
 	const bool rhs_integerlike = converts_to_integerlike(src.data<2>()->type_code);
 	if (!converts_to_integerlike(src.data<1>()->type_code))
 		{	// tests for string literal in place of integer literal
@@ -6635,7 +6637,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((old_type.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
 		const bool undefined_behavior = target_machine->C_bit(machine_type)<=rhs_int;
 
-		//! \bug can't test with static test case (need to use bitcount of uintmax_t/intmax_t)
+		//! \todo can't test with static test case (need to use bitcount of uintmax_t/intmax_t)
 		if (undefined_behavior)
 			{
 			src.flags |= parse_tree::INVALID;
@@ -6662,7 +6664,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 			// note that incoming negative signed integers are not handled by this code path
 			if (C99_SHIFT_SUBTYPE_LEFT==src.subtype)
 				{
-				//! \bug but signed integers do go undefined in C if left-shifted too much; C++ accepts
+				//! \todo but signed integers do go undefined in C if left-shifted too much; C++ accepts
 #if 0
 				if (0==(old_type.base_type_index-C_TYPE::INT)%2 && target_machine->C_bit(machine_type)<=rhs_int.to_uint()+lhs_int.int_log2()+1)
 					{
@@ -8755,7 +8757,7 @@ bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const le
 	assert(C_TESTFLAG_PP_NUMERAL & flags);
 	assert(!(C_TESTFLAG_FLOAT & flags));
 	C_REALITY_CHECK_PP_NUMERAL_FLAGS(flags);
-	//! \bug need some way to signal legality for integer literals
+	//! \todo need some way to signal legality for integer literals
 	switch(C_EXTRACT_BASE_CODE(flags))
 	{
 #ifndef NDEBUG

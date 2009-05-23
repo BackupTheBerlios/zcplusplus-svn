@@ -352,6 +352,14 @@ main(int argc, char* argv[])
 		INC_INFORM((uintmax_t)(CHAR_BIT));
 		FATAL("]");
 		};
+	if (7>target_machine.C_char_bit())
+		{
+		INC_INFORM("error: target machine CHAR_BIT<7 cannot represent C source character set");
+		INC_INFORM(target_machine.C_char_bit());
+		INC_INFORM(" vs ");
+		INC_INFORM((uintmax_t)(CHAR_BIT));
+		FATAL("]");
+		};
 	if (C_UNICODE_MAX<target_machine.unsigned_max(target_machine.UNICODE_wchar_t()))
 		{
 		INC_INFORM("error: target machine has larger unsigned WCHAR_MAX than ours [");
