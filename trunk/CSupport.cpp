@@ -536,6 +536,12 @@ enum hard_type_indexes {
 
 }
 
+static inline virtual_machine::std_int_enum machine_type_from_type_index(size_t base_type_index)
+{
+	assert(C_TYPE::INT<=base_type_index && C_TYPE::ULLONG>=base_type_index);
+	return (virtual_machine::std_int_enum)((base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+}
+
 #if 0
 static bool is_innate_type(size_t base_type_index)
 {
@@ -3305,7 +3311,7 @@ static bool C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 	if (actual.second)
 		{
 		const size_t promoted_type = default_promote_type(src.type_code.base_type_index);
-		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((promoted_type-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(promoted_type);
 		if (0==(promoted_type-C_TYPE::INT)%2)
 			target_machine->signed_additive_inverse(dest,machine_type);
 		else
@@ -3330,7 +3336,7 @@ static bool CPP_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 	if (actual.second)
 		{
 		const size_t promoted_type = default_promote_type(src.type_code.base_type_index);
-		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((promoted_type-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(promoted_type);
 		if (0==(promoted_type-C_TYPE::INT)%2)
 			target_machine->signed_additive_inverse(dest,machine_type);
 		else
@@ -4332,7 +4338,7 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,func_trai
 		};
 	if (converts_to_integer(src.data<2>()->type_code) && 1==(src.type_code.base_type_index-C_TYPE::INT)%2 && (PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
 		{	// unsigned...we're fine
-		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(src.type_code.base_type_index);
 		const type_spec old_type = src.type_code;
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
 		intlike_literal_to_VM(res_int,*src.data<2>());
@@ -4676,7 +4682,7 @@ static bool int_has_trapped(parse_tree& src,const unsigned_fixed_int<VM_MAX_BIT_
 {
 	assert(C_TYPE::INT<=src.type_code.base_type_index && C_TYPE::INTEGERLIKE>src.type_code.base_type_index);
 	// check for trap representation for signed types
-	const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+	const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(src.type_code.base_type_index);
 	if (bool_options[boolopt::int_traps] && 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && target_machine->trap_int(src_int,machine_type))
 		{
 		if (hard_error && !(parse_tree::INVALID & src.flags))
@@ -4777,7 +4783,7 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool ha
 	if (intlike_literal_to_VM(res_int,*src.data<2>())) 
 		{
 		const type_spec old_type = src.type_code;
-		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((old_type.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(old_type.base_type_index);
 		res_int.auto_bitwise_complement();
 		res_int.mask_to(target_machine->C_bit(machine_type));
 
@@ -5242,9 +5248,9 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 		const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
 		const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
 		const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
-		const virtual_machine::std_int_enum machine_type_lhs = (virtual_machine::std_int_enum)((promoted_type_lhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-		const virtual_machine::std_int_enum machine_type_rhs = (virtual_machine::std_int_enum)((promoted_type_rhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-		const virtual_machine::std_int_enum machine_type_old = (virtual_machine::std_int_enum)((promoted_type_old-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const virtual_machine::std_int_enum machine_type_lhs = machine_type_from_type_index(promoted_type_lhs);
+		const virtual_machine::std_int_enum machine_type_rhs = machine_type_from_type_index(promoted_type_rhs);
+		const virtual_machine::std_int_enum machine_type_old = machine_type_from_type_index(promoted_type_old);
 		const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
 		const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
 		const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
@@ -5406,9 +5412,9 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 		const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
 		const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
 		const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
-		const virtual_machine::std_int_enum machine_type_lhs = (virtual_machine::std_int_enum)((promoted_type_lhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-		const virtual_machine::std_int_enum machine_type_rhs = (virtual_machine::std_int_enum)((promoted_type_rhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-		const virtual_machine::std_int_enum machine_type_old = (virtual_machine::std_int_enum)((promoted_type_old-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const virtual_machine::std_int_enum machine_type_lhs = machine_type_from_type_index(promoted_type_lhs);
+		const virtual_machine::std_int_enum machine_type_rhs = machine_type_from_type_index(promoted_type_rhs);
+		const virtual_machine::std_int_enum machine_type_old = machine_type_from_type_index(promoted_type_old);
 		const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
 		const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
 		const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
@@ -5586,9 +5592,9 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 		const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
 		const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
 		const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
-		const virtual_machine::std_int_enum machine_type_lhs = (virtual_machine::std_int_enum)((promoted_type_lhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-		const virtual_machine::std_int_enum machine_type_rhs = (virtual_machine::std_int_enum)((promoted_type_rhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-		const virtual_machine::std_int_enum machine_type_old = (virtual_machine::std_int_enum)((promoted_type_old-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const virtual_machine::std_int_enum machine_type_lhs = machine_type_from_type_index(promoted_type_lhs);
+		const virtual_machine::std_int_enum machine_type_rhs = machine_type_from_type_index(promoted_type_rhs);
+		const virtual_machine::std_int_enum machine_type_old = machine_type_from_type_index(promoted_type_old);
 		const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
 		const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
 		const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
@@ -5979,9 +5985,9 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 				const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
 				const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
 				const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
-				const virtual_machine::std_int_enum machine_type_lhs = (virtual_machine::std_int_enum)((promoted_type_lhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-				const virtual_machine::std_int_enum machine_type_rhs = (virtual_machine::std_int_enum)((promoted_type_rhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-				const virtual_machine::std_int_enum machine_type_old = (virtual_machine::std_int_enum)((promoted_type_old-C_TYPE::INT)/2+virtual_machine::std_int_int);
+				const virtual_machine::std_int_enum machine_type_lhs = machine_type_from_type_index(promoted_type_lhs);
+				const virtual_machine::std_int_enum machine_type_rhs = machine_type_from_type_index(promoted_type_rhs);
+				const virtual_machine::std_int_enum machine_type_old = machine_type_from_type_index(promoted_type_old);
 				const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
 				const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
 				const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
@@ -6165,9 +6171,9 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 				const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
 				const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
 				const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
-				const virtual_machine::std_int_enum machine_type_lhs = (virtual_machine::std_int_enum)((promoted_type_lhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-				const virtual_machine::std_int_enum machine_type_rhs = (virtual_machine::std_int_enum)((promoted_type_rhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-				const virtual_machine::std_int_enum machine_type_old = (virtual_machine::std_int_enum)((promoted_type_old-C_TYPE::INT)/2+virtual_machine::std_int_int);
+				const virtual_machine::std_int_enum machine_type_lhs = machine_type_from_type_index(promoted_type_lhs);
+				const virtual_machine::std_int_enum machine_type_rhs = machine_type_from_type_index(promoted_type_rhs);
+				const virtual_machine::std_int_enum machine_type_old = machine_type_from_type_index(promoted_type_old);
 				const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
 				const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
 				const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
@@ -6634,7 +6640,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
 	if (intlike_literal_to_VM(rhs_int,*src.data<2>()))
 		{
-		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((old_type.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(old_type.base_type_index);
 		const bool undefined_behavior = target_machine->C_bit(machine_type)<=rhs_int;
 
 		//! \todo can't test with static test case (need to use bitcount of uintmax_t/intmax_t)
@@ -6685,7 +6691,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 			else	// if (C99_SHIFT_SUBTYPE_RIGHT==src.subtype)
 				res_int >>= rhs_int.to_uint();
 
-			const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+			const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(src.type_code.base_type_index);
 			const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
 			if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
 			parse_tree tmp;
@@ -7295,7 +7301,7 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 			// lhs & rhs = rhs; conserve type
 			src.eval_to_arg<2>(0);
 		else{
-			const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+			const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(src.type_code.base_type_index);
 			const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
 			if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
 			parse_tree tmp;
@@ -7460,7 +7466,7 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 
 		if (int_has_trapped(src,res_int,hard_error)) return false;
 
-		const virtual_machine::std_int_enum machine_type = (virtual_machine::std_int_enum)((src.type_code.base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
+		const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(src.type_code.base_type_index);
 		const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
 		if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
 		parse_tree tmp;
@@ -8641,112 +8647,6 @@ static bool CPP_CondenseParseTree(parse_tree& src,const type_system& types)
 
 	while(src.is_raw_list() && 1==src.size<0>()) src.eval_to_arg<0>(0);
 	return true;
-}
-
-static bool C99_convert_literal_to_integer(const parse_tree& src,unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& tmp,bool& is_negative)
-{
-	assert(src.is_atomic());
-	if (C_TESTFLAG_CHAR_LITERAL==src.index_tokens[0].flags)
-		{
-		assert(IsLegalCCharacterLiteral(src.index_tokens[0].token.first,src.index_tokens[0].token.second));
-		uintmax_t tmp2 = EvalCharacterLiteral(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
-		assert(target_machine->unsigned_max<virtual_machine::std_int_char>()>=tmp2);
-		if (bool_options[boolopt::char_is_signed] && target_machine->signed_max<virtual_machine::std_int_char>()<tmp2)
-			{
-			is_negative = true;
-			switch(target_machine->C_signed_int_representation())
-			{
-#ifndef NDEBUG
-			default: FATAL_CODE("invalid return from CPUInfo::C_signed_int_representation",3);
-#endif
-			case virtual_machine::twos_complement:		{	// (UCHAR_MAX+1)-original 
-														tmp2 = (target_machine->unsigned_max<virtual_machine::std_int_char>().to_uint()-tmp2)+1;
-														break;
-														};
-			case virtual_machine::ones_complement:		{	// UCHAR_MAX-original
-														tmp2 = target_machine->unsigned_max<virtual_machine::std_int_char>().to_uint()-tmp2;
-														break;
-														};
-			case virtual_machine::sign_and_magnitude:	{	// just clear the sign bit....
-														tmp2 &= ~(1ULL << (target_machine->C_char_bit()-1));
-														break;
-														};
-			}
-			}
-		tmp = tmp2;
-		return true;
-		};
-	if (!(C_TESTFLAG_PP_NUMERAL & src.index_tokens[0].flags)) return false;
-	C_REALITY_CHECK_PP_NUMERAL_FLAGS(src.index_tokens[0].flags);
-	//! \todo --do-what-i-mean should try to identify floats that are really integers
-	if (src.index_tokens[0].flags & C_TESTFLAG_FLOAT) return false;
-
-	C_PPDecimalInteger test_dec;
-	C_PPHexInteger test_hex;
-	C_PPOctalInteger test_oct;
-	int errno_copy = 0;
-	{
-	OS::scoped_lock errno_lock(errno_mutex);
-	errno = 0;
-	switch(C_EXTRACT_BASE_CODE(src.index_tokens[0].flags))
-	{
-#ifndef NDEBUG
-	default: FATAL_CODE("unclassified integer literal",3);
-#endif
-	case C_BASE_OCTAL:
-		{	// all-zeros is zero, ok with leading 0 prefix
-#ifdef NDEBUG
-		C_PPOctalInteger::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,test_oct);
-#else
-		assert(C_PPOctalInteger::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,test_oct));
-#endif
-		tmp = test_oct.to_umax();
-		break;
-		};
-	case C_BASE_DECIMAL:
-		{	// decimal is easy
-#ifdef NDEBUG
-		C_PPDecimalInteger::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,test_dec);
-#else
-		assert(C_PPDecimalInteger::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,test_dec));
-#endif
-		tmp = test_dec.to_umax();
-		break;
-		};
-	case C_BASE_HEXADECIMAL:
-		{	// all-zeros is zero, but ignore the leading 0x prefix
-#ifdef NDEBUG
-		C_PPHexInteger::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,test_hex);
-#else
-		assert(C_PPHexInteger::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,test_hex));
-#endif
-		tmp = test_hex.to_umax();
-		break;
-		};
-	}
-	errno_copy = errno;
-	};	// end scope of errno_mutex lock
-	assert(0==errno_copy || ERANGE==errno_copy);
-	return !errno_copy;
-}
-
-static bool CPlusPlus_convert_literal_to_integer(const parse_tree& src,unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& tmp,bool& is_negative)
-{
-	assert(src.is_atomic());
-	if (token_is_string<4>(src.index_tokens[0].token,"true"))
-		{
-		tmp.clear();
-		tmp += 1;
-		is_negative = false;
-		return true;
-		};
-	if (token_is_string<5>(src.index_tokens[0].token,"false"))
-		{
-		tmp.clear();
-		is_negative = false;
-		return true;
-		}
-	return C99_convert_literal_to_integer(src,tmp,is_negative);
 }
 
 //! \test if.C99/Pass_zero.hpp, if.C99/Pass_zero.h
