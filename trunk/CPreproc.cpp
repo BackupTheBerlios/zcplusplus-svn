@@ -45,7 +45,7 @@ enum LangTypes 	{	C,			// C99
 #define ERR_STR "error: "
 #define WARN_STR "warning: "
 
-#define INSTALL_TO "C:\\CPP_App\\Z.C++"
+#define INSTALL_TO "\\CPP_App\\Z.C++"
 #define ZCC_VERSION "0.0.0"
 #define ZCC_VERSION_MAJOR 0
 #define ZCC_VERSION_MINOR 0
@@ -69,11 +69,29 @@ static const char* const fixed_system_include_search[] = {
 	".." ZAIMONI_PATH_SEP "include"
 };
 
+static const char* actual_system_include_search[] =	{
+	// C++-only install paths
+	NULL,
+	NULL,
+	// C++-only relative paths
+	NULL,
+	NULL,
+	// install path
+	NULL,
+	NULL,
+	NULL,
+	// relative paths
+	NULL,
+	NULL,
+	NULL
+};
+
+BOOST_STATIC_ASSERT(STATIC_SIZE(fixed_system_include_search)==STATIC_SIZE(actual_system_include_search));
+
 #define START_CPP_ONLY_PATHS 4
 
 #undef INSTALL_TO
 
-static bool fixed_system_include_exists[STATIC_SIZE(fixed_system_include_search)];
 static bool fixed_system_include_exists_init = false;
 
 static void init_fixed_system_include_search(void)
@@ -81,15 +99,28 @@ static void init_fixed_system_include_search(void)
 	if (!fixed_system_include_exists_init)
 		{
 		char filepath[FILENAME_MAX];
+		char workpath[FILENAME_MAX];
 		size_t i = STATIC_SIZE(fixed_system_include_search);
 		do	{
 			--i;
 			assert(!is_empty_string(fixed_system_include_search[i]));
-			char* exists = z_realpath(filepath,fixed_system_include_search[i]);
-			fixed_system_include_exists[i] = (NULL!=exists && !access(exists,F_OK));
+			if ('.'==fixed_system_include_search[i][0] && FILENAME_MAX>strlen(self_path)+strlen(fixed_system_include_search[i])+1)
+				{	// obviously relative path
+				z_dirname(workpath,self_path);
+				strcat(workpath,ZAIMONI_PATH_SEP);
+				strcat(workpath,fixed_system_include_search[i]);
+				char* exists = z_realpath(filepath,workpath);
+				if (NULL!=exists && !access(exists,F_OK))
+					actual_system_include_search[i] = register_string(filepath);
+				}
+			else if (ZAIMONI_PATH_SEP[0]==fixed_system_include_search[i][0])
+				{	// absolute path, current drive
+				char* exists = z_realpath(filepath,fixed_system_include_search[i]);
+				if (NULL!=exists && !access(exists,F_OK))
+					actual_system_include_search[i] = register_string(filepath);
+				};
 			}
 		while(0<i);
-		fixed_system_include_exists_init = true;
 		}
 }
 
@@ -2392,11 +2423,11 @@ CPreprocessor::find_system_include(const char* const src, char* const filepath_b
 	// \todo more robust multi-language architecture
 	//! \test Pass13.hpp
 	size_t i = (Lang::C==lang_code) ? START_CPP_ONLY_PATHS : 0;
-	do	if (fixed_system_include_exists[i])
+	do	if (actual_system_include_search[i])
 			{
-			size_t target_length = strlen(fixed_system_include_search[i]);
+			size_t target_length = strlen(actual_system_include_search[i]);
 			assert(FILENAME_MAX>target_length);
-			strcpy(test_filepath,fixed_system_include_search[i]);
+			strcpy(test_filepath,actual_system_include_search[i]);
 			if (FILENAME_MAX<=target_length+(sizeof(ZAIMONI_PATH_SEP)-1)+src_len) continue;	// safe only because FILENAME_MAX is small
 			strcpy(test_filepath+target_length,ZAIMONI_PATH_SEP);
 			target_length += (sizeof(ZAIMONI_PATH_SEP)-1);
@@ -2413,7 +2444,7 @@ CPreprocessor::find_system_include(const char* const src, char* const filepath_b
 				return true;
 				}
 			}
-	while(STATIC_SIZE(fixed_system_include_search) > ++i);
+	while(STATIC_SIZE(actual_system_include_search) > ++i);
 
 	return false;	//! \test Error_include_nonexistent1.hpp
 }
