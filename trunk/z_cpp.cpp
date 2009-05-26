@@ -397,13 +397,6 @@ main(int argc, char* argv[])
 		else{
 			if (last_arg_used_in_option) FATAL("file not last argument provided");
 			if (!load_sourcefile(TokenList,register_string(argv[argc-1]),lexer_from_string(string_options[stringopt::lang]))) FATAL("target file not loaded");
-			if (!TokenList.empty())
-				{
-				size_t j = TokenList.size();
-				do	TokenList[--j]->parent_dir = origin_dir;	//! \bug should reflect actual loading path
-				while(0<j);
-				};
-
 			cpp.preprocess(TokenList);
 			}
 

@@ -4,6 +4,7 @@
 #include "Zaimoni.STL/cstdio"
 #include "Zaimoni.STL/LexParse/Token.hpp"
 #include "Zaimoni.STL/LexParse/LangConf.hpp"
+#include "AtomicString.h"
 #include "errors.hpp"
 #include "errcount.hpp"
 
@@ -153,6 +154,16 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 			assert(!TokenList[i]->empty());
 		}
 	}
+
+	// correct parent_dir
+	if (!TokenList.empty())
+		{
+		char workspace[FILENAME_MAX];
+		z_realpath(workspace,filename);
+		size_t j = TokenList.size();
+		do	TokenList[--j]->parent_dir = register_string(workspace);
+		while(0<j);
+		};
 
 #ifndef NDEBUG
 	// post-condition testing
