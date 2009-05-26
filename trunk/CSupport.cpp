@@ -3814,11 +3814,8 @@ static bool inspect_potential_paren_primary_expression(parse_tree& src)
 			{	// ahem...invalid
 				// untestable as a preprocessor expression, balanced-kill gets this first
 			src.flags &= parse_tree::RESERVED_MASK;	// just in case
-			src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION | parse_tree::INVALID);
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INFORM("tried to use () as expression (C99 6.5.2p1/C++98 5.2p1)");
-			zcc_errors.inc_error();
+			src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
+			simple_error(src," cannot be an expression (C99 6.5.2p1/C++98 5.2p1)");
 			return true;
 			};
 		if (1==content_length)
@@ -4811,19 +4808,7 @@ static void CPP_bitwise_complement_easy_syntax_check(parse_tree& src,const type_
 	if (!converts_to_integerlike(src.data<2>()->type_code))
 		{
 		src.type_code.set_type(0);
-#if 2
 		simple_error(src," applies ~ to a nonintegral type (C99 6.5.3.3p1)");
-#else
-		src.flags |= parse_tree::INVALID;
-		if (!(parse_tree::INVALID & src.data<2>()->flags))
-			{	//! \test Error_if_control25.hpp
-			message_header(src.index_tokens[0]);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(src);
-			INFORM(" applies ~ to a nonintegral type (C++98 5.3.1p9)");
-			zcc_errors.inc_error();
-			}
-#endif
 		return;
 		}
 	src.type_code.set_type(default_promote_type(src.data<2>()->type_code.base_type_index));
