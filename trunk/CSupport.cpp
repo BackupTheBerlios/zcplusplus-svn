@@ -1052,6 +1052,18 @@ static POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const parse_tre
 	return depth;
 }
 
+static void unbalanced_error(const weak_token& src,size_t count, char match)
+{
+	assert(0<count);
+	message_header(src);
+	INC_INFORM(ERR_STR);
+	INC_INFORM(count);
+	INC_INFORM(" unbalanced '");
+	INC_INFORM(match);
+	INFORM('\'');
+	zcc_errors.inc_error();
+}
+
 static void _construct_matched_pairs(const weak_token* tokenlist,size_t tokenlist_len, autovalarray_ptr<POD_pair<size_t,size_t> >& stack1,const char l_match,const char r_match)
 {
 	assert(NULL!=tokenlist);
@@ -1079,14 +1091,8 @@ static void _construct_matched_pairs(const weak_token* tokenlist,size_t tokenlis
 					{	// soft-left: not an error
 					if (0<depth.second)
 						{
-						message_header(tokenlist[i]);
-						INC_INFORM(ERR_STR);
-						INC_INFORM(depth.second);
-						INC_INFORM(" unbalanced '");
-						INC_INFORM(r_match);
-						INFORM('\'');
+						unbalanced_error(tokenlist[i],depth.second,r_match);
 						depth.second = 0;
-						zcc_errors.inc_error();
 						}
 					if (0==depth.first) unbalanced_loc.first = i;
 					fixedstack[depth.first++] = i;
@@ -1114,25 +1120,11 @@ static void _construct_matched_pairs(const weak_token* tokenlist,size_t tokenlis
 
 	assert(0==depth.first || 0==depth.second);
 	if (0<depth.second)
-		{	// soft-left: not an error
-		message_header(tokenlist[unbalanced_loc.second]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM(depth.second);
-		INC_INFORM(" unbalanced '");
-		INC_INFORM(r_match);
-		INFORM('\'');
-		zcc_errors.inc_error();
-		}
+		// soft-left: not an error
+		unbalanced_error(tokenlist[unbalanced_loc.second],depth.second,r_match);
 	if (0<depth.first)
-		{	// soft-right: not an error
-		message_header(tokenlist[unbalanced_loc.first]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM(depth.first);
-		INC_INFORM(" unbalanced '");
-		INC_INFORM(l_match);
-		INFORM('\'');
-		zcc_errors.inc_error();
-		};
+		// soft-right: not an error
+		unbalanced_error(tokenlist[unbalanced_loc.first],depth.first,l_match);
 }
 
 template<char l_match,char r_match>
@@ -1171,12 +1163,8 @@ static void construct_matched_pairs<'[',']'>(const weak_token* tokenlist,size_t 
 					{
 					if (0<depth.second)
 						{
-						message_header(tokenlist[i]);
-						INC_INFORM(ERR_STR);
-						INC_INFORM(depth.second);
-						INC_INFORM(" unbalanced ']'");
+						unbalanced_error(tokenlist[i],depth.second,']');
 						depth.second = 0;
-						zcc_errors.inc_error();
 						}
 					if (0==depth.first) unbalanced_loc.first = i;
 					fixedstack[depth.first++] = i;
@@ -1204,21 +1192,9 @@ static void construct_matched_pairs<'[',']'>(const weak_token* tokenlist,size_t 
 
 	assert(0==depth.first || 0==depth.second);
 	if (0<depth.second)
-		{
-		message_header(tokenlist[unbalanced_loc.second]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM(depth.second);
-		INC_INFORM(" unbalanced ']'");
-		zcc_errors.inc_error();
-		}
+		unbalanced_error(tokenlist[unbalanced_loc.second],depth.second,']');
 	if (0<depth.first)
-		{
-		message_header(tokenlist[unbalanced_loc.first]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM(depth.first);
-		INC_INFORM(" unbalanced '['");
-		zcc_errors.inc_error();
-		};
+		unbalanced_error(tokenlist[unbalanced_loc.first],depth.first,'[');
 }
 
 template<>
@@ -1249,12 +1225,8 @@ static void construct_matched_pairs<'{','}'>(const weak_token* tokenlist,size_t 
 					{
 					if (0<depth.second)
 						{
-						message_header(tokenlist[i]);
-						INC_INFORM(ERR_STR);
-						INC_INFORM(depth.second);
-						INC_INFORM(" unbalanced '}'");
+						unbalanced_error(tokenlist[i],depth.second,'}');
 						depth.second = 0;
-						zcc_errors.inc_error();
 						}
 					if (0==depth.first) unbalanced_loc.first = i;
 					fixedstack[depth.first++] = i;
@@ -1282,21 +1254,9 @@ static void construct_matched_pairs<'{','}'>(const weak_token* tokenlist,size_t 
 
 	assert(0==depth.first || 0==depth.second);
 	if (0<depth.second)
-		{
-		message_header(tokenlist[unbalanced_loc.second]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM(depth.second);
-		INC_INFORM(" unbalanced '}'");
-		zcc_errors.inc_error();
-		}
+		unbalanced_error(tokenlist[unbalanced_loc.second],depth.second,'}');
 	if (0<depth.first)
-		{
-		message_header(tokenlist[unbalanced_loc.first]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM(depth.first);
-		INC_INFORM(" unbalanced '{'");
-		zcc_errors.inc_error();
-		}
+		unbalanced_error(tokenlist[unbalanced_loc.first],depth.first,'{');
 }
 
 
