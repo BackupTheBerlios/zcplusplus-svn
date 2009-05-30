@@ -5,13 +5,12 @@ boolean options
  --pedantic: try to be standard-compliant rather than pragmatic
  --int-sign-magnitude: preprocess for a sign-magnitude integer machine
  --int-ones-complement: preprocess for a one's complement integer machine
- --int-twos-complement: preprocess for a two's complement integer machine (defau
-lt)
- --int-negative-zero-traps: -0 is a trap representation
+ --int-twos-complement: preprocess for a two's complement integer machine (default)
+ --int-traps: signed int has a trap representation (-0 for sign-magnitude and one's complement, -(2^CHAR_BIT) for two's complement
  -fsigned-char: char acts like signed char
  -funsigned-char: char acts like unsigned char (default)
+ --int-neg-div-rounds-away-from-zero: make -3/-2==-2 contrary to C99 recommendation
 override-default options
  -x: language override
-** should be one of: c, C, c++, C++
- --fdiagnostics-limit: how many errors are too many (default 100)
-** needs to be a positive integer numeral, upper limit is native INT_MAX
+ --system-include: unpreprocessed #include<...> to stdout
+ -fmax-errors: how many errors are too many (default 100)
