@@ -275,7 +275,7 @@ bool process_options(const size_t argc, char* argv[])
 	return argc-1==last_arg_used_in_option;
 }
 
-void help(void)
+static void help(void)
 {
 	STRING_LITERAL_TO_STDOUT("usage: z_cpp [options] infile\n");
 	STRING_LITERAL_TO_STDOUT("boolean options\n");
@@ -304,19 +304,15 @@ void help(void)
 		C_STRING_TO_STDOUT(option_map_int[i].third);
 		}
 	while(STATIC_SIZE(option_map_int) > ++i);
+	exit(EXIT_SUCCESS);
 }
 
-int
-main(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
 #ifndef ZAIMONI_FORCE_ISO
 	AppRunning = 1;	/* using custom memory manager, cancel non-ANSI mode for M$ Windows */
 #endif
-	if (2>argc)
-		{
-		help();
-		return EXIT_SUCCESS;
-		}
+	if (2>argc) help();
 
 	bootstrap_filesystem(argv[0]);
 	const bool last_arg_used_in_option = process_options(argc,argv);
