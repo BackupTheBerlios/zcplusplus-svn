@@ -46,10 +46,10 @@ enum LangTypes 	{	C,			// C99
 #define WARN_STR "warning: "
 
 #define INSTALL_TO "\\CPP_App\\Z.C++"
-#define ZCC_VERSION "0.0.0"
+#define ZCC_VERSION "0.0.1"
 #define ZCC_VERSION_MAJOR 0
 #define ZCC_VERSION_MINOR 0
-#define ZCC_VERSION_PATCH 0
+#define ZCC_VERSION_PATCH 1
 
 //! \todo this should be language-sensitive; LangConf not a good location
 static const char* const fixed_system_include_search[] = {
