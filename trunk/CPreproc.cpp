@@ -2650,7 +2650,7 @@ inline static void construct_matched_pairs(const Token<char>& x, const autovalar
 }
 
 template<>
-static void construct_matched_pairs<'[',']'>(const Token<char>& x, const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized, autovalarray_ptr<POD_pair<size_t,size_t> >& pair_stack)
+void construct_matched_pairs<'[',']'>(const Token<char>& x, const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized, autovalarray_ptr<POD_pair<size_t,size_t> >& pair_stack)
 {
 	POD_pair<size_t,size_t> depth = balanced_character_count(x.data(),pretokenized,'[',']');	// pre-scan
 	size_t err_count = 0;
@@ -2747,7 +2747,7 @@ token_is_char(const char* const x, const POD_triple<size_t,size_t,lex_flags>& le
 }
 
 template<>
-static inline bool
+inline bool
 token_is_char<'#'>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
 	assert(NULL!=x);
@@ -2755,7 +2755,7 @@ token_is_char<'#'>(const char* const x, const POD_triple<size_t,size_t,lex_flags
 }
 
 template<>
-static inline bool
+inline bool
 token_is_char<'['>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
 	assert(NULL!=x);
@@ -2763,7 +2763,7 @@ token_is_char<'['>(const char* const x, const POD_triple<size_t,size_t,lex_flags
 }
 
 template<>
-static inline bool
+inline bool
 token_is_char<']'>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
 	assert(NULL!=x);
@@ -2771,7 +2771,7 @@ token_is_char<']'>(const char* const x, const POD_triple<size_t,size_t,lex_flags
 }
 
 template<>
-static inline bool
+inline bool
 token_is_char<'{'>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
 	assert(NULL!=x);
@@ -2779,7 +2779,7 @@ token_is_char<'{'>(const char* const x, const POD_triple<size_t,size_t,lex_flags
 }
 
 template<>
-static inline bool
+inline bool
 token_is_char<'}'>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
 	assert(NULL!=x);

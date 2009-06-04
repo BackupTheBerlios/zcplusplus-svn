@@ -966,7 +966,7 @@ inline static POD_pair<size_t,size_t> balanced_character_count(const weak_token*
 }
 
 template<>
-static POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const weak_token* tokenlist,size_t tokenlist_len)
+POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const weak_token* tokenlist,size_t tokenlist_len)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
@@ -980,7 +980,7 @@ static POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const weak_toke
 }
 
 template<>
-static POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const weak_token* tokenlist,size_t tokenlist_len)
+POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const weak_token* tokenlist,size_t tokenlist_len)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
@@ -1019,7 +1019,7 @@ inline static POD_pair<size_t,size_t> balanced_character_count(const parse_tree*
 }
 
 template<>
-static POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const parse_tree* tokenlist,size_t tokenlist_len)
+POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const parse_tree* tokenlist,size_t tokenlist_len)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
@@ -1036,7 +1036,7 @@ static POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const parse_tre
 }
 
 template<>
-static POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const parse_tree* tokenlist,size_t tokenlist_len)
+POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const parse_tree* tokenlist,size_t tokenlist_len)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
@@ -1136,7 +1136,7 @@ static void construct_matched_pairs(const weak_token* tokenlist,size_t tokenlist
 }
 
 template<>
-static void construct_matched_pairs<'[',']'>(const weak_token* tokenlist,size_t tokenlist_len, autovalarray_ptr<POD_pair<size_t,size_t> >& stack1)
+void construct_matched_pairs<'[',']'>(const weak_token* tokenlist,size_t tokenlist_len, autovalarray_ptr<POD_pair<size_t,size_t> >& stack1)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
@@ -1198,7 +1198,7 @@ static void construct_matched_pairs<'[',']'>(const weak_token* tokenlist,size_t 
 }
 
 template<>
-static void construct_matched_pairs<'{','}'>(const weak_token* tokenlist,size_t tokenlist_len, autovalarray_ptr<POD_pair<size_t,size_t> >& stack1)
+void construct_matched_pairs<'{','}'>(const weak_token* tokenlist,size_t tokenlist_len, autovalarray_ptr<POD_pair<size_t,size_t> >& stack1)
 {
 	assert(NULL!=tokenlist);
 	assert(0<tokenlist_len);
@@ -1397,83 +1397,72 @@ token_is_char(const POD_pair<const char*,size_t>& x)
 }
 
 template<>
-static inline bool
-token_is_char<'#'>(const POD_pair<const char*,size_t>& x)
+inline bool token_is_char<'#'>(const POD_pair<const char*,size_t>& x)
 {
 	assert(NULL!=x.first);
 	return detect_C_stringize_op(x.first,x.second);
 }
 
 template<>
-static inline bool
-token_is_char<'['>(const POD_pair<const char*,size_t>& x)
+inline bool token_is_char<'['>(const POD_pair<const char*,size_t>& x)
 {
 	assert(NULL!=x.first);
 	return detect_C_left_bracket_op(x.first,x.second);
 }
 
 template<>
-static inline bool
-token_is_char<']'>(const POD_pair<const char*,size_t>& x)
+inline bool token_is_char<']'>(const POD_pair<const char*,size_t>& x)
 {
 	assert(NULL!=x.first);
 	return detect_C_right_bracket_op(x.first,x.second);
 }
 
 template<>
-static inline bool
-token_is_char<'{'>(const POD_pair<const char*,size_t>& x)
+inline bool token_is_char<'{'>(const POD_pair<const char*,size_t>& x)
 {
 	assert(NULL!=x.first);
 	return detect_C_left_brace_op(x.first,x.second);
 }
 
 template<>
-static inline bool
-token_is_char<'}'>(const POD_pair<const char*,size_t>& x)
+inline bool token_is_char<'}'>(const POD_pair<const char*,size_t>& x)
 {
 	assert(NULL!=x.first);
 	return detect_C_right_brace_op(x.first,x.second);
 }
 
 template<char c>
-static inline bool
-robust_token_is_char(const POD_pair<const char*,size_t>& x)
+inline bool robust_token_is_char(const POD_pair<const char*,size_t>& x)
 {
 	return NULL!=x.first && 1==x.second && c== *x.first;
 }
 
 template<>
-static inline bool
-robust_token_is_char<'#'>(const POD_pair<const char*,size_t>& x)
+inline bool robust_token_is_char<'#'>(const POD_pair<const char*,size_t>& x)
 {
 	return NULL!=x.first && detect_C_stringize_op(x.first,x.second);
 }
 
 template<>
-static inline bool
-robust_token_is_char<'['>(const POD_pair<const char*,size_t>& x)
+inline bool robust_token_is_char<'['>(const POD_pair<const char*,size_t>& x)
 {
 	return NULL!=x.first && detect_C_left_bracket_op(x.first,x.second);
 }
 
 template<>
-static inline bool
-robust_token_is_char<']'>(const POD_pair<const char*,size_t>& x)
+inline bool robust_token_is_char<']'>(const POD_pair<const char*,size_t>& x)
 {
 	return NULL!=x.first && detect_C_right_bracket_op(x.first,x.second);
 }
 
 template<>
-static inline bool
-robust_token_is_char<'{'>(const POD_pair<const char*,size_t>& x)
+inline bool robust_token_is_char<'{'>(const POD_pair<const char*,size_t>& x)
 {
 	return NULL!=x.first && detect_C_left_brace_op(x.first,x.second);
 }
 
 template<>
-static inline bool
-robust_token_is_char<'}'>(const POD_pair<const char*,size_t>& x)
+inline bool robust_token_is_char<'}'>(const POD_pair<const char*,size_t>& x)
 {
 	return NULL!=x.first && detect_C_right_brace_op(x.first,x.second);
 }
