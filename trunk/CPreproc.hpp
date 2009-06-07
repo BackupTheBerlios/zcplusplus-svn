@@ -23,8 +23,6 @@ namespace virtual_machine {
 class CPUInfo;
 }
 
-zaimoni::LangConf& lexer_from_string(const char* const lang);
-
 class CPreprocessor
 {
 public:
@@ -39,7 +37,6 @@ public:
 	bool raw_system_include(const char* const look_for, zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& IncludeTokenList) const;
 
 	void set_debug(bool _debug_mode) {debug_mode = _debug_mode;};
-	static const char* echo_valid_lang(const char* const x);
 	bool require_padding(char lhs, char rhs) const;
 private:
 	size_t lang_code;

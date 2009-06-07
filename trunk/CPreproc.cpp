@@ -19,6 +19,7 @@
 #include "errors.hpp"
 #include "errcount.hpp"
 #include "filesystem.h"
+#include "langroute.hpp"
 #include "load_src.hpp"
 #include "ParseTree.hpp"
 #include "type_system.hpp"
@@ -31,15 +32,6 @@
 #include "DebugCSupport.h"
 
 using namespace zaimoni;
-
-namespace Lang {
-
-// some idea of which lexer to use
-enum LangTypes 	{	C,			// C99
-					CPlusPlus	// C++98 (mostly)
-				};
-
-}
 
 // beginning of multilingual support
 #define ERR_STR "error: "
@@ -257,57 +249,6 @@ static const POD_pair<const char*,const char*> CPP0x_macro_identifier_default[]
 		{"__ZCC_MINOR__", "0"},		// minor version
 		{"__ZCC_PATCHLEVEL__", "0"}	// patchlevel
 	};
-
-static const POD_pair<const char*,Lang::LangTypes> LegalLanguages[]
-	=	{	{"C", Lang::C},
-			{"C++", Lang::CPlusPlus},
-			{"c", Lang::C},
-			{"c++", Lang::CPlusPlus}
-		};
-
-/*! 
- * Verifies that a string identifying a language for the preprocessor is valid.
- * 
- * \param x string to be checked for acceptability to CPreprocessor
- * 
- * \return NULL if x is unacceptable, x if x acceptable
- */
-const char* CPreprocessor::echo_valid_lang(const char* const x)
-{
-	if (!is_empty_string(x))
-		{
-		size_t i = STATIC_SIZE(LegalLanguages);
-		do	if (!strcmp(x,LegalLanguages[--i].first)) return x;
-		while(0<i);
-		}
-	return NULL;
-}
-
-static LangConf& lexer_from_lang(unsigned int lang)
-{
-	switch(lang)
-	{
-	case Lang::C:			return *CLexer;
-	case Lang::CPlusPlus:	return *CPlusPlusLexer;
-	default: FATAL("Invalid language code");
-	}
-}
-
-static unsigned int lang_index(const char* const lang)
-{
-	assert(NULL!=lang);
-	size_t i = STATIC_SIZE(LegalLanguages);
-	do	if (!strcmp(lang,LegalLanguages[--i].first)) return LegalLanguages[i].second;
-	while(0<i);
-	INC_INFORM("Invalid language '");
-	INC_INFORM(lang);
-	FATAL("'");
-}
-
-LangConf& lexer_from_string(const char* const lang)
-{
-	return lexer_from_lang(lang_index(lang));
-}
 
 CPreprocessor::CPreprocessor(const virtual_machine::CPUInfo& _target_machine, const char* const _lang)
 :	lang_code(lang_index(_lang)),
