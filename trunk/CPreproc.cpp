@@ -367,10 +367,30 @@ static const POD_pair<const char*,size_t> accept_pragma_leading_tokens[]
 		};
 
 // yes, enum would be better style
-// #define PRAGMA_LEADING_STDC 0
+#define PRAGMA_LEADING_STDC 0
 #define PRAGMA_LEADING_ZCC 1
 // #define PRAGMA_LEADING_GCC 2
 #define PRAGMA_MESSAGE 3
+
+static const POD_pair<const char*,size_t> pragma_STDC_on_off_switch[]	// C99 6.10.5p2
+	=	{	DICT_STRUCT("OFF"),
+			DICT_STRUCT("DEFAULT"),
+			DICT_STRUCT("ON")
+		};
+
+#define ON_OFF_SWITCH_OFF 0
+#define ON_OFF_SWITCH_DEFAULT 1
+#define ON_OFF_SWITCH_ON 2
+
+static const POD_pair<const char*,size_t> pragma_STDC_keywords[]
+	=	{	DICT_STRUCT("FP_CONTRACT"),
+			DICT_STRUCT("FENV_ACCESS"),
+			DICT_STRUCT("CX_LIMITED_RANGE")
+		};
+
+#define PRAGMA_STDC_FP_CONTRACT 0
+#define PRAGMA_STDC_FENV_ACCESS 1
+#define PRAGMA_STDC_CX_LIMITED_RANGE 2
 
 static const POD_pair<const char*,size_t> pragma_ZCC_keywords[]
 	=	{	DICT_STRUCT("lock"),
@@ -1575,8 +1595,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						if (        TokenList.size()<=i+1
 							||   1!=TokenList[i+1]->size()
 							|| '('!=TokenList[i+1]->front())
-							{	//! \test Error_pragma_op1.hpp
-								//! \test Error_pragma_op2.hpp
+							{	//! \test cpp/Pragma.C99/Error_op1.hpp, cpp/Pragma.C99/Error_op1.h
+								//! \test cpp/Pragma.C99/Error_op2.hpp, cpp/Pragma.C99/Error_op2.h
 							message_header2(*TokenList[i],TokenList[i]->logical_line.second);
 							INC_INFORM(ERR_STR);
 							INFORM("Invalid _Pragma operator.  Discarding. (C99 6.10.9p1/C++0x 16.9)");
@@ -1589,8 +1609,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						while(TokenList.size()>i+2 && !tokenize_line(TokenList,i+2));
 						if (   TokenList.size()<=i+2
 							|| C_TESTFLAG_STRING_LITERAL!=TokenList[i+2]->flags)
-							{	//! \test Error_pragma_op3.hpp
-								//! \test Error_pragma_op4.hpp
+							{	//! \test cpp/Pragma.C99/Error_op3.hpp, cpp/Pragma.C99/Error_op3.h
+								//! \test cpp/Pragma.C99/Error_op4.hpp, cpp/Pragma.C99/Error_op4.h
 							message_header2(*TokenList[i],TokenList[i]->logical_line.second);
 							INC_INFORM(ERR_STR);
 							INFORM("Invalid _Pragma operator.  Discarding. (C99 6.10.9p1/C++0x 16.9)");
@@ -1604,8 +1624,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						if (        TokenList.size()<=i+3
 							||   1!=TokenList[i+3]->size()
 							|| ')'!=TokenList[i+3]->front())
-							{	//! \test Error_pragma_op5.hpp
-								//! \test Error_pragma_op6.hpp
+							{	//! \test cpp/Pragma.C99/Error_op5.hpp, cpp/Pragma.C99/Error_op5.h
+								//! \test cpp/Pragma.C99/Error_op6.hpp, cpp/Pragma.C99/Error_op6.h
 							message_header2(*TokenList[i],TokenList[i]->logical_line.second);
 							INC_INFORM(ERR_STR);
 							INFORM("Invalid _Pragma operator.  Discarding. (C99 6.10.9p1/C++0x 16.9)");
@@ -2158,6 +2178,7 @@ CPreprocessor::raw_system_include(const char* const look_for, autovalarray_ptr<T
 void
 CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_ptr<char*>& locked_macros)
 {
+	//! \todo: fix return value situation when enabling code-generation affecting pragmas
 	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	lang.line_lex(x, x_len, pretokenized);
 
@@ -2169,20 +2190,65 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 			const errr ZCC_pragma =  linear_find_lencached(x+pretokenized[1].first, pretokenized[1].second, pragma_ZCC_keywords, STATIC_SIZE(pragma_ZCC_keywords));
 			switch(ZCC_pragma)
 			{
-			case PRAGMA_ZCC_LOCK:	{	//! \test Error_undef_locked_macro.hpp
-									size_t j = pretokenized.size();
-									while(2<j)
-										{
-										if (C_TESTFLAG_IDENTIFIER!=pretokenized[--j].third) continue;
-										char* tmp = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[j].second));
-										strncpy(tmp,x+pretokenized[j].first,pretokenized[j].second);
-										if (!locked_macros.InsertSlotAt(locked_macros.size(),tmp))
-											{
-											_flush(tmp);
-											throw std::bad_alloc();
-											}
-										}
-									}
+			case PRAGMA_ZCC_LOCK:
+				{	//! \test Error_undef_locked_macro.hpp
+				size_t j = pretokenized.size();
+				while(2<j)
+					{
+					if (C_TESTFLAG_IDENTIFIER!=pretokenized[--j].third) continue;
+					char* tmp = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[j].second));
+					strncpy(tmp,x+pretokenized[j].first,pretokenized[j].second);
+					if (!locked_macros.InsertSlotAt(locked_macros.size(),tmp))
+						{
+						_flush(tmp);
+						throw std::bad_alloc();
+						}
+					}
+				}
+			}
+			}
+		return;
+		}
+	else if (PRAGMA_LEADING_STDC==valid_pragma_class)
+		{
+		if (1<pretokenized.size())
+			{
+			const errr STDC_pragma =  linear_find_lencached(x+pretokenized[1].first, pretokenized[1].second, pragma_STDC_keywords, STATIC_SIZE(pragma_STDC_keywords));
+			if (0<=STDC_pragma)
+				{	// found something we know
+				switch(STDC_pragma)
+				{
+#ifndef NDEBUG
+				default:
+					{
+					INC_INFORM(ERR_STR);
+					INC_INFORM("unhandled STDC pragma ");
+					INFORM(pragma_STDC_keywords[STDC_pragma].first);
+					zcc_errors.inc_error();
+					return;
+					};
+#endif
+				case PRAGMA_STDC_FP_CONTRACT:
+				case PRAGMA_STDC_FENV_ACCESS:
+				case PRAGMA_STDC_CX_LIMITED_RANGE:
+					{
+					//! \test cpp/Pragma.C99/Error_CX_LIMITED_RANGE1.hpp, cpp/Pragma.C99/Error_CX_LIMITED_RANGE1.h
+					//! \test cpp/Pragma.C99/Error_CX_LIMITED_RANGE2.hpp, cpp/Pragma.C99/Error_CX_LIMITED_RANGE2.h
+					//! \test cpp/Pragma.C99/Error_FENV_ACCESS1.hpp, cpp/Pragma.C99/Error_FENV_ACCESS1.h
+					//! \test cpp/Pragma.C99/Error_FENV_ACCESS2.hpp, cpp/Pragma.C99/Error_FENV_ACCESS2.h
+					//! \test cpp/Pragma.C99/Error_FP_CONTRACT1.hpp, cpp/Pragma.C99/Error_FP_CONTRACT1.h
+					//! \test cpp/Pragma.C99/Error_FP_CONTRACT2.hpp, cpp/Pragma.C99/Error_FP_CONTRACT2.h
+					const errr on_off_switch = (3==pretokenized.size()) ? linear_find_lencached(x+pretokenized[2].first, pretokenized[2].second, pragma_STDC_on_off_switch, STATIC_SIZE(pragma_STDC_on_off_switch)) : -2;
+					if (0>on_off_switch)
+						{
+						INC_INFORM(ERR_STR);
+						INC_INFORM("invalid STDC pragma ");
+						INFORM(x,x_len);
+						zcc_errors.inc_error();
+						return;
+						}
+					};
+				}
 			}
 			}
 		return;
@@ -2219,8 +2285,6 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 			}
 		return;
 		}
-	//! \bug: should syntax-check current STDC pragmas in C-mode
-	//! \todo: fix return value situation when enabling code-generation affecting pragmas
 }
 
 static void _complete_string_character_literal(Token<char>& x,const char delim, const char* const end_error)

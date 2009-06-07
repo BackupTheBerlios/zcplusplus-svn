@@ -38,6 +38,10 @@
 @for %%f in (if.C99\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
 @for %%f in (if.C99\Error*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (if.C99\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (pragma.C99\Error*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (pragma.C99\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (pragma.C99\Error*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (pragma.C99\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
 
 @echo Checking ZCC warnings on ISO-accepted code
 @echo ====
@@ -80,6 +84,9 @@
 @for %%f in (default.nonconforming\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
 @for %%f in (default.nonconforming\Error*.hpp) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (default.nonconforming\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
+
+@echo Checking ZCC content transforms
+@echo ====
 
 @echo %BAD_PASS% of %REJECT_TEST% rejection tests accepted
 @if not "%BAD_PASS_NAME%"=="LastAccepted:" @echo %BAD_PASS_NAME%

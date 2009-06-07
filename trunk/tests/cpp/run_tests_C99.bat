@@ -24,6 +24,8 @@
 @for %%f in (ifdef.C99\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
 @for %%f in (if.C99\Error*.h) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (if.C99\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (pragma.C99\Error*.h) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (pragma.C99\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
 
 @echo Checking ISO acceptance requirements
 @echo ====

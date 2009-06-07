@@ -13,6 +13,7 @@ ERROR CPP_ISO define.C99/Error*
 ERROR CPP_ISO defined.C99/Error*
 ERROR CPP_ISO ifdef.C99/Error*
 ERROR CPP_ISO if.C99/Error*
+ERROR CPP_ISO pragma.C99/Error*
 
 ECHO Checking ZCC warnings on ISO-accepted code
 WARN CPP_ISO Warn*
@@ -28,6 +29,9 @@ PASS CPP default/Pass*
 
 ECHO Checking ZCC nonconforming errors
 ERROR CPP default.nonconforming/Error*
+
+ECHO Checking ZCC content transforms
+TEXTTRANSFORM CPP default/Preprocess*
 
 EPILOG
 

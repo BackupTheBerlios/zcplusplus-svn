@@ -11,6 +11,7 @@ ERROR CPP define.C99/Error*
 ERROR CPP defined.C99/Error*
 ERROR CPP ifdef.C99/Error*
 ERROR CPP if.C99/Error*
+ERROR CPP pragma.C99/Error*
 
 ECHO Checking ISO acceptance requirements
 PASS CPP Warn*
