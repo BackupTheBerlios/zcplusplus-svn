@@ -364,4 +364,7 @@ public:
 	~parse_tree_class() {this->destroy();};
 };
 
+void INC_INFORM(const parse_tree& src);
+inline void INFORM(const parse_tree& src) {INC_INFORM(src); INFORM(" ");}
+
 #endif

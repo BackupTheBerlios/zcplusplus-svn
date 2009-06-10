@@ -182,3 +182,32 @@ parse_tree::_resize(const size_t arg_idx,size_t n)
 	return true;
 }
 
+void INC_INFORM(const parse_tree& src)
+{	// generally...
+	// prefix data
+#define USER_MASK (ULONG_MAX-((1U<<parse_tree::PREDEFINED_STRICT_UB)-1))
+	const lex_flags my_rank = src.flags & USER_MASK;
+	bool need_parens = (1==src.size<1>()) ? my_rank>(src.data<1>()->flags & USER_MASK) : false;
+	if (need_parens) INC_INFORM('(');
+	size_t i = 0;
+	while(src.size<1>()>i) INC_INFORM(src.data<1>()[i++]);
+	if (need_parens) INC_INFORM(')');
+	// first index token
+	if (NULL!=src.index_tokens[0].token.first) INC_INFORM(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
+	// infix data
+	need_parens = (1==src.size<0>()) ? my_rank>(src.data<0>()->flags & USER_MASK) : false;
+	if (need_parens) INC_INFORM('(');
+	i = 0;
+	while(src.size<0>()>i) INC_INFORM(src.data<0>()[i++]);
+	if (need_parens) INC_INFORM(')');
+	// second index token
+	if (NULL!=src.index_tokens[1].token.first) INC_INFORM(src.index_tokens[1].token.first,src.index_tokens[1].token.second);
+	// postfix data
+	need_parens = (1==src.size<2>()) ? my_rank>(src.data<2>()->flags & USER_MASK) : false;
+	if (need_parens) INC_INFORM('(');
+	i = 0;
+	while(src.size<2>()>i) INC_INFORM(src.data<2>()[i++]);
+	if (need_parens) INC_INFORM(')');
+#undef USER_MASK
+}
+

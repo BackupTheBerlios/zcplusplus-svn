@@ -2727,37 +2727,6 @@ BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>
 #define PARSE_PAREN_PRIMARY_PASSTHROUGH (parse_tree::CONSTANT_EXPRESSION)
 
 /* XXX this may belong with parse_tree XXX */
-static void INC_INFORM(const parse_tree& src)
-{	// generally...
-	// prefix data
-	const lex_flags my_rank = src.flags & PARSE_EXPRESSION;
-	bool need_parens = (1==src.size<1>()) ? my_rank>(src.data<1>()->flags & PARSE_EXPRESSION) : false;
-	if (need_parens) INC_INFORM('(');
-	size_t i = 0;
-	while(src.size<1>()>i) INC_INFORM(src.data<1>()[i++]);
-	if (need_parens) INC_INFORM(')');
-	// first index token
-	if (NULL!=src.index_tokens[0].token.first) INC_INFORM(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
-	// infix data
-	need_parens = (1==src.size<0>()) ? my_rank>(src.data<0>()->flags & PARSE_EXPRESSION) : false;
-	if (need_parens) INC_INFORM('(');
-	i = 0;
-	while(src.size<0>()>i) INC_INFORM(src.data<0>()[i++]);
-	if (need_parens) INC_INFORM(')');
-	// second index token
-	if (NULL!=src.index_tokens[1].token.first) INC_INFORM(src.index_tokens[1].token.first,src.index_tokens[1].token.second);
-	// postfix data
-	need_parens = (1==src.size<2>()) ? my_rank>(src.data<2>()->flags & PARSE_EXPRESSION) : false;
-	if (need_parens) INC_INFORM('(');
-	i = 0;
-	while(src.size<2>()>i) INC_INFORM(src.data<2>()[i++]);
-	if (need_parens) INC_INFORM(')');
-}
-
-/* XXX this may belong with parse_tree XXX */
-static inline void INFORM(const parse_tree& src) {INC_INFORM(src); INFORM(" ");}
-
-/* XXX this may belong with parse_tree XXX */
 static void simple_error(parse_tree& src, const char* const err_str)
 {
 	assert(NULL!=err_str);
