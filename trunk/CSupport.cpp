@@ -8212,6 +8212,23 @@ static bool CPP_CondenseParseTree(parse_tree& src,const type_system& types)
 	return true;
 }
 
+static bool C99_ContextFreeParse(parse_tree& src,const type_system& types)
+{
+	assert(src.is_raw_list());
+	_label_literals(src,types);
+	if (!_match_pairs(src)) return false;
+	return true;
+}
+
+static bool CPP_ContextFreeParse(parse_tree& src,const type_system& types)
+{
+	assert(src.is_raw_list());
+	_label_literals(src,types);
+	std::for_each(src.begin<0>(),src.end<0>(),_label_CPP_literal);	// intercepts: true, false, this
+	if (!_match_pairs(src)) return false;
+	return true;
+}
+
 //! \test if.C99/Pass_zero.hpp, if.C99/Pass_zero.h
 bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const lex_flags flags)
 {
@@ -8855,7 +8872,8 @@ PP_auxfunc C99_aux
 	C99_PPHackTree,
 	ConcatenateCStringLiterals,
 	C99_echo_reserved_keyword,
-	C99_echo_reserved_symbol
+	C99_echo_reserved_symbol,
+	C99_ContextFreeParse
 	};
 
 PP_auxfunc CPlusPlus_aux
@@ -8871,7 +8889,8 @@ PP_auxfunc CPlusPlus_aux
 	CPP_PPHackTree,
 	ConcatenateCStringLiterals,
 	CPP_echo_reserved_keyword,
-	CPP_echo_reserved_symbol
+	CPP_echo_reserved_symbol,
+	CPP_ContextFreeParse
 	};
 
 #if 0
