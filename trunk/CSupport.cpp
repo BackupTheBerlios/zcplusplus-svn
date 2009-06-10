@@ -508,6 +508,66 @@ static const POD_pair<const char*,size_t> valid_keyword[]
 BOOST_STATIC_ASSERT(C_KEYWORD_NONSTRICT_LB<C_KEYWORD_STRICT_UB);
 BOOST_STATIC_ASSERT(CPP_KEYWORD_NONSTRICT_LB<C_KEYWORD_STRICT_UB);
 
+static const char* C99_echo_reserved_keyword(const char* x,size_t x_len)
+{
+	assert(NULL!=x);
+	assert(x_len<=strlen(x));
+	size_t i = C_KEYWORD_STRICT_UB-C_KEYWORD_NONSTRICT_LB;
+	do	if (x_len==valid_keyword[C_KEYWORD_NONSTRICT_LB + --i].second && !strncmp(valid_keyword[C_KEYWORD_NONSTRICT_LB + i].first,x,x_len))
+			return valid_keyword[C_KEYWORD_NONSTRICT_LB + i].first;
+	while(0<i);
+	i = C_PREPROC_OP_STRICT_UB;
+	do	if (x_len==valid_pure_preprocessing_op_punc[--i].second && !strncmp(valid_pure_preprocessing_op_punc[i].first,x,x_len))
+			return valid_pure_preprocessing_op_punc[i].first;
+	while(0<i);
+	return NULL;
+}
+
+static const char* CPP_echo_reserved_keyword(const char* x,size_t x_len)
+{
+	assert(NULL!=x);
+	assert(x_len<=strlen(x));
+	size_t i = CPP_KEYWORD_STRICT_UB-CPP_KEYWORD_NONSTRICT_LB;
+	do	if (x_len==valid_keyword[CPP_KEYWORD_NONSTRICT_LB + --i].second && !strncmp(valid_keyword[CPP_KEYWORD_NONSTRICT_LB + i].first,x,x_len))
+			return valid_keyword[CPP_KEYWORD_NONSTRICT_LB + i].first;
+	while(0<i);
+	i = CPP_PREPROC_OP_STRICT_UB;
+	do	if (x_len==valid_pure_preprocessing_op_punc[--i].second && !strncmp(valid_pure_preprocessing_op_punc[i].first,x,x_len))
+			return valid_pure_preprocessing_op_punc[i].first;
+	while(0<i);
+	return NULL;
+}
+
+static const char* C99_echo_reserved_symbol(const char* x,size_t x_len)
+{
+	assert(NULL!=x);
+	assert(x_len<=strlen(x));
+	size_t i = C_KEYWORD_STRICT_UB-C_KEYWORD_NONSTRICT_LB;
+	do	if (x_len==valid_keyword[C_KEYWORD_NONSTRICT_LB + --i].second && !strncmp(valid_keyword[C_KEYWORD_NONSTRICT_LB + i].first,x,x_len))
+			return valid_keyword[C_KEYWORD_NONSTRICT_LB + i].first;
+	while(0<i);
+	i = C_PREPROC_OP_STRICT_UB;
+	do	if (x_len==valid_pure_preprocessing_op_punc[--i].second && !strncmp(valid_pure_preprocessing_op_punc[i].first,x,x_len))
+			return valid_pure_preprocessing_op_punc[i].first;
+	while(0<i);
+	return NULL;
+}
+
+static const char* CPP_echo_reserved_symbol(const char* x,size_t x_len)
+{
+	assert(NULL!=x);
+	assert(x_len<=strlen(x));
+	size_t i = CPP_KEYWORD_STRICT_UB-CPP_KEYWORD_NONSTRICT_LB;
+	do	if (x_len==valid_keyword[CPP_KEYWORD_NONSTRICT_LB + --i].second && !strncmp(valid_keyword[CPP_KEYWORD_NONSTRICT_LB + i].first,x,x_len))
+			return valid_keyword[CPP_KEYWORD_NONSTRICT_LB + i].first;
+	while(0<i);
+	i = CPP_PREPROC_OP_STRICT_UB;
+	do	if (x_len==valid_pure_preprocessing_op_punc[--i].second && !strncmp(valid_pure_preprocessing_op_punc[i].first,x,x_len))
+			return valid_pure_preprocessing_op_punc[i].first;
+	while(0<i);
+	return NULL;
+}
+
 namespace C_TYPE {
 
 enum hard_type_indexes {
@@ -8793,7 +8853,9 @@ PP_auxfunc C99_aux
 	C99_CondenseParseTree,
 	C99_EvalParseTree,
 	C99_PPHackTree,
-	ConcatenateCStringLiterals
+	ConcatenateCStringLiterals,
+	C99_echo_reserved_keyword,
+	C99_echo_reserved_symbol
 	};
 
 PP_auxfunc CPlusPlus_aux
@@ -8807,7 +8869,9 @@ PP_auxfunc CPlusPlus_aux
 	CPP_CondenseParseTree,
 	CPP_EvalParseTree,
 	CPP_PPHackTree,
-	ConcatenateCStringLiterals
+	ConcatenateCStringLiterals,
+	CPP_echo_reserved_keyword,
+	CPP_echo_reserved_symbol
 	};
 
 #if 0

@@ -118,6 +118,9 @@ struct PP_auxfunc
  * \post if NULL!=target, target points to a valid string literal
  */
 	func_traits<int (*)(const char* src, size_t src_len, const char* src2, size_t src2_len, char*& target)>::function_ref_type EscapedStringConcatenate;
+	// start zcc-specific functions
+	func_traits<const char* (*)(const char* x,size_t x_len)>::function_ref_type EchoReservedKeyword;
+	func_traits<const char* (*)(const char* x,size_t x_len)>::function_ref_type EchoReservedSymbol;
 };
 
 }

@@ -51,30 +51,62 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 				{	// only one token: grab the memory from Token and just do it
 				TokenList.front()->ltrim(pretokenized[0].first);
 				TokenList.front()->lslice(pretokenized[0].second);
-				char* tmp = NULL; //! \bug adjust API, should be able to add qualifications safely
-				TokenList.front()->TransferOutAndNULL(tmp);
-				ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].token.first = tmp;
 				ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].token.second = pretokenized[0].second;
 				ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].logical_line.first = TokenList.front()->original_line.first;
 				ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].logical_line.second = TokenList.front()->original_line.second;
 				ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].flags = pretokenized[0].third;
 				ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].src_filename = TokenList.front()->src_filename;
-				ParsedList[0]->c_array<0>()[old_parsed_size].control_index_token<0>(true);
+				const char* tmp = (C_TESTFLAG_IDENTIFIER==pretokenized[0].third ? lang.pp_support->EchoReservedKeyword(TokenList.front()->data(),pretokenized[0].second) : NULL);
+				if (tmp)
+					{
+					ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].token.first = tmp;
+					ParsedList[0]->c_array<0>()[old_parsed_size].control_index_token<0>(false);
+					}
+				else{
+					tmp = (C_TESTFLAG_PP_OP_PUNC & pretokenized[0].third ? lang.pp_support->EchoReservedSymbol(TokenList.front()->data(),pretokenized[0].second) : NULL);
+					if (tmp)
+						{
+						ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].token.first = tmp;
+						ParsedList[0]->c_array<0>()[old_parsed_size].control_index_token<0>(false);
+						}
+					else{
+						char* tmp2 = NULL; //! \bug adjust API, should be able to add qualifications safely
+						TokenList.front()->TransferOutAndNULL(tmp2);
+						ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].token.first = tmp2;
+						ParsedList[0]->c_array<0>()[old_parsed_size].control_index_token<0>(true);
+						}
+					}
 				}
 			else{
 				i = append_tokens;
 				do	{	// copy it
 					--i;
-					char* tmp = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[i].second));
-					memmove(tmp,TokenList.front()->data()+pretokenized[i].first,pretokenized[i].second);
-					ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].token.first = tmp;
 					ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].token.second = pretokenized[i].second;
 					ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].logical_line.first = TokenList.front()->original_line.first;
 					ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].logical_line.second = TokenList.front()->original_line.second;
 					ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].logical_line.second += pretokenized[i].first;
 					ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].flags = pretokenized[i].third;
 					ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].src_filename = TokenList.front()->src_filename;
-					ParsedList[0]->c_array<0>()[old_parsed_size+i].control_index_token<0>(true);
+					const char* tmp = (C_TESTFLAG_IDENTIFIER==pretokenized[0].third ? lang.pp_support->EchoReservedKeyword(TokenList.front()->data()+pretokenized[i].first,pretokenized[0].second) : NULL);
+					if (tmp)
+						{
+						ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].token.first = tmp;
+						ParsedList[0]->c_array<0>()[old_parsed_size].control_index_token<0>(false);
+						}
+					else{
+						tmp = (C_TESTFLAG_PP_OP_PUNC & pretokenized[0].third ? lang.pp_support->EchoReservedSymbol(TokenList.front()->data()+pretokenized[i].first,pretokenized[0].second) : NULL);
+						if (tmp)
+							{
+							ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].token.first = tmp;
+							ParsedList[0]->c_array<0>()[old_parsed_size].control_index_token<0>(false);
+							}
+						else{
+							char* tmp2 = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[i].second));
+							memmove(tmp2,TokenList.front()->data()+pretokenized[i].first,pretokenized[i].second);
+							ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].token.first = tmp2;
+							ParsedList[0]->c_array<0>()[old_parsed_size+i].control_index_token<0>(true);
+							}
+						}
 					}
 				while(0<i);
 				}
@@ -84,7 +116,9 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 		}
 	while(!TokenList.empty());
 	if (ParsedList.empty()) return false;	// no-op, nothing to export to object file
-	// ok...now ready for LangConf
+	// ok...now ready for LangConf (note that CSupport.hpp/CSupport.cpp may fork on whether z_cpp or zcc is being built
+	// 1) lexical absolute parsing: primary expressions and similar
+//	lang.pp_support->ContextFreeParse(*ParsedList[0]);
 
 	die_on_parse_errors();
 	debug_to_stderr(ParsedList);
