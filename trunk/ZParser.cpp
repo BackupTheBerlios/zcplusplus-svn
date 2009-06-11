@@ -117,10 +117,11 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 		}
 	while(!TokenList.empty());
 	if (ParsedList.empty()) return false;	// no-op, nothing to export to object file
-	const type_system min_types((Lang::C==lang_code) ? C_atomic_types : CPP_atomic_types,C_CPP_TYPE_MAX,C_int_priority,C_INT_PRIORITY_SIZE);
+	const type_system min_types((Lang::C==lang_code) ? C_atomic_types : CPP_atomic_types,(Lang::C==lang_code) ? C_TYPE_MAX : CPP_TYPE_MAX,C_int_priority,C_INT_PRIORITY_SIZE);
 	// ok...now ready for LangConf (note that CSupport.hpp/CSupport.cpp may fork on whether z_cpp or zcc is being built
 	// 1) lexical absolute parsing: primary expressions and similar
 	lang.pp_support->ContextFreeParse(*ParsedList[0],min_types);
+//	die_on_parse_errors();
 
 	die_on_parse_errors();
 	debug_to_stderr(ParsedList);

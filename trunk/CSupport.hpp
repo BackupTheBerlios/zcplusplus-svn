@@ -138,7 +138,8 @@ extern const zaimoni::POD_triple<const char* const,size_t,zaimoni::lex_flags> C_
 extern const zaimoni::POD_triple<const char* const,size_t,zaimoni::lex_flags> CPP_atomic_types[];	// to help out the preprocessor, etc.
 extern const size_t C_int_priority[];
 
-#define C_CPP_TYPE_MAX 21
+#define C_TYPE_MAX 21
+#define CPP_TYPE_MAX 22
 #define C_INT_PRIORITY_SIZE 7
 #define C_PP_INT_PRIORITY_ORIGIN 4
 

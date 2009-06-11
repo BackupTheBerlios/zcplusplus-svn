@@ -417,13 +417,15 @@ int main(int argc, char* argv[])
 		//! \todo parse the resulting TokenList...
 		ZParser parser(target_machine,string_options[stringopt::lang]);
 		if (bool_options[boolopt::test]) parser.set_debug(true);
+#if 1
+		parser.parse(TokenList,ParsedList);
+#else
 		const bool export_to_object_ok = parser.parse(TokenList,ParsedList);
-#if 0
 		if (export_to_object_ok)
 			{
 			};
 #endif
-		return export_to_object_ok ? EXIT_SUCCESS : EXIT_FAILURE;
+		return EXIT_SUCCESS;
 		}
 	catch(const std::bad_alloc&)
 		{
