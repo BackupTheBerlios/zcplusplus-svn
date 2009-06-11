@@ -21,6 +21,8 @@
 #include "C_PPDecimalInteger.hpp"
 #include "C_PPHexInteger.hpp"
 #include "C_PPOctalInteger.hpp"
+#include "C_PPDecimalFloat.hpp"
+#include "C_PPHexFloat.hpp"
 #include "CheckReturn.hpp"
 
 using namespace zaimoni;
@@ -1759,6 +1761,250 @@ static size_t LengthOfCPPSystemHeader(const char* src)
 	return 0;
 }
 
+//! \bug ZParser needs this as well.  Lift out into a pp_support function hook.
+static void C99_bad_syntax_tokenized(const char* const x, size_t x_len, lex_flags& flags, const char* const src_filename, size_t line_no)
+{
+	assert(NULL!=x);
+	assert(NULL!=src_filename && '\0'!= *src_filename);
+	assert(x_len<=strlen(x));
+	assert((C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_PP_OP_PUNC | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_IDENTIFIER) & flags);
+
+	// reality checks on relation between flag constants and enums
+	BOOST_STATIC_ASSERT((C_PPFloatCore::F<<10)==C_TESTFLAG_F);
+	BOOST_STATIC_ASSERT((C_PPFloatCore::L<<10)==C_TESTFLAG_L);
+
+	BOOST_STATIC_ASSERT((C_PPIntCore::U<<10)==C_TESTFLAG_U);
+	BOOST_STATIC_ASSERT((C_PPIntCore::L<<10)==C_TESTFLAG_L);
+	BOOST_STATIC_ASSERT((C_PPIntCore::UL<<10)==(C_TESTFLAG_L | C_TESTFLAG_U));
+	BOOST_STATIC_ASSERT((C_PPIntCore::LL<<10)==C_TESTFLAG_LL);
+	BOOST_STATIC_ASSERT((C_PPIntCore::ULL<<10)==(C_TESTFLAG_LL | C_TESTFLAG_U));
+
+	if (C_TESTFLAG_PP_NUMERAL==flags)
+		{
+		union_quartet<C_PPIntCore,C_PPFloatCore,C_PPDecimalFloat,C_PPHexFloat> test;
+		if 		(C_PPDecimalFloat::is(x,x_len,test.third))
+			{
+			flags |= C_TESTFLAG_FLOAT | C_TESTFLAG_DECIMAL;
+			}
+		else if	(C_PPHexFloat::is(x,x_len,test.fourth))
+			{
+			flags |= C_TESTFLAG_FLOAT | C_TESTFLAG_HEXADECIMAL;
+			}
+		else if (C_PPIntCore::is(x,x_len,test.first))
+			{
+			assert(C_PPIntCore::ULL>=test.first.hinted_type);
+			flags |= (((lex_flags)(test.first.hinted_type))<<10);
+			assert(8==test.first.radix || 10==test.first.radix || 16==test.first.radix);
+			switch(test.first.radix)
+			{
+			case 8:		{
+						flags |= C_TESTFLAG_INTEGER | C_TESTFLAG_OCTAL;
+						break;
+						}
+			case 10:	{
+						flags |= C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL;
+						break;
+						}
+			case 16:	{
+						flags |= C_TESTFLAG_INTEGER | C_TESTFLAG_HEXADECIMAL;
+						break;
+						}
+			};
+			}
+		if 		(flags & C_TESTFLAG_FLOAT)
+			{
+			assert(C_PPFloatCore::L>=test.second.hinted_type);
+			flags |= (((lex_flags)(test.second.hinted_type))<<10);
+			};
+		if (C_TESTFLAG_PP_NUMERAL==flags)
+			{
+			INC_INFORM(src_filename);
+			INC_INFORM(':');
+			INC_INFORM(line_no);
+			INC_INFORM(": ");
+			INC_INFORM(ERR_STR);
+			INC_INFORM("invalid preprocessing number");
+			INC_INFORM(x,x_len);
+			INFORM(" (C99 6.4.4.1p1,6.4.4.2p1/C++98 2.13.1,2.13.3)");
+			zcc_errors.inc_error();
+			return;
+			}
+		}
+	else if (C_TESTFLAG_PP_OP_PUNC & flags)
+		{	// language-sensitive token blacklisting
+		const signed int pp_code = CPurePreprocessingOperatorPunctuationCode(x,x_len);
+		assert(0<pp_code);
+		C_PP_ENCODE(flags,pp_code);
+		}
+	else if (C_TESTFLAG_STRING_LITERAL==flags)
+		{	// This gets in by C99 6.6p10, as 6.6p6 doesn't list string literals as legitimate
+		if (!IsLegalCString(x,x_len))
+			{
+			INC_INFORM(src_filename);
+			INC_INFORM(':');
+			INC_INFORM(line_no);
+			INC_INFORM(": ");
+			INC_INFORM(ERR_STR);
+			INC_INFORM(x,x_len);
+			INFORM(" : invalid string (C99 6.4.5p1/C++98 2.13.4)");
+			zcc_errors.inc_error();
+			return;
+			}
+		else if (bool_options[boolopt::pedantic])
+			{
+			INC_INFORM(src_filename);
+			INC_INFORM(':');
+			INC_INFORM(line_no);
+			INC_INFORM(": ");
+			INC_INFORM(WARN_STR);
+			INC_INFORM(x,x_len);
+			INFORM(" : string literals in integer constant expressions are only permitted, not required (C99 6.6p10)");
+			if (bool_options[boolopt::warnings_are_errors])
+				{
+				zcc_errors.inc_error();
+				return;
+				}
+			}
+		}
+	else if (C_TESTFLAG_CHAR_LITERAL==flags)
+		{
+		if (!IsLegalCCharacterLiteral(x,x_len))
+			{
+			INC_INFORM(src_filename);
+			INC_INFORM(':');
+			INC_INFORM(line_no);
+			INC_INFORM(": ");
+			INC_INFORM(ERR_STR);
+			INC_INFORM("invalid character literal ");
+			INC_INFORM(x,x_len);
+			INFORM(" (C99 6.4.4.4p1/C++98 2.13.2)");
+			zcc_errors.inc_error();
+			return;
+			}
+		}
+}
+
+static void CPP_bad_syntax_tokenized(const char* const x, size_t x_len, lex_flags& flags, const char* const src_filename, size_t line_no)
+{
+	assert(NULL!=x);
+	assert(NULL!=src_filename && '\0'!= *src_filename);
+	assert(x_len<=strlen(x));
+	assert((C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_PP_OP_PUNC | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_IDENTIFIER) & flags);
+
+	// reality checks on relation between flag constants and enums
+	BOOST_STATIC_ASSERT((C_PPFloatCore::F<<10)==C_TESTFLAG_F);
+	BOOST_STATIC_ASSERT((C_PPFloatCore::L<<10)==C_TESTFLAG_L);
+
+	BOOST_STATIC_ASSERT((C_PPIntCore::U<<10)==C_TESTFLAG_U);
+	BOOST_STATIC_ASSERT((C_PPIntCore::L<<10)==C_TESTFLAG_L);
+	BOOST_STATIC_ASSERT((C_PPIntCore::UL<<10)==(C_TESTFLAG_L | C_TESTFLAG_U));
+	BOOST_STATIC_ASSERT((C_PPIntCore::LL<<10)==C_TESTFLAG_LL);
+	BOOST_STATIC_ASSERT((C_PPIntCore::ULL<<10)==(C_TESTFLAG_LL | C_TESTFLAG_U));
+
+	if (C_TESTFLAG_PP_NUMERAL==flags)
+		{
+		union_quartet<C_PPIntCore,C_PPFloatCore,C_PPDecimalFloat,C_PPHexFloat> test;
+		if 		(C_PPDecimalFloat::is(x,x_len,test.third))
+			{
+			flags |= C_TESTFLAG_FLOAT | C_TESTFLAG_DECIMAL;
+			}
+		else if	(C_PPHexFloat::is(x,x_len,test.fourth))
+			{
+			flags |= C_TESTFLAG_FLOAT | C_TESTFLAG_HEXADECIMAL;
+			}
+		else if (C_PPIntCore::is(x,x_len,test.first))
+			{
+			assert(C_PPIntCore::ULL>=test.first.hinted_type);
+			flags |= (((lex_flags)(test.first.hinted_type))<<10);
+			assert(8==test.first.radix || 10==test.first.radix || 16==test.first.radix);
+			switch(test.first.radix)
+			{
+			case 8:		{
+						flags |= C_TESTFLAG_INTEGER | C_TESTFLAG_OCTAL;
+						break;
+						}
+			case 10:	{
+						flags |= C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL;
+						break;
+						}
+			case 16:	{
+						flags |= C_TESTFLAG_INTEGER | C_TESTFLAG_HEXADECIMAL;
+						break;
+						}
+			};
+			}
+		if 		(flags & C_TESTFLAG_FLOAT)
+			{
+			assert(C_PPFloatCore::L>=test.second.hinted_type);
+			flags |= (((lex_flags)(test.second.hinted_type))<<10);
+			};
+		if (C_TESTFLAG_PP_NUMERAL==flags)
+			{
+			INC_INFORM(src_filename);
+			INC_INFORM(':');
+			INC_INFORM(line_no);
+			INC_INFORM(": ");
+			INC_INFORM(ERR_STR);
+			INC_INFORM("invalid preprocessing number");
+			INC_INFORM(x,x_len);
+			INFORM(" (C99 6.4.4.1p1,6.4.4.2p1/C++98 2.13.1,2.13.3)");
+			zcc_errors.inc_error();
+			return;
+			}
+		}
+	else if (C_TESTFLAG_PP_OP_PUNC & flags)
+		{	// language-sensitive token blacklisting
+		const signed int pp_code = CPPPurePreprocessingOperatorPunctuationCode(x,x_len);
+		assert(0<pp_code);
+		C_PP_ENCODE(flags,pp_code);
+		}
+	else if (C_TESTFLAG_STRING_LITERAL==flags)
+		{	// This gets in by C99 6.6p10, as 6.6p6 doesn't list string literals as legitimate
+		if (!IsLegalCString(x,x_len))
+			{
+			INC_INFORM(src_filename);
+			INC_INFORM(':');
+			INC_INFORM(line_no);
+			INC_INFORM(": ");
+			INC_INFORM(ERR_STR);
+			INC_INFORM(x,x_len);
+			INFORM(" : invalid string (C99 6.4.5p1/C++98 2.13.4)");
+			zcc_errors.inc_error();
+			return;
+			}
+		else if (bool_options[boolopt::pedantic])
+			{
+			INC_INFORM(src_filename);
+			INC_INFORM(':');
+			INC_INFORM(line_no);
+			INC_INFORM(": ");
+			INC_INFORM(WARN_STR);
+			INC_INFORM(x,x_len);
+			INFORM(" : string literals in integer constant expressions are only permitted, not required (C99 6.6p10)");
+			if (bool_options[boolopt::warnings_are_errors])
+				{
+				zcc_errors.inc_error();
+				return;
+				}
+			}
+		}
+	else if (C_TESTFLAG_CHAR_LITERAL==flags)
+		{
+		if (!IsLegalCCharacterLiteral(x,x_len))
+			{
+			INC_INFORM(src_filename);
+			INC_INFORM(':');
+			INC_INFORM(line_no);
+			INC_INFORM(": ");
+			INC_INFORM(ERR_STR);
+			INC_INFORM("invalid character literal ");
+			INC_INFORM(x,x_len);
+			INFORM(" (C99 6.4.4.4p1/C++98 2.13.2)");
+			zcc_errors.inc_error();
+			return;
+			}
+		}
+}
 
 //! \todo fix these to not assume perfect matching character sets
 #define C99_SYMBOLIC_ESCAPED_ESCAPES "\a\b\f\n\r\t\v"
@@ -9451,6 +9697,7 @@ PP_auxfunc C99_aux
 	C99_EvalParseTree,
 	C99_PPHackTree,
 	ConcatenateCStringLiterals,
+	C99_bad_syntax_tokenized,
 	C99_echo_reserved_keyword,
 	C99_echo_reserved_symbol,
 	C99_ContextFreeParse
@@ -9468,6 +9715,7 @@ PP_auxfunc CPlusPlus_aux
 	CPP_EvalParseTree,
 	CPP_PPHackTree,
 	ConcatenateCStringLiterals,
+	CPP_bad_syntax_tokenized,
 	CPP_echo_reserved_keyword,
 	CPP_echo_reserved_symbol,
 	CPP_ContextFreeParse

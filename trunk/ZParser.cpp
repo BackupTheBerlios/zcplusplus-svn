@@ -14,6 +14,9 @@
 
 using namespace zaimoni;
 
+// beginning of multilingual support
+#define ERR_STR "error: "
+
 ZParser::ZParser(const virtual_machine::CPUInfo& _target_machine, const char* const _lang)
 :	lang_code(lang_index(_lang)),
 	lang(lexer_from_lang(lang_code)),
@@ -48,6 +51,27 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 			do	ParsedList[0]->c_array<0>()[old_parsed_size+ --i].clear();
 			while(0<i);
 #endif
+			// error the illegal preprocessing tokens here, not in CPreprocessor
+			i = pretokenized.size();
+			do	{
+				--i;
+				lang.pp_support->AddPostLexFlags(TokenList.front()->data()+pretokenized[i].first, pretokenized[i].second, pretokenized[i].third, TokenList.front()->src_filename, TokenList.front()->original_line.first);
+				if (	(C_TESTFLAG_PP_OP_PUNC & pretokenized[i].third)
+					&& 	(C_DISALLOW_POSTPROCESSED_SOURCE & lang.pp_support->GetPPOpPuncFlags(C_PP_DECODE(pretokenized[i].third))))
+					{
+					INC_INFORM(TokenList.front()->src_filename);
+					INC_INFORM(':');
+					INC_INFORM(TokenList.front()->original_line.first);
+					INC_INFORM(": ");
+					INC_INFORM(ERR_STR);
+					INC_INFORM("Forbidden token ");
+					INC_INFORM(TokenList.front()->data()+pretokenized[i].first, pretokenized[i].second);
+					INFORM(" in postprocessed source.");
+					zcc_errors.inc_error();
+					};
+				}
+			while(0<i);
+
 			if (1==append_tokens)
 				{	// only one token: grab the memory from Token and just do it
 				TokenList.front()->ltrim(pretokenized[0].first);
@@ -116,7 +140,9 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 		TokenList.DeleteIdx(0);
 		}
 	while(!TokenList.empty());
+	die_on_parse_errors();
 	if (ParsedList.empty()) return false;	// no-op, nothing to export to object file
+
 	const type_system min_types((Lang::C==lang_code) ? C_atomic_types : CPP_atomic_types,(Lang::C==lang_code) ? C_TYPE_MAX : CPP_TYPE_MAX,C_int_priority,C_INT_PRIORITY_SIZE);
 	// ok...now ready for LangConf (note that CSupport.hpp/CSupport.cpp may fork on whether z_cpp or zcc is being built
 	// 1) lexical absolute parsing: primary expressions and similar

@@ -11,10 +11,6 @@
 #include "AtomicString.h"
 #include "CSupport.hpp"
 #include "C_PPDecimalInteger.hpp"
-#include "C_PPHexInteger.hpp"
-#include "C_PPOctalInteger.hpp"
-#include "C_PPDecimalFloat.hpp"
-#include "C_PPHexFloat.hpp"
 #include "CPUInfo.hpp"
 #include "errors.hpp"
 #include "errcount.hpp"
@@ -1497,6 +1493,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 			}
 		else{	// non-directive; lex, and check for macros and _Pragma operators
 				// remember to convert whitespace to single-space tokens, and flush those later
+				// we do not error illegal preprocessing tokens here; that's handled in ZParser
 			if (0==include_where && 0==restart_full_scan)
 				{
 				if (!tokenize_line(TokenList,i))
@@ -2791,123 +2788,6 @@ token_is_char<'}'>(const char* const x, const POD_triple<size_t,size_t,lex_flags
 	return detect_C_right_brace_op(x+lexed_token.first,lexed_token.second);
 }
 
-static bool
-_bad_syntax_pretokenized(const Token<char>& x,const LangConf& lang,POD_triple<size_t,size_t,lex_flags>& pretoken)
-{	//! \bug need testcases
-	assert((C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_PP_OP_PUNC | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_IDENTIFIER) & pretoken.third);
-	assert(x.size()>pretoken.first);
-	assert(x.size()-pretoken.first>=pretoken.second);
-
-	// reality checks on relation between flag constants and enums
-	BOOST_STATIC_ASSERT((C_PPFloatCore::F<<10)==C_TESTFLAG_F);
-	BOOST_STATIC_ASSERT((C_PPFloatCore::L<<10)==C_TESTFLAG_L);
-
-	BOOST_STATIC_ASSERT((C_PPIntCore::U<<10)==C_TESTFLAG_U);
-	BOOST_STATIC_ASSERT((C_PPIntCore::L<<10)==C_TESTFLAG_L);
-	BOOST_STATIC_ASSERT((C_PPIntCore::UL<<10)==(C_TESTFLAG_L | C_TESTFLAG_U));
-	BOOST_STATIC_ASSERT((C_PPIntCore::LL<<10)==C_TESTFLAG_LL);
-	BOOST_STATIC_ASSERT((C_PPIntCore::ULL<<10)==(C_TESTFLAG_LL | C_TESTFLAG_U));
-
-	if (C_TESTFLAG_PP_NUMERAL==pretoken.third)
-		{
-		union_quartet<C_PPIntCore,C_PPFloatCore,C_PPDecimalFloat,C_PPHexFloat> test;
-		if 		(C_PPDecimalFloat::is(x.data()+pretoken.first,pretoken.second,test.third))
-			{
-			pretoken.third |= C_TESTFLAG_FLOAT | C_TESTFLAG_DECIMAL;
-			}
-		else if	(C_PPHexFloat::is(x.data()+pretoken.first,pretoken.second,test.fourth))
-			{
-			pretoken.third |= C_TESTFLAG_FLOAT | C_TESTFLAG_HEXADECIMAL;
-			}
-		else if (C_PPIntCore::is(x.data()+pretoken.first,pretoken.second,test.first))
-			{
-			assert(C_PPIntCore::ULL>=test.first.hinted_type);
-			pretoken.third |= (((lex_flags)(test.first.hinted_type))<<10);
-			assert(8==test.first.radix || 10==test.first.radix || 16==test.first.radix);
-			switch(test.first.radix)
-			{
-			case 8:		{
-						pretoken.third |= C_TESTFLAG_INTEGER | C_TESTFLAG_OCTAL;
-						break;
-						}
-			case 10:	{
-						pretoken.third |= C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL;
-						break;
-						}
-			case 16:	{
-						pretoken.third |= C_TESTFLAG_INTEGER | C_TESTFLAG_HEXADECIMAL;
-						break;
-						}
-			};
-			}
-		if 		(pretoken.third & C_TESTFLAG_FLOAT)
-			{
-			assert(C_PPFloatCore::L>=test.second.hinted_type);
-			pretoken.third |= (((lex_flags)(test.second.hinted_type))<<10);
-			};
-		if (C_TESTFLAG_PP_NUMERAL==pretoken.third)
-			{
-			message_header(x);
-			INC_INFORM(ERR_STR);
-			INC_INFORM("invalid preprocessing number");
-			INC_INFORM(x.data()+pretoken.first,pretoken.second);
-			INFORM(" (C99 6.4.4.1p1,6.4.4.2p1/C++98 2.13.1,2.13.3)");
-			return true;
-			}
-		}
-	else if (C_TESTFLAG_PP_OP_PUNC & pretoken.third)
-		{	// language-sensitive token blacklisting
-		const signed int pp_code = lang.pp_support->EncodePPOpPunc(x.data()+pretoken.first,pretoken.second);
-		assert(0<pp_code);
-		//! \todo this must be fixed to be used more generally
-		if ((C_DISALLOW_POSTPROCESSED_SOURCE | C_DISALLOW_CONSTANT_EXPR | C_DISALLOW_IF_ELIF_CONTROL) & lang.pp_support->GetPPOpPuncFlags(pp_code))
-			{
-			message_header(x);
-			INC_INFORM(ERR_STR);
-			INC_INFORM("Forbidden token ");
-			INC_INFORM(x.data()+pretoken.first,pretoken.second);
-			INFORM(" in control expression.");
-			return true;
-			};
-		C_PP_ENCODE(pretoken.third,pp_code);
-		}
-	else if (C_TESTFLAG_STRING_LITERAL==pretoken.third)
-		{	// this really needs to be language-specific
-			// This gets in by C99 6.6p10, as 6.6p6 doesn't list string literals as legitimate
-			//! \todo needs to be language-controlled
-		if (!IsLegalCString(x.data()+pretoken.first,pretoken.second))
-			{
-			message_header(x);
-			INC_INFORM(ERR_STR);
-			INC_INFORM(x.data()+pretoken.first,pretoken.second);
-			INFORM(" : invalid string (C99 6.4.5p1/C++98 2.13.4)");
-			return true;
-			}
-		else if (bool_options[boolopt::pedantic])
-			{
-			message_header(x);
-			INC_INFORM(WARN_STR);
-			INC_INFORM(x.data()+pretoken.first,pretoken.second);
-			INFORM(" : string literals in integer constant expressions are only permitted, not required (C99 6.6p10)");
-			if (bool_options[boolopt::warnings_are_errors]) return true;
-			}
-		}
-	else if (C_TESTFLAG_CHAR_LITERAL==pretoken.third)
-		{	// this really needs to be language-specific
-			//! \todo needs to be language-controlled
-		if (!IsLegalCCharacterLiteral(x.data()+pretoken.first,pretoken.second))
-			{
-			message_header(x);
-			INC_INFORM(ERR_STR);
-			INC_INFORM("invalid character literal ");
-			INC_INFORM(x.data()+pretoken.first,pretoken.second);
-			INFORM(" (C99 6.4.4.4p1/C++98 2.13.2)");
-			return true;
-			}
-		}
-	return false;
-}
-
 // Closely related to _C99_literal_converts_to_bool/CSupport.cpp
 /*! 
  * examines a proposed token for whether it is suitable for an #if/#elif control expression, and if so 
@@ -3078,6 +2958,10 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 	if (bad_control) return false;	// but if we discard the block anyway it doesn't matter
 
 	intradirective_preprocess(x,valid_directives[if_directive].second+2,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion);
+
+	// if we went invalid do not proceed further
+	if (x.flags & INVALID_DIRECTIVE_FLAG) return false;
+
 	intradirective_flush_identifiers_to_zero(x,valid_directives[if_directive].second+2);
 
 	// ZCC should actually calculate the control expression completely to 0/1  Error reporting for this isn't particularly compatible with destructive-evaluate.
@@ -3087,12 +2971,27 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 	lang.line_lex(x.data()+critical_offset,x.size()-critical_offset,pretokenized);
 	STL_translate_first(critical_offset,pretokenized);	// coordinate fixup
 
-	// error the illegal preprocessing number tokens here
-	size_t err_count = 0;
+	// error the illegal preprocessing tokens here
+	{
+	const size_t old_err_count = zcc_errors.err_count();
 	i = pretokenized.size();
-	do	err_count += _bad_syntax_pretokenized(x,lang,pretokenized[--i]);
+	do	{
+		--i;
+		lang.pp_support->AddPostLexFlags(x.data()+pretokenized[i].first, pretokenized[i].second, pretokenized[i].third, x.src_filename, x.original_line.first);
+		if (	(C_TESTFLAG_PP_OP_PUNC & pretokenized[i].third)
+			&& 	((C_DISALLOW_POSTPROCESSED_SOURCE | C_DISALLOW_CONSTANT_EXPR | C_DISALLOW_IF_ELIF_CONTROL) & lang.pp_support->GetPPOpPuncFlags(C_PP_DECODE(pretokenized[i].third))))
+			{
+			message_header(x);
+			INC_INFORM(ERR_STR);
+			INC_INFORM("Forbidden token ");
+			INC_INFORM(x.data()+pretokenized[i].first, pretokenized[i].second);
+			INFORM(" in control expression.");
+			zcc_errors.inc_error();
+			};
+		}
 	while(0<i);
-	if (zcc_errors.inc_error(err_count)) return false;
+	if (old_err_count!=zcc_errors.err_count()) return false;
+	}
 
 	// should be merging string literals at this point
 RetryStringMerge:
@@ -3290,28 +3189,23 @@ oneTokenExit:
 	lang.line_lex(x.data()+critical_offset,x.size()-critical_offset,pretokenized);
 	STL_translate_first(critical_offset,pretokenized);	// coordinate fixup
 	i = pretokenized.size();
-#ifdef NDEBUG
-	do	_bad_syntax_pretokenized(x,lang,pretokenized[--i]);
+	do	{
+		--i;
+		lang.pp_support->AddPostLexFlags(x.data()+pretokenized[i].first, pretokenized[i].second, pretokenized[i].third, x.src_filename, x.original_line.first);
+		}
 	while(0<i);
-#else
-	do	err_count += _bad_syntax_pretokenized(x,lang,pretokenized[--i]);
-	while(0<i);
-	assert(0==err_count);
-#endif
 	str_concat_wants_RAM = false;
 	}
 	if (1==pretokenized.size()) goto oneTokenExit;
 	return true;
 }
 
-#undef ULONG_BIT
 #undef PREPROCESSING_DIRECTIVE_FLAG
 #undef PACK_DIRECTIVE
 #undef UNPACK_DIRECTIVE
 #undef MAX_PP_DIRECTIVE
 #undef PP_INVALID
 #undef SYNTAX_CHECKED_FLAG
-#undef INVALID_DIRECTIVE_FLAG
 
 void
 CPreprocessor::predefined_macro_replacement(Token<char>& x, size_t critical_offset)
@@ -3538,6 +3432,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 			INC_INFORM(x.data()+critical_offset,token_len);
 			INFORM(" did not close its argument list in time. (C99 6.10p1/C++98 16.1p1)");
 			zcc_errors.inc_error();
+			x.flags |= INVALID_DIRECTIVE_FLAG;
 			return false;
 			}
 		if (formal_arg_count>arg_count || (formal_arg_count<arg_count && !formal_varadic))
@@ -3556,6 +3451,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 			INC_INFORM(formal_arg_count);
 			INFORM(". (C99 6.10p1/C++0x 16.1p1)");
 			zcc_errors.inc_error();
+			x.flags |= INVALID_DIRECTIVE_FLAG;
 			return false;
 			}
 		if (NULL==macros_function_expansion[function_macro_index])
@@ -3621,6 +3517,9 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 		};
 	return false;
 }
+
+#undef ULONG_BIT
+#undef INVALID_DIRECTIVE_FLAG
 
 /*! 
  * Does a single concatenation of the tokens indicated

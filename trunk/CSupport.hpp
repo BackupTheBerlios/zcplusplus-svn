@@ -85,6 +85,7 @@ template<class T1,class T2,class T3> struct POD_triple;
 // C preprocessor class has to know about this type
 struct PP_auxfunc
 {
+	// z_cpp 0.0.1
 	func_traits<size_t (*)(const char*)>::function_ref_type LengthOfSystemHeader;			// non-zero iff system header exactly matched
 	func_traits<signed int (*)(const char* const x, size_t x_len)>::function_ref_type EncodePPOpPunc;	// encode pp op/punc; 0>= if not found
 	func_traits<unsigned int (*)(signed int)>::function_ref_type GetPPOpPuncFlags;			// returns flag set, 0 if nothing matched
@@ -118,7 +119,9 @@ struct PP_auxfunc
  * \post if NULL!=target, target points to a valid string literal
  */
 	func_traits<int (*)(const char* src, size_t src_len, const char* src2, size_t src2_len, char*& target)>::function_ref_type EscapedStringConcatenate;
-	// start zcc-specific functions
+	// z_cpp 0.0.2
+	func_traits<void (*)(const char* const x, size_t x_len, lex_flags& flags, const char* const src_filename, size_t line_no)>::function_ref_type AddPostLexFlags;
+	// zcc 0.0.2
 	func_traits<const char* (*)(const char* x,size_t x_len)>::function_ref_type EchoReservedKeyword;
 	func_traits<const char* (*)(const char* x,size_t x_len)>::function_ref_type EchoReservedSymbol;
 	func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type ContextFreeParse;		// return true iff no errors
