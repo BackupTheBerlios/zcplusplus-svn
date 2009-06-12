@@ -3518,9 +3518,6 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 	return false;
 }
 
-#undef ULONG_BIT
-#undef INVALID_DIRECTIVE_FLAG
-
 /*! 
  * Does a single concatenation of the tokens indicated
  * 
@@ -3989,7 +3986,14 @@ bool CPreprocessor::discard_leading_trailing_concatenate_op(Token<char>& x)
 void
 CPreprocessor::use_line_directive_and_discard(autovalarray_ptr<Token<char>* >& TokenList, const size_t i)
 {
+	assert(i<TokenList.size());
+	assert(NULL!=TokenList[i]);
 	assert(!strncmp(TokenList[i]->data(),"#line ",sizeof("#line ")-1));
+	if (TokenList[i]->flags & INVALID_DIRECTIVE_FLAG)
+		{
+		TokenList.DeleteIdx(i);
+		return;
+		};
 	C_PPDecimalInteger line_number;
 	lex_flags first_token_flags;
 	lex_flags second_token_flags;
@@ -4093,6 +4097,9 @@ CPreprocessor::use_line_directive_and_discard(autovalarray_ptr<Token<char>* >& T
 
 	TokenList.DeleteIdx(i);
 }
+
+#undef ULONG_BIT
+#undef INVALID_DIRECTIVE_FLAG
 
 void
 CPreprocessor::truncate_illegal_tokens(Token<char>& x,const int directive_type,const size_t critical_offset)
