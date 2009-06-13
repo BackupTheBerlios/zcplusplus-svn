@@ -468,7 +468,7 @@ static const POD_pair<const char*,size_t> valid_keyword[]
 			DICT_STRUCT("dynamic_cast"),
 			DICT_STRUCT("explicit"),
 			DICT_STRUCT("false"),
-			DICT_STRUCT("friend "),
+			DICT_STRUCT("friend"),
 			DICT_STRUCT("mutable"),
 			DICT_STRUCT("namespace"),
 			DICT_STRUCT("new"),

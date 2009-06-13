@@ -25,6 +25,7 @@ PASS CPP_ISO if.C99/Pass*
 
 ECHO Checking ZCC implementation-defined errors and features
 ERROR CPP default/Error*
+ERROR CPP default/keywords/Error*
 PASS CPP default/Pass*
 
 ECHO Checking ZCC nonconforming errors

@@ -768,17 +768,55 @@ static bool line_is_preprocessing_directive(Token<char>& x)
 	return '#'==x.front();
 }
 
-static void discard_locked_macro(autovalarray_ptr<Token<char>* >& TokenList, const size_t i,const int directive_type)
+static void discard_locked_macro(autovalarray_ptr<Token<char>* >& TokenList, const size_t i,const int directive_type,const size_t first_token_len)
 {
 	message_header(*TokenList[i]);
 	INC_INFORM(ERR_STR);
 	INC_INFORM("#");
 	INC_INFORM(valid_directives[directive_type].first);
 	INC_INFORM(" applied to locked macro ");
-	INC_INFORM(TokenList[i]->data()+valid_directives[directive_type].second+2);
+	INC_INFORM(TokenList[i]->data()+valid_directives[directive_type].second+2,first_token_len);
 	INFORM("; discarding directive. (ZCPP pragma effect)");
 	TokenList.DeleteIdx(i);
 	zcc_errors.inc_error();
+}
+
+static void C99_reject_keyword_macros(autovalarray_ptr<Token<char>* >& TokenList, size_t include_where, const char* look_for, const LangConf& lang, autovalarray_ptr<char*>& macros_object, autovalarray_ptr<Token<char>*>& macros_object_expansion, autovalarray_ptr<Token<char>*>& macros_object_expansion_pre_eval, autovalarray_ptr<char*>& macros_function, autovalarray_ptr<Token<char>*>& macros_function_arglist, autovalarray_ptr<Token<char>*>& macros_function_expansion, autovalarray_ptr<Token<char>*>& macros_function_expansion_pre_eval)
+{
+	assert(NULL!=look_for);
+	size_t j = lang.len_InvariantKeywords;
+	do	{
+		--j;
+		const errr object_macro_index = binary_find(lang.InvariantKeywords[j].first,lang.InvariantKeywords[j].second,macros_object);
+		const errr function_macro_index = binary_find(lang.InvariantKeywords[j].first,lang.InvariantKeywords[j].second,macros_function);
+		assert(0>object_macro_index || 0>function_macro_index);
+		if (0<=object_macro_index || 0<=function_macro_index)
+			{
+			message_header(*TokenList[include_where]);
+			INC_INFORM(ERR_STR);
+			INC_INFORM("keyword '");
+			INC_INFORM(0<=object_macro_index ? macros_object[object_macro_index] : macros_function[function_macro_index]);
+			INC_INFORM("' defined as a macro when including system header <");
+			INC_INFORM(look_for);
+			INFORM(">.  Defining undefined behavior as undefining macro and proceeding.  (C99 7.1.2p4)");
+			zcc_errors.inc_error();
+			if (0<=object_macro_index)
+				{
+				macros_object.DeleteIdx(object_macro_index);
+				macros_object_expansion.DeleteIdx(object_macro_index);
+				macros_object_expansion_pre_eval.DeleteIdx(object_macro_index);
+				};
+			if (0<=function_macro_index)
+				{
+				macros_function.DeleteIdx(function_macro_index);
+				macros_function_arglist.DeleteIdx(function_macro_index);
+				macros_function_expansion.DeleteIdx(function_macro_index);
+				macros_function_expansion_pre_eval.DeleteIdx(function_macro_index);
+				};
+			return;
+			}
+		}
+	while(0<j);
 }
 
 void
@@ -973,7 +1011,7 @@ RestartAfterInclude:
 
 					if (hard_locked_macro(TokenList[i]->data()+critical_offset,first_token_len))
 						{	//! \test Error_undef_STDC.hpp : #undef __STDC__
-						discard_locked_macro(TokenList,i,directive_type);
+						discard_locked_macro(TokenList,i,directive_type,first_token_len);
 						if (0==i) goto Restart;
 						--i;
 						continue;
@@ -982,7 +1020,7 @@ RestartAfterInclude:
 						&&	pragma_locked_macro(TokenList[i]->data()+critical_offset,first_token_len,locked_macros))
 						{	// here so we don't recalculate the above
 						//! \test cpp/Error_undef_locked_macro.hpp
-						discard_locked_macro(TokenList,i,directive_type);
+						discard_locked_macro(TokenList,i,directive_type,first_token_len);
 						if (0==i) goto Restart;
 						--i;
 						continue;
@@ -1919,47 +1957,9 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 				// C0x appears to be conserving C99 exactly.
 				// We undefine the offending macros as well as erroring, mainly to prevent duplicate error messages
 				// C99 doesn't care about such defines *after* the header; C++98 does.
-				//! \bug need testcase(s)
+				//! \test cpp/default/keywords/Error_*.h
 				if (Lang::C==lang_code && 0<lang.pp_support->LengthOfSystemHeader(look_for))
-					{	//! \todo better linear_find_authorized_string instantiation
-					const errr found = linear_find_lencached(look_for,strlen(look_for),lang.InvariantKeywords,lang.len_InvariantKeywords);
-					if (0<=found)
-						{
-						size_t j = lang.len_InvariantKeywords;
-						do	{
-							--j;
-							//! \todo better find_authorized_string instantiation
-							const errr object_macro_index = binary_find(lang.InvariantKeywords[j].first,lang.InvariantKeywords[j].second,macros_object);
-							const errr function_macro_index = binary_find(lang.InvariantKeywords[j].first,lang.InvariantKeywords[j].second,macros_function);
-							assert(0>object_macro_index || 0>function_macro_index);
-							if (0<=object_macro_index || 0<=function_macro_index)
-								{
-								message_header(*TokenList[i]);
-								INC_INFORM(ERR_STR);
-								INC_INFORM("keyword '");
-								INC_INFORM((0<=object_macro_index) ? macros_object[object_macro_index] : macros_function[function_macro_index]);
-								INC_INFORM("' defined as a macro when including system header <");
-								INC_INFORM(look_for);
-								INC_INFORM(">.  Undefining macro and proceeding.  (C99 7.1.2p4)");
-								zcc_errors.inc_error();
-								if (0<=object_macro_index)
-									{
-									macros_object.DeleteIdx(object_macro_index);
-									macros_object_expansion.DeleteIdx(object_macro_index);
-									macros_object_expansion_pre_eval.DeleteIdx(object_macro_index);
-									};
-								if (0<=function_macro_index)
-									{
-									macros_function.DeleteIdx(function_macro_index);
-									macros_function_arglist.DeleteIdx(function_macro_index);
-									macros_function_expansion.DeleteIdx(function_macro_index);
-									macros_function_expansion_pre_eval.DeleteIdx(function_macro_index);
-									};
-								}
-							}
-						while(0<j);
-						}
-					}
+					C99_reject_keyword_macros(TokenList,include_where,look_for,lang,macros_object,macros_object_expansion,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion,macros_function_expansion_pre_eval);
 
 				// C,C++: limits.h is hardcoded
 				// C++: climits is hardcoded
@@ -1967,6 +1967,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					||	(!strcmp(look_for,"climits") && Lang::CPlusPlus==lang_code))
 					{	// header is limits.h
 					hardcoded_header = true;
+					C99_reject_keyword_macros(TokenList,include_where,look_for,lang,macros_object,macros_object_expansion,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion,macros_function_expansion_pre_eval);
 					if (0>binary_find("__LIMITS_H__",sizeof("__LIMITS_H__")-1,macros_object))	
 						create_limits_header(IncludeTokenList,look_for);	// not included yet
 					};
@@ -1977,6 +1978,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					||	(!strcmp(look_for,"cstddef") && Lang::CPlusPlus==lang_code))
 					{	// header is stddef.h
 					hardcoded_header = true;
+					C99_reject_keyword_macros(TokenList,include_where,look_for,lang,macros_object,macros_object_expansion,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion,macros_function_expansion_pre_eval);
 					if (0>binary_find("__STDDEF_H__",sizeof("__STDDEF_H__")-1,macros_object))	
 						create_stddef_header(IncludeTokenList,look_for);	// not included yet
 					};
@@ -1987,6 +1989,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					||	(!strcmp(look_for,"cstdint") && Lang::CPlusPlus==lang_code))
 					{	// header is stdint.h
 					hardcoded_header = true;
+					C99_reject_keyword_macros(TokenList,include_where,look_for,lang,macros_object,macros_object_expansion,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion,macros_function_expansion_pre_eval);
 					if (0>binary_find("__STDINT_H__",sizeof("__STDINT_H__")-1,macros_object))	
 						create_stdint_header(IncludeTokenList,look_for);	// not included yet
 					};
