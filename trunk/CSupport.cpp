@@ -3122,53 +3122,52 @@ static int _C99_CPP_notice_multitoken_primary_type_token_to_index(const zaimoni:
 static void _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 {
 	assert(!(PARSE_PRIMARY_TYPE & src.data<0>()[i].flags) && NULL!=src.data<0>()[i].index_tokens[0].token.first);
-	if (token_is_string<4>(src.c_array<0>()[i].index_tokens[0].token,"char"))
+	parse_tree& original_target = src.c_array<0>()[i];
+	if (token_is_string<4>(original_target.index_tokens[0].token,"char"))
 		{
-		src.c_array<0>()[i].type_code.set_type(C_TYPE::CHAR);
-		src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+		original_target.type_code.set_type(C_TYPE::CHAR);
+		original_target.flags |= PARSE_PRIMARY_TYPE;
 		}
-	else if (token_is_string<3>(src.c_array<0>()[i].index_tokens[0].token,"int"))
+	else if (token_is_string<3>(original_target.index_tokens[0].token,"int"))
 		{
-		src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);
-		src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+		original_target.type_code.set_type(C_TYPE::INT);
+		original_target.flags |= PARSE_PRIMARY_TYPE;
 		}
 	else if (token_is_string<5>(src.c_array<0>()[i].index_tokens[0].token,"short"))
 		{
-		if (i<src.size<0>()-1 && robust_token_is_string<3>(src.c_array<0>()[i].index_tokens[0].token,"int"))
+		if (i<src.size<0>()-1 && robust_token_is_string<3>(src.c_array<0>()[i+1].index_tokens[0].token,"int"))
 			{
-			src.c_array<0>()[i].grab_index_token_from_str_literal<0>("short int",0);	//! \bug should use something informative; identifier not fine
+			original_target.grab_index_token_from_str_literal<0>("short int",0);	//! \bug should use something informative; identifier not fine
 			src.DeleteIdx<0>(i+1);
 			};
 		src.c_array<0>()[i].type_code.set_type(C_TYPE::SHRT);
 		src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
 		}
-	else if (token_is_string<5>(src.c_array<0>()[i].index_tokens[0].token,"float"))
+	else if (token_is_string<5>(original_target.index_tokens[0].token,"float"))
 		{
-		if (i<src.size<0>()-1 && robust_token_is_string<8>(src.c_array<0>()[i].index_tokens[0].token,"_Complex"))
+		if (i<src.size<0>()-1 && robust_token_is_string<8>(src.c_array<0>()[i+1].index_tokens[0].token,"_Complex"))
 			{
-			src.c_array<0>()[i].grab_index_token_from_str_literal<0>("float _Complex",0);	//! \bug should use something informative; identifier not fine
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::FLOAT__COMPLEX);
+			original_target.grab_index_token_from_str_literal<0>("float _Complex",0);	//! \bug should use something informative; identifier not fine
+			original_target.type_code.set_type(C_TYPE::FLOAT__COMPLEX);
 			src.DeleteIdx<0>(i+1);
 			}
-		else{
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::FLOAT);
-			};
+		else
+			original_target.type_code.set_type(C_TYPE::FLOAT);
 		src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
 		}
-	else if (token_is_string<6>(src.c_array<0>()[i].index_tokens[0].token,"double"))
+	else if (token_is_string<6>(original_target.index_tokens[0].token,"double"))
 		{
-		if (i<src.size<0>()-1 && robust_token_is_string<8>(src.c_array<0>()[i].index_tokens[0].token,"_Complex"))
+		if (i<src.size<0>()-1 && robust_token_is_string<8>(src.c_array<0>()[i+1].index_tokens[0].token,"_Complex"))
 			{
-			src.c_array<0>()[i].grab_index_token_from_str_literal<0>("double _Complex",0);	//! \bug should use something informative; identifier not fine
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::DOUBLE__COMPLEX);
+			original_target.grab_index_token_from_str_literal<0>("double _Complex",0);	//! \bug should use something informative; identifier not fine
+			original_target.type_code.set_type(C_TYPE::DOUBLE__COMPLEX);
 			src.DeleteIdx<0>(i+1);
 			}
-		else{
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::DOUBLE);
-			};
+		else
+			original_target.type_code.set_type(C_TYPE::DOUBLE);
 		src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
 		}
-	else if (token_is_string<4>(src.c_array<0>()[i].index_tokens[0].token,"long"))
+	else if (token_is_string<4>(original_target.index_tokens[0].token,"long"))
 		{
 		const int keyindex 	= (i>=src.size<0>()-1 || NULL==src.data<0>()[i+1].index_tokens[0].token.first) ? 0 
 							: token_is_string<3>(src.c_array<0>()[i+1].index_tokens[0].token,"int") ? 1
@@ -3178,29 +3177,29 @@ static void _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 		{
 		case 3:	// long double
 			{
-			if (i<src.size<0>()-2 && robust_token_is_string<8>(src.c_array<0>()[i].index_tokens[0].token,"_Complex"))
+			if (i<src.size<0>()-2 && robust_token_is_string<8>(src.c_array<0>()[i+2].index_tokens[0].token,"_Complex"))
 				{
-				src.c_array<0>()[i].grab_index_token_from_str_literal<0>("long double _Complex",0);	//! \bug should use something informative; identifier not fine
+				original_target.grab_index_token_from_str_literal<0>("long double _Complex",0);	//! \bug should use something informative; identifier not fine
+				original_target.type_code.set_type(C_TYPE::LDOUBLE__COMPLEX);
 				src.DeleteNSlotsAt<0>(2,i+1);
-				src.c_array<0>()[i].type_code.set_type(C_TYPE::LDOUBLE__COMPLEX);
 				}
 			else{
-				src.c_array<0>()[i].grab_index_token_from_str_literal<0>("long double",0);	//! \bug should use something informative; identifier not fine
+				original_target.grab_index_token_from_str_literal<0>("long double",0);	//! \bug should use something informative; identifier not fine
+				original_target.type_code.set_type(C_TYPE::LDOUBLE);
 				src.DeleteIdx<0>(i+1);						
-				src.c_array<0>()[i].type_code.set_type(C_TYPE::LDOUBLE);
 				}
 			src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;					
 			break;
 			}
 		case 2:	// long long
 			{
-			if (i<src.size<0>()-2 && robust_token_is_string<3>(src.c_array<0>()[i].index_tokens[0].token,"int"))
+			if (i<src.size<0>()-2 && robust_token_is_string<3>(src.c_array<0>()[i+2].index_tokens[0].token,"int"))
 				{
-				src.c_array<0>()[i].grab_index_token_from_str_literal<0>("long long int",0);	//! \bug should use something informative; identifier not fine
+				original_target.grab_index_token_from_str_literal<0>("long long int",0);	//! \bug should use something informative; identifier not fine
 				src.DeleteNSlotsAt<0>(2,i+1);
 				}
 			else{
-				src.c_array<0>()[i].grab_index_token_from_str_literal<0>("long long",0);	//! \bug should use something informative; identifier not fine
+				original_target.grab_index_token_from_str_literal<0>("long long",0);	//! \bug should use something informative; identifier not fine
 				src.DeleteIdx<0>(i+1);						
 				}
 			src.c_array<0>()[i].type_code.set_type(C_TYPE::LLONG);
@@ -3209,7 +3208,7 @@ static void _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 			}
 		case 1:	// long int
 			{
-			src.c_array<0>()[i].grab_index_token_from_str_literal<0>("long int",0);	//! \bug should use something informative; identifier not fine
+			original_target.grab_index_token_from_str_literal<0>("long int",0);	//! \bug should use something informative; identifier not fine
 			src.DeleteIdx<0>(i+1);
 			}	// intentional fall-through
 		case 0:	// long
@@ -3219,7 +3218,7 @@ static void _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 			}
 		}
 		}
-	else if (token_is_string<6>(src.c_array<0>()[i].index_tokens[0].token,"signed"))
+	else if (token_is_string<6>(original_target.index_tokens[0].token,"signed"))
 		{
 		const int key_index	= (i>=src.size<0>()-1 || NULL==src.data<0>()[i+1].index_tokens[0].token.first) ? 0
 							: _C99_CPP_notice_multitoken_primary_type_token_to_index(src.data<0>()[i+1].index_tokens[0].token);
@@ -3236,11 +3235,11 @@ static void _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 				{
 				if (i<src.size<0>()-3 && robust_token_is_string<3>(src.c_array<0>()[i+3].index_tokens[0].token,"int"))
 					{	// signed long long int
-					src.c_array<0>()[i].grab_index_token_from_str_literal<0>("signed long long int",0);	//! \bug should use something informative; identifier not fine
+					original_target.grab_index_token_from_str_literal<0>("signed long long int",0);	//! \bug should use something informative; identifier not fine
 					src.DeleteNSlotsAt<0>(3,i+1);
 					}
 				else{	// signed long long
-					src.c_array<0>()[i].grab_index_token_from_str_literal<0>("signed long long",0);	//! \bug should use something informative; identifier not fine
+					original_target.grab_index_token_from_str_literal<0>("signed long long",0);	//! \bug should use something informative; identifier not fine
 					src.DeleteNSlotsAt<0>(2,i+1);
 					};
 				src.c_array<0>()[i].type_code.set_type(C_TYPE::LLONG);
@@ -3249,17 +3248,17 @@ static void _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 				}
 			case 1:	// signed long int
 				{
-				src.c_array<0>()[i].grab_index_token_from_str_literal<0>("signed long int",0);	//! \bug should use something informative; identifier not fine
-				src.c_array<0>()[i].type_code.set_type(C_TYPE::LONG);
-				src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+				original_target.grab_index_token_from_str_literal<0>("signed long int",0);	//! \bug should use something informative; identifier not fine
+				original_target.type_code.set_type(C_TYPE::LONG);
+				original_target.flags |= PARSE_PRIMARY_TYPE;
 				src.DeleteNSlotsAt<0>(2,i+1);
 				break;
 				}
 			case 0:	// signed long
 				{
-				src.c_array<0>()[i].grab_index_token_from_str_literal<0>("signed long",0);	//! \bug should use something informative; identifier not fine
-				src.c_array<0>()[i].type_code.set_type(C_TYPE::LONG);
-				src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+				original_target.grab_index_token_from_str_literal<0>("signed long",0);	//! \bug should use something informative; identifier not fine
+				original_target.type_code.set_type(C_TYPE::LONG);
+				original_target.flags |= PARSE_PRIMARY_TYPE;
 				src.DeleteIdx<0>(i+1);
 //				break;
 				}
@@ -3268,23 +3267,23 @@ static void _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 			}
 		case 3:	// signed short
 			{
-			src.c_array<0>()[i].grab_index_token_from_str_literal<0>("signed short",0);	//! \bug should use something informative; identifier not fine
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::SHRT);
-			src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+			original_target.grab_index_token_from_str_literal<0>("signed short",0);	//! \bug should use something informative; identifier not fine
+			original_target.type_code.set_type(C_TYPE::SHRT);
+			original_target.flags |= PARSE_PRIMARY_TYPE;
 			src.DeleteIdx<0>(i+1);
 			break;
 			}
 		case 2:	// signed char
 			{
-			src.c_array<0>()[i].grab_index_token_from_str_literal<0>("signed char",0);	//! \bug should use something informative; identifier not fine
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::SCHAR);
-			src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+			original_target.grab_index_token_from_str_literal<0>("signed char",0);	//! \bug should use something informative; identifier not fine
+			original_target.type_code.set_type(C_TYPE::SCHAR);
+			original_target.flags |= PARSE_PRIMARY_TYPE;
 			src.DeleteIdx<0>(i+1);
 			break;
 			}
 		case 1:	// signed int
 			{
-			src.c_array<0>()[i].grab_index_token_from_str_literal<0>("signed int",0);	//! \bug should use something informative; identifier not fine
+			original_target.grab_index_token_from_str_literal<0>("signed int",0);	//! \bug should use something informative; identifier not fine
 			src.DeleteIdx<0>(i+1);
 			}	// intentional fall-through
 		case 0:	// signed
@@ -3294,7 +3293,7 @@ static void _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 			}
 		}
 		}
-	else if (token_is_string<8>(src.c_array<0>()[i].index_tokens[0].token,"unsigned"))
+	else if (token_is_string<8>(original_target.index_tokens[0].token,"unsigned"))
 		{
 		const int key_index	= (i>=src.size<0>()-1 || NULL==src.data<0>()[i+1].index_tokens[0].token.first) ? 0
 							: _C99_CPP_notice_multitoken_primary_type_token_to_index(src.data<0>()[i+1].index_tokens[0].token);
@@ -3311,11 +3310,11 @@ static void _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 				{
 				if (i<src.size<0>()-3 && robust_token_is_string<3>(src.c_array<0>()[i+3].index_tokens[0].token,"int"))
 					{	// unsigned long long int
-					src.c_array<0>()[i].grab_index_token_from_str_literal<0>("unsigned long long int",0);	//! \bug should use something informative; identifier not fine
+					original_target.grab_index_token_from_str_literal<0>("unsigned long long int",0);	//! \bug should use something informative; identifier not fine
 					src.DeleteNSlotsAt<0>(3,i+1);
 					}
 				else{	// unsigned long long
-					src.c_array<0>()[i].grab_index_token_from_str_literal<0>("unsigned long long",0);	//! \bug should use something informative; identifier not fine
+					original_target.grab_index_token_from_str_literal<0>("unsigned long long",0);	//! \bug should use something informative; identifier not fine
 					src.DeleteNSlotsAt<0>(2,i+1);
 					};
 				src.c_array<0>()[i].type_code.set_type(C_TYPE::LLONG);
@@ -3324,17 +3323,17 @@ static void _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 				}
 			case 1:	// unsigned long int
 				{
-				src.c_array<0>()[i].grab_index_token_from_str_literal<0>("unsigned long int",0);	//! \bug should use something informative; identifier not fine
-				src.c_array<0>()[i].type_code.set_type(C_TYPE::ULONG);
-				src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+				original_target.grab_index_token_from_str_literal<0>("unsigned long int",0);	//! \bug should use something informative; identifier not fine
+				original_target.type_code.set_type(C_TYPE::ULONG);
+				original_target.flags |= PARSE_PRIMARY_TYPE;
 				src.DeleteNSlotsAt<0>(2,i+1);
 				break;
 				}
 			case 0:	// unsigned long
 				{
-				src.c_array<0>()[i].grab_index_token_from_str_literal<0>("unsigned long",0);	//! \bug should use something informative; identifier not fine
-				src.c_array<0>()[i].type_code.set_type(C_TYPE::ULONG);
-				src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+				original_target.grab_index_token_from_str_literal<0>("unsigned long",0);	//! \bug should use something informative; identifier not fine
+				original_target.type_code.set_type(C_TYPE::ULONG);
+				original_target.flags |= PARSE_PRIMARY_TYPE;
 				src.DeleteIdx<0>(i+1);
 //				break;
 				}
@@ -3343,23 +3342,23 @@ static void _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 			}
 		case 3:	// unsigned short
 			{
-			src.c_array<0>()[i].grab_index_token_from_str_literal<0>("unsigned short",0);	//! \bug should use something informative; identifier not fine
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::USHRT);
-			src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+			original_target.grab_index_token_from_str_literal<0>("unsigned short",0);	//! \bug should use something informative; identifier not fine
+			original_target.type_code.set_type(C_TYPE::USHRT);
+			original_target.flags |= PARSE_PRIMARY_TYPE;
 			src.DeleteIdx<0>(i+1);
 			break;
 			}
 		case 2:	// unsigned char
 			{
-			src.c_array<0>()[i].grab_index_token_from_str_literal<0>("unsigned char",0);	//! \bug should use something informative; identifier not fine
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::UCHAR);
-			src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+			original_target.grab_index_token_from_str_literal<0>("unsigned char",0);	//! \bug should use something informative; identifier not fine
+			original_target.type_code.set_type(C_TYPE::UCHAR);
+			original_target.flags |= PARSE_PRIMARY_TYPE;
 			src.DeleteIdx<0>(i+1);
 			break;
 			}
 		case 1:	// unsigned int
 			{
-			src.c_array<0>()[i].grab_index_token_from_str_literal<0>("unsigned int",0);	//! \bug should use something informative; identifier not fine
+			original_target.grab_index_token_from_str_literal<0>("unsigned int",0);	//! \bug should use something informative; identifier not fine
 			src.DeleteIdx<0>(i+1);
 			}	// intentional fall-through
 		case 0:	// unsigned
@@ -3369,8 +3368,8 @@ static void _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 			}
 		}
 		}
-	else if (token_is_string<8>(src.c_array<0>()[i].index_tokens[0].token,"_Complex"))
-		simple_error(src.c_array<0>()[i]," does not have immediately preceding floating point type (C99 6.7.2p2)");
+	else if (token_is_string<8>(original_target.index_tokens[0].token,"_Complex"))
+		simple_error(original_target," does not have immediately preceding floating point type (C99 6.7.2p2)");
 }
 
 static void C99_notice_primary_type(parse_tree& src)
