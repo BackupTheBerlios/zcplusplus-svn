@@ -26,6 +26,7 @@ ZAIMONI_POD_STRUCT(ZAIMONI_TEMPLATE_SPEC,ZAIMONI_CLASS_SPEC,char)
 
 }
 
+//! required to be POD to allow C memory management
 struct type_spec
 {
 	size_t base_type_index;
@@ -36,7 +37,8 @@ struct type_spec
 	enum typetrait_list {
 		lvalue = 1,			// C/C++ sense, assume works for other languages
 		_const = (1<<1),	// C/C++ sense, assume works for other languages
-		_volatile = (1<<2)	// C/C++ sense, assume works for other languages
+		_volatile = (1<<2),	// C/C++ sense, assume works for other languages
+		_restrict = (1<<3)	// C99 sense, assume works for other languages
 	};
 
 	size_t pointer_power_after_array_decay() const {return pointer_power+(0<static_array_size);};
@@ -63,6 +65,7 @@ struct type_spec
 	bool operator!=(const type_spec& rhs) {return !(*this==rhs);};
 };
 
+//! required to be POD to allow C memory management
 struct parse_tree
 {
 #ifdef ZAIMONI_FORCE_ISO
@@ -345,7 +348,7 @@ struct parse_tree
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>dest_idx);
 		assert(NULL!=src);
-		if (own_index_token<dest_idx>()) free(const_cast<char*>(index_tokens[dest_idx].token.first));
+		if (own_index_token<dest_idx>()) { free(const_cast<char*>(index_tokens[dest_idx].token.first)); };
 		index_tokens[dest_idx].token.first = src;
 		index_tokens[dest_idx].token.second = strlen(src);
 		index_tokens[dest_idx].flags = src_flags;

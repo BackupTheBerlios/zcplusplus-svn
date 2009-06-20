@@ -8857,7 +8857,26 @@ static bool C99_ContextFreeParse(parse_tree& src,const type_system& types)
 	if (!_match_pairs(src)) return false;
 	// handle core type specifiers
 	C99_notice_primary_type(src);
-	// ...
+	//! \todo type-vectorize as part of the lexical-forward loop.  Need to handle in type_spec, which is required to be POD to allow C memory management:
+	// * indirection depth n (already have this in practice)
+	// * const, volatile at each level of indirection 0..n
+	// * extent at each level of indirection 1..n (0 := raw-ptr, positive := array that can be bounds-checked for undefined behavior
+	// * top-level reference (check standards to see if reference-in-middle is illegal, never seen it in real source)
+	// * C99: restrict qualifier at each level of indirection 1..n (this is *not* in C++0x as of April 8 2009!)
+	// * storage-qualifiers extern, static, register, auto
+	// * fake type-qualifier typedef
+	// Exploit uintptr_t to mitigate dynamic memory management.
+	// * union of uintptr_t,unsigned char[sizeof(uintptr_t)] is probably best way to handle the qualifier-vector
+	// * extent-vector will be painful: properly should be a CPUInfo-controlled type.  Can get away with uintmax_t for now.  (size_t won't work because we're
+	//   a cross-compiler; target size_t could be larger than host size_t.  size_t does work for string literals since we have to represent those on the host.)
+	// note that typedefs and struct/union declarations/definitions create new types; if this happens we are no longer context-free (so second pass with context-based parsing)
+#if 0
+	size_t i = 0;
+	while(i<src.size<0>())
+		{
+		++i;
+		};
+#endif
 	return true;
 }
 
@@ -8869,7 +8888,16 @@ static bool CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 	if (!_match_pairs(src)) return false;
 	// handle core type specifiers
 	CPP_notice_primary_type(src);
-	// ...
+	//! \todo type-vectorize as part of the lexical-forward loop.  Need to handle
+	// * indirection depth n (already have this in practice)
+	// * const, volatile at each level of indirection 0..n
+	// * extent at each level of indirection 1..n (0 := raw-ptr, positive := array that can be bounds-checked for undefined behavior
+	// * top-level reference (check standards to see if reference-in-middle is illegal, never seen it in real source)
+	// * storage-qualifiers extern, static, register, mutable, thread_local
+	// * fake type-qualifier typedef
+	// note that typedefs and struct/union declarations/definitions create new types
+	// C++: note that class declarations/definitions create new types
+	// note that we need a sense of "current namespace" in C++
 	return true;
 }
 
