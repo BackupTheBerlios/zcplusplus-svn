@@ -44,25 +44,10 @@ struct type_spec
 	size_t pointer_power_after_array_decay() const {return pointer_power+(0<static_array_size);};
 	bool decays_to_nonnull_pointer() const {return 0==pointer_power && 0<static_array_size;};
 
-	void clear() {
-		base_type_index = 0;
-		pointer_power = 0;
-		static_array_size = 0;
-		traits = 0;
-	};
-	void set_type(size_t _base_type_index) {
-		base_type_index = _base_type_index;
-		pointer_power = 0;
-		static_array_size = 0;
-		traits = 0;
-	};
-
-	bool operator==(const type_spec& rhs)
-		{return 	base_type_index==rhs.base_type_index
-				&&	pointer_power==rhs.pointer_power
-				&& 	static_array_size==rhs.static_array_size
-				&&	traits==rhs.traits;};
-	bool operator!=(const type_spec& rhs) {return !(*this==rhs);};
+	void clear();
+	void set_type(size_t _base_type_index);
+	bool operator==(const type_spec& rhs) const;
+	bool operator!=(const type_spec& rhs) const {return !(*this==rhs);};
 };
 
 //! required to be POD to allow C memory management

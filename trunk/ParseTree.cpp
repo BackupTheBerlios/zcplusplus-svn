@@ -6,8 +6,31 @@
 #include "Zaimoni.STL/MetaRAM2.hpp"
 using namespace zaimoni;
 
-bool
-parse_tree::is_atomic() const
+void type_spec::clear()
+{
+	base_type_index = 0;
+	pointer_power = 0;
+	static_array_size = 0;
+	traits = 0;
+}
+
+void type_spec::set_type(size_t _base_type_index)
+{
+	base_type_index = _base_type_index;
+	pointer_power = 0;
+	static_array_size = 0;
+	traits = 0;
+}
+
+bool type_spec::operator==(const type_spec& rhs) const
+{
+	return 	base_type_index==rhs.base_type_index
+		&&	pointer_power==rhs.pointer_power
+		&& 	static_array_size==rhs.static_array_size
+		&&	traits==rhs.traits;
+}
+
+bool parse_tree::is_atomic() const
 {
 	return (	NULL!=index_tokens[0].token.first
 			&&	NULL==index_tokens[1].token.first
@@ -22,8 +45,7 @@ parse_tree::is_atomic() const
 #endif
 }
 
-bool
-parse_tree::is_raw_list() const
+bool parse_tree::is_raw_list() const
 {
 	return (	NULL==index_tokens[0].token.first
 			&&	NULL==index_tokens[1].token.first
@@ -38,8 +60,7 @@ parse_tree::is_raw_list() const
 #endif
 }
 
-void
-parse_tree::clear()
+void parse_tree::clear()
 {
 	index_tokens[0].clear();
 	index_tokens[1].clear();
@@ -84,8 +105,7 @@ static void _destroy(parse_tree*& target)
 }
 #endif
 
-void
-parse_tree::destroy()
+void parse_tree::destroy()
 {
 	_destroy(args[2]);
 	_destroy(args[1]);
@@ -99,8 +119,7 @@ parse_tree::destroy()
 	type_code.clear();
 }
 
-void
-parse_tree::core_flag_update()
+void parse_tree::core_flag_update()
 {
 	size_t i = size<0>();
 	bool is_constant = true;
@@ -158,8 +177,7 @@ parse_tree::collapse_matched_pair(parse_tree& src, const zaimoni::POD_pair<size_
 	return true;
 }
 
-void
-parse_tree::_eval_to_arg(size_t arg_idx, size_t i)
+void parse_tree::_eval_to_arg(size_t arg_idx, size_t i)
 {
 	parse_tree tmp = data(arg_idx)[i];
 	c_array(arg_idx)[i].clear();
@@ -167,8 +185,7 @@ parse_tree::_eval_to_arg(size_t arg_idx, size_t i)
 	*this = tmp;
 }
 
-bool
-parse_tree::_resize(const size_t arg_idx,size_t n)
+bool parse_tree::_resize(const size_t arg_idx,size_t n)
 {
 	assert(STATIC_SIZE(args)>arg_idx);
 #ifdef ZAIMONI_FORCE_ISO
