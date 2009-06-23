@@ -4000,27 +4000,27 @@ static void _label_one_literal(parse_tree& src,const type_system& types)
 	if ((C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_PP_NUMERAL) & src.index_tokens[0].flags)
 		{
 		src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
-		src.type_code.pointer_power = 0;
-		src.type_code.traits = 0;
 		if (C_TESTFLAG_STRING_LITERAL==src.index_tokens[0].flags)
 			{
-			src.type_code.traits |= type_spec::lvalue;	// C99 unclear; C++98 states lvalueness of string literals explicitly
-			src.type_code.base_type_index = C_TYPE::CHAR;
+			src.type_code.set_type(C_TYPE::CHAR);
+#if 2
+			src.type_code.set_static_array_size(LengthOfCStringLiteral(src.index_tokens[0].token.first,src.index_tokens[0].token.second));
+#else
+			src.type_code.qualifier_vector.second[0] |= type_spec::lvalue;	// C99 unclear; C++98 states lvalueness of string literals explicitly
 			src.type_code.static_array_size = LengthOfCStringLiteral(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
+#endif
 			return;
 			}
 		else if (C_TESTFLAG_CHAR_LITERAL==src.index_tokens[0].flags)
 			{
-			src.type_code.base_type_index = C_TYPE::CHAR;
-			src.type_code.static_array_size = 0;
+			src.type_code.set_type(C_TYPE::CHAR);
 			return;
 			};
 		assert(C_TESTFLAG_PP_NUMERAL & src.index_tokens[0].flags);
 		C_REALITY_CHECK_PP_NUMERAL_FLAGS(src.index_tokens[0].flags);
-		src.type_code.static_array_size = 0;
 		if (C_TESTFLAG_INTEGER & src.index_tokens[0].flags)
 			{
-			src.type_code.base_type_index = C_TYPE::INTEGERLIKE;
+			src.type_code.set_type(C_TYPE::INTEGERLIKE);
 			C_PPIntCore parse_tmp;
 #ifdef NDEBUG
 			C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,parse_tmp);
@@ -4090,8 +4090,8 @@ static void _label_one_literal(parse_tree& src,const type_system& types)
 			}
 		else{
 			//! \todo --do-what-i-mean should check for floating-point numerals that convert exactly to integers
-			src.type_code.base_type_index = 	(C_TESTFLAG_L & src.index_tokens[0].flags) ? C_TYPE::LDOUBLE : 
-												(C_TESTFLAG_F & src.index_tokens[0].flags) ? C_TYPE::FLOAT : C_TYPE::DOUBLE;
+			src.type_code.set_type(	(C_TESTFLAG_L & src.index_tokens[0].flags) ? C_TYPE::LDOUBLE : 
+									(C_TESTFLAG_F & src.index_tokens[0].flags) ? C_TYPE::FLOAT : C_TYPE::DOUBLE);
 			}
 		}
 }
@@ -4446,7 +4446,7 @@ static bool inspect_potential_paren_primary_expression(parse_tree& src)
 				src.flags &= parse_tree::RESERVED_MASK;	// just in case
 				src.flags |= PARSE_PRIMARY_EXPRESSION;
 				src.flags |= (PARSE_PAREN_PRIMARY_PASSTHROUGH & src.data<0>()->flags);
-				src.type_code = src.data<0>()->type_code;
+				src.type_code.value_copy(src.data<0>()->type_code);
 				return true;
 				}
 			};
@@ -4525,7 +4525,7 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
 			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<0>()[0]);
 			src.type_code.set_type(C_TYPE::NOT_VOID);
-			src.c_array<0>()[i].type_code.traits |= type_spec::lvalue;
+			src.c_array<0>()[i].type_code.qualifier_vector.second[0] |= type_spec::lvalue;
 			assert(is_array_deref(src.data<0>()[i]));
 			return true;
 			};
@@ -4583,14 +4583,12 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 			}
 		else if (converts_to_integerlike(src.data<0>()->type_code.base_type_index))
 			{
-			src.type_code.base_type_index = src.data<1>()->type_code.base_type_index;
-			if (0<src.data<1>()->type_code.pointer_power)
-				{
-				src.type_code.pointer_power = src.data<1>()->type_code.pointer_power-1U;
-				src.type_code.static_array_size = src.data<1>()->type_code.static_array_size;	//! \todo multi-dimensional array change target
-				};
-			// otherwise, we dereferenced a 1-d static array...fine for now
-			//! \todo change target for implementing multidimensional arrays
+			src.type_code.value_copy(src.data<1>()->type_code);
+#ifndef NDEBUG
+			assert(src.type_code.dereference());
+#else
+			src.type_code.dereference();
+#endif
 			}
 		else{	// not testable from preprocessor yet (need floating-point literals as extension)
 			src.flags |= parse_tree::INVALID;
@@ -4607,14 +4605,12 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 		{
 		if (converts_to_integerlike(src.data<1>()->type_code.base_type_index))
 			{
-			src.type_code.base_type_index = src.data<0>()->type_code.base_type_index;
-			if (0<src.data<0>()->type_code.pointer_power)
-				{
-				src.type_code.pointer_power = src.data<0>()->type_code.pointer_power-1U;
-				src.type_code.static_array_size = src.data<0>()->type_code.static_array_size;	//! \todo multi-dimensional array change target
-				};
-			// otherwise, we dereferenced a 1-d static array...fine for now
-			//! \todo change target for implementing multidimensional arrays
+			src.type_code.value_copy(src.data<0>()->type_code);
+#ifndef NDEBUG
+			assert(src.type_code.dereference());
+#else
+			src.type_code.dereference();
+#endif
 			}
 		else{	// autofails in C
 				// not testable from preprocessor yet (need floating-point literals, would be extension regardless)
@@ -5049,7 +5045,7 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 		if (0<src.data<2>()->type_code.pointer_power_after_array_decay())
 			// C++98 5.3.1p6: pointer type allowed for unary +, not for unary - (C99 errors)
 			//! \test default/Pass_if_control27.hpp
-			src.type_code = src.data<2>()->type_code;
+			src.type_code.value_copy(src.data<2>()->type_code);
 
 		if 		(is_C99_unary_operator_expression<'+'>(*src.data<2>()))
 			eval_unary_plus(*src.c_array<2>(),types);
@@ -5133,13 +5129,10 @@ static void C_deref_easy_syntax_check(parse_tree& src,const type_system& types)
 	//! \todo: handle *& identity when we have &
 	//! \todo multidimensional array target
 	//! \todo cv-qualified pointer target
-	src.type_code = src.data<2>()->type_code;
-	src.type_code.traits |= type_spec::lvalue;	// result is lvalue; C99 unclear regarding string literals, follow C++98
-	if (0<src.type_code.pointer_power)
-		--src.type_code.pointer_power;
-	else if (0<src.type_code.static_array_size)
-		src.type_code.static_array_size = 0;
-	else	//! \test default/Error_if_control24.hpp, default/Error_if_control24.h
+	src.type_code.value_copy(src.data<2>()->type_code);
+	// handle lvalueness in indirection type building and/or the dereference stage
+	if (!src.type_code.dereference())
+		//! \test default/Error_if_control24.hpp, default/Error_if_control24.h
 		simple_error(src," is not dereferencing a pointer (C99 6.5.3.2p2; C++98 5.3.1p1)");
 }
 
@@ -8392,7 +8385,7 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 			if (C_TYPE::NOT_VOID==src.data<2>()->type_code.base_type_index)
 				{	// recoverable
 				src.type_code.set_type(C_TYPE::NOT_VOID);
-				src.type_code.pointer_power = src.data<0>()->type_code.pointer_power_after_array_decay();
+				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power_after_array_decay());
 				}
 			else if (is_null_pointer_constant(*src.data<2>(),C99_intlike_literal_to_VM))
 				// (...) ? string : 0 -- do *not* error (null pointer); check true/false status
@@ -8411,7 +8404,7 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 			if (C_TYPE::NOT_VOID==src.data<0>()->type_code.base_type_index)
 				{	// recoverable
 				src.type_code.set_type(C_TYPE::NOT_VOID);
-				src.type_code.pointer_power = src.data<2>()->type_code.pointer_power_after_array_decay();
+				src.type_code.set_pointer_power(src.data<2>()->type_code.pointer_power_after_array_decay());
 				}
 			else if (is_null_pointer_constant(*src.data<0>(),C99_intlike_literal_to_VM))
 				// (...) ? 0 : string -- do *not* error (null pointer); check true/false status
@@ -8430,7 +8423,7 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 			if (src.data<0>()->type_code.base_type_index==src.data<2>()->type_code.base_type_index)
 				{
 				src.type_code.set_type(src.data<0>()->type_code.base_type_index);
-				src.type_code.pointer_power = src.data<0>()->type_code.pointer_power_after_array_decay();
+				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power_after_array_decay());
 				}
 			else if (0==src.data<0>()->type_code.pointer_power_after_array_decay() && (C_TYPE::VOID>=src.data<0>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index))
 				{	// can't test this from preprocessor
@@ -8445,7 +8438,7 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 			else if (C_TYPE::NOT_VOID==src.data<0>()->type_code.base_type_index || C_TYPE::NOT_VOID==src.data<2>()->type_code.base_type_index)
 				{
 				src.type_code.set_type(C_TYPE::NOT_VOID);
-				src.type_code.pointer_power = src.data<0>()->type_code.pointer_power_after_array_decay();
+				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power_after_array_decay());
 				}
 			else{	// can't test this from preprocessor
 				src.type_code.set_type(0);	// incoherent type
@@ -8482,7 +8475,7 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 			if (C_TYPE::NOT_VOID==src.data<2>()->type_code.base_type_index)
 				{	// recoverable
 				src.type_code.set_type(C_TYPE::NOT_VOID);
-				src.type_code.pointer_power = src.data<0>()->type_code.pointer_power_after_array_decay();
+				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power_after_array_decay());
 				}
 			else if (is_null_pointer_constant(*src.data<2>(),CPP_intlike_literal_to_VM))
 				// (...) ? string : 0 -- do *not* error (null pointer); check true/false status
@@ -8501,7 +8494,7 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 			if (C_TYPE::NOT_VOID==src.data<0>()->type_code.base_type_index)
 				{	// recoverable
 				src.type_code.set_type(C_TYPE::NOT_VOID);
-				src.type_code.pointer_power = src.data<2>()->type_code.pointer_power_after_array_decay();
+				src.type_code.set_pointer_power(src.data<2>()->type_code.pointer_power_after_array_decay());
 				}
 			else if (is_null_pointer_constant(*src.data<0>(),CPP_intlike_literal_to_VM))
 				// (...) ? 0 : string -- do *not* error (null pointer); check true/false status
@@ -8520,7 +8513,7 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 			if (src.data<0>()->type_code.base_type_index==src.data<2>()->type_code.base_type_index)
 				{
 				src.type_code.set_type(src.data<0>()->type_code.base_type_index);
-				src.type_code.pointer_power = src.data<0>()->type_code.pointer_power_after_array_decay();
+				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power_after_array_decay());
 				}
 			else if (0==src.data<0>()->type_code.pointer_power_after_array_decay() && (C_TYPE::VOID>=src.data<0>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index))
 				{	// can't test this from preprocessor
@@ -8534,7 +8527,7 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 			else if (C_TYPE::NOT_VOID==src.data<0>()->type_code.base_type_index || C_TYPE::NOT_VOID==src.data<2>()->type_code.base_type_index)
 				{
 				src.type_code.set_type(C_TYPE::NOT_VOID);
-				src.type_code.pointer_power = src.data<0>()->type_code.pointer_power_after_array_decay();
+				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power_after_array_decay());
 				}
 			else{	// can't test this from preprocessor
 				src.type_code.set_type(0);	// incoherent type
@@ -8802,10 +8795,8 @@ static void _label_CPP_literal(parse_tree& src)
 		else if (token_is_string<4>(src.index_tokens[0].token,"this"))
 			{
 			src.flags |= PARSE_PRIMARY_EXPRESSION;
-			src.type_code.base_type_index = C_TYPE::NOT_VOID;
-			src.type_code.pointer_power = 1;
-			src.type_code.static_array_size = 0;
-			src.type_code.traits = 0;
+			src.type_code.set_type(C_TYPE::NOT_VOID);
+			src.type_code.set_pointer_power(1);
 			}
 		else if (token_is_string<5>(src.index_tokens[0].token,"false"))
 			{
