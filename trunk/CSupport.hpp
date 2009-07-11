@@ -125,6 +125,7 @@ struct PP_auxfunc
 	func_traits<const char* (*)(const char* x,size_t x_len)>::function_ref_type EchoReservedKeyword;
 	func_traits<const char* (*)(const char* x,size_t x_len)>::function_ref_type EchoReservedSymbol;
 	func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type ContextFreeParse;		// return true iff no errors
+	func_traits<bool (*)(parse_tree&,type_system&)>::function_ref_type ContextParse;		// return true iff no errors
 };
 
 }

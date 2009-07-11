@@ -3119,6 +3119,7 @@ static int _C99_CPP_notice_multitoken_primary_type_token_to_index(const zaimoni:
 		: token_is_string<4>(src,"long") ? 4 : 0;
 }
 
+//! \todo rewrite this so the algorithms calling this aren't realloc-heavy (should only need one realloc)
 static void _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 {
 	assert(!(PARSE_PRIMARY_TYPE & src.data<0>()[i].flags) && NULL!=src.data<0>()[i].index_tokens[0].token.first);
@@ -8848,6 +8849,22 @@ static bool C99_ContextFreeParse(parse_tree& src,const type_system& types)
 	if (!_match_pairs(src)) return false;
 	// handle core type specifiers
 	C99_notice_primary_type(src);
+	return true;
+}
+
+static bool CPP_ContextFreeParse(parse_tree& src,const type_system& types)
+{
+	assert(src.is_raw_list());
+	_label_literals(src,types);
+	std::for_each(src.begin<0>(),src.end<0>(),_label_CPP_literal);	// intercepts: true, false, this
+	if (!_match_pairs(src)) return false;
+	// handle core type specifiers
+	CPP_notice_primary_type(src);
+	return true;
+}
+
+static bool C99_ContextParse(parse_tree& src,type_system& types)
+{
 	//! \todo type-vectorize as part of the lexical-forward loop.  Need to handle in type_spec, which is required to be POD to allow C memory management:
 	// * indirection depth n (already have this in practice)
 	// * const, volatile at each level of indirection 0..n
@@ -8861,24 +8878,11 @@ static bool C99_ContextFreeParse(parse_tree& src,const type_system& types)
 	// * extent-vector will be painful: properly should be a CPUInfo-controlled type.  Can get away with uintmax_t for now.  (size_t won't work because we're
 	//   a cross-compiler; target size_t could be larger than host size_t.  size_t does work for string literals since we have to represent those on the host.)
 	// note that typedefs and struct/union declarations/definitions create new types; if this happens we are no longer context-free (so second pass with context-based parsing)
-#if 0
-	size_t i = 0;
-	while(i<src.size<0>())
-		{
-		++i;
-		};
-#endif
 	return true;
 }
 
-static bool CPP_ContextFreeParse(parse_tree& src,const type_system& types)
+static bool CPP_ContextParse(parse_tree& src,type_system& types)
 {
-	assert(src.is_raw_list());
-	_label_literals(src,types);
-	std::for_each(src.begin<0>(),src.end<0>(),_label_CPP_literal);	// intercepts: true, false, this
-	if (!_match_pairs(src)) return false;
-	// handle core type specifiers
-	CPP_notice_primary_type(src);
 	//! \todo type-vectorize as part of the lexical-forward loop.  Need to handle
 	// * indirection depth n (already have this in practice)
 	// * const, volatile at each level of indirection 0..n
@@ -9537,7 +9541,8 @@ PP_auxfunc C99_aux
 	C99_bad_syntax_tokenized,
 	C99_echo_reserved_keyword,
 	C99_echo_reserved_symbol,
-	C99_ContextFreeParse
+	C99_ContextFreeParse,
+	C99_ContextParse
 	};
 
 PP_auxfunc CPlusPlus_aux
@@ -9555,7 +9560,8 @@ PP_auxfunc CPlusPlus_aux
 	CPP_bad_syntax_tokenized,
 	CPP_echo_reserved_keyword,
 	CPP_echo_reserved_symbol,
-	CPP_ContextFreeParse
+	CPP_ContextFreeParse,
+	CPP_ContextParse
 	};
 
 #if 0
