@@ -339,11 +339,12 @@ bool parse_tree::_resize(const size_t arg_idx,size_t n)
 #ifdef ZAIMONI_FORCE_ISO
 	const size_t old_size = args[arg_idx].second;
 	if (!zaimoni::_resize(args[arg_idx].first,args[arg_idx].second,n)) return false;
+	while(old_size<n) args[arg_idx].first[--n].clear();
 #else
 	const size_t old_size = SafeArraySize(args[arg_idx]);
 	if (!zaimoni::_resize(args[arg_idx],n)) return false;
+	while(old_size<n) args[arg_idx][--n].clear();
 #endif
-	while(old_size<n) args[0][--n].clear();
 	return true;
 }
 

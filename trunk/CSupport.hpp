@@ -124,8 +124,8 @@ struct PP_auxfunc
 	// zcc 0.0.2
 	func_traits<const char* (*)(const char* x,size_t x_len)>::function_ref_type EchoReservedKeyword;
 	func_traits<const char* (*)(const char* x,size_t x_len)>::function_ref_type EchoReservedSymbol;
-	func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type ContextFreeParse;		// return true iff no errors
-	func_traits<bool (*)(parse_tree&,type_system&)>::function_ref_type ContextParse;		// return true iff no errors
+	func_traits<void (*)(parse_tree&,const type_system&)>::function_ref_type ContextFreeParse;		// return true iff no errors
+	func_traits<void (*)(parse_tree&,type_system&)>::function_ref_type ContextParse;		// return true iff no errors
 };
 
 }
