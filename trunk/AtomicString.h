@@ -26,6 +26,25 @@ const char* register_string(const char* const x);
  */
 const char* register_substring(const char* const x,const unsigned long x_len);
 
+/*! 
+ * Returns strings meant to be weak pointers safe to use through the end of the program.
+ * 
+ * \param x string to be registered
+ * 
+ * \return const char* pointer to registered string safe to pin indefinitely if already registered, or NULL
+ */
+const char* is_string_registered(const char* const x);
+
+/*! 
+ * Returns strings meant to be weak pointers safe to use through the end of the program.
+ * 
+ * \param x substring to be registered
+ * \param x_len length of substring to be registered
+ * 
+ * \return const char* pointer to registered string safe to pin indefinitely if already registered, or NULL
+ */
+const char* is_substring_registered(const char* const x,const unsigned long x_len);
+
 /* and in case we want to garbage-collect these.... */
 /* index really should be a size_t, but we're minimizing includes here */
 /*! 
