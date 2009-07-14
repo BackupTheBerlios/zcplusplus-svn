@@ -6,6 +6,12 @@ PROLOG
 VAR CPP ../../zcc
 VAR CPP_ISO ../../zcc --pedantic
 
+ECHO Checking ISO error requirements
+ERROR CPP_ISO namespace.CPP/Error*
+
+ECHO Checking ZCC warnings on ISO-accepted code
+WARN CPP_ISO namespace.CPP/Warn*
+
 ECHO Checking ISO acceptance requirements
 PASS CPP_ISO Pass*
 

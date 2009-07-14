@@ -7,9 +7,9 @@
 #include "Zaimoni.STL/MetaRAM2.hpp"
 #include "Zaimoni.STL/lite_alg.hpp"
 #include "Zaimoni.STL/LexParse/LangConf.hpp"
-#include "Zaimoni.STL/POD.hpp"
 #include "Zaimoni.STL/search.hpp"
 #include "AtomicString.h"
+#include "string_counter.hpp"
 #include "Trigraph.hpp"
 #include "Flat_UNI.hpp"
 #include "errors.hpp"
@@ -8887,7 +8887,7 @@ static void conserve_tokens(parse_tree& x)
 }
 
 // will need: "function-type vector"
-// return: 1 typespec record
+// return: 1 typespec record (for now, other languages may have more demanding requirements)
 // incoming: n typespec records, flag for trailing ...
 // will need: typedef map: identifier |-> typespec record
 static void C99_ContextParse(parse_tree& src,type_system& types)
@@ -8907,11 +8907,34 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 	// note that typedefs and struct/union declarations/definitions create new types; if this happens we are no longer context-free (so second pass with context-based parsing)
 	// ask GCC: struct/class/union/enum collides with each other (both C and C++), does not collide with namespace
 	// think we can handle this as "disallow conflicting definitions"
+	size_t i = 0;
+	while(i<src.size<0>())
+		{
+		conserve_tokens(src.c_array<0>()[i]);
+		//! \todo we intercept typedefs as part of general variable declaration detection (weird storage qualifier)
+		++i;
+		}
 }
+
+#ifndef NDEBUG
+static bool is_CPP_namespace(const parse_tree& src)
+{
+	return		robust_token_is_string<9>(src.index_tokens[0].token,"namespace")
+			&&	2==src.size<2>()
+			&&	src.data<2>()[0].is_atomic()
+#ifndef NDEBUG
+			&&	C_TESTFLAG_IDENTIFIER==src.data<2>()[0].index_tokens[0].flags
+#endif
+			&&	robust_token_is_char<'{'>(src.data<2>()[1].index_tokens[0].token)
+			&&	robust_token_is_char<'}'>(src.data<2>()[1].index_tokens[1].token);
+}
+#endif
 
 // handle namespaces or else
 static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* const active_namespace)
 {
+	static string_counter anon_namespace_index;
+
 	//! \todo type-vectorize as part of the lexical-forward loop.  Need to handle
 	// * indirection depth n (already have this in practice)
 	// * const, volatile at each level of indirection 0..n
@@ -8924,14 +8947,27 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 	// note that we need a sense of "current namespace" in C++
 	// ask GCC: struct/class/union/enum collides with each other (both C and C++), does not collide with namespace
 	// think we can handle this as "disallow conflicting definitions"
+	// should be able to disable this warning (it's about bloat)
+	if (src.empty<0>())
+		{	//! \test zcc\namespace.CPP\Warn_emptybody1.hpp
+			//! \test zcc\namespace.CPP\Warn_emptybody2.hpp
+		message_header(src.index_tokens[0]);
+		INC_INFORM(WARN_STR);
+		INFORM("namespace contains no declarations");
+		if (bool_options[boolopt::warnings_are_errors])
+			zcc_errors.inc_error();
+		return;
+		}
+
 	size_t i = 0;
 	while(i<src.size<0>())
-		{	// namespace scanner
-			// need some scheme to handle unnamed namespaces (probably alphabetical counter after something illegal so unmatchable)
-			// C++0X has inline namespaces; ignore these for now
-			// C++0X has more complicated using namespace directives: ignore these for now
-		// basic namespace; C++98 and C++0X agree on what this is
+		{	
 		conserve_tokens(src.c_array<0>()[i]);
+		// namespace scanner
+		// need some scheme to handle unnamed namespaces (probably alphabetical counter after something illegal so unmatchable)
+		// C++0X has inline namespaces; ignore these for now
+		// C++0X has more complicated using namespace directives: ignore these for now
+		// basic namespace; C++98 and C++0X agree on what this is
 		if (robust_token_is_string<9>(src.data<0>()[i].index_tokens[0].token,"namespace"))
 			{	// fail if: end of token stream
 				// fail if: next token is a type
@@ -8939,7 +8975,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				// accept if: next token is an identifier, and the token after that is {} (typical namespace)
 				// fail otherwise
 			if (1>=src.size<0>()-i)
-				{	//! \bug needs test case
+				{	//! \test zcc\namespace.CPP\Error_premature1.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("namespace declaration cut off by end of scope");
@@ -8950,13 +8986,38 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			if (	robust_token_is_char<'{'>(src.data<0>()[i+1].index_tokens[0].token)
 				&&	robust_token_is_char<'}'>(src.data<0>()[i+1].index_tokens[1].token))
 				{	//! \todo: handle unnamed namespace
-					// uniqueish name: postfix arg 1 (try: $__DATE__$__TIME__$__FILE__$__LINE__)
+					// uniqueish name: postfix arg 1 (try: $...)
 					// namespace definition body: postfix arg 2
+					//! \test zcc\namespace.CPP\Warn_emptybody2.hpp
+					// regardless of official linkage, entities in anonymous namespaces aren't very accessible outside of the current translation unit;
+					// any reasonable linker thinks they have static linkage
 				src.c_array<0>()[i].resize<2>(2);
 				src.c_array<0>()[i].c_array<2>()[1] = src.data<0>()[i+1];
 				src.c_array<0>()[i+1].clear();
 				src.DeleteIdx<0>(i+1);
-				//! \todo handle unnamed namespace
+
+				// anonymous namespace names are technically illegal: $___
+				char* new_active_namespace = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(1+anon_namespace_index.size()));
+				new_active_namespace[0] = '$';
+				strcat(new_active_namespace,anon_namespace_index.data());
+				src.c_array<0>()[i].c_array<2>()[0].grab_index_token_from<0>(new_active_namespace,C_TESTFLAG_IDENTIFIER);	// pretend it's an identifier
+				src.c_array<0>()[i].c_array<2>()[0].grab_index_token_location_from<0,0>(src.data<0>()[i].data<2>()[1]);	// inject it at where the namespace body starts
+				assert(is_CPP_namespace(src.data<0>()[i]));
+
+				if (active_namespace)
+					{
+					new_active_namespace = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(strlen(active_namespace)+3+anon_namespace_index.size()));
+					strcpy(new_active_namespace,active_namespace);
+					strcat(new_active_namespace,"::$");
+					strcat(new_active_namespace,anon_namespace_index.data());
+					}
+				else{
+					new_active_namespace = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(anon_namespace_index.size()));
+					strcpy(new_active_namespace,anon_namespace_index.data());
+					}
+				++anon_namespace_index;	// increment now, in case of nested anonymous namespaces
+				CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[1],types,new_active_namespace);
+				free(new_active_namespace);
 				++i;
 				continue;
 				}
@@ -8969,7 +9030,9 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				|| 	!(C_TESTFLAG_IDENTIFIER & src.data<0>()[i+1].index_tokens[0].flags)
 				||	(PARSE_TYPE & src.data<0>()[i+1].flags)
 				||	CPP_echo_reserved_keyword(src.data<0>()[i+1].index_tokens[0].token.first,src.data<0>()[i+1].index_tokens[0].token.second))
-				{	//! \bug needs test cases
+				{	//! \test zcc/namespace.CPP/Error_badname1.hpp
+					//! \test zcc/namespace.CPP/Error_badname2.hpp
+					//! \test zcc/namespace.CPP/Error_badname3.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("named namespace declaration must use non-reserved identifier (C++98 7.3.1p1, 7.3.2p1)");
@@ -8981,7 +9044,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				continue;
 				};
 			if (!namespace_has_body)
-				{
+				{	//! \test zcc\namespace.CPP\Error_premature2.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("'namespace ");
@@ -8993,6 +9056,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				i += 2;
 				continue;
 				};
+			//! \test zcc\namespace.CPP\Warn_emptybody1.hpp
 			// process namespace
 			// namespace name: postfix arg 1
 			// namespace definition body: postfix arg 2
@@ -9013,7 +9077,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			src.c_array<0>()[i+1].clear();
 			src.c_array<0>()[i+2].clear();
 			src.DeleteNSlotsAt<0>(2,i+1);
-			//! \todo handle named namespace
+			assert(is_CPP_namespace(src.data<0>()[i]));
+			// handle named namespace
 			if (NULL==active_namespace)
 				{	// global
 					//! \todo expand namespace aliases
@@ -9030,7 +9095,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				}
 			++i;
 			continue;
-			}
+			};
+		//! \todo we intercept typedefs as part of general variable declaration detection (weird storage qualifier)
 		++i;
 		}
 }
