@@ -242,6 +242,22 @@ struct parse_tree
 		zaimoni::_delete_idx(args[arg_idx],i);
 #endif
 		}
+	template<size_t dest_idx> void DestroyNAtAndRotateTo(size_t n,size_t i,const size_t actual_size)
+		{
+		assert(size<dest_idx>()>=actual_size);
+		assert(actual_size>i);
+		assert(actual_size-i>=n);
+		size_t j = n;
+		do	c_array<dest_idx>()[i + --j].destroy();
+		while(0<j);
+		if (actual_size>i+n)
+			{
+			memmove(c_array<dest_idx>()+i,c_array<dest_idx>()+i+n,sizeof(parse_tree)*(actual_size-(i+n)));
+			j = n;
+			do	c_array<dest_idx>()[actual_size-n+ --j].clear();
+			while(0<j);
+			}
+		}
 	
 	bool is_atomic() const;
 	bool is_raw_list() const;

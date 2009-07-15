@@ -44,6 +44,8 @@ Standards compliance notes:
 * In C++ mode, ZCC follow C++0x regarding what universal-character-encodings are legal.  C++98 is more permissive.
 * Regarding defining keywords as macros, in C++-mode ZCC follows C++0x rather than C++98 as a matter of ease of implementation.  The difference only matters for programs
 that include no standard headers whatsoever.  In this case, C++0x prohibits while C++98 does not.
+* In C++ mode, auto is a type-specifier rather than a storage specifier; this follows C++0X.  We also recognize the C++0X declaration-specifiers.
+** No decision on whether to violate C++0X/C++98 by recognizing C99/C1X restrict has been made yet.
 * While string literals as components of integer constant expressions are allowed as long as the expression has an integer-like type, they are not required.
 ** Array-dereferencing a string literal with a compile-time constant that is out-of-bounds is an error.
 ** We assume an optimizing linker: "A"=="A" will be optimized to 1 because the two "A" literals will be assumed to have only one physical instance.
