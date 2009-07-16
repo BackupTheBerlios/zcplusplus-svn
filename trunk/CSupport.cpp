@@ -500,9 +500,11 @@ static const POD_pair<const char*,size_t> valid_keyword[]
 			DICT_STRUCT("or_eq"),
 			DICT_STRUCT("xor"),
 			DICT_STRUCT("xor_eq"),		// end C++98 alternate-operators
-			DICT_STRUCT("const_expr"),	// C++0X keywords we pay attention to
+			DICT_STRUCT("constexpr"),	// C++0X keywords we pay attention to
 			DICT_STRUCT("thread_local")		
 		};
+
+//! \todo some way to test that constexpr, thread_local are locked only for C++0X mode
 
 // think about C++0x keywords later.
 #define C_KEYWORD_NONSTRICT_LB 0
@@ -899,6 +901,36 @@ const POD_triple<const char* const,size_t,lex_flags> CPP_atomic_types[]
 
 BOOST_STATIC_ASSERT(STATIC_SIZE(C_atomic_types)==C_TYPE_MAX);
 BOOST_STATIC_ASSERT(STATIC_SIZE(CPP_atomic_types)==CPP_TYPE_MAX);
+
+static const POD_pair<const char*,size_t> C99_decl_specifiers[] =
+	{	DICT_STRUCT("typedef"),
+		DICT_STRUCT("const"),
+		DICT_STRUCT("volatile"),
+		DICT_STRUCT("restrict"),
+		DICT_STRUCT("register"),
+		DICT_STRUCT("static"),
+		DICT_STRUCT("extern"),
+		DICT_STRUCT("inline"),
+		DICT_STRUCT("auto")
+	};
+
+// we implement C++0X, not C++98.  auto as storage specifier is pretty much a waste of source code anyway.
+// may have to invoke weirdness to deal with C headers that use restrict (and link with C standard library functions!)
+static const POD_pair<const char*,size_t> CPP0X_decl_specifiers[] =
+	{	DICT_STRUCT("typedef"),
+		DICT_STRUCT("const"),
+		DICT_STRUCT("volatile"),
+		DICT_STRUCT("thread_local"),
+		DICT_STRUCT("register"),
+		DICT_STRUCT("static"),
+		DICT_STRUCT("extern"),
+		DICT_STRUCT("inline"),
+		DICT_STRUCT("constexpr"),
+		DICT_STRUCT("mutable"),
+		DICT_STRUCT("virtual"),
+		DICT_STRUCT("explicit"),
+		DICT_STRUCT("friend")
+	};
 
 #undef DICT2_STRUCT
 #undef DICT_STRUCT
@@ -8878,6 +8910,74 @@ static void conserve_tokens(parse_tree& x)
 		}
 }
 
+class C99_decl_specifier_scanner
+{
+private:
+	size_t decl_count[CHAR_BIT*sizeof(uintmax_t)];
+	uintmax_t flags;
+	type_spec base_type;
+public:
+	C99_decl_specifier_scanner() : flags(0)
+		{
+		clear(decl_count);
+		base_type.clear();
+		};
+	// trivial destructor, copy constructor, assignment fine
+	bool operator()(const parse_tree& x)
+		{
+		BOOST_STATIC_ASSERT(CHAR_BIT*sizeof(uintmax_t)>=STATIC_SIZE(C99_decl_specifiers));
+		if (!x.is_atomic()) return false;
+		const errr Idx = linear_find(x.index_tokens[0].token.first,x.index_tokens[0].token.second,C99_decl_specifiers,STATIC_SIZE(C99_decl_specifiers));
+		if (0<=Idx)
+			{
+			flags |= (1ULL<<Idx);
+			++decl_count[Idx];
+			return true;
+			};
+		if (PARSE_PRIMARY_TYPE & x.flags)
+			{
+			if (base_type.base_type_index) return false;
+			base_type.value_copy(x.type_code);
+			return true;
+			}
+		return false;
+		};
+};
+
+class CPP0X_decl_specifier_scanner
+{
+private:
+	size_t decl_count[CHAR_BIT*sizeof(uintmax_t)];
+	uintmax_t flags;
+	type_spec base_type;
+public:
+	CPP0X_decl_specifier_scanner() : flags(0)
+		{
+		clear(decl_count);
+		base_type.clear();
+		}
+	// trivial destructor, copy constructor, assignment fine
+	bool operator()(const parse_tree& x)
+		{
+		BOOST_STATIC_ASSERT(CHAR_BIT*sizeof(uintmax_t)>=STATIC_SIZE(CPP0X_decl_specifiers));
+		if (!x.is_atomic()) return false;
+		const errr Idx = linear_find(x.index_tokens[0].token.first,x.index_tokens[0].token.second,CPP0X_decl_specifiers,STATIC_SIZE(CPP0X_decl_specifiers));
+		if (0<=Idx)
+			{
+			flags |= (1ULL<<Idx);
+			++decl_count[Idx];
+			return true;
+			};
+		if (PARSE_PRIMARY_TYPE & x.flags)
+			{
+			if (base_type.base_type_index) return false;
+			base_type.value_copy(x.type_code);
+			return true;
+			}
+		return false;
+		};
+};
+
 // will need: "function-type vector"
 // return: 1 typespec record (for now, other languages may have more demanding requirements)
 // incoming: n typespec records, flag for trailing ...
@@ -8903,6 +9003,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 	while(i<src.size<0>())
 		{
 		conserve_tokens(src.c_array<0>()[i]);
+		// general declaration scanner 
 		//! \todo we intercept typedefs as part of general variable declaration detection (weird storage qualifier)
 		// intercept declarations as follows
 		// * storage-class specifiers
@@ -8914,6 +9015,16 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		// * cv-qualification
 		// ** C: const volatile restrict (but pointer type required for restrict)
 		// * atomic types have already been parsed, we need to catch the others
+		{
+		C99_decl_specifier_scanner decl_finder;
+		size_t decl_count = src.get_span<0>(i,decl_finder);
+		if (decl_count)
+			{
+			// ....
+			i += decl_count;
+			continue;
+			}
+		}
 		++i;
 		}
 }
@@ -8953,6 +9064,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 	if (src.empty<0>())
 		{	//! \test zcc\namespace.CPP\Warn_emptybody1.hpp
 			//! \test zcc\namespace.CPP\Warn_emptybody2.hpp
+			//! \todo -Wno-bloat turns off 
 		message_header(src.index_tokens[0]);
 		INC_INFORM(WARN_STR);
 		INFORM("namespace contains no declarations");
@@ -9098,6 +9210,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			++i;
 			continue;
 			};
+		// general declaration scanner (have to catch C++0X inline namespaces first when those come up)
+		// ideally would cope with both C++98 and C++0X
 		//! \todo we intercept typedefs as part of general variable declaration detection (weird storage qualifier)
 		// intercept declarations as follows
 		// * storage-class specifiers
@@ -9113,6 +9227,16 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		// ** C++: const volatile
 		// * atomic types have already been parsed, we need to catch the others
 		// * C++0x: auto is a possible type!
+		{
+		CPP0X_decl_specifier_scanner decl_finder;
+		size_t decl_count = src.get_span<0>(i,decl_finder);
+		if (decl_count)
+			{
+			// ....
+			i += decl_count;
+			continue;
+			}
+		}
 		++i;
 		}
 }

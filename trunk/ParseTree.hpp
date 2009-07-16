@@ -329,6 +329,15 @@ struct parse_tree
 		index_tokens[dest_idx].flags = src_flags;
 		control_index_token<dest_idx>(false);
 		}
+
+	template<size_t src_idx,class scanner> size_t get_span(size_t i,scanner& x) const
+		{
+		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>src_idx);
+		assert(size<src_idx>()>i);
+		size_t found = 0;
+		while(x(data<src_idx>()[i]) && (++found,size<src_idx>()> ++i));
+		return found;
+		}
 private:
 	bool _resize(const size_t arg_idx,size_t n);
 	void _eval_to_arg(size_t arg_idx, size_t i);
