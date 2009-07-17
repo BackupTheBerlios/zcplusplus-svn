@@ -932,6 +932,8 @@ static const POD_pair<const char*,size_t> CPP0X_decl_specifiers[] =
 		DICT_STRUCT("friend")
 	};
 
+#define C99_CPP0X_DECLSPEC_TYPEDEF (1ULL<<0)
+
 #undef DICT2_STRUCT
 #undef DICT_STRUCT
 
@@ -3156,56 +3158,57 @@ static int _C99_CPP_notice_multitoken_primary_type_token_to_index(const zaimoni:
 
 static size_t _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 {
-	assert(!(PARSE_PRIMARY_TYPE & src.data<0>()[i].flags) && NULL!=src.data<0>()[i].index_tokens[0].token.first);
-	parse_tree& original_target = src.c_array<0>()[i];
-	if (token_is_string<4>(original_target.index_tokens[0].token,"char"))
+	assert(src.size<0>()>i);
+	parse_tree& x = src.c_array<0>()[i];
+	assert(!(PARSE_PRIMARY_TYPE & x.flags) && NULL!=x.index_tokens[0].token.first);
+	if (token_is_string<4>(x.index_tokens[0].token,"char"))
 		{
-		original_target.type_code.set_type(C_TYPE::CHAR);
-		original_target.flags |= PARSE_PRIMARY_TYPE;
+		x.type_code.set_type(C_TYPE::CHAR);
+		x.flags |= PARSE_PRIMARY_TYPE;
 		return 0;
 		}
-	else if (token_is_string<3>(original_target.index_tokens[0].token,"int"))
+	else if (token_is_string<3>(x.index_tokens[0].token,"int"))
 		{
-		original_target.type_code.set_type(C_TYPE::INT);
-		original_target.flags |= PARSE_PRIMARY_TYPE;
+		x.type_code.set_type(C_TYPE::INT);
+		x.flags |= PARSE_PRIMARY_TYPE;
 		return 0;
 		}
-	else if (token_is_string<5>(src.c_array<0>()[i].index_tokens[0].token,"short"))
+	else if (token_is_string<5>(x.index_tokens[0].token,"short"))
 		{
 		const bool short_int = i<src.size<0>()-1 && robust_token_is_string<3>(src.c_array<0>()[i+1].index_tokens[0].token,"int");
 		if (short_int)
-			original_target.grab_index_token_from_str_literal<0>("short int",0);	//! \bug should use something informative; identifier not fine
-		src.c_array<0>()[i].type_code.set_type(C_TYPE::SHRT);
-		src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+			x.grab_index_token_from_str_literal<0>("short int",0);	//! \bug should use something informative; identifier not fine
+		x.type_code.set_type(C_TYPE::SHRT);
+		x.flags |= PARSE_PRIMARY_TYPE;
 		return short_int;
 		}
-	else if (token_is_string<5>(original_target.index_tokens[0].token,"float"))
+	else if (token_is_string<5>(x.index_tokens[0].token,"float"))
 		{
 		const bool float__Complex = i<src.size<0>()-1 && robust_token_is_string<8>(src.c_array<0>()[i+1].index_tokens[0].token,"_Complex");
 		if (float__Complex)
 			{
-			original_target.grab_index_token_from_str_literal<0>("float _Complex",0);	//! \bug should use something informative; identifier not fine
-			original_target.type_code.set_type(C_TYPE::FLOAT__COMPLEX);
+			x.grab_index_token_from_str_literal<0>("float _Complex",0);	//! \bug should use something informative; identifier not fine
+			x.type_code.set_type(C_TYPE::FLOAT__COMPLEX);
 			}
 		else
-			original_target.type_code.set_type(C_TYPE::FLOAT);
-		src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+			x.type_code.set_type(C_TYPE::FLOAT);
+		x.flags |= PARSE_PRIMARY_TYPE;
 		return float__Complex;
 		}
-	else if (token_is_string<6>(original_target.index_tokens[0].token,"double"))
+	else if (token_is_string<6>(x.index_tokens[0].token,"double"))
 		{
 		const bool double__Complex = i<src.size<0>()-1 && robust_token_is_string<8>(src.c_array<0>()[i+1].index_tokens[0].token,"_Complex");
 		if (double__Complex)
 			{
-			original_target.grab_index_token_from_str_literal<0>("double _Complex",0);	//! \bug should use something informative; identifier not fine
-			original_target.type_code.set_type(C_TYPE::DOUBLE__COMPLEX);
+			x.grab_index_token_from_str_literal<0>("double _Complex",0);	//! \bug should use something informative; identifier not fine
+			x.type_code.set_type(C_TYPE::DOUBLE__COMPLEX);
 			}
 		else
-			original_target.type_code.set_type(C_TYPE::DOUBLE);
-		src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+			x.type_code.set_type(C_TYPE::DOUBLE);
+		x.flags |= PARSE_PRIMARY_TYPE;
 		return double__Complex;
 		}
-	else if (token_is_string<4>(original_target.index_tokens[0].token,"long"))
+	else if (token_is_string<4>(x.index_tokens[0].token,"long"))
 		{
 		const int keyindex 	= (i>=src.size<0>()-1 || NULL==src.data<0>()[i+1].index_tokens[0].token.first) ? 0 
 							: token_is_string<3>(src.c_array<0>()[i+1].index_tokens[0].token,"int") ? 1
@@ -3218,26 +3221,26 @@ static size_t _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 			const bool long_double__Complex = (i<src.size<0>()-2 && robust_token_is_string<8>(src.c_array<0>()[i+2].index_tokens[0].token,"_Complex"));
 			if (long_double__Complex)
 				{
-				original_target.grab_index_token_from_str_literal<0>("long double _Complex",0);	//! \bug should use something informative; identifier not fine
-				original_target.type_code.set_type(C_TYPE::LDOUBLE__COMPLEX);
+				x.grab_index_token_from_str_literal<0>("long double _Complex",0);	//! \bug should use something informative; identifier not fine
+				x.type_code.set_type(C_TYPE::LDOUBLE__COMPLEX);
 				}
 			else{
-				original_target.grab_index_token_from_str_literal<0>("long double",0);	//! \bug should use something informative; identifier not fine
-				original_target.type_code.set_type(C_TYPE::LDOUBLE);
+				x.grab_index_token_from_str_literal<0>("long double",0);	//! \bug should use something informative; identifier not fine
+				x.type_code.set_type(C_TYPE::LDOUBLE);
 				}
-			src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+			x.flags |= PARSE_PRIMARY_TYPE;
 			return 1+long_double__Complex;
 			}
 		case 2:	// long long
 			{
 			const bool long_long_int = (i<src.size<0>()-2 && robust_token_is_string<3>(src.c_array<0>()[i+2].index_tokens[0].token,"int"));
-			original_target.grab_index_token_from_str_literal<0>(long_long_int ? "long long int" : "long long",0);	//! \bug should use something informative; identifier not fine
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::LLONG);
-			src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+			x.grab_index_token_from_str_literal<0>(long_long_int ? "long long int" : "long long",0);	//! \bug should use something informative; identifier not fine
+			x.type_code.set_type(C_TYPE::LLONG);
+			x.flags |= PARSE_PRIMARY_TYPE;
 			return 1+long_long_int;
 			}
 		case 1:	// long int
-			original_target.grab_index_token_from_str_literal<0>("long int",0);	//! \bug should use something informative; identifier not fine
+			x.grab_index_token_from_str_literal<0>("long int",0);	//! \bug should use something informative; identifier not fine
 			// intentional fall-through
 		case 0:	// long
 			src.c_array<0>()[i].type_code.set_type(C_TYPE::LONG);
@@ -3245,7 +3248,7 @@ static size_t _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 			return keyindex;
 		}
 		}
-	else if (token_is_string<6>(original_target.index_tokens[0].token,"signed"))
+	else if (token_is_string<6>(x.index_tokens[0].token,"signed"))
 		{
 		const int key_index	= (i>=src.size<0>()-1 || NULL==src.data<0>()[i+1].index_tokens[0].token.first) ? 0
 							: _C99_CPP_notice_multitoken_primary_type_token_to_index(src.data<0>()[i+1].index_tokens[0].token);
@@ -3263,27 +3266,27 @@ static size_t _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 				const bool signed_long_long_int = i<src.size<0>()-3 && robust_token_is_string<3>(src.c_array<0>()[i+3].index_tokens[0].token,"int");
 				if (signed_long_long_int)
 					{	// signed long long int
-					original_target.grab_index_token_from_str_literal<0>("signed long long int",0);	//! \bug should use something informative; identifier not fine
+					x.grab_index_token_from_str_literal<0>("signed long long int",0);	//! \bug should use something informative; identifier not fine
 					}
 				else{	// signed long long
-					original_target.grab_index_token_from_str_literal<0>("signed long long",0);	//! \bug should use something informative; identifier not fine
+					x.grab_index_token_from_str_literal<0>("signed long long",0);	//! \bug should use something informative; identifier not fine
 					};
-				src.c_array<0>()[i].type_code.set_type(C_TYPE::LLONG);
-				src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+				x.type_code.set_type(C_TYPE::LLONG);
+				x.flags |= PARSE_PRIMARY_TYPE;
 				return 2+signed_long_long_int;
 				}
 			case 1:	// signed long int
 				{
-				original_target.grab_index_token_from_str_literal<0>("signed long int",0);	//! \bug should use something informative; identifier not fine
-				original_target.type_code.set_type(C_TYPE::LONG);
-				original_target.flags |= PARSE_PRIMARY_TYPE;
+				x.grab_index_token_from_str_literal<0>("signed long int",0);	//! \bug should use something informative; identifier not fine
+				x.type_code.set_type(C_TYPE::LONG);
+				x.flags |= PARSE_PRIMARY_TYPE;
 				return 2;
 				}
 			case 0:	// signed long
 				{
-				original_target.grab_index_token_from_str_literal<0>("signed long",0);	//! \bug should use something informative; identifier not fine
-				original_target.type_code.set_type(C_TYPE::LONG);
-				original_target.flags |= PARSE_PRIMARY_TYPE;
+				x.grab_index_token_from_str_literal<0>("signed long",0);	//! \bug should use something informative; identifier not fine
+				x.type_code.set_type(C_TYPE::LONG);
+				x.flags |= PARSE_PRIMARY_TYPE;
 				return 1;
 				}
 			}
@@ -3291,28 +3294,28 @@ static size_t _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 			}
 		case 3:	// signed short
 			{
-			original_target.grab_index_token_from_str_literal<0>("signed short",0);	//! \bug should use something informative; identifier not fine
-			original_target.type_code.set_type(C_TYPE::SHRT);
-			original_target.flags |= PARSE_PRIMARY_TYPE;
+			x.grab_index_token_from_str_literal<0>("signed short",0);	//! \bug should use something informative; identifier not fine
+			x.type_code.set_type(C_TYPE::SHRT);
+			x.flags |= PARSE_PRIMARY_TYPE;
 			return 1;
 			}
 		case 2:	// signed char
 			{
-			original_target.grab_index_token_from_str_literal<0>("signed char",0);	//! \bug should use something informative; identifier not fine
-			original_target.type_code.set_type(C_TYPE::SCHAR);
-			original_target.flags |= PARSE_PRIMARY_TYPE;
+			x.grab_index_token_from_str_literal<0>("signed char",0);	//! \bug should use something informative; identifier not fine
+			x.type_code.set_type(C_TYPE::SCHAR);
+			x.flags |= PARSE_PRIMARY_TYPE;
 			return 1;
 			}
 		case 1:	// signed int
-			original_target.grab_index_token_from_str_literal<0>("signed int",0);	//! \bug should use something informative; identifier not fine
+			x.grab_index_token_from_str_literal<0>("signed int",0);	//! \bug should use something informative; identifier not fine
 			// intentional fall-through
 		case 0:	// signed
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);
-			src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+			x.type_code.set_type(C_TYPE::INT);
+			x.flags |= PARSE_PRIMARY_TYPE;
 			return key_index;
 		}
 		}
-	else if (token_is_string<8>(original_target.index_tokens[0].token,"unsigned"))
+	else if (token_is_string<8>(x.index_tokens[0].token,"unsigned"))
 		{
 		const int key_index	= (i>=src.size<0>()-1 || NULL==src.data<0>()[i+1].index_tokens[0].token.first) ? 0
 							: _C99_CPP_notice_multitoken_primary_type_token_to_index(src.data<0>()[i+1].index_tokens[0].token);
@@ -3330,27 +3333,27 @@ static size_t _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 				const bool unsigned_long_long_int = i<src.size<0>()-3 && robust_token_is_string<3>(src.c_array<0>()[i+3].index_tokens[0].token,"int");
 				if (unsigned_long_long_int)
 					{	// unsigned long long int
-					original_target.grab_index_token_from_str_literal<0>("unsigned long long int",0);	//! \bug should use something informative; identifier not fine
+					x.grab_index_token_from_str_literal<0>("unsigned long long int",0);	//! \bug should use something informative; identifier not fine
 					}
 				else{	// unsigned long long
-					original_target.grab_index_token_from_str_literal<0>("unsigned long long",0);	//! \bug should use something informative; identifier not fine
+					x.grab_index_token_from_str_literal<0>("unsigned long long",0);	//! \bug should use something informative; identifier not fine
 					};
-				src.c_array<0>()[i].type_code.set_type(C_TYPE::ULLONG);
-				src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+				x.type_code.set_type(C_TYPE::ULLONG);
+				x.flags |= PARSE_PRIMARY_TYPE;
 				return 2+unsigned_long_long_int;
 				}
 			case 1:	// unsigned long int
 				{
-				original_target.grab_index_token_from_str_literal<0>("unsigned long int",0);	//! \bug should use something informative; identifier not fine
-				original_target.type_code.set_type(C_TYPE::ULONG);
-				original_target.flags |= PARSE_PRIMARY_TYPE;
+				x.grab_index_token_from_str_literal<0>("unsigned long int",0);	//! \bug should use something informative; identifier not fine
+				x.type_code.set_type(C_TYPE::ULONG);
+				x.flags |= PARSE_PRIMARY_TYPE;
 				return 2;
 				}
 			case 0:	// unsigned long
 				{
-				original_target.grab_index_token_from_str_literal<0>("unsigned long",0);	//! \bug should use something informative; identifier not fine
-				original_target.type_code.set_type(C_TYPE::ULONG);
-				original_target.flags |= PARSE_PRIMARY_TYPE;
+				x.grab_index_token_from_str_literal<0>("unsigned long",0);	//! \bug should use something informative; identifier not fine
+				x.type_code.set_type(C_TYPE::ULONG);
+				x.flags |= PARSE_PRIMARY_TYPE;
 				return 1;
 				}
 			}
@@ -3358,29 +3361,29 @@ static size_t _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 			}
 		case 3:	// unsigned short
 			{
-			original_target.grab_index_token_from_str_literal<0>("unsigned short",0);	//! \bug should use something informative; identifier not fine
-			original_target.type_code.set_type(C_TYPE::USHRT);
-			original_target.flags |= PARSE_PRIMARY_TYPE;
+			x.grab_index_token_from_str_literal<0>("unsigned short",0);	//! \bug should use something informative; identifier not fine
+			x.type_code.set_type(C_TYPE::USHRT);
+			x.flags |= PARSE_PRIMARY_TYPE;
 			return 1;
 			}
 		case 2:	// unsigned char
 			{
-			original_target.grab_index_token_from_str_literal<0>("unsigned char",0);	//! \bug should use something informative; identifier not fine
-			original_target.type_code.set_type(C_TYPE::UCHAR);
-			original_target.flags |= PARSE_PRIMARY_TYPE;
+			x.grab_index_token_from_str_literal<0>("unsigned char",0);	//! \bug should use something informative; identifier not fine
+			x.type_code.set_type(C_TYPE::UCHAR);
+			x.flags |= PARSE_PRIMARY_TYPE;
 			return 1;
 			}
 		case 1:	// unsigned int
-			original_target.grab_index_token_from_str_literal<0>("unsigned int",0);	//! \bug should use something informative; identifier not fine
+			x.grab_index_token_from_str_literal<0>("unsigned int",0);	//! \bug should use something informative; identifier not fine
 			// intentional fall-through
 		case 0:	// unsigned
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::UINT);
-			src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+			x.type_code.set_type(C_TYPE::UINT);
+			x.flags |= PARSE_PRIMARY_TYPE;
 			return key_index;
 		}
 		}
-	else if (token_is_string<8>(original_target.index_tokens[0].token,"_Complex"))
-		simple_error(original_target," does not have immediately preceding floating point type (C99 6.7.2p2)");
+	else if (token_is_string<8>(x.index_tokens[0].token,"_Complex"))
+		simple_error(x," does not have immediately preceding floating point type (C99 6.7.2p2)");
 	return 0;
 }
 
@@ -8936,12 +8939,14 @@ public:
 			};
 		if (PARSE_PRIMARY_TYPE & x.flags)
 			{
-			if (base_type.base_type_index) return false;
 			base_type.value_copy(x.type_code);
 			return true;
 			}
+		//! \todo handle other known types
 		return false;
 		};
+	uintmax_t get_flags() const {return flags;};
+	void value_copy_type(type_spec& dest) const {dest.value_copy(base_type);};
 };
 
 class CPP0X_decl_specifier_scanner
@@ -8970,13 +8975,39 @@ public:
 			};
 		if (PARSE_PRIMARY_TYPE & x.flags)
 			{
-			if (base_type.base_type_index) return false;
 			base_type.value_copy(x.type_code);
 			return true;
 			}
+		//! \todo handle other known types
 		return false;
 		};
+	uintmax_t get_flags() const {return flags;};
+	void value_copy_type(type_spec& dest) const {dest.value_copy(base_type);};
 };
+
+size_t C99_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+{
+	assert(x.size<0>()>i);
+	// identifier?
+	if (x.data<0>()[i].is_atomic() && (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags))
+		{	// for now, do nothing else
+		initdecl_identifier_idx = i;
+		return 1;
+		};
+	return 0;
+}
+
+size_t CPP_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+{
+	assert(x.size<0>()>i);
+	// identifier?
+	if (x.data<0>()[i].is_atomic() && (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags))
+		{	// for now, do nothing else
+		initdecl_identifier_idx = i;
+		return 1;
+		};
+	return 0;
+}
 
 // will need: "function-type vector"
 // return: 1 typespec record (for now, other languages may have more demanding requirements)
@@ -9016,12 +9047,133 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		// ** C: const volatile restrict (but pointer type required for restrict)
 		// * atomic types have already been parsed, we need to catch the others
 		{
-		C99_decl_specifier_scanner decl_finder;
-		size_t decl_count = src.get_span<0>(i,decl_finder);
+		C99_decl_specifier_scanner declFind;
+		size_t decl_count = src.get_span<0>(i,declFind);
 		if (decl_count)
 			{
-			// ....
-			i += decl_count;
+//			const uintmax_t decl_flags = declFind.get_flags();
+			//! \todo analyze decl_specifiers for errors and warnings
+			if (src.size<0>()-i<=decl_count)
+				{	// unterminated declaration
+					//! \bug need test case
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("declaration cut off by end of scope (C99 6.7p1)");
+				zcc_errors.inc_error();
+				// remove from parse
+				src.DeleteNSlotsAt<0>(decl_count,i);
+				return;
+				};
+			if (src.data<0>()[i+decl_count].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count].index_tokens[0].token))
+				{	// C99 7p2 error: must declare something
+					//! \bug need test case
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("declaration must declare something (C99 6.7p2)");
+				zcc_errors.inc_error();
+				// remove from parse
+				src.DeleteNSlotsAt<0>(decl_count+1,i);
+				continue;
+				};
+
+			size_t decl_offset = 0;
+			bool have_we_parsed_yet = false;
+			do	{
+				type_spec bootstrap;
+				bootstrap.clear();
+				declFind.value_copy_type(bootstrap);
+				size_t initdecl_identifier_idx = 0;
+				size_t initdecl_span = C99_init_declarator_scanner(src,i+decl_count+decl_offset,bootstrap,initdecl_identifier_idx);
+				assert(0<initdecl_span || 0==initdecl_identifier_idx);
+				if (0==initdecl_span)
+					{	// no declarator where expected
+						// a botched function-declarator will have non-zero length
+					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("declarator missing (C99 6.7p1)");
+					zcc_errors.inc_error();
+					// find the next semicolon
+					size_t j = i+decl_count+decl_offset;
+					while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
+					if (have_we_parsed_yet)
+						{
+						src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
+						}
+					else{
+						src.DeleteNSlotsAt<0>((j-i)+(src.size<0>()>j),i);
+						}
+					break;
+					};
+				if (!initdecl_identifier_idx)
+					{	// didn't find identifier when needed
+					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("declarator has no identifier to declare (C99 6.7p1)");
+					zcc_errors.inc_error();
+					// find the next semicolon, unless we have () immediately in which case we have nothing to look for
+					const bool unwind_to_compound_statement = robust_token_is_char<'('>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token) && robust_token_is_char<')'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[1].token);
+					if (unwind_to_compound_statement)
+						{
+						assert(!have_we_parsed_yet);
+						src.DeleteNSlotsAt<0>(decl_count+decl_offset+initdecl_span,i);
+						}
+					else{
+						size_t j = i+decl_count+decl_offset;
+						while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
+						if (have_we_parsed_yet)
+							{
+							src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
+							}
+						else{
+							src.DeleteNSlotsAt<0>((j-i)+1,i);
+							}
+						}
+					break;
+					};
+				//! \todo analyze decl_specifiers for errors (now have full target type)
+				// something is being declared
+				have_we_parsed_yet = true;
+#if 0
+				if (C99_CPP0X_DECLSPEC_TYPEDEF & declFind.flags)
+					{	// typedef
+					}
+				else{	// something else
+					};
+#endif
+				decl_offset += initdecl_span;
+				if (src.size<0>()-(i+decl_count)<=decl_offset)
+					{	// unterminated declaration: error
+						//! \bug need test case
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("declaration cut off by end of scope (C99 6.7p1)");
+					zcc_errors.inc_error();
+					return;
+					};
+				//! \todo function declarations can be self-terminating
+				// ;: done
+				if (src.data<0>()[i+decl_count+decl_offset].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token))
+					{
+					++decl_offset;
+					break;
+					};
+				// ,: iterate
+				// anything else: error
+				if (!src.data<0>()[i+decl_count+decl_offset].is_atomic() || !token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token))
+					{
+					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("declaration disoriented by missing , (C99 6.7p1)");
+					// find the next semicolon
+					size_t j = i+decl_count+decl_offset;
+					while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
+					src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
+					continue;
+					}
+				++decl_offset;
+				}
+			while(src.size<0>()>(i+decl_count+decl_offset));
+			i += decl_count+decl_offset;
 			continue;
 			}
 		}
@@ -9093,8 +9245,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("namespace declaration cut off by end of scope");
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
 				zcc_errors.inc_error();
+				src.DeleteIdx<0>(i);
 				break;
 				};
 			if (	robust_token_is_char<'{'>(src.data<0>()[i+1].index_tokens[0].token)
@@ -9150,11 +9302,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("named namespace declaration must use non-reserved identifier (C++98 7.3.1p1, 7.3.2p1)");
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-				src.c_array<0>()[i+1].flags |= parse_tree::INVALID;
-				if (namespace_has_body) src.c_array<0>()[i+2].flags |= parse_tree::INVALID;
 				zcc_errors.inc_error();
-				i += 2+namespace_has_body;
+				src.DeleteNSlotsAt<0>(2+namespace_has_body,i);
 				continue;
 				};
 			if (!namespace_has_body)
@@ -9164,10 +9313,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				INC_INFORM("'namespace ");
 				INC_INFORM(src.data<0>()[i+1]);
 				INFORM("' definition needs a body (C++98 7.3.1p1)");
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-				src.c_array<0>()[i+1].flags |= parse_tree::INVALID;
 				zcc_errors.inc_error();
-				i += 2;
+				src.DeleteNSlotsAt<0>(2,i);
 				continue;
 				};
 			//! \test zcc\namespace.CPP\Warn_emptybody1.hpp
@@ -9228,12 +9375,133 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		// * atomic types have already been parsed, we need to catch the others
 		// * C++0x: auto is a possible type!
 		{
-		CPP0X_decl_specifier_scanner decl_finder;
-		size_t decl_count = src.get_span<0>(i,decl_finder);
+		CPP0X_decl_specifier_scanner declFind;
+		size_t decl_count = src.get_span<0>(i,declFind);
 		if (decl_count)
 			{
-			// ....
-			i += decl_count;
+//			const uintmax_t decl_flags = declFind.get_flags();
+			//! \todo analyze decl_specifiers for errors
+			if (src.size<0>()-i<=decl_count)
+				{	// unterminated declaration
+					//! \bug need test case
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("declaration cut off by end of scope (C++98 7p1)");
+				zcc_errors.inc_error();
+				// remove from parse
+				src.DeleteNSlotsAt<0>(decl_count,i);
+				return;
+				};
+			if (src.data<0>()[i+decl_count].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count].index_tokens[0].token))
+				{	// must declare something
+					//! \bug need test case
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("declaration must declare something (C++98 7p4)");
+				zcc_errors.inc_error();
+				// remove from parse
+				src.DeleteNSlotsAt<0>(decl_count+1,i);
+				continue;
+				};
+
+			size_t decl_offset = 0;
+			bool have_we_parsed_yet = false;
+			do	{
+				type_spec bootstrap;
+				bootstrap.clear();
+				declFind.value_copy_type(bootstrap);
+				size_t initdecl_identifier_idx = 0;
+				size_t initdecl_span = CPP_init_declarator_scanner(src,i+decl_count+decl_offset,bootstrap,initdecl_identifier_idx);
+				assert(0<initdecl_span || 0==initdecl_identifier_idx);
+				if (0==initdecl_span)
+					{	// no declarator where expected
+						// a botched function-declarator will have non-zero length
+					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("declarator missing (C++98 7p1)");
+					zcc_errors.inc_error();
+					// find the next semicolon
+					size_t j = i+decl_count+decl_offset;
+					while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
+					if (have_we_parsed_yet)
+						{
+						src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
+						}
+					else{
+						src.DeleteNSlotsAt<0>((j-i)+(src.size<0>()>j),i);
+						}
+					break;
+					};
+				if (!initdecl_identifier_idx)
+					{	// didn't find identifier when needed
+					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("declarator has no name to declare (C++98 7p1)");
+					zcc_errors.inc_error();
+					// find the next semicolon, unless we have () immediately in which case we have nothing to look for
+					const bool unwind_to_compound_statement = robust_token_is_char<'('>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token) && robust_token_is_char<')'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[1].token);
+					if (unwind_to_compound_statement)
+						{
+						assert(!have_we_parsed_yet);
+						src.DeleteNSlotsAt<0>(decl_count+decl_offset+initdecl_span,i);
+						}
+					else{
+						size_t j = i+decl_count+decl_offset;
+						while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
+						if (have_we_parsed_yet)
+							{
+							src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
+							}
+						else{
+							src.DeleteNSlotsAt<0>((j-i)+1,i);
+							}
+						}
+					break;
+					};
+				//! \todo analyze decl_specifiers for errors (now have full target type)
+				// something is being declared
+				have_we_parsed_yet = true;
+#if 0
+				if (C99_CPP0X_DECLSPEC_TYPEDEF & declFind.flags)
+					{	// typedef
+					}
+				else{	// something else
+					};
+#endif
+				decl_offset += initdecl_span;
+				if (src.size<0>()-(i+decl_count)<=decl_offset)
+					{	// unterminated declaration: error
+						//! \bug need test case
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("declaration cut off by end of scope (C++98 7p1)");
+					zcc_errors.inc_error();
+					return;
+					};
+				//! \todo function declarations can be self-terminating
+				// ;: done
+				if (src.data<0>()[i+decl_count+decl_offset].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token))
+					{
+					++decl_offset;
+					break;
+					};
+				// ,: iterate
+				// anything else: error
+				if (!src.data<0>()[i+decl_count+decl_offset].is_atomic() || !token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token))
+					{
+					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("declaration disoriented by missing , (C++98 7p1)");
+					// find the next semicolon
+					size_t j = i+decl_count+decl_offset;
+					while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
+					src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
+					continue;
+					}
+				++decl_offset;
+				}
+			while(src.size<0>()>(i+decl_count+decl_offset));
+			i += decl_count+decl_offset;
 			continue;
 			}
 		}

@@ -1,5 +1,4 @@
-// Preprocess_stddef_h.hpp
+// zcc/Pass_stddef_h.hpp
 
 #include <stddef.h>
 
-NULL

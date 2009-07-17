@@ -177,7 +177,7 @@ void ZParser::die_on_parse_errors() const
 		{
 		INC_INFORM("FATAL: ");
 		INC_INFORM(zcc_errors.err_count());
-		INC_INFORM(" parsing errors");
+		INC_INFORM(" parsing error");
 		INFORM((1==zcc_errors.err_count()) ? "\n" : "s\n");
 		exit(EXIT_FAILURE);
 		};

@@ -1,5 +1,4 @@
-// Preprocess_cstddef.hpp
+// zcc/Pass_cstddef.hpp
 
 #include <cstddef>
 
-NULL
