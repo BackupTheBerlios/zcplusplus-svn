@@ -732,7 +732,8 @@ _delete_n_slots_at(T*& _ptr, size_t& _ptr_size, size_t n, size_t Idx)
 #endif
 		}
 	else{
-		DELETEARRAY_AND_NULL(_ptr);
+		_flush(_ptr);
+		_ptr = NULL;
 #ifdef ZAIMONI_FORCE_ISO
 		_ptr_size = 0;
 #endif
@@ -780,7 +781,8 @@ void _delete_n_slots_at(T**& _ptr, size_t& _ptr_size, size_t n, size_t Idx)
 #endif
 		}
 	else{
-		DELETEARRAY_AND_NULL(_ptr);
+		free(_ptr);
+		_ptr = NULL;
 #ifdef ZAIMONI_FORCE_ISO
 		_ptr_size = 0;
 #endif
@@ -807,7 +809,8 @@ _weak_delete_n_slots_at(T**& _ptr, size_t n, size_t Idx)
 		_ptr = REALLOC(_ptr,sizeof(T*)*(_ptr_size-n));
 		}
 	else{
-		DELETEARRAY_AND_NULL(_ptr);
+		free(_ptr);
+		_ptr = NULL;
 		}
 }
 
