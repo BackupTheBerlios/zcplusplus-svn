@@ -108,8 +108,7 @@ static unsigned long DebugCounter = 0;
 static char DebugBuffer[25];
 #endif
 
-inline void
-ReportError(const char* const FatalErrorMessage)
+inline void ReportError(const char* const FatalErrorMessage)
 {	// FORMALLY CORRECT: Kenneth Boyd, 11/15/1999
 #ifdef _WIN32
 	MessageBox(NULL,FatalErrorMessage,RAMManagerName,MB_ICONSTOP | MB_OK | MB_SYSTEMMODAL);
@@ -118,8 +117,7 @@ ReportError(const char* const FatalErrorMessage)
 #endif
 }
 
-static void
-__ReportErrorAndCrash(const char* const FatalErrorMessage)
+static void __ReportErrorAndCrash(const char* const FatalErrorMessage)
 {	// FORMALLY CORRECT: Kenneth Boyd, 11/15/1999
 	ReportError(FatalErrorMessage);
 #ifdef __cplusplus
@@ -137,8 +135,7 @@ struct _track_pointer {
 typedef struct _track_pointer _track_pointer;
 #endif
 
-inline void
-InitBlock(void* memblock, size_t size)
+inline void InitBlock(void* memblock, size_t size)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/15/1999
 #ifdef __cplusplus
 	reinterpret_cast<size_t*>(reinterpret_cast<char*>(memblock)-sizeof(size_t))[0]=size;
@@ -150,23 +147,20 @@ InitBlock(void* memblock, size_t size)
 }
 
 #ifdef __cplusplus
-inline size_t&
-PTRSIZE_FROM_IDX(size_t CurrIdx)
+inline size_t& PTRSIZE_FROM_IDX(size_t CurrIdx)
 {return reinterpret_cast<_track_pointer*>(RawBlock)[CurrIdx-1]._size;}
 #else
 #define PTRSIZE_FROM_IDX(CurrIdx) ((_track_pointer*)(RawBlock))[CurrIdx-1]._size
 #endif
 
 #ifdef __cplusplus
-inline char*&
-CHARPTR_FROM_IDX(size_t CurrIdx)
+inline char*& CHARPTR_FROM_IDX(size_t CurrIdx)
 {return reinterpret_cast<_track_pointer*>(RawBlock)[CurrIdx-1]._address;}
 #else
 #define CHARPTR_FROM_IDX(CurrIdx) ((_track_pointer*)(RawBlock))[CurrIdx-1]._address
 #endif
 
-inline size_t
-HOLESIZE(size_t CurrIdxSubOne)
+inline size_t HOLESIZE(size_t CurrIdxSubOne)
 {
 #ifdef __cplusplus
 	return   reinterpret_cast<_track_pointer*>(RawBlock)[CurrIdxSubOne-1]._address
@@ -181,8 +175,7 @@ HOLESIZE(size_t CurrIdxSubOne)
 }
 
 // uses global variable HighBoundPtrSpace
-inline size_t
-HOLESIZE_AT_IDX1(void)
+inline size_t HOLESIZE_AT_IDX1(void)
 {return	 HighBoundPtrSpace
 #ifdef __cplusplus
 		-reinterpret_cast<_track_pointer*>(RawBlock)[0]._address
@@ -193,8 +186,7 @@ HOLESIZE_AT_IDX1(void)
 #endif
 		-sizeof(void*);}
 
-static void*
-__ExpandV2(void* memblock, size_t CurrIdx, size_t size)
+static void* __ExpandV2(void* memblock, size_t CurrIdx, size_t size)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/19/1999
 	// Using goto to condense exit code
 	if      (_msize(memblock)==size)
@@ -216,7 +208,7 @@ ExitUnchanged:
 }
 
 static size_t
-__IdxOfPointerInPtrList(void* const Target, size_t Idx, char* BasePtrIndex)
+__IdxOfPointerInPtrList(const void* const Target, size_t Idx, char* BasePtrIndex)
 {	// FORMALLY CORRECT: Kenneth Boyd, 10/30/1999
 	// this routine checks to see if Target was allocated by RAMManager, by scanning the
 	// list pointed to by BasePtrIndex.  It 1 above the index if found, 0 otherwise
@@ -286,11 +278,9 @@ Restart:
 }
 
 #if 0	// TODO: REDO memory2.azm
-static void
-__OnePassInsertSort(_track_pointer* OffsetIntoPtrIndex, size_t CurrIdx);
+static void __OnePassInsertSort(_track_pointer* OffsetIntoPtrIndex, size_t CurrIdx);
 #else	// base form
-static void
-__OnePassInsertSort(_track_pointer* OffsetIntoPtrIndex, size_t CurrIdx)
+static void __OnePassInsertSort(_track_pointer* OffsetIntoPtrIndex, size_t CurrIdx)
 {	// FORMALLY CORRECT: 9/19/1999
 	// STABLE
 #pragma message("This routine wants inline ASM: void __OnePassInsertSort(char* OffsetIntoPtrIndex, size_t CurrIdx);")
@@ -306,8 +296,7 @@ __OnePassInsertSort(_track_pointer* OffsetIntoPtrIndex, size_t CurrIdx)
 }
 #endif
 
-static void
-__RegisterPtr(void* memblock, size_t size, char* BasePtrIndex)
+static void __RegisterPtr(void* memblock, size_t size, char* BasePtrIndex)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/20/1999
 	// MS C++: ASM already efficient, do not use inline ASM
 	if (NULL!=memblock)
@@ -338,16 +327,13 @@ __ReleaseNextIndexPage(void)
 #endif
 }
 
-static void
-__CompactIndexRAM(void)
+static void __CompactIndexRAM(void)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/15/1999
 	size_t SpareIndexRAM = (StrictHighBoundIndexPages-RawBlock)-sizeof(_track_pointer)*CountPointersAllocated;
-	if (2*PageSize<SpareIndexRAM)
-		__ReleaseNextIndexPage();
+	if (2*PageSize<SpareIndexRAM) __ReleaseNextIndexPage();
 }
 
-static void
-__MetaFree(size_t CurrIdx)
+static void __MetaFree(size_t CurrIdx)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/19/1999
 	// all error checking is done in free() or realloc().
 	// remove entry from MasterList
@@ -362,16 +348,14 @@ __MetaFree(size_t CurrIdx)
 	__CompactIndexRAM();
 }
 
-static void
-__DesperateCompactIndexRAM(void)
+static void __DesperateCompactIndexRAM(void)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/16/1999
 	size_t SpareIndexRAM = (StrictHighBoundIndexPages-RawBlock)-sizeof(_track_pointer)*CountPointersAllocated;
 	if (PageSize+sizeof(_track_pointer)<SpareIndexRAM)
 		__ReleaseNextIndexPage();
 }
 
-static int
-__CommitNextPtrPages(size_t PageCount)
+static int __CommitNextPtrPages(size_t PageCount)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/16/1999
 	LowBoundPtrSpace-=PageCount*PageSize;
 #if _WIN32
@@ -394,8 +378,7 @@ __CommitNextPtrPages(size_t PageCount)
 	return 1;
 }
 
-static void*
-__CreateAtBottom(size_t size)
+static void* __CreateAtBottom(size_t size)
 {	// FORMALLY CORRECT: Kenneth Boyd, 10/1/1999
 	// this routine tries to make space at the bottom of PTRspace for a memory block of
 	// size bytes, plus overhead [sizeof(size_t)+sizeof(void*)].  It does *not* actually
@@ -428,8 +411,7 @@ __CreateAtBottom(size_t size)
 		TargetPtr = CHARPTR_FROM_IDX(CountPointersAllocated);
 		};
 	TargetPtr -= TargetSize;
-	if (SparePtrRAM>=TargetSize)
-		return TargetPtr;
+	if (SparePtrRAM>=TargetSize) return TargetPtr;
 	{
 	size_t PageCount = 0;
 	do	{
@@ -437,12 +419,11 @@ __CreateAtBottom(size_t size)
 		SparePtrRAM+=PageSize;
 		}
 	while(SparePtrRAM<TargetSize);
-	return (__CommitNextPtrPages(PageCount)) ? TargetPtr : NULL;
+	return __CommitNextPtrPages(PageCount) ? TargetPtr : NULL;
 	};
 }
 
-static void
-__ReleaseNextPtrPages(size_t PageCount)
+static void __ReleaseNextPtrPages(size_t PageCount)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/17/1999
 	size_t PhysicalSize = PageCount*PageSize;
 #ifdef _WIN32
@@ -453,8 +434,7 @@ __ReleaseNextPtrPages(size_t PageCount)
 	LowBoundPtrSpace += PhysicalSize;
 }
 
-static void
-__CompactPtrRAM(void)
+static void __CompactPtrRAM(void)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/15/1999
 #ifdef __cplusplus
 	size_t SparePtrRAM = reinterpret_cast<_track_pointer*>(RawBlock)[CountPointersAllocated-1]._address-LowBoundPtrSpace;
@@ -473,8 +453,7 @@ __CompactPtrRAM(void)
 		};
 }
 
-static void
-__DesperateCompactPtrRAM(void)
+static void __DesperateCompactPtrRAM(void)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/16/1999
 #ifdef __cplusplus
 	size_t SparePtrRAM = reinterpret_cast<_track_pointer*>(RawBlock)[CountPointersAllocated-1]._address-LowBoundPtrSpace;
@@ -493,8 +472,7 @@ __DesperateCompactPtrRAM(void)
 		};
 }
 
-static int
-__CommitNextIndexPage(void)
+static int __CommitNextIndexPage(void)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/16/1999
 #if _WIN32
 	if (!VirtualAlloc(StrictHighBoundIndexPages,PageSize-1,MEM_COMMIT,PAGE_EXECUTE_READWRITE))
@@ -514,8 +492,7 @@ __CommitNextIndexPage(void)
 	return 1;
 }
 
-static void
-FlushMemoryManager(void)
+static void FlushMemoryManager(void)
 {
 #ifdef __cplusplus
 	RAMBlock.Lock();
@@ -535,8 +512,7 @@ FlushMemoryManager(void)
 #endif
 }
 
-static void
-__EmergencyInitialize(void)
+static void __EmergencyInitialize(void)
 {	// FORMALLY CORRECT: 11/3/1999
 	size_t AllocateStep;
 	size_t BaseSize;
@@ -581,8 +557,7 @@ __EmergencyInitialize(void)
 	__ReportErrorAndCrash(NoPtrRAM);
 }
 
-static void
-__DetectOverwrites(void)
+static void __DetectOverwrites(void)
 {	// FORMALLY CORRECT: Kenneth Boyd, 11/3/1999
 	size_t Idx = CountPointersAllocated;
 #ifdef __cplusplus
@@ -651,8 +626,7 @@ namespace std
 // actual implementation
 extern "C"
 #endif
-void* _cdecl
-malloc(size_t size)
+void* _cdecl malloc(size_t size)
 {	// FORMALLY CORRECT: Kenneth Boyd, 2/24/2008
 	// We have the option, in C99, of returning NULL rather than allocating 0 bytes.  Do It.
 	if (0==size) return NULL;
@@ -660,8 +634,7 @@ malloc(size_t size)
 #ifdef __cplusplus
 	RAMBlock.Lock();
 #endif
-	if (NULL==RawBlock)
-		__EmergencyInitialize();
+	if (NULL==RawBlock) __EmergencyInitialize();
 	__DetectOverwrites();
 	{	// space check: can we store the allocated pointer in the pointer index?
 	size_t SpareIndexRAM = StrictHighBoundIndexPages-RawBlock-sizeof(_track_pointer)*CountPointersAllocated;
@@ -675,10 +648,8 @@ malloc(size_t size)
 	};
 	{
 	void* Tmp = __FindHole(size,LowBoundPtrSpace,CountPointersAllocated,HighBoundPtrSpace);
-	if (NULL==Tmp)
-		Tmp = __CreateAtBottom(size);
-	if (NULL!=Tmp)
-		__RegisterPtr(Tmp,size,RawBlock);
+	if (NULL==Tmp) Tmp = __CreateAtBottom(size);
+	if (NULL!=Tmp) __RegisterPtr(Tmp,size,RawBlock);
 #ifdef __cplusplus
 	RAMBlock.UnLock();
 #endif
@@ -689,15 +660,13 @@ malloc(size_t size)
 #ifdef __cplusplus
 extern "C"
 #endif
-void* _cdecl
-calloc(size_t num, size_t size)
+void* _cdecl calloc(size_t num, size_t size)
 {	// FORMALLY CORRECT: Kenneth Boyd, 2/24/2008
 	void* Tmp = NULL;
 	if ((size_t)(-1)/size>=num)
 	{	// CERT-mandated fix (MEM07): we NULL out rather than take an integer overflow.
 		Tmp = malloc(num*size);
-		if (NULL!=Tmp)
-			memset(Tmp,'\x00',_msize(Tmp));
+		if (NULL!=Tmp) memset(Tmp,'\0',_msize(Tmp));
 	}
 	return Tmp;
 }
@@ -705,8 +674,7 @@ calloc(size_t num, size_t size)
 #ifdef __cplusplus
 extern "C"
 #endif
-void _cdecl
-free(void* memblock)
+void _cdecl free(void* memblock)
 {	// FORMALLY CORRECT: Kenneth Boyd, 6/2/2008
 	if (	NULL!=memblock	/* C90 */
 		&&  NULL!=RawBlock)	/* handle race condition issues at program shutdown */
@@ -733,8 +701,7 @@ free(void* memblock)
 }	// namespace std
 #endif
 
-static void*
-__SlideUp(char* memblock, size_t CurrIdx, size_t size)
+static void* __SlideUp(char* memblock, size_t CurrIdx, size_t size)
 {	// FORMALLY CORRECT: Kenneth Boyd, 11/3/1999
 	// this routine tries to slide up a block [i.e., move the hole from above the block
 	// to under the block].  The block retains its current size.
@@ -757,8 +724,7 @@ namespace std
 {
 extern "C"
 #endif
-void* _cdecl
-realloc(void* memblock, size_t size)
+void* _cdecl realloc(void* memblock, size_t size)
 {	// FORMALLY CORRECT: Kenneth Boyd, 11/3/1999
 	if (NULL==memblock)
 		return malloc(size);
@@ -834,11 +800,9 @@ realloc(void* memblock, size_t size)
 
 extern "C"
 #endif
-void*
-_expand(void* memblock, size_t size)
+void* _expand(void* memblock, size_t size)
 {	// FORMALLY CORRECT: Kenneth Boyd, 11/3/1999
-	if (NULL==memblock)
-		return malloc(size);
+	if (NULL==memblock) return malloc(size);
 #ifdef __cplusplus
 	RAMBlock.Lock();
 #endif
@@ -856,23 +820,22 @@ _expand(void* memblock, size_t size)
 	}
 }
 
-#if 0
 #ifdef __cplusplus
 extern "C"
 #endif
-bool
-_RAMBlockStartValid(void* memblock)
+int _memory_block_start_valid(const void* x)
 {
 #ifdef __cplusplus
 	RAMBlock.Lock();
 #endif
-	size_t CurrIdx = __IdxOfPointerInPtrList(memblock,CountPointersAllocated,RawBlock);
+	size_t i = __IdxOfPointerInPtrList(x,CountPointersAllocated,RawBlock);
 #ifdef __cplusplus
 	RAMBlock.UnLock();
 #endif
-	return 0!=CurrIdx;	
+	return 0!=i;
 }
 
+#if 0
 // META: declare this when necessary
 #ifdef __cplusplus
 extern "C"
@@ -894,8 +857,7 @@ _DynamicRAMIsNotObviouslyCorrupted(void)
 
 std::new_handler ZaimoniNewHandler = NULL;
 
-void*
-operator new(size_t NewSize) throw (std::bad_alloc)
+void* operator new(size_t NewSize) throw (std::bad_alloc)
 {
 	void* Tmp = calloc(1,NewSize);
 	while(NULL==Tmp && NULL!=ZaimoniNewHandler)
@@ -903,13 +865,11 @@ operator new(size_t NewSize) throw (std::bad_alloc)
 		ZaimoniNewHandler();
 		Tmp = calloc(1,NewSize);
 		}
-	if (NULL==Tmp)
-		throw std::bad_alloc();
+	if (NULL==Tmp) throw std::bad_alloc();
 	return Tmp;
 }
 
-void*
-operator new(size_t NewSize, const std::nothrow_t& tracer) throw ()
+void* operator new(size_t NewSize, const std::nothrow_t& tracer) throw ()
 {
 	void* Tmp = calloc(1,NewSize);
 	while(NULL==Tmp && NULL!=ZaimoniNewHandler)
@@ -917,13 +877,11 @@ operator new(size_t NewSize, const std::nothrow_t& tracer) throw ()
 		ZaimoniNewHandler();
 		Tmp = calloc(1,NewSize);
 		}
-	if (NULL==Tmp)
-		throw std::bad_alloc();
+	if (NULL==Tmp) throw std::bad_alloc();
 	return Tmp;
 }
 
-void*
-operator new[](std::size_t NewSize) throw (std::bad_alloc)
+void* operator new[](std::size_t NewSize) throw (std::bad_alloc)
 {
 	void* Tmp = calloc(1,NewSize);
 	while(NULL==Tmp && NULL!=ZaimoniNewHandler)
@@ -952,20 +910,16 @@ operator new[](std::size_t NewSize, const std::nothrow_t& tracer) throw ()
 	return Tmp;
 }
 
-void
-operator delete(void* Target) throw ()
+void operator delete(void* Target) throw ()
 {/* FORMALLY CORRECT: 4/16/98, Kenneth Boyd */ free(Target);}
 
-void
-operator delete(void* Target, const std::nothrow_t& tracer) throw ()
+void operator delete(void* Target, const std::nothrow_t& tracer) throw ()
 {/* FORMALLY CORRECT: 4/16/98, Kenneth Boyd */ free(Target);}
 
-void
-operator delete[](void* Target) throw()
+void operator delete[](void* Target) throw()
 {/* FORMALLY CORRECT: 9/27/2005, Kenneth Boyd */ free(Target);}
 
-void
-operator delete[](void* Target, const std::nothrow_t& tracer) throw()
+void operator delete[](void* Target, const std::nothrow_t& tracer) throw()
 {/* FORMALLY CORRECT: 9/27/2005, Kenneth Boyd */ free(Target);}
 
 #endif

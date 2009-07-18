@@ -35,6 +35,37 @@ bool parse_tree::is_raw_list() const
 #endif
 }
 
+#ifndef ZAIMONI_FORCE_ISO
+bool parse_tree::syntax_ok() const
+{
+	if (NULL!=args[0] && !_memory_block_start_valid(args[0])) return false;
+	if (NULL!=args[1] && !_memory_block_start_valid(args[1])) return false;
+	if (NULL!=args[2] && !_memory_block_start_valid(args[2])) return false;
+
+	if (own_index_token<0>())
+		{
+		if (NULL==index_tokens[0].token.first) return false;
+		if (!_memory_block_start_valid(index_tokens[0].token.first)) return false;
+		};
+	if (own_index_token<1>())
+		{
+		if (NULL==index_tokens[1].token.first) return false;
+		if (!_memory_block_start_valid(index_tokens[1].token.first)) return false;
+		};
+
+	size_t i = 0;
+	while(size<0>()>i)
+		if (!data<0>()[i++].syntax_ok()) return false;
+	i = 0;
+	while(size<1>()>i)
+		if (!data<1>()[i++].syntax_ok()) return false;
+	i = 0;
+	while(size<2>()>i)
+		if (!data<2>()[i++].syntax_ok()) return false;
+	return true;
+}
+#endif
+
 void parse_tree::clear()
 {
 	index_tokens[0].clear();
@@ -147,6 +178,9 @@ parse_tree::collapse_matched_pair(parse_tree& src, const zaimoni::POD_pair<size_
 		tmp.control_index_token<1>(true);
 		src.c_array<0>()[target.second].control_index_token<0>(false);
 		};
+	size_t i = zap_span+1;
+	do	src.c_array<0>()[target.first+1+ --i].clear();
+	while(0<i);
 	src.DeleteNSlotsAt<0>(zap_span+1,target.first+1);
 	src.c_array<0>()[target.first] = tmp;
 	return true;

@@ -58,6 +58,20 @@ static const virtual_machine::CPUInfo* target_machine = NULL;
 #define ERR_STR "error: "
 #define WARN_STR "warning: "
 
+// would have been in ParseTree.hpp, except that we don't have AtomicString.h there
+template<size_t i> void register_token(parse_tree& x)
+{
+	BOOST_STATIC_ASSERT(STATIC_SIZE(x.index_tokens)>i);
+	if (x.own_index_token<i>())
+		{
+		const char* tmp = register_substring(x.index_tokens[i].token.first,x.index_tokens[i].token.second);
+		assert(tmp!=x.index_tokens[i].token.first);
+		free(const_cast<char*>(x.index_tokens[i].token.first));
+		x.index_tokens[i].token.first = tmp;
+		x.control_index_token<i>(false);
+		}
+}
+
 /* need for compiler implementation */
 /* remember to review pragma definitions from GCC, MSVC++, etc. */
 /*
@@ -9053,6 +9067,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 			{
 //			const uintmax_t decl_flags = declFind.get_flags();
 			//! \todo analyze decl_specifiers for errors and warnings
+			//! \todo apply const and volatile at this time
 			if (src.size<0>()-i<=decl_count)
 				{	// unterminated declaration
 					//! \bug need test case
@@ -9096,12 +9111,9 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					size_t j = i+decl_count+decl_offset;
 					while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
 					if (have_we_parsed_yet)
-						{
 						src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
-						}
-					else{
+					else
 						src.DeleteNSlotsAt<0>((j-i)+(src.size<0>()>j),i);
-						}
 					break;
 					};
 				if (!initdecl_identifier_idx)
@@ -9121,22 +9133,54 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 						size_t j = i+decl_count+decl_offset;
 						while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
 						if (have_we_parsed_yet)
-							{
 							src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
-							}
-						else{
+						else
 							src.DeleteNSlotsAt<0>((j-i)+1,i);
-							}
 						}
 					break;
 					};
 				//! \todo analyze decl_specifiers for errors (now have full target type)
 				// something is being declared
 				have_we_parsed_yet = true;
-#if 0
-				if (C99_CPP0X_DECLSPEC_TYPEDEF & declFind.flags)
+				if (C99_CPP0X_DECLSPEC_TYPEDEF & declFind.get_flags())
 					{	// typedef
+					register_token<0>(src.c_array<0>()[initdecl_identifier_idx]);
+					// verify that there is no prior definition
+					const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
+					if (NULL!=tmp)
+						{
+						if (bootstrap==tmp->first)
+							{	// warn if there is a prior, consistent definition
+								//! \bug needs test case
+							message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
+							INC_INFORM(WARN_STR);
+							INC_INFORM("redeclaring ");
+							INC_INFORM(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
+							INC_INFORM(", prior typedef at ");
+							INC_INFORM(tmp->second);
+							INC_INFORM(':');
+							INFORM(tmp->third);
+							if (bool_options[boolopt::warnings_are_errors])
+								zcc_errors.inc_error();
+							}
+						else{	// error if there is a prior, inconsistent definition
+								//! \bug needs test case
+							message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
+							INC_INFORM(ERR_STR);
+							INC_INFORM("redeclaring ");
+							INC_INFORM(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
+							INC_INFORM(", prior typedef at ");
+							INC_INFORM(tmp->second);
+							INC_INFORM(':');
+							INFORM(tmp->third);
+							zcc_errors.inc_error();
+							}	
+						// do not re-register if there is a prior definition
+						}
+					else	// register this with types object
+						types.set_typedef(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first,src.data<0>()[initdecl_identifier_idx].index_tokens[0].src_filename,src.data<0>()[initdecl_identifier_idx].index_tokens[0].logical_line.first,bootstrap);
 					}
+#if 0
 				else{	// something else
 					};
 #endif
@@ -9322,16 +9366,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			// namespace name: postfix arg 1
 			// namespace definition body: postfix arg 2
 			// the namespace name is likely to be reused: atomic string target
-			{
-			if (src.data<0>()[i+1].own_index_token<0>())
-				{
-				const char* tmp = register_substring(src.data<0>()[i+1].index_tokens[0].token.first,src.data<0>()[i+1].index_tokens[0].token.second);
-				assert(tmp!=src.data<0>()[i+1].index_tokens[0].token.first);
-				src.c_array<0>()[i+1].index_tokens[0].token.first = tmp;
-				src.c_array<0>()[i+1].control_index_token<0>(false);
-				}
-			}
-
+			register_token<0>(src.c_array<0>()[i+1]);
 			src.c_array<0>()[i].resize<2>(2);
 			src.c_array<0>()[i].c_array<2>()[0] = src.data<0>()[i+1];
 			src.c_array<0>()[i].c_array<2>()[1] = src.data<0>()[i+2];
@@ -9381,6 +9416,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			{
 //			const uintmax_t decl_flags = declFind.get_flags();
 			//! \todo analyze decl_specifiers for errors
+			//! \todo apply const and volatile at this time
 			if (src.size<0>()-i<=decl_count)
 				{	// unterminated declaration
 					//! \bug need test case
@@ -9424,12 +9460,9 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					size_t j = i+decl_count+decl_offset;
 					while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
 					if (have_we_parsed_yet)
-						{
 						src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
-						}
-					else{
+					else
 						src.DeleteNSlotsAt<0>((j-i)+(src.size<0>()>j),i);
-						}
 					break;
 					};
 				if (!initdecl_identifier_idx)
@@ -9449,22 +9482,66 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 						size_t j = i+decl_count+decl_offset;
 						while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
 						if (have_we_parsed_yet)
-							{
 							src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
-							}
-						else{
+						else
 							src.DeleteNSlotsAt<0>((j-i)+1,i);
-							}
 						}
 					break;
 					};
 				//! \todo analyze decl_specifiers for errors (now have full target type)
 				// something is being declared
 				have_we_parsed_yet = true;
-#if 0
-				if (C99_CPP0X_DECLSPEC_TYPEDEF & declFind.flags)
+				if (C99_CPP0X_DECLSPEC_TYPEDEF & declFind.get_flags())
 					{	// typedef
+					register_token<0>(src.c_array<0>()[initdecl_identifier_idx]);
+					const char* fullname = src.c_array<0>()[initdecl_identifier_idx].index_tokens[0].token.first;
+					// deal with namespaces
+					if (NULL!=active_namespace)
+						{
+						char* const actual_name = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(strlen(active_namespace)+2+strlen(fullname)));
+						strcpy(actual_name,active_namespace);
+						strcat(actual_name,"::");
+						strcat(actual_name,fullname);
+						fullname = register_string(actual_name);	//! \todo would like to use "consume string" to avoid frivolous memory allocation
+						free(actual_name);
+						}
+
+					// verify that there is no prior definition
+					const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(fullname);
+					if (NULL!=tmp)
+						{
+						if (bootstrap==tmp->first)
+							{	// warn if there is a prior, consistent definition
+								//! \bug needs test case
+							message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
+							INC_INFORM(WARN_STR);
+							INC_INFORM("redeclaring ");
+							INC_INFORM(fullname);
+							INC_INFORM(", prior typedef at ");
+							INC_INFORM(tmp->second);
+							INC_INFORM(':');
+							INFORM(tmp->third);
+							if (bool_options[boolopt::warnings_are_errors])
+								zcc_errors.inc_error();
+							}
+						else{	// error if there is a prior, inconsistent definition
+								//! \bug needs test case
+							message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
+							INC_INFORM(ERR_STR);
+							INC_INFORM("redeclaring ");
+							INC_INFORM(fullname);
+							INC_INFORM(", prior typedef at ");
+							INC_INFORM(tmp->second);
+							INC_INFORM(':');
+							INFORM(tmp->third);
+							zcc_errors.inc_error();
+							}	
+						// do not re-register if there is a prior definition
+						}
+					else	// register this with types object
+						types.set_typedef(fullname,src.data<0>()[initdecl_identifier_idx].index_tokens[0].src_filename,src.data<0>()[initdecl_identifier_idx].index_tokens[0].logical_line.first,bootstrap);
 					}
+#if 0
 				else{	// something else
 					};
 #endif

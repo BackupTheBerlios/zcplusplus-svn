@@ -7,6 +7,7 @@
 #include "Zaimoni.STL/LexParse/std.h"
 #include "Zaimoni.STL/POD.hpp"
 #include "Zaimoni.STL/AutoPtr.hpp"
+#include "type_spec.hpp"
 
 class type_system
 {
@@ -20,6 +21,7 @@ public:
 	const size_t int_priority_size;
 private:
 	zaimoni::autovalarray_ptr<zaimoni::POD_triple<char*,size_t,zaimoni::lex_flags> > dynamic_types;
+	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> > > typedef_registry;
 	// uncopyable
 	type_system(const type_system& src);
 	void operator=(const type_system& src);
@@ -52,6 +54,9 @@ public:
 		assert(core_types_size+dynamic_types.size()>=id);
 		return _name(id);
 		}
+
+	void set_typedef(const char* const alias, const char* filename, const size_t lineno, type_spec& src);	// invalidates src
+	const zaimoni::POD_triple<type_spec,const char*,size_t>* get_typedef(const char* const alias);
 private:
 	type_index _get_id(const char* const x,size_t x_len) const;
 	type_data _get_flags(size_t id) const;

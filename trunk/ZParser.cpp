@@ -146,9 +146,18 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 	type_system types((Lang::C==lang_code) ? C_atomic_types : CPP_atomic_types,(Lang::C==lang_code) ? C_TYPE_MAX : CPP_TYPE_MAX,C_int_priority,C_INT_PRIORITY_SIZE);
 	// ok...now ready for LangConf (note that CSupport.hpp/CSupport.cpp may fork on whether z_cpp or zcc is being built
 	// 1) lexical absolute parsing: primary expressions and similar
+#ifndef ZAIMONI_FORCE_ISO
+	assert(ParsedList[0]->syntax_ok());
+#endif
 	lang.pp_support->ContextFreeParse(*ParsedList[0],types);
+#ifndef ZAIMONI_FORCE_ISO
+	assert(ParsedList[0]->syntax_ok());
+#endif
 	die_on_parse_errors();
 	lang.pp_support->ContextParse(*ParsedList[0],types);
+#ifndef ZAIMONI_FORCE_ISO
+	assert(ParsedList[0]->syntax_ok());
+#endif
 //	die_on_parse_errors();
 
 	die_on_parse_errors();

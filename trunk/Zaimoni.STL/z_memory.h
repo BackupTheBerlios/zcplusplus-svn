@@ -12,11 +12,7 @@
 #define USE_ZAIMONI_MEMORY_MANAGER 1
 #endif
 
-#ifdef __cplusplus
-#include <cstdlib>
-#else
 #include <stdlib.h>
-#endif
 
 /*
  * this memory manager uses sizeof(intptr_t) NUL characters as guard bytes
@@ -35,8 +31,7 @@ extern size_t AppRunning;
 #ifdef __cplusplus
 extern "C"
 #endif
-inline size_t _cdecl
-_msize(const void* memblock)
+inline size_t _cdecl _msize(const void* memblock)
 {	/* FORMALLY CORRECT: Kenneth Boyd, 9/15/1999 */
 #ifdef __cplusplus
 	return reinterpret_cast<const size_t*>(reinterpret_cast<const char*>(memblock)-sizeof(size_t))[0];
@@ -44,6 +39,15 @@ _msize(const void* memblock)
 	return ((const size_t*)((const char*)(memblock)-sizeof(size_t)))[0];
 #endif
 }
+
+/*!
+ * checks that memory block in question is not only dynamically allocated, but is safe to free/realloc
+ */
+#ifdef __cplusplus
+extern "C"
+#endif
+int _memory_block_start_valid(const void* x);
+
 
 #ifdef __cplusplus
 
@@ -64,12 +68,10 @@ _msize(const void* memblock)
  * These must come before #include <new> to prevent compiler errors,
  * but don't show these to memory.cpp
  */
-inline void
-operator delete(void* Target) throw ()
+inline void operator delete(void* Target) throw ()
 {/* FORMALLY CORRECT: 4/16/98, Kenneth Boyd */ free(Target);}
 
-inline void
-operator delete[](void* Target) throw()
+inline void operator delete[](void* Target) throw()
 {/* FORMALLY CORRECT: 9/27/2005, Kenneth Boyd */ free(Target);}
 #endif /* end ZAIMONI_STL_ARCHAISM_INLINE_DELETE */
 #undef ZAIMONI_STL_ARCHAISM_INLINE_DELETE

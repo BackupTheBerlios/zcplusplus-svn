@@ -244,6 +244,7 @@ struct parse_tree
 		}
 	template<size_t dest_idx> void DestroyNAtAndRotateTo(size_t n,size_t i,const size_t actual_size)
 		{
+		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>dest_idx);
 		assert(size<dest_idx>()>=actual_size);
 		assert(actual_size>i);
 		assert(actual_size-i>=n);
@@ -264,6 +265,9 @@ struct parse_tree
 	void clear();	// XXX should be constructor; good way to leak memory in other contexts
 	void destroy();	// XXX should be destructor; note that this does *not* touch line/col information or src_filename in its own index_tokens
 	void core_flag_update();
+#ifndef ZAIMONI_FORCE_ISO
+	bool syntax_ok() const;
+#endif
 
 	template<size_t dest_idx> void fast_set_arg(parse_tree* src)
 		{
@@ -282,16 +286,16 @@ struct parse_tree
 	static bool collapse_matched_pair(parse_tree& src, const zaimoni::POD_pair<size_t,size_t>& target);
 	template<size_t dest_idx,size_t src_idx> void grab_index_token_location_from(const parse_tree& tmp)
 		{
-		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>dest_idx);
-		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>src_idx);
+		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>dest_idx);
+		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>src_idx);
 		assert(NULL!=tmp.index_tokens[src_idx].src_filename);
 		index_tokens[dest_idx].logical_line = tmp.index_tokens[src_idx].logical_line;
 		index_tokens[dest_idx].src_filename = tmp.index_tokens[src_idx].src_filename;
 		}
 	template<size_t dest_idx,size_t src_idx> void grab_index_token_from(parse_tree& tmp)
 		{
-		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>dest_idx);
-		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>src_idx);
+		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>dest_idx);
+		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>src_idx);
 		if (own_index_token<dest_idx>()) free(const_cast<char*>(index_tokens[dest_idx].token.first));
 		index_tokens[dest_idx].token = tmp.index_tokens[src_idx].token;
 		control_index_token<dest_idx>(tmp.own_index_token<src_idx>());
@@ -299,7 +303,7 @@ struct parse_tree
 		}
 	template<size_t dest_idx> void grab_index_token_from(char*& src,zaimoni::lex_flags src_flags)
 		{
-		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>dest_idx);
+		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>dest_idx);
 		assert(NULL!=src);
 		if (own_index_token<dest_idx>()) free(const_cast<char*>(index_tokens[dest_idx].token.first));
 		index_tokens[dest_idx].token.first = src;
@@ -310,7 +314,7 @@ struct parse_tree
 		}
 	template<size_t dest_idx> void grab_index_token_from(const char*& src,zaimoni::lex_flags src_flags)
 		{
-		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>dest_idx);
+		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>dest_idx);
 		assert(NULL!=src);
 		if (own_index_token<dest_idx>()) free(const_cast<char*>(index_tokens[dest_idx].token.first));
 		index_tokens[dest_idx].token.first = src;
@@ -321,7 +325,7 @@ struct parse_tree
 		}
 	template<size_t dest_idx> void grab_index_token_from_str_literal(const char* const src,zaimoni::lex_flags src_flags)
 		{
-		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>dest_idx);
+		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>dest_idx);
 		assert(NULL!=src);
 		if (own_index_token<dest_idx>()) { free(const_cast<char*>(index_tokens[dest_idx].token.first)); };
 		index_tokens[dest_idx].token.first = src;
