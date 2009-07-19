@@ -45,6 +45,8 @@ struct type_spec
 	void set_pointer_power(size_t _size);
 	void value_copy(const type_spec& src);	// XXX properly operator= in C++, but type_spec has to be POD
 	bool dereference();
+	unsigned char& qualifier(size_t i) {return sizeof(unsigned char*)>pointer_power_after_array_decay() ? qualifier_vector.second[i] : qualifier_vector.first[i];};
+	template<size_t i> unsigned char& qualifier() {return sizeof(unsigned char*)>pointer_power_after_array_decay() ? qualifier_vector.second[i] : qualifier_vector.first[i];}
 
 	void clear();	// XXX should be constructor; good way to leak memory in other contexts
 	void destroy();	// XXX should be destructor

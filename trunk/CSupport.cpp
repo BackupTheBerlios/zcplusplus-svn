@@ -947,6 +947,20 @@ static const POD_pair<const char*,size_t> CPP0X_decl_specifiers[] =
 	};
 
 #define C99_CPP0X_DECLSPEC_TYPEDEF (1ULL<<0)
+#define C99_CPP0X_DECLSPEC_CONST (1ULL<<1)
+#define C99_CPP0X_DECLSPEC_VOLATILE (1ULL<<2)
+#define C99_CPP0X_DECLSPEC_REGISTER (1ULL<<4)
+#define C99_CPP0X_DECLSPEC_STATIC (1ULL<<5)
+#define C99_CPP0X_DECLSPEC_EXTERN (1ULL<<6)
+#define C99_CPP0X_DECLSPEC_INLINE (1ULL<<7)
+#define C99_DECLSPEC_AUTO (1ULL<<8)
+#define CPP_DECLSPEC_MUTABLE (1ULL<<9)
+#define CPP_DECLSPEC_VIRTUAL (1ULL<<10)
+#define CPP_DECLSPEC_EXPLICIT (1ULL<<11)
+#define CPP_DECLSPEC_FRIEND (1ULL<<12)
+
+BOOST_STATIC_ASSERT(C99_CPP0X_DECLSPEC_CONST==type_spec::_const);
+BOOST_STATIC_ASSERT(C99_CPP0X_DECLSPEC_VOLATILE==type_spec::_volatile);
 
 #undef DICT2_STRUCT
 #undef DICT_STRUCT
@@ -8927,6 +8941,22 @@ static void conserve_tokens(parse_tree& x)
 		}
 }
 
+//! \todo really should be somewhere in natural-language output
+void INFORM_separated_list(const char* const* x,size_t x_len, const char* const sep)
+{
+	assert(NULL!=sep && !*sep);
+	assert(NULL!=x);
+	if (0<x_len)
+		{
+		INC_INFORM(*x);
+		while(0< --x_len)
+			{
+			INC_INFORM(sep);
+			INC_INFORM(*(++x));
+			}
+		};
+}
+
 class C99_decl_specifier_scanner
 {
 private:
@@ -8959,6 +8989,82 @@ public:
 		//! \todo handle other known types
 		return false;
 		};
+	bool analyze_flags_global(parse_tree& x, size_t i, size_t& decl_count)
+		{
+		assert(x.size<0>()>i);
+		assert(x.size<0>()-i>=decl_count);
+		if ((C99_CPP0X_DECLSPEC_TYPEDEF | C99_CPP0X_DECLSPEC_REGISTER | C99_CPP0X_DECLSPEC_STATIC | C99_CPP0X_DECLSPEC_EXTERN | C99_DECLSPEC_AUTO) & flags)
+			{	// storage class specifiers
+			const char* specs[5];
+			unsigned int storage_count = 0;
+			unsigned int erased_count = 0;
+			if (C99_CPP0X_DECLSPEC_TYPEDEF & flags)
+				specs[storage_count++] = "typedef";
+			if (C99_CPP0X_DECLSPEC_STATIC & flags)
+				specs[storage_count++] = "static";
+			if (C99_CPP0X_DECLSPEC_EXTERN & flags)
+				specs[storage_count++] = "extern";
+			if (C99_CPP0X_DECLSPEC_REGISTER & flags)
+				{	//! \bug needs test case
+				specs[storage_count++] = "register";
+				++erased_count;
+				message_header(x.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("storage-class specifier register disallowed at translation-unit level (C99 6.9p2)");
+				zcc_errors.inc_error();
+				size_t j = 0;
+				size_t offset = 0;
+				do	if (robust_token_is_string<8>(x.data<0>()[i+j].index_tokens[0].token,"register"))
+						++offset;
+					else if (0<offset)
+						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
+				while(decl_count> ++j);
+				j = offset;
+				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
+				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
+				decl_count -= offset;
+				assert(0<decl_count);
+				flags &= ~C99_CPP0X_DECLSPEC_REGISTER;
+				}
+			if (C99_DECLSPEC_AUTO & flags)
+				{	//! \bug needs test case
+				specs[storage_count++] = "auto";
+				++erased_count;
+				message_header(x.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("storage-class specifier auto disallowed at translation-unit level (C99 6.9p2)");
+				zcc_errors.inc_error();
+				size_t j = 0;
+				size_t offset = 0;
+				do	if (robust_token_is_string<4>(x.data<0>()[i+j].index_tokens[0].token,"auto"))
+						++offset;
+					else if (0<offset)
+						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
+				while(decl_count> ++j);
+				j = offset;
+				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
+				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
+				decl_count -= offset;
+				assert(0<decl_count);
+				flags &= ~C99_DECLSPEC_AUTO;
+				};
+			if (1<storage_count)
+				{	//! \bug needs test case
+				message_header(x.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("declaration has too many storage-class specifiers: ");
+				INFORM_separated_list(specs,storage_count,", ");
+				INFORM(" (C99 6.7.1p2)");
+				zcc_errors.inc_error();
+				};
+			storage_count -= erased_count;
+			// inline requires a function type
+			// typedef must have a function type to tolerate anything (but kills inline)
+			return 1>=storage_count;
+			};
+		return true;
+		}
+	void fixup_type() { base_type.qualifier<0>() |= ((C99_CPP0X_DECLSPEC_CONST | C99_CPP0X_DECLSPEC_VOLATILE) & flags); };
 	uintmax_t get_flags() const {return flags;};
 	void value_copy_type(type_spec& dest) const {dest.value_copy(base_type);};
 };
@@ -8995,6 +9101,145 @@ public:
 		//! \todo handle other known types
 		return false;
 		};
+	bool analyze_flags_global(parse_tree& x, size_t i, size_t& decl_count)
+		{
+		assert(x.size<0>()>i);
+		assert(x.size<0>()-i>=decl_count);
+		if ((C99_CPP0X_DECLSPEC_TYPEDEF | C99_CPP0X_DECLSPEC_REGISTER | C99_CPP0X_DECLSPEC_STATIC | C99_CPP0X_DECLSPEC_EXTERN | CPP_DECLSPEC_MUTABLE) & flags)
+			{	// storage class specifiers
+			const char* specs[5];
+			unsigned int storage_count = 0;
+			unsigned int erased_count = 0;
+			if (C99_CPP0X_DECLSPEC_TYPEDEF & flags)
+				specs[storage_count++] = "typedef";
+			if (C99_CPP0X_DECLSPEC_STATIC & flags)
+				specs[storage_count++] = "static";
+			if (C99_CPP0X_DECLSPEC_EXTERN & flags)
+				specs[storage_count++] = "extern";
+			if (C99_CPP0X_DECLSPEC_REGISTER & flags)
+				{	//! \bug needs test case
+				specs[storage_count++] = "register";
+				++erased_count;
+				message_header(x.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("storage-class specifier register allowed only to objects named in a block, or function parameters (C++98 7.1.1p2)");
+				zcc_errors.inc_error();
+				size_t j = 0;
+				size_t offset = 0;
+				do	if (robust_token_is_string<8>(x.data<0>()[i+j].index_tokens[0].token,"register"))
+						++offset;
+					else if (0<offset)
+						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
+				while(decl_count> ++j);
+				j = offset;
+				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
+				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
+				decl_count -= offset;
+				assert(0<decl_count);
+				flags &= ~C99_CPP0X_DECLSPEC_REGISTER;
+				}
+			if (CPP_DECLSPEC_MUTABLE & flags)
+				{	//! \bug needs test case
+				specs[storage_count++] = "mutable";
+				++erased_count;
+				message_header(x.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("storage-class specifier mutable only allowed for non-static non-const non-reference class data members (C++0X 7.1.1p10)");
+				zcc_errors.inc_error();
+				size_t j = 0;
+				size_t offset = 0;
+				do	if (robust_token_is_string<7>(x.data<0>()[i+j].index_tokens[0].token,"mutable"))
+						++offset;
+					else if (0<offset)
+						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
+				while(decl_count> ++j);
+				j = offset;
+				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
+				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
+				decl_count -= offset;
+				assert(0<decl_count);
+				flags &= ~CPP_DECLSPEC_MUTABLE;
+				};
+			if (1<storage_count)
+				{	//! \bug needs test case
+				message_header(x.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("declaration has too many storage-class specifiers: ");
+				INFORM_separated_list(specs,storage_count,", ");
+				INFORM(" (C99 6.7.1p2)");
+				zcc_errors.inc_error();
+				}
+			storage_count -= erased_count;
+			// thread_local ok at namespace scope for objects/references
+			// inline dies if not a function type
+			// typedef must have a function type to tolerate anything (but kills inline)
+			// virtual and explicit can only be used in class declarations: erase (C++0X 7.1.2p5, 7.1.2p6
+			if (CPP_DECLSPEC_VIRTUAL & flags)
+				{	//! \bug needs test case
+				message_header(x.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("function specifier virtual allowed only for class member functions (C++98 7.1.2p5)");
+				zcc_errors.inc_error();
+				size_t j = 0;
+				size_t offset = 0;
+				do	if (robust_token_is_string<7>(x.data<0>()[i+j].index_tokens[0].token,"virtual"))
+						++offset;
+					else if (0<offset)
+						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
+				while(decl_count> ++j);
+				j = offset;
+				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
+				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
+				decl_count -= offset;
+				assert(0<decl_count);
+				flags &= ~CPP_DECLSPEC_VIRTUAL;
+				};
+			if (CPP_DECLSPEC_EXPLICIT & flags)
+				{	//! \bug needs test case
+				message_header(x.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("function specifier explicit allowed only for constructors (C++98 7.1.2p6)");
+				zcc_errors.inc_error();
+				size_t j = 0;
+				size_t offset = 0;
+				do	if (robust_token_is_string<8>(x.data<0>()[i+j].index_tokens[0].token,"explicit"))
+						++offset;
+					else if (0<offset)
+						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
+				while(decl_count> ++j);
+				j = offset;
+				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
+				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
+				decl_count -= offset;
+				assert(0<decl_count);
+				flags &= ~CPP_DECLSPEC_EXPLICIT;
+				};
+			// friend is only usable within a class
+			if (CPP_DECLSPEC_FRIEND & flags)
+				{	//! \bug needs test case
+				message_header(x.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("decl-specifier friend only useful within a class definition (C++98 7.1.4)");
+				zcc_errors.inc_error();
+				size_t j = 0;
+				size_t offset = 0;
+				do	if (robust_token_is_string<6>(x.data<0>()[i+j].index_tokens[0].token,"friend"))
+						++offset;
+					else if (0<offset)
+						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
+				while(decl_count> ++j);
+				j = offset;
+				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
+				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
+				decl_count -= offset;
+				assert(0<decl_count);
+				flags &= ~CPP_DECLSPEC_FRIEND;
+				};
+			return 1>=storage_count;
+			};
+		return true;
+		};
+	void fixup_type() { base_type.qualifier<0>() |= ((C99_CPP0X_DECLSPEC_CONST | C99_CPP0X_DECLSPEC_VOLATILE) & flags); };
 	uintmax_t get_flags() const {return flags;};
 	void value_copy_type(type_spec& dest) const {dest.value_copy(base_type);};
 };
@@ -9049,7 +9294,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		{
 		conserve_tokens(src.c_array<0>()[i]);
 		// general declaration scanner 
-		//! \todo we intercept typedefs as part of general variable declaration detection (weird storage qualifier)
+		// we intercept typedefs as part of general variable declaration detection (weird storage qualifier)
 		// intercept declarations as follows
 		// * storage-class specifiers
 		// ** C: extern static auto register
@@ -9065,9 +9310,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		size_t decl_count = src.get_span<0>(i,declFind);
 		if (decl_count)
 			{
-//			const uintmax_t decl_flags = declFind.get_flags();
-			//! \todo analyze decl_specifiers for errors and warnings
-			//! \todo apply const and volatile at this time
+			const bool coherent_storage_specifiers = declFind.analyze_flags_global(src,i,decl_count);
 			if (src.size<0>()-i<=decl_count)
 				{	// unterminated declaration
 					//! \bug need test case
@@ -9090,6 +9333,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				src.DeleteNSlotsAt<0>(decl_count+1,i);
 				continue;
 				};
+			declFind.fixup_type();	// apply const, volatile
 
 			size_t decl_offset = 0;
 			bool have_we_parsed_yet = false;
@@ -9142,48 +9386,51 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				//! \todo analyze decl_specifiers for errors (now have full target type)
 				// something is being declared
 				have_we_parsed_yet = true;
-				if (C99_CPP0X_DECLSPEC_TYPEDEF & declFind.get_flags())
-					{	// typedef
-					register_token<0>(src.c_array<0>()[initdecl_identifier_idx]);
-					// verify that there is no prior definition
-					const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
-					if (NULL!=tmp)
-						{
-						if (bootstrap==tmp->first)
-							{	// warn if there is a prior, consistent definition
-								//! \bug needs test case
-							message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
-							INC_INFORM(WARN_STR);
-							INC_INFORM("redeclaring ");
-							INC_INFORM(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
-							INC_INFORM(", prior typedef at ");
-							INC_INFORM(tmp->second);
-							INC_INFORM(':');
-							INFORM(tmp->third);
-							if (bool_options[boolopt::warnings_are_errors])
+				if (coherent_storage_specifiers)
+					{
+					if (C99_CPP0X_DECLSPEC_TYPEDEF & declFind.get_flags())
+						{	// typedef
+						register_token<0>(src.c_array<0>()[initdecl_identifier_idx]);
+						// verify that there is no prior definition
+						const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
+						if (NULL!=tmp)
+							{
+							if (bootstrap==tmp->first)
+								{	// warn if there is a prior, consistent definition
+									//! \bug needs test case
+								message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
+								INC_INFORM(WARN_STR);
+								INC_INFORM("redeclaring ");
+								INC_INFORM(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
+								INC_INFORM(", prior typedef at ");
+								INC_INFORM(tmp->second);
+								INC_INFORM(':');
+								INFORM(tmp->third);
+								if (bool_options[boolopt::warnings_are_errors])
+									zcc_errors.inc_error();
+								}
+							else{	// error if there is a prior, inconsistent definition
+									//! \bug needs test case
+								message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
+								INC_INFORM(ERR_STR);
+								INC_INFORM("redeclaring ");
+								INC_INFORM(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
+								INC_INFORM(", prior typedef at ");
+								INC_INFORM(tmp->second);
+								INC_INFORM(':');
+								INFORM(tmp->third);
 								zcc_errors.inc_error();
+								}	
+							// do not re-register if there is a prior definition
 							}
-						else{	// error if there is a prior, inconsistent definition
-								//! \bug needs test case
-							message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
-							INC_INFORM(ERR_STR);
-							INC_INFORM("redeclaring ");
-							INC_INFORM(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
-							INC_INFORM(", prior typedef at ");
-							INC_INFORM(tmp->second);
-							INC_INFORM(':');
-							INFORM(tmp->third);
-							zcc_errors.inc_error();
-							}	
-						// do not re-register if there is a prior definition
+						else	// register this with types object
+							types.set_typedef(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first,src.data<0>()[initdecl_identifier_idx].index_tokens[0].src_filename,src.data<0>()[initdecl_identifier_idx].index_tokens[0].logical_line.first,bootstrap);
 						}
-					else	// register this with types object
-						types.set_typedef(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first,src.data<0>()[initdecl_identifier_idx].index_tokens[0].src_filename,src.data<0>()[initdecl_identifier_idx].index_tokens[0].logical_line.first,bootstrap);
-					}
 #if 0
-				else{	// something else
-					};
+					else{	// something else
+						};
 #endif
+					}
 				decl_offset += initdecl_span;
 				if (src.size<0>()-(i+decl_count)<=decl_offset)
 					{	// unterminated declaration: error
@@ -9394,7 +9641,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			};
 		// general declaration scanner (have to catch C++0X inline namespaces first when those come up)
 		// ideally would cope with both C++98 and C++0X
-		//! \todo we intercept typedefs as part of general variable declaration detection (weird storage qualifier)
+		// we intercept typedefs as part of general variable declaration detection (weird storage qualifier)
 		// intercept declarations as follows
 		// * storage-class specifiers
 		// ** C++98: auto register static extern mutable [class-data only]
@@ -9414,9 +9661,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		size_t decl_count = src.get_span<0>(i,declFind);
 		if (decl_count)
 			{
-//			const uintmax_t decl_flags = declFind.get_flags();
-			//! \todo analyze decl_specifiers for errors
-			//! \todo apply const and volatile at this time
+			const bool coherent_storage_specifiers = declFind.analyze_flags_global(src,i,decl_count);
 			if (src.size<0>()-i<=decl_count)
 				{	// unterminated declaration
 					//! \bug need test case
@@ -9439,6 +9684,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				src.DeleteNSlotsAt<0>(decl_count+1,i);
 				continue;
 				};
+			declFind.fixup_type();	// apply const, volatile
 
 			size_t decl_offset = 0;
 			bool have_we_parsed_yet = false;
@@ -9491,60 +9737,63 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				//! \todo analyze decl_specifiers for errors (now have full target type)
 				// something is being declared
 				have_we_parsed_yet = true;
-				if (C99_CPP0X_DECLSPEC_TYPEDEF & declFind.get_flags())
-					{	// typedef
-					register_token<0>(src.c_array<0>()[initdecl_identifier_idx]);
-					const char* fullname = src.c_array<0>()[initdecl_identifier_idx].index_tokens[0].token.first;
-					// deal with namespaces
-					if (NULL!=active_namespace)
-						{
-						char* const actual_name = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(strlen(active_namespace)+2+strlen(fullname)));
-						strcpy(actual_name,active_namespace);
-						strcat(actual_name,"::");
-						strcat(actual_name,fullname);
-						fullname = register_string(actual_name);	//! \todo would like to use "consume string" to avoid frivolous memory allocation
-						free(actual_name);
-						}
-
-					// verify that there is no prior definition
-					const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(fullname);
-					if (NULL!=tmp)
-						{
-						if (bootstrap==tmp->first)
-							{	// warn if there is a prior, consistent definition
-								//! \bug needs test case
-							message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
-							INC_INFORM(WARN_STR);
-							INC_INFORM("redeclaring ");
-							INC_INFORM(fullname);
-							INC_INFORM(", prior typedef at ");
-							INC_INFORM(tmp->second);
-							INC_INFORM(':');
-							INFORM(tmp->third);
-							if (bool_options[boolopt::warnings_are_errors])
-								zcc_errors.inc_error();
+				if (coherent_storage_specifiers)
+					{
+					if (C99_CPP0X_DECLSPEC_TYPEDEF & declFind.get_flags())
+						{	// typedef
+						register_token<0>(src.c_array<0>()[initdecl_identifier_idx]);
+						const char* fullname = src.c_array<0>()[initdecl_identifier_idx].index_tokens[0].token.first;
+						// deal with namespaces
+						if (NULL!=active_namespace)
+							{
+							char* const actual_name = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(strlen(active_namespace)+2+strlen(fullname)));
+							strcpy(actual_name,active_namespace);
+							strcat(actual_name,"::");
+							strcat(actual_name,fullname);
+							fullname = register_string(actual_name);	//! \todo would like to use "consume string" to avoid frivolous memory allocation
+							free(actual_name);
 							}
-						else{	// error if there is a prior, inconsistent definition
-								//! \bug needs test case
-							message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
-							INC_INFORM(ERR_STR);
-							INC_INFORM("redeclaring ");
-							INC_INFORM(fullname);
-							INC_INFORM(", prior typedef at ");
-							INC_INFORM(tmp->second);
-							INC_INFORM(':');
-							INFORM(tmp->third);
-							zcc_errors.inc_error();
-							}	
-						// do not re-register if there is a prior definition
+
+						// verify that there is no prior definition
+						const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(fullname);
+						if (NULL!=tmp)
+							{
+							if (bootstrap==tmp->first)
+								{	// warn if there is a prior, consistent definition
+									//! \bug needs test case
+								message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
+								INC_INFORM(WARN_STR);
+								INC_INFORM("redeclaring ");
+								INC_INFORM(fullname);
+								INC_INFORM(", prior typedef at ");
+								INC_INFORM(tmp->second);
+								INC_INFORM(':');
+								INFORM(tmp->third);
+								if (bool_options[boolopt::warnings_are_errors])
+									zcc_errors.inc_error();
+								}
+							else{	// error if there is a prior, inconsistent definition
+									//! \bug needs test case
+								message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
+								INC_INFORM(ERR_STR);
+								INC_INFORM("redeclaring ");
+								INC_INFORM(fullname);
+								INC_INFORM(", prior typedef at ");
+								INC_INFORM(tmp->second);
+								INC_INFORM(':');
+								INFORM(tmp->third);
+								zcc_errors.inc_error();
+								}
+							// do not re-register if there is a prior definition
+							}
+						else	// register this with types object
+							types.set_typedef(fullname,src.data<0>()[initdecl_identifier_idx].index_tokens[0].src_filename,src.data<0>()[initdecl_identifier_idx].index_tokens[0].logical_line.first,bootstrap);
 						}
-					else	// register this with types object
-						types.set_typedef(fullname,src.data<0>()[initdecl_identifier_idx].index_tokens[0].src_filename,src.data<0>()[initdecl_identifier_idx].index_tokens[0].logical_line.first,bootstrap);
-					}
 #if 0
-				else{	// something else
-					};
+					else{	// something else
+						};
 #endif
+					};
 				decl_offset += initdecl_span;
 				if (src.size<0>()-(i+decl_count)<=decl_offset)
 					{	// unterminated declaration: error
