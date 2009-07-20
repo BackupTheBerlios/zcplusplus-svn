@@ -9,7 +9,6 @@
 #include "Zaimoni.STL/LexParse/LangConf.hpp"
 #include "Zaimoni.STL/search.hpp"
 #include "AtomicString.h"
-#include "string_counter.hpp"
 #include "Trigraph.hpp"
 #include "Flat_UNI.hpp"
 #include "errors.hpp"
@@ -9457,8 +9456,6 @@ static bool is_CPP_namespace(const parse_tree& src)
 // handle namespaces or else
 static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* const active_namespace)
 {
-	static string_counter anon_namespace_index;
-
 	//! \todo type-vectorize as part of the lexical-forward loop.  Need to handle
 	// * indirection depth n (already have this in practice)
 	// * const, volatile at each level of indirection 0..n
@@ -9521,28 +9518,24 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				src.c_array<0>()[i+1].clear();
 				src.DeleteIdx<0>(i+1);
 
-				// anonymous namespace names are technically illegal: $___
-				char* new_active_namespace = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(1+anon_namespace_index.size()));
-				new_active_namespace[0] = '$';
-				strcat(new_active_namespace,anon_namespace_index.data());
-				src.c_array<0>()[i].c_array<2>()[0].grab_index_token_from<0>(new_active_namespace,C_TESTFLAG_IDENTIFIER);	// pretend it's an identifier
+				// anonymous namespace names are technically illegal
+				// GCC uses <unknown> and handles uniqueness at link time
+				src.c_array<0>()[i].c_array<2>()[0].grab_index_token_from_str_literal<0>("<unknown>",C_TESTFLAG_IDENTIFIER);	// pretend it's an identifier
 				src.c_array<0>()[i].c_array<2>()[0].grab_index_token_location_from<0,0>(src.data<0>()[i].data<2>()[1]);	// inject it at where the namespace body starts
 				assert(is_CPP_namespace(src.data<0>()[i]));
 
 				if (active_namespace)
 					{
-					new_active_namespace = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(strlen(active_namespace)+3+anon_namespace_index.size()));
+					char* new_active_namespace = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(strlen(active_namespace)+11 /*sizeof("::<unknown>")-1*/));
 					strcpy(new_active_namespace,active_namespace);
-					strcat(new_active_namespace,"::$");
-					strcat(new_active_namespace,anon_namespace_index.data());
+					strcat(new_active_namespace,"::<unknown>");
+					strcat(new_active_namespace,"");
+					CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[1],types,new_active_namespace);
+					free(new_active_namespace);
 					}
 				else{
-					new_active_namespace = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(anon_namespace_index.size()));
-					strcpy(new_active_namespace,anon_namespace_index.data());
+					CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[1],types,"<unknown>");
 					}
-				++anon_namespace_index;	// increment now, in case of nested anonymous namespaces
-				CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[1],types,new_active_namespace);
-				free(new_active_namespace);
 				++i;
 				continue;
 				}
@@ -9607,6 +9600,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			++i;
 			continue;
 			};
+		// C++0X also has inline namespaces; all anonymous namespaces are already inline
 		// general declaration scanner (have to catch C++0X inline namespaces first when those come up)
 		// ideally would cope with both C++98 and C++0X
 		// we intercept typedefs as part of general variable declaration detection (weird storage qualifier)
