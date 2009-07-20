@@ -8957,6 +8957,30 @@ void INFORM_separated_list(const char* const* x,size_t x_len, const char* const 
 		};
 }
 
+//! \todo does this need to be in ParseTree.hpp?
+template<class T>
+size_t
+//typename boost::enable_if<boost::is_array<T>, size_t>::type
+flush_token(parse_tree& x, const size_t i, const size_t n, T target)
+{
+	assert(x.size<0>()>i);
+	assert(x.size<0>()-i>=n);
+	size_t offset = 0;
+	size_t j = 0;
+	do	if (robust_token_is_string<sizeof(T)-1>(x.data<0>()[i+j].index_tokens[0].token,target))
+			++offset;
+		else if (0<offset)
+			x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
+	while(n> ++j);
+	if (0<offset)
+		{
+		j = offset;
+		while(0<j) x.c_array<0>()[i+n- j--].clear();
+		x.DeleteNSlotsAt<0>(offset,i+n-offset);
+		}
+	return offset;
+}
+
 class C99_decl_specifier_scanner
 {
 private:
@@ -8981,11 +9005,14 @@ public:
 			++decl_count[Idx];
 			return true;
 			};
+		// not a decl-specifier; bail out if we already have a type
+		if (base_type.base_type_index) return false;
 		if (PARSE_PRIMARY_TYPE & x.flags)
 			{
 			base_type.value_copy(x.type_code);
 			return true;
 			}
+		//! \todo handle typedefs
 		//! \todo handle other known types
 		return false;
 		};
@@ -9006,45 +9033,27 @@ public:
 				specs[storage_count++] = "extern";
 			if (C99_CPP0X_DECLSPEC_REGISTER & flags)
 				{	//! \bug needs test case
+				//! \todo should be warning for --do-what-i-mean
 				specs[storage_count++] = "register";
 				++erased_count;
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("storage-class specifier register disallowed at translation-unit level (C99 6.9p2)");
 				zcc_errors.inc_error();
-				size_t j = 0;
-				size_t offset = 0;
-				do	if (robust_token_is_string<8>(x.data<0>()[i+j].index_tokens[0].token,"register"))
-						++offset;
-					else if (0<offset)
-						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
-				while(decl_count> ++j);
-				j = offset;
-				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
-				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
-				decl_count -= offset;
+				decl_count -= flush_token(x,i,decl_count,"register");
 				assert(0<decl_count);
 				flags &= ~C99_CPP0X_DECLSPEC_REGISTER;
 				}
 			if (C99_DECLSPEC_AUTO & flags)
 				{	//! \bug needs test case
+				//! \todo should be warning for --do-what-i-mean
 				specs[storage_count++] = "auto";
 				++erased_count;
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("storage-class specifier auto disallowed at translation-unit level (C99 6.9p2)");
 				zcc_errors.inc_error();
-				size_t j = 0;
-				size_t offset = 0;
-				do	if (robust_token_is_string<4>(x.data<0>()[i+j].index_tokens[0].token,"auto"))
-						++offset;
-					else if (0<offset)
-						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
-				while(decl_count> ++j);
-				j = offset;
-				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
-				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
-				decl_count -= offset;
+				decl_count -= flush_token(x,i,decl_count,"auto");
 				assert(0<decl_count);
 				flags &= ~C99_DECLSPEC_AUTO;
 				};
@@ -9093,11 +9102,14 @@ public:
 			++decl_count[Idx];
 			return true;
 			};
+		// not a decl-specifier; bail out if we already have a type
+		if (base_type.base_type_index) return false;
 		if (PARSE_PRIMARY_TYPE & x.flags)
 			{
 			base_type.value_copy(x.type_code);
 			return true;
 			}
+		//! \todo handle typedefs
 		//! \todo handle other known types
 		return false;
 		};
@@ -9118,50 +9130,33 @@ public:
 				specs[storage_count++] = "extern";
 			if (C99_CPP0X_DECLSPEC_REGISTER & flags)
 				{	//! \bug needs test case
+				//! \todo should be warning for --do-what-i-mean
 				specs[storage_count++] = "register";
 				++erased_count;
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("storage-class specifier register allowed only to objects named in a block, or function parameters (C++98 7.1.1p2)");
 				zcc_errors.inc_error();
-				size_t j = 0;
-				size_t offset = 0;
-				do	if (robust_token_is_string<8>(x.data<0>()[i+j].index_tokens[0].token,"register"))
-						++offset;
-					else if (0<offset)
-						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
-				while(decl_count> ++j);
-				j = offset;
-				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
-				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
-				decl_count -= offset;
+				decl_count -= flush_token(x,i,decl_count,"register");
 				assert(0<decl_count);
 				flags &= ~C99_CPP0X_DECLSPEC_REGISTER;
 				}
 			if (CPP_DECLSPEC_MUTABLE & flags)
 				{	//! \bug needs test case
+				//! \todo should be warning for --do-what-i-mean
 				specs[storage_count++] = "mutable";
 				++erased_count;
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("storage-class specifier mutable only allowed for non-static non-const non-reference class data members (C++0X 7.1.1p10)");
 				zcc_errors.inc_error();
-				size_t j = 0;
-				size_t offset = 0;
-				do	if (robust_token_is_string<7>(x.data<0>()[i+j].index_tokens[0].token,"mutable"))
-						++offset;
-					else if (0<offset)
-						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
-				while(decl_count> ++j);
-				j = offset;
-				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
-				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
-				decl_count -= offset;
+				decl_count -= flush_token(x,i,decl_count,"mutable");
 				assert(0<decl_count);
 				flags &= ~CPP_DECLSPEC_MUTABLE;
 				};
 			if (1<storage_count)
 				{	//! \bug needs test case
+				//! \todo should be warning for --do-what-i-mean
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("declaration has too many storage-class specifiers: ");
@@ -9176,62 +9171,35 @@ public:
 			// virtual and explicit can only be used in class declarations: erase (C++0X 7.1.2p5, 7.1.2p6
 			if (CPP_DECLSPEC_VIRTUAL & flags)
 				{	//! \bug needs test case
+				//! \todo should be warning for --do-what-i-mean
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("function specifier virtual allowed only for class member functions (C++98 7.1.2p5)");
 				zcc_errors.inc_error();
-				size_t j = 0;
-				size_t offset = 0;
-				do	if (robust_token_is_string<7>(x.data<0>()[i+j].index_tokens[0].token,"virtual"))
-						++offset;
-					else if (0<offset)
-						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
-				while(decl_count> ++j);
-				j = offset;
-				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
-				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
-				decl_count -= offset;
+				decl_count -= flush_token(x,i,decl_count,"virtual");
 				assert(0<decl_count);
 				flags &= ~CPP_DECLSPEC_VIRTUAL;
 				};
 			if (CPP_DECLSPEC_EXPLICIT & flags)
 				{	//! \bug needs test case
+				//! \todo should be warning for --do-what-i-mean
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("function specifier explicit allowed only for constructors (C++98 7.1.2p6)");
 				zcc_errors.inc_error();
-				size_t j = 0;
-				size_t offset = 0;
-				do	if (robust_token_is_string<8>(x.data<0>()[i+j].index_tokens[0].token,"explicit"))
-						++offset;
-					else if (0<offset)
-						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
-				while(decl_count> ++j);
-				j = offset;
-				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
-				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
-				decl_count -= offset;
+				decl_count -= flush_token(x,i,decl_count,"explicit");
 				assert(0<decl_count);
 				flags &= ~CPP_DECLSPEC_EXPLICIT;
 				};
 			// friend is only usable within a class
 			if (CPP_DECLSPEC_FRIEND & flags)
 				{	//! \bug needs test case
+				//! \todo should be warning for --do-what-i-mean
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("decl-specifier friend only useful within a class definition (C++98 7.1.4)");
 				zcc_errors.inc_error();
-				size_t j = 0;
-				size_t offset = 0;
-				do	if (robust_token_is_string<6>(x.data<0>()[i+j].index_tokens[0].token,"friend"))
-						++offset;
-					else if (0<offset)
-						x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
-				while(decl_count> ++j);
-				j = offset;
-				while(0<j) x.c_array<0>()[i+decl_count- j--].clear();
-				x.DeleteNSlotsAt<0>(offset,i+decl_count-offset);
-				decl_count -= offset;
+				decl_count -= flush_token(x,i,decl_count,"friend");
 				assert(0<decl_count);
 				flags &= ~CPP_DECLSPEC_FRIEND;
 				};
