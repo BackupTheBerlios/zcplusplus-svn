@@ -342,6 +342,14 @@ struct parse_tree
 		while(x(data<src_idx>()[i]) && (++found,size<src_idx>()> ++i));
 		return found;
 		}
+	template<size_t src_idx,class scanner> size_t destructive_get_span(size_t i,scanner& x)
+		{
+		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>src_idx);
+		assert(size<src_idx>()>i);
+		size_t found = 0;
+		while(x(*this,i) && (++found,size<src_idx>()> ++i));
+		return found;
+		}
 private:
 	bool _resize(const size_t arg_idx,size_t n);
 	void _eval_to_arg(size_t arg_idx, size_t i);

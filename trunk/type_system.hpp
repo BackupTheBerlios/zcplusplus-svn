@@ -56,7 +56,7 @@ public:
 		}
 
 	void set_typedef(const char* const alias, const char* filename, const size_t lineno, type_spec& src);	// invalidates src
-	const zaimoni::POD_triple<type_spec,const char*,size_t>* get_typedef(const char* const alias);
+	const zaimoni::POD_triple<type_spec,const char*,size_t>* get_typedef(const char* const alias) const;
 private:
 	type_index _get_id(const char* const x,size_t x_len) const;
 	type_data _get_flags(size_t id) const;

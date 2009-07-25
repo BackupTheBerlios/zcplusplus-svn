@@ -42,6 +42,8 @@ void type_system::set_typedef(const char* const alias, const char* filename, con
 {
 	assert(NULL!=alias && '0'!= *alias);
 	assert(NULL!=filename && '0'!= *alias);
+	//! \todo: strip off trailing inline namespaces
+	// <unknown> is the hack for anonymous namespaces taken from GCC, it's always inline
 	errr tmp = binary_find(alias,strlen(alias),typedef_registry.data(),typedef_registry.size());
 	assert(0>tmp);		// error to call with conflicting prior definition
 	if (0<=tmp) return;	// conflicting prior definition
@@ -53,9 +55,11 @@ void type_system::set_typedef(const char* const alias, const char* filename, con
 	src.clear();
 }
 
-const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_typedef(const char* const alias)
+const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_typedef(const char* const alias) const
 {
 	assert(NULL!=alias);
+	//! \todo: strip off trailing inline namespaces
+	// <unknown> is the hack for anonymous namespaces taken from GCC, it's always inline
 	errr tmp = binary_find(alias,strlen(alias),typedef_registry.data(),typedef_registry.size());
 	if (0<=tmp) return &typedef_registry[tmp].second;
 	return NULL;

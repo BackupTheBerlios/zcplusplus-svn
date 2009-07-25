@@ -8956,6 +8956,18 @@ void INFORM_separated_list(const char* const* x,size_t x_len, const char* const 
 		};
 }
 
+//! \todo should this be a type_system member?
+bool check_for_typedef(type_spec& dest,const char* const src,const type_system& types)
+{
+	const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(src);
+	if (NULL!=tmp)
+		{	//! \todo C++: check for access control if source ends up being a class or struct
+		dest.value_copy(tmp->first);
+		return true;
+		}
+	return false;
+}
+
 //! \todo does this need to be in ParseTree.hpp?
 template<class T>
 size_t
@@ -8986,8 +8998,9 @@ private:
 	size_t decl_count[CHAR_BIT*sizeof(uintmax_t)];
 	uintmax_t flags;
 	type_spec base_type;
+	const type_system& types;
 public:
-	C99_decl_specifier_scanner() : flags(0)
+	C99_decl_specifier_scanner(const type_system& _types) : flags(0),types(_types)
 		{
 		clear(decl_count);
 		base_type.clear();
@@ -9011,7 +9024,8 @@ public:
 			base_type.value_copy(x.type_code);
 			return true;
 			}
-		//! \todo handle typedefs
+		// handle typedefs
+		if (check_for_typedef(base_type,x.index_tokens[0].token.first,types)) return true;
 		//! \todo handle other known types
 		return false;
 		};
@@ -9077,20 +9091,102 @@ public:
 	void value_copy_type(type_spec& dest) const {dest.value_copy(base_type);};
 };
 
+bool CPP_ok_for_toplevel_qualified_name(const parse_tree& x)
+{
+	if (!x.is_atomic()) return false;
+	if (PARSE_PRIMARY_TYPE & x.flags) return false;
+	if (C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags) return true;
+	if (token_is_string<2>(x.index_tokens[0].token,"::")) return true;
+	return false;
+}
+
+bool CPP_locate_qualified_name(parse_tree& x, size_t i)
+{
+	assert(x.size<0>()>i);
+	if (!CPP_ok_for_toplevel_qualified_name(x.data<0>()[i])) return NULL;
+	size_t span = 1;
+	size_t resize_to = x.data<0>()[i].index_tokens[0].token.second;
+	while(x.size<0>()-i>span && CPP_ok_for_toplevel_qualified_name(x.data<0>()[i+span]) && (C_TESTFLAG_IDENTIFIER & x.data<0>()[i+span].index_tokens[0].flags ? token_is_string<2>(x.data<0>()[i+span-1].index_tokens[0].token,"::") : !token_is_string<2>(x.data<0>()[i+span-1].index_tokens[0].token,"::")))
+		{
+		++span;
+		resize_to += x.data<0>()[i+span].index_tokens[0].token.second;
+		}
+	//! \todo handle templates later
+	if (1<=span && token_is_string<2>(x.data<0>()[i+span-1].index_tokens[0].token,"::")) x.c_array<0>()[i].flags |= parse_tree::INVALID;
+	if (1>=span) return span;
+	{
+	char* tmp = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(resize_to));
+	strncpy(tmp,x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second);
+	size_t j = 1;
+	do	strncat(tmp,x.data<0>()[i+j].index_tokens[0].token.first,x.data<0>()[i+j].index_tokens[0].token.second);
+	while(span> ++j);
+	const char* tmp2 = is_string_registered(tmp);
+	if (NULL==tmp2)
+		{
+		x.c_array<0>()[i].grab_index_token_from_str_literal<0>(tmp,C_TESTFLAG_IDENTIFIER);	// well...not really, but it'll substitute for one
+		x.c_array<0>()[i].control_index_token<0>(true);
+		}
+	else{
+		free(tmp);
+		x.c_array<0>()[i].grab_index_token_from_str_literal<0>(tmp2,C_TESTFLAG_IDENTIFIER);	// well...not really, but it'll substitute for one
+		}
+	}
+	x.DeleteNSlotsAt<0>(span-1,i+1);
+	return true;
+}
+
+//! \todo belongs elsewhere
+size_t count_disjoint_substring_instances(const char* const src,const char* const match)
+{
+	assert(NULL!=src && *src);
+	assert(NULL!=match && *match);
+	const size_t src_len = strlen(src);
+	const size_t match_len = strlen(match);
+	size_t n = 0;
+	const char* test = strstr(src,match);
+	while(NULL!=test)
+		{
+		++n;
+		test = (2*match_len<=src_len-(test-src)) ? strstr(test+match_len,match) : NULL;
+		};
+	return n;
+}
+
+//! \todo belongs elsewhere
+void report_disjoint_substring_instances(const char* const src,const char* const match,const char**& namespace_break_stack,const size_t namespace_break_stack_size)
+{
+	assert(NULL!=src && *src);
+	assert(NULL!=match && *match);
+	assert(NULL!=namespace_break_stack);
+	const size_t src_len = strlen(src);
+	const size_t match_len = strlen(match);
+	size_t n = 0;
+	const char* test = strstr(src,match);
+	while(NULL!=test)
+		{
+		assert(namespace_break_stack_size>n);
+		namespace_break_stack[n++] = test;
+		test = (2*match_len<=src_len-(test-src)) ? strstr(test+match_len,match) : NULL;
+		};
+	assert(0<n);
+}
+
 class CPP0X_decl_specifier_scanner
 {
 private:
 	size_t decl_count[CHAR_BIT*sizeof(uintmax_t)];
 	uintmax_t flags;
 	type_spec base_type;
+	const type_system& types;
+	const char* const active_namespace;
 public:
-	CPP0X_decl_specifier_scanner() : flags(0)
+	CPP0X_decl_specifier_scanner(const type_system& _types,const char* const _active_namespace) : flags(0),types(_types),active_namespace(_active_namespace)
 		{
 		clear(decl_count);
 		base_type.clear();
 		}
 	// trivial destructor, copy constructor, assignment fine
-	bool operator()(const parse_tree& x)
+	bool operator()(parse_tree& x,const size_t i)
 		{
 		BOOST_STATIC_ASSERT(CHAR_BIT*sizeof(uintmax_t)>=STATIC_SIZE(CPP0X_decl_specifiers));
 		if (!x.is_atomic()) return false;
@@ -9108,7 +9204,72 @@ public:
 			base_type.value_copy(x.type_code);
 			return true;
 			}
-		//! \todo handle typedefs
+		{	// handle typedefs
+		// determine what fully-qualified name would be
+		if (CPP_locate_qualified_name(x,i))
+			{
+			if (parse_tree::INVALID & x.data<0>()[i].flags)
+				{	//! \todo error
+				message_header(x.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("qualified-name may not end in :: (C++98 7.1.5.3p1, 5.1p8)");
+				zcc_errors.inc_error();
+				return false;
+				};
+			if (!strncmp(x.data<0>()[i].index_tokens[0].token.first,"::",2))
+				{	// fully-qualified
+				assert(2<x.data<0>()[i].index_tokens[0].token.second);
+				return check_for_typedef(base_type,x.data<0>()[i].index_tokens[0].token.first+2,types);
+				};
+			// ahem...Koenig lookup
+			// work backwards until we find something
+			// if the result ends up being from a struct/class, access control will cut in
+			// in any case, the types object is responsible for handling aliases and using directives
+			// Don't use the check_for_typedef function in this block (conflicts with dynamic RAM loading minimization)
+			if (NULL!=active_namespace)
+				{
+				const size_t active_namespace_len = strlen(active_namespace);
+				char* tmp2 = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(active_namespace_len+2+x.data<0>()[i].index_tokens[0].token.second));
+				strcpy(tmp2,active_namespace);
+				strcpy(tmp2+active_namespace_len,"::");
+				strncpy(tmp2+active_namespace_len+2,x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second);
+				const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(tmp2);
+				if (NULL!=tmp)
+					{	//! \todo check for access-control if source is a class or struct
+					free(tmp2);
+					base_type.value_copy(tmp->first);
+					return true;
+					};
+				size_t namespace_break_stack_size = count_disjoint_substring_instances(active_namespace,"::");
+				if (0<namespace_break_stack_size)
+					{	//! \todo this wastes a calloc/free, but odds are the code cost of special-casing is larger
+					const char** namespace_break_stack = _new_buffer_nonNULL_throws<const char*>(namespace_break_stack_size);
+					report_disjoint_substring_instances(active_namespace,"::",namespace_break_stack,namespace_break_stack_size);
+					do	{
+						size_t offset = namespace_break_stack[--namespace_break_stack_size]-active_namespace;
+						strncpy(tmp2,active_namespace,offset);
+						strcpy(tmp2+offset,"::");
+						offset += 2;
+						strncpy(tmp2+offset,x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second);
+						tmp2[offset+x.data<0>()[i].index_tokens[0].token.second] = '\0';
+						const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(tmp2);
+						if (NULL!=tmp)
+							{	//! \todo check for access-control if source is a class or struct
+							free(namespace_break_stack);
+							free(tmp2);
+							base_type.value_copy(tmp->first);
+							return true;
+							};
+						}
+					while(0<namespace_break_stack_size);
+					free(namespace_break_stack);
+					};
+				free(tmp2);
+				}
+			// last case: just try it as-is
+			return check_for_typedef(base_type,x.data<0>()[i].index_tokens[0].token.first,types);
+			}
+		}
 		//! \todo handle other known types
 		return false;
 		};
@@ -9273,7 +9434,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		// ** C: const volatile restrict (but pointer type required for restrict)
 		// * atomic types have already been parsed, we need to catch the others
 		{
-		C99_decl_specifier_scanner declFind;
+		C99_decl_specifier_scanner declFind(types);
 		size_t decl_count = src.get_span<0>(i,declFind);
 		if (decl_count)
 			{
@@ -9507,9 +9668,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				};
 			if (	robust_token_is_char<'{'>(src.data<0>()[i+1].index_tokens[0].token)
 				&&	robust_token_is_char<'}'>(src.data<0>()[i+1].index_tokens[1].token))
-				{	//! \todo: handle unnamed namespace
-					// uniqueish name: postfix arg 1 (try: $...)
-					// namespace definition body: postfix arg 2
+				{	//! handle unnamed namespace
 					//! \test zcc\namespace.CPP\Warn_emptybody2.hpp
 					// regardless of official linkage, entities in anonymous namespaces aren't very accessible outside of the current translation unit;
 					// any reasonable linker thinks they have static linkage
@@ -9619,8 +9778,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		// * atomic types have already been parsed, we need to catch the others
 		// * C++0x: auto is a possible type!
 		{
-		CPP0X_decl_specifier_scanner declFind;
-		size_t decl_count = src.get_span<0>(i,declFind);
+		CPP0X_decl_specifier_scanner declFind(types,active_namespace);
+		size_t decl_count = src.destructive_get_span<0>(i,declFind);
 		if (decl_count)
 			{
 			const bool coherent_storage_specifiers = declFind.analyze_flags_global(src,i,decl_count);
