@@ -229,6 +229,22 @@ static const zaimoni::POD_pair<const char*,size_t> stdint_h_core[]
 #define STDINT_LEAST_FAST_INJECT_LINE 47
 #define STDINT_CPP_LEAST_FAST_INJECT_LINE 61
 
+static void final_init_tokenlist(zaimoni::Token<char>* const * x, size_t x_len, const char* const header_name)
+{
+	assert(NULL!=x);
+	assert(0<x_len);
+	assert(NULL!=header_name);
+	while(0<x_len)
+		{
+		--x_len;
+		assert(NULL!=x[x_len]);
+		x[x_len]->logical_line.first = x_len+1;
+		x[x_len]->logical_line.second = 0;
+		x[x_len]->original_line = x[x_len]->logical_line;
+		x[x_len]->src_filename = header_name;
+		};
+}
+
 /*! 
  * Improvises the C99 limits.h header from target information.  Can throw std::bad_alloc.
  * 
@@ -249,10 +265,6 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	do	{
 		--i;
 		tmp[i] = new zaimoni::Token<char>(limits_h_core[i].first,0,limits_h_core[i].second,0);
-		tmp[i]->logical_line.first = i+1;
-		tmp[i]->logical_line.second = 0;
-		tmp[i]->original_line = tmp[i]->logical_line;
-		tmp[i]->src_filename = header_name;
 		}
 	while(0<i);
 	// initialize the limits from target_machine
@@ -352,6 +364,8 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// handle POSIX; should be no question of representability for reasonable machines
 	tmp[LIMITS_WORD_BIT_LINE]->append(z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_int>(),buf+1,10)-1);
 	tmp[LIMITS_LONG_BIT_LINE]->append(z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_long>(),buf+1,10)-1);
+
+	final_init_tokenlist(TokenList.c_array(),TokenList.size(),header_name);
 }
 
 //! \bug balancing feature envy vs minimal interface
@@ -448,10 +462,6 @@ CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	do	{
 		--i;
 		tmp[i] = new zaimoni::Token<char>(stddef_h_core[i].first,0,stddef_h_core[i].second,0);
-		tmp[i]->logical_line.first = i+1;
-		tmp[i]->logical_line.second = 0;
-		tmp[i]->original_line = tmp[i]->logical_line;
-		tmp[i]->src_filename = header_name;
 		}
 	while(0<i);
 
@@ -473,6 +483,8 @@ CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// C99 17.7p3 : macros
 	// we assume that ptrdiff_t is the correct size (really should have an explicit void* size)
 	tmp[STDDEF_NULL_LINE]->append(NULL_constant_from_machine(target_machine.ptrdiff_t_type()));
+
+	final_init_tokenlist(TokenList.c_array(),TokenList.size(),header_name);
 }
 
 static void new_token_at(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& dest,size_t i,const char* const src)
@@ -1139,17 +1151,6 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		}
 	while(0<i);
 
-	// final normalization
-	i = TokenList.size();
-	tmp = TokenList.c_array();
-	do	{
-		--i;
-		assert(NULL!=tmp[i]);
-		tmp[i]->logical_line.first = i+1;
-		tmp[i]->logical_line.second = 0;
-		tmp[i]->original_line = tmp[i]->logical_line;
-		tmp[i]->src_filename = header_name;
-		}
-	while(0<i);
+	final_init_tokenlist(TokenList.c_array(),TokenList.size(),header_name);
 }
 
