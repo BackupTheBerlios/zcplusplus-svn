@@ -13,6 +13,33 @@
 #define DICT_STRUCT(A) { (A), sizeof(A)-1 }
 
 //! \todo POSIX support as feasible
+static const char* const limits_h_reserved[]
+	=	{	"CHAR_BIT",
+			"SCHAR_MIN",
+			"SCHAR_MAX",
+			"UCHAR_MAX",
+			"CHAR_MIN",
+			"CHAR_MAX",
+			"MB_LEN_MAX",
+			"SHRT_MIN",
+			"SHRT_MAX",
+			"USHRT_MAX",
+			"INT_MIN",
+			"INT_MAX",
+			"UINT_MAX",
+			"LONG_MIN",
+			"LONG_MAX",
+			"ULONG_MAX",
+			"LLONG_MIN",
+			"LLONG_MAX",
+			"ULLONG_MAX"
+		};
+
+static const char* const limits_h_POSIX_reserved[]
+	=	{	"WORD_BIT",
+			"LONG_BIT"
+		};
+
 static const zaimoni::POD_pair<const char*,size_t> limits_h_core[]
 	=	{	DICT_STRUCT("#ifndef __LIMITS_H__"),
 			DICT_STRUCT("#define __LIMITS_H__ 1"),
@@ -43,14 +70,7 @@ static const zaimoni::POD_pair<const char*,size_t> limits_h_core[]
 			DICT_STRUCT("#define WORD_BIT"),
 			DICT_STRUCT("#define LONG_BIT"),
 			DICT_STRUCT("#endif"),
-			DICT_STRUCT("#pragma ZCC lock CHAR_BIT SCHAR_MIN SCHAR_MAX"),
-			DICT_STRUCT("#pragma ZCC lock UCHAR_MAX CHAR_MIN CHAR_MAX"),
-			DICT_STRUCT("#pragma ZCC lock MB_LEN_MAX SHRT_MIN SHRT_MAX"),
-			DICT_STRUCT("#pragma ZCC lock USHRT_MAX INT_MIN INT_MAX"),
-			DICT_STRUCT("#pragma ZCC lock UINT_MAX LONG_MIN LONG_MAX"),
-			DICT_STRUCT("#pragma ZCC lock ULONG_MAX LLONG_MIN LLONG_MAX"),
-			DICT_STRUCT("#pragma ZCC lock ULLONG_MAX"),
-			DICT_STRUCT("#endif"),
+			DICT_STRUCT("#endif")
 		};
 
 #define LIMITS_CHAR_BIT_LINE 3
@@ -75,6 +95,20 @@ static const zaimoni::POD_pair<const char*,size_t> limits_h_core[]
 #define LIMITS_WORD_BIT_LINE 23
 #define LIMITS_LONG_BIT_LINE 24
 
+#define LIMITS_INJECT_LOCK (LIMITS_LONG_BIT_LINE+2)
+#define LIMITS_INJECT_REALITY LIMITS_CHAR_BIT_LINE
+#define LIMITS_POSIX_INJECT_LOCK (LIMITS_LONG_BIT_LINE+1)
+#define LIMITS_POSIX_INJECT_REALITY LIMITS_WORD_BIT_LINE
+
+static const char* const stddef_h_reserved[]
+	=	{	"wchar_t",	// C only
+			"ptrdiff_t",	// common to C, C++
+			"size_t",
+			"NULL",
+			"offsetof",
+			"std"			// C++ only
+		};
+
 //! \todo option --deathstation, with supporting predefine : do not provide convenient, legal but not required features
 // NOTE: wchar_t is a reserved keyword in C++, do not typedef it!
 static const zaimoni::POD_pair<const char*,size_t> stddef_h_core[]
@@ -84,12 +118,14 @@ static const zaimoni::POD_pair<const char*,size_t> stddef_h_core[]
 			DICT_STRUCT("typedef "),
 			DICT_STRUCT("typedef "),
 			DICT_STRUCT("#ifndef __cplusplus "),
+			DICT_STRUCT("#pragma ZCC lock wchar_t"),
 			DICT_STRUCT("typedef "),
 			DICT_STRUCT("#endif"),
 			DICT_STRUCT("#define NULL "),
 //			DICT_STRUCT("#define offsetof"),	// do not provide offsetof as we don't parse structs yet
-			DICT_STRUCT("#pragma ZCC lock NULL offsetof"),	// lock offsetof because it's standard
+			DICT_STRUCT("#pragma ZCC lock ptrdiff_t size_t NULL offsetof"),	// lock offsetof because it's standard
 			DICT_STRUCT("#ifdef __cplusplus"),
+			DICT_STRUCT("#pragma ZCC lock std"),
 			DICT_STRUCT("namespace std {"),
 			DICT_STRUCT("typedef "),
 			DICT_STRUCT("typedef "),
@@ -100,10 +136,14 @@ static const zaimoni::POD_pair<const char*,size_t> stddef_h_core[]
 
 #define STDDEF_PTRDIFF_T_LINE 3
 #define STDDEF_SIZE_T_LINE 4
-#define STDDEF_WCHAR_T_LINE 6
-#define STDDEF_NULL_LINE 8
-#define STDDEF_CPP_PTRDIFF_T_LINE 12
-#define STDDEF_CPP_SIZE_T_LINE 13
+#define STDDEF_WCHAR_T_LINE 7
+#define STDDEF_NULL_LINE 9
+#define STDDEF_CPP_PTRDIFF_T_LINE 14
+#define STDDEF_CPP_SIZE_T_LINE 15
+
+#define STDDEF_INJECT_REALITY STDDEF_PTRDIFF_T_LINE
+#define STDDEF_INJECT_C_REALITY (STDDEF_WCHAR_T_LINE-1)
+#define STDDEF_INJECT_CPP_REALITY (STDDEF_CPP_PTRDIFF_T_LINE-2)
 
 static const zaimoni::POD_pair<const char*,size_t> stdint_h_core[]
 	=	{	DICT_STRUCT("#ifndef __STDINT_H__"),
@@ -228,6 +268,104 @@ static const zaimoni::POD_pair<const char*,size_t> stdint_h_core[]
 
 #define STDINT_LEAST_FAST_INJECT_LINE 47
 #define STDINT_CPP_LEAST_FAST_INJECT_LINE 61
+
+// inject preprocessor block of preexisting definitions
+static void
+disallow_prior_definitions(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,size_t i,const char* const * identifiers,size_t identifiers_len)
+{
+	assert(TokenList.size()>i);
+	assert(NULL!=identifiers);
+	assert(0<identifiers_len);
+	assert(SIZE_MAX/4>=identifiers_len);
+/*
+#ifdef __bool_true_false_are_defined
+#error Undefined Behavior: reserved identifier '__bool_true_false_are_defined' defined as macro
+#undef __bool_true_false_are_defined
+#endif
+*/
+	if (!TokenList.InsertNSlotsAt(4*identifiers_len,i)) throw std::bad_alloc();
+	while(0<identifiers_len)
+		{
+		assert(NULL!=*identifiers && '\0'!=**identifiers);
+		zaimoni::Token<char>** const tmp = TokenList.c_array();
+		tmp[i+3] = new zaimoni::Token<char>("#endif",0,sizeof("#endif")-1,0);
+
+		const size_t identifier_len = strlen(*identifiers);
+		char* tmp2 = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(sizeof("#ifdef ")-1+identifier_len));
+		strcpy(tmp2,"#ifdef ");
+		strcpy(tmp2+sizeof("#ifdef ")-1,*identifiers);
+		tmp[i] = new(std::nothrow) zaimoni::Token<char>(tmp2,NULL);
+		if (NULL==tmp[i])
+			{
+			free(tmp2);
+			throw std::bad_alloc();
+			}
+
+		tmp2 = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(sizeof("#undef ")-1+identifier_len));
+		strcpy(tmp2,"#undef ");
+		strcpy(tmp2+sizeof("#undef ")-1,*identifiers);
+		tmp[i+2] = new zaimoni::Token<char>(tmp2,NULL);
+		if (NULL==tmp[i+2])
+			{
+			free(tmp2);
+			throw std::bad_alloc();
+			}
+
+		tmp2 = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(sizeof("#error Undefined Behavior: reserved identifier '")-1+identifier_len+sizeof("' defined as macro")-1));
+		strcpy(tmp2,"#error Undefined Behavior: reserved identifier '");
+		strcpy(tmp2+sizeof("#error Undefined Behavior: reserved identifier '")-1,*identifiers);
+		strcpy(tmp2+sizeof("#error Undefined Behavior: reserved identifier '")-1+identifier_len,"' defined as macro");
+		tmp[i+1] = new zaimoni::Token<char>(tmp2,NULL);
+		if (NULL==tmp[i+1])
+			{
+			free(tmp2);
+			throw std::bad_alloc();
+			}
+
+		i += 4;
+		--identifiers_len;
+		++identifiers;
+		}
+}
+
+// inject preprocessor lockdown for a reserved identifier
+static void
+lockdown_reserved_identifiers(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const size_t i,const char* const * identifiers,size_t identifiers_len)
+{
+	assert(TokenList.size()>i);
+	assert(NULL!=identifiers);
+	assert(0<identifiers_len);
+	size_t target_len = sizeof("#pragma ZCC lock")-1;
+	size_t j = 0;
+	do	{
+		assert(NULL!=*identifiers && '\0'!=**identifiers);
+		target_len += strlen(identifiers[j])+1;
+		}
+	while(identifiers_len> ++j);
+	char* tmp = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(target_len));
+	char* tmp2 = tmp;
+	strcpy(tmp2,"#pragma ZCC lock");
+	tmp2 += sizeof("#pragma ZCC lock")-1;
+	while(0<identifiers_len)
+		{
+		*tmp2++ = ' ';
+		strcpy(tmp2,*identifiers);
+		tmp2 += strlen(*identifiers);
+		++identifiers;
+		--identifiers_len;
+		};
+	zaimoni::Token<char>* relay = new(std::nothrow) zaimoni::Token<char>(tmp,NULL);
+	if (NULL==relay)
+		{
+		free(tmp);
+		throw std::bad_alloc();
+		};
+	if (!TokenList.InsertSlotAt(i,relay))
+		{
+		delete relay;
+		throw std::bad_alloc();
+		};
+}
 
 static void final_init_tokenlist(zaimoni::Token<char>* const * x, size_t x_len, const char* const header_name)
 {
@@ -365,6 +503,14 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	tmp[LIMITS_WORD_BIT_LINE]->append(z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_int>(),buf+1,10)-1);
 	tmp[LIMITS_LONG_BIT_LINE]->append(z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_long>(),buf+1,10)-1);
 
+	lockdown_reserved_identifiers(TokenList,LIMITS_INJECT_LOCK,limits_h_reserved+18,STATIC_SIZE(limits_h_reserved)-18);
+	lockdown_reserved_identifiers(TokenList,LIMITS_INJECT_LOCK,limits_h_reserved+12,6);
+	lockdown_reserved_identifiers(TokenList,LIMITS_INJECT_LOCK,limits_h_reserved+6,6);
+	lockdown_reserved_identifiers(TokenList,LIMITS_INJECT_LOCK,limits_h_reserved,6);
+	lockdown_reserved_identifiers(TokenList,LIMITS_POSIX_INJECT_LOCK,limits_h_POSIX_reserved,STATIC_SIZE(limits_h_POSIX_reserved));
+	disallow_prior_definitions(TokenList,LIMITS_POSIX_INJECT_REALITY,limits_h_POSIX_reserved,STATIC_SIZE(limits_h_POSIX_reserved));
+	disallow_prior_definitions(TokenList,LIMITS_INJECT_REALITY,limits_h_reserved,STATIC_SIZE(limits_h_reserved));
+
 	final_init_tokenlist(TokenList.c_array(),TokenList.size(),header_name);
 }
 
@@ -484,12 +630,17 @@ CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// we assume that ptrdiff_t is the correct size (really should have an explicit void* size)
 	tmp[STDDEF_NULL_LINE]->append(NULL_constant_from_machine(target_machine.ptrdiff_t_type()));
 
+	BOOST_STATIC_ASSERT(6==STATIC_SIZE(stddef_h_reserved));
+	disallow_prior_definitions(TokenList,STDDEF_INJECT_CPP_REALITY,stddef_h_reserved+5,1);
+	disallow_prior_definitions(TokenList,STDDEF_INJECT_C_REALITY,stddef_h_reserved,1);
+	disallow_prior_definitions(TokenList,STDDEF_INJECT_REALITY,stddef_h_reserved+1,4);
+
 	final_init_tokenlist(TokenList.c_array(),TokenList.size(),header_name);
 }
 
 static void new_token_at(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& dest,size_t i,const char* const src)
 {
-	assert(NULL!=src);
+	assert(NULL!=src && *src);
 	zaimoni::Token<char>* tmp = new zaimoni::Token<char>(src,0,strlen(src),0);
 	if (!dest.InsertSlotAt(i,tmp))
 		{
