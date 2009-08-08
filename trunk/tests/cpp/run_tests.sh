@@ -18,6 +18,8 @@ function run_tests {
 	local ACCEPT_TEST=0
 	local CPP=../../z_cpp
 	local CPP_ISO="../../z_cpp --pedantic"
+	local CPP_SIGNMAG_NOTRAP="../../z_cpp --int-sign-magnitude"
+	local CPP_ONESCOMP_NOTRAP="../../z_cpp --int-ones-complement"
 
 	echo Checking ISO error requirements
 	echo ====
@@ -60,6 +62,10 @@ function run_tests {
 	for F in default/keywords/Error*.hpp; do let ++REJECT_TEST; echo $CPP $F; if $CPP $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
 	for F in default/Pass*.h; do let ++ACCEPT_TEST; echo $CPP $F; if $CPP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 	for F in default/Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP $F; if $CPP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/signmag.notrap/Pass*.h; do let ++ACCEPT_TEST; echo $CPP_SIGNMAG_NOTRAP $F; if $CPP_SIGNMAG_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/signmag.notrap/Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP_SIGNMAG_NOTRAP $F; if $CPP_SIGNMAG_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/onescomp.notrap/Pass*.h; do let ++ACCEPT_TEST; echo $CPP_ONESCOMP_NOTRAP $F; if $CPP_ONESCOMP_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/onescomp.notrap/Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP_ONESCOMP_NOTRAP $F; if $CPP_ONESCOMP_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 
 	echo Checking ZCC nonconforming errors
 	echo ====

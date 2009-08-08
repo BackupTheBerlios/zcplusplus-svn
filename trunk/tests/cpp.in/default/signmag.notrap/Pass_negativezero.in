@@ -1,0 +1,43 @@
+SUFFIXES h hpp
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+#include <limits.h>
+#include <stdint.h>
+
+// sign-magnitude: -0 is trap representation
+// check internal relations
+TRUE_EXPRESSION INT_MIN==-INT_MAX
+TRUE_EXPRESSION LONG_MIN==-LONG_MAX
+TRUE_EXPRESSION LLONG_MIN==-LLONG_MAX
+
+// non-trapping machines accept bitwise -0
+// C99 6.2.6.2 defines the two bit patterns for 0 as comparing equal
+// | : impractical (have to start with bitwise -0)
+// ~ : use INT_MAX
+// ^ : ^ any positive integer with its negative (randdriver)
+// & : (randdriver)
+
+// promotion to intmax_t skews things
+FALSE_EXPRESSION ~INTMAX_MAX
+
+// spot-check ^
+FALSE_EXPRESSION 1 ^ -1
+FALSE_EXPRESSION 1L ^ -1L
+FALSE_EXPRESSION 1LL ^ -1LL
+
+FALSE_EXPRESSION INT_MAX ^ INT_MIN
+FALSE_EXPRESSION LONG_MAX ^ LONG_MIN
+FALSE_EXPRESSION LLONG_MAX ^ LLONG_MIN
+FALSE_EXPRESSION INTMAX_MAX ^ INTMAX_MIN
+
+// spot-check &
+FALSE_EXPRESSION INT_MIN+1 & 1
+FALSE_EXPRESSION INT_MAX-1 & -1
+FALSE_EXPRESSION LONG_MIN+1 & 1
+FALSE_EXPRESSION LONG_MAX-1 & -1
+FALSE_EXPRESSION LLONG_MIN+1 & 1
+FALSE_EXPRESSION LLONG_MAX-1 & -1
+FALSE_EXPRESSION INTMAX_MIN+1 & 1
+FALSE_EXPRESSION INTMAX_MAX-1 & -1
+
+

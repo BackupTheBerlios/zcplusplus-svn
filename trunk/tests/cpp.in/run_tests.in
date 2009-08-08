@@ -5,6 +5,8 @@ DESC (C)2009 Kenneth Boyd, license: MIT.txt
 PROLOG
 VAR CPP ../../z_cpp
 VAR CPP_ISO ../../z_cpp --pedantic
+VAR CPP_SIGNMAG_NOTRAP ../../z_cpp --int-sign-magnitude
+VAR CPP_ONESCOMP_NOTRAP ../../z_cpp --int-ones-complement
 
 ECHO Checking ISO error requirements
 ERROR CPP_ISO Error*
@@ -27,6 +29,8 @@ ECHO Checking ZCC implementation-defined errors and features
 ERROR CPP default/Error*
 ERROR CPP default/keywords/Error*
 PASS CPP default/Pass*
+PASS CPP_SIGNMAG_NOTRAP default/signmag.notrap/Pass*
+PASS CPP_ONESCOMP_NOTRAP default/onescomp.notrap/Pass*
 
 ECHO Checking ZCC nonconforming errors
 ERROR CPP default.nonconforming/Error*

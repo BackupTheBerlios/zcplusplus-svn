@@ -3033,6 +3033,7 @@ bool CCharLiteralIsFalse(const char* x,size_t x_len)
 	assert(IsLegalCCharacterLiteral(x,x_len));
 	const uintmax_t result = EvalCharacterLiteral(x,x_len);
 	if (0==result) return true;
+	if (bool_options[boolopt::char_is_unsigned]) return false;
 	switch(target_machine->C_signed_int_representation())
 	{
 	default: return false;
@@ -3935,7 +3936,7 @@ static bool _C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& 
 		return true;
 		}	
 
-	if (!C_TESTFLAG_INTEGER & src.index_tokens[0].flags) return false;
+	if (!(C_TESTFLAG_INTEGER & src.index_tokens[0].flags)) return false;
 	C_PPIntCore tmp;
 #ifdef NDEBUG
 	C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,tmp);
@@ -7232,8 +7233,8 @@ static bool eval_relation_expression(parse_tree& src, const type_system& types,f
 		force_decimal_literal(src,result,types);
 		return true;
 		};
-	//! \todo: string literals can't handle GTE, LTE; convert to bug when 0.0.1 released
-	//! \todo: string literals handle GT, LT only with respect to zero (NULL constant); convert to bug when 0.0.1 released
+	//! \bug: string literals can't handle GTE, LTE
+	//! \bug: string literals handle GT, LT only with respect to zero (NULL constant)?
 	return false;
 }
 
@@ -7387,8 +7388,8 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 	assert(C99_EQUALITY_SUBTYPE_EQ<=src.subtype && C99_EQUALITY_SUBTYPE_NEQ>=src.subtype);
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
-	const unsigned int integer_literal_case = 	  (converts_to_integer(src.data<1>()->type_code) && (PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
-											+	2*(converts_to_integer(src.data<2>()->type_code) && (PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags));
+	const unsigned int integer_literal_case = 	  converts_to_integer(src.data<1>()->type_code)
+											+	2*converts_to_integer(src.data<2>()->type_code);
 	const bool is_equal_op = src.subtype==C99_EQUALITY_SUBTYPE_EQ;
 	bool is_true = false;
 	switch(integer_literal_case)
