@@ -15,9 +15,8 @@ TRUE_EXPRESSION LLONG_MIN==-LLONG_MAX
 // ~ : use 0
 // | : try INT_MAX | INT_MIN (randdriver)
 // ^ : try INT_MAX ^ INT_MIN (randdriver)
+// use preprocessor intmax_t promotion (C99 6.10.1p3)
 FALSE_EXPRESSION ~0
-FALSE_EXPRESSION ~0L
-FALSE_EXPRESSION ~0LL
 
 // spot-check ^
 FALSE_EXPRESSION INT_MAX ^ INT_MIN

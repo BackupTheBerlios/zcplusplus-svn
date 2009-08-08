@@ -6,7 +6,9 @@ PROLOG
 VAR CPP ../../z_cpp
 VAR CPP_ISO ../../z_cpp --pedantic
 VAR CPP_SIGNMAG_NOTRAP ../../z_cpp --int-sign-magnitude
+VAR CPP_SIGNMAG_TRAP ../../z_cpp --int-sign-magnitude --int-traps
 VAR CPP_ONESCOMP_NOTRAP ../../z_cpp --int-ones-complement
+VAR CPP_ONESCOMP_TRAP ../../z_cpp --int-ones-complement --int-traps
 
 ECHO Checking ISO error requirements
 ERROR CPP_ISO Error*
@@ -29,8 +31,14 @@ ECHO Checking ZCC implementation-defined errors and features
 ERROR CPP default/Error*
 ERROR CPP default/keywords/Error*
 PASS CPP default/Pass*
+PASS CPP_SIGNMAG_NOTRAP default/signmag.core/Pass*
 PASS CPP_SIGNMAG_NOTRAP default/signmag.notrap/Pass*
+PASS CPP_SIGNMAG_TRAP default/signmag.core/Pass*
+ERROR CPP_SIGNMAG_TRAP default/signmag.trap/Error*
+PASS CPP_ONESCOMP_NOTRAP default/onescomp.core/Pass*
 PASS CPP_ONESCOMP_NOTRAP default/onescomp.notrap/Pass*
+PASS CPP_ONESCOMP_TRAP default/onescomp.core/Pass*
+ERROR CPP_ONESCOMP_TRAP default/onescomp.trap/Error*
 
 ECHO Checking ZCC nonconforming errors
 ERROR CPP default.nonconforming/Error*

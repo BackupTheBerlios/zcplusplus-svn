@@ -19,7 +19,9 @@ function run_tests {
 	local CPP=../../z_cpp
 	local CPP_ISO="../../z_cpp --pedantic"
 	local CPP_SIGNMAG_NOTRAP="../../z_cpp --int-sign-magnitude"
+	local CPP_SIGNMAG_TRAP="../../z_cpp --int-sign-magnitude --int-traps"
 	local CPP_ONESCOMP_NOTRAP="../../z_cpp --int-ones-complement"
+	local CPP_ONESCOMP_TRAP="../../z_cpp --int-ones-complement --int-traps"
 
 	echo Checking ISO error requirements
 	echo ====
@@ -62,10 +64,22 @@ function run_tests {
 	for F in default/keywords/Error*.hpp; do let ++REJECT_TEST; echo $CPP $F; if $CPP $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
 	for F in default/Pass*.h; do let ++ACCEPT_TEST; echo $CPP $F; if $CPP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 	for F in default/Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP $F; if $CPP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/signmag.core/Pass*.h; do let ++ACCEPT_TEST; echo $CPP_SIGNMAG_NOTRAP $F; if $CPP_SIGNMAG_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/signmag.core/Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP_SIGNMAG_NOTRAP $F; if $CPP_SIGNMAG_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 	for F in default/signmag.notrap/Pass*.h; do let ++ACCEPT_TEST; echo $CPP_SIGNMAG_NOTRAP $F; if $CPP_SIGNMAG_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 	for F in default/signmag.notrap/Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP_SIGNMAG_NOTRAP $F; if $CPP_SIGNMAG_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/signmag.core/Pass*.h; do let ++ACCEPT_TEST; echo $CPP_SIGNMAG_TRAP $F; if $CPP_SIGNMAG_TRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/signmag.core/Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP_SIGNMAG_TRAP $F; if $CPP_SIGNMAG_TRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/signmag.trap/Error*.h; do let ++REJECT_TEST; echo $CPP_SIGNMAG_TRAP $F; if $CPP_SIGNMAG_TRAP $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
+	for F in default/signmag.trap/Error*.hpp; do let ++REJECT_TEST; echo $CPP_SIGNMAG_TRAP $F; if $CPP_SIGNMAG_TRAP $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
+	for F in default/onescomp.core/Pass*.h; do let ++ACCEPT_TEST; echo $CPP_ONESCOMP_NOTRAP $F; if $CPP_ONESCOMP_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/onescomp.core/Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP_ONESCOMP_NOTRAP $F; if $CPP_ONESCOMP_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 	for F in default/onescomp.notrap/Pass*.h; do let ++ACCEPT_TEST; echo $CPP_ONESCOMP_NOTRAP $F; if $CPP_ONESCOMP_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 	for F in default/onescomp.notrap/Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP_ONESCOMP_NOTRAP $F; if $CPP_ONESCOMP_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/onescomp.core/Pass*.h; do let ++ACCEPT_TEST; echo $CPP_ONESCOMP_TRAP $F; if $CPP_ONESCOMP_TRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/onescomp.core/Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP_ONESCOMP_TRAP $F; if $CPP_ONESCOMP_TRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/onescomp.trap/Error*.h; do let ++REJECT_TEST; echo $CPP_ONESCOMP_TRAP $F; if $CPP_ONESCOMP_TRAP $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
+	for F in default/onescomp.trap/Error*.hpp; do let ++REJECT_TEST; echo $CPP_ONESCOMP_TRAP $F; if $CPP_ONESCOMP_TRAP $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
 
 	echo Checking ZCC nonconforming errors
 	echo ====

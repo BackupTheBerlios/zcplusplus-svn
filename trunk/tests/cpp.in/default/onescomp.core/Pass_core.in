@@ -1,0 +1,11 @@
+SUFFIXES h hpp
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+#include <limits.h>
+
+// one's-complement: -0 is trap representation
+// check internal relations
+TRUE_EXPRESSION INT_MIN==-INT_MAX
+TRUE_EXPRESSION LONG_MIN==-LONG_MAX
+TRUE_EXPRESSION LLONG_MIN==-LLONG_MAX
+

@@ -4,21 +4,6 @@
 #include <limits.h>
 #include <stdint.h>
 
-// sign-magnitude: -0 is trap representation
-// check internal relations
-#if INT_MIN==-INT_MAX
-#else
-#error INT_MIN==-INT_MAX is false
-#endif
-#if LONG_MIN==-LONG_MAX
-#else
-#error LONG_MIN==-LONG_MAX is false
-#endif
-#if LLONG_MIN==-LLONG_MAX
-#else
-#error LLONG_MIN==-LLONG_MAX is false
-#endif
-
 // non-trapping machines accept bitwise -0
 // C99 6.2.6.2 defines the two bit patterns for 0 as comparing equal
 // | : impractical (have to start with bitwise -0)
@@ -32,14 +17,9 @@
 #endif
 
 // spot-check ^
+// use preprocessor intmax_t promotion (C99 6.10.1p3)
 #if 1 ^ -1
 #error 1 ^ -1 is true
-#endif
-#if 1L ^ -1L
-#error 1L ^ -1L is true
-#endif
-#if 1LL ^ -1LL
-#error 1LL ^ -1LL is true
 #endif
 
 #if INT_MAX ^ INT_MIN
@@ -56,29 +36,18 @@
 #endif
 
 // spot-check &
-#if INT_MIN+1 & 1
-#error INT_MIN+1 & 1 is true
+#if INT_MIN+1 & -1
+#error INT_MIN+1 & -1 is true
 #endif
-#if INT_MAX-1 & -1
-#error INT_MAX-1 & -1 is true
+#if LONG_MIN+1 & -1
+#error LONG_MIN+1 & -1 is true
 #endif
-#if LONG_MIN+1 & 1
-#error LONG_MIN+1 & 1 is true
+#if LLONG_MIN+1 & -1
+#error LLONG_MIN+1 & -1 is true
 #endif
-#if LONG_MAX-1 & -1
-#error LONG_MAX-1 & -1 is true
+#if INTMAX_MIN+1 & -1
+#error INTMAX_MIN+1 & -1 is true
 #endif
-#if LLONG_MIN+1 & 1
-#error LLONG_MIN+1 & 1 is true
-#endif
-#if LLONG_MAX-1 & -1
-#error LLONG_MAX-1 & -1 is true
-#endif
-#if INTMAX_MIN+1 & 1
-#error INTMAX_MIN+1 & 1 is true
-#endif
-#if INTMAX_MAX-1 & -1
-#error INTMAX_MAX-1 & -1 is true
-#endif
+
 
 

@@ -24,14 +24,9 @@
 // ~ : use 0
 // | : try INT_MAX | INT_MIN (randdriver)
 // ^ : try INT_MAX ^ INT_MIN (randdriver)
+// use preprocessor intmax_t promotion (C99 6.10.1p3)
 #if ~0
 #error ~0 is true
-#endif
-#if ~0L
-#error ~0L is true
-#endif
-#if ~0LL
-#error ~0LL is true
 #endif
 
 // spot-check ^

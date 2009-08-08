@@ -12,7 +12,9 @@
 @set CPP=..\..\z_cpp
 @set CPP_ISO=..\..\z_cpp --pedantic
 @set CPP_SIGNMAG_NOTRAP=..\..\z_cpp --int-sign-magnitude
+@set CPP_SIGNMAG_TRAP=..\..\z_cpp --int-sign-magnitude --int-traps
 @set CPP_ONESCOMP_NOTRAP=..\..\z_cpp --int-ones-complement
+@set CPP_ONESCOMP_TRAP=..\..\z_cpp --int-ones-complement --int-traps
 
 @echo Checking ISO error requirements
 @echo ====
@@ -83,14 +85,38 @@
 @for %%f in (default\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 @for %%f in (default\Pass*.hpp) do @echo %CPP% %%f & @%CPP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (default\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\signmag.core\Pass*.h) do @echo %CPP_SIGNMAG_NOTRAP% %%f & @%CPP_SIGNMAG_NOTRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\signmag.core\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\signmag.core\Pass*.hpp) do @echo %CPP_SIGNMAG_NOTRAP% %%f & @%CPP_SIGNMAG_NOTRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\signmag.core\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 @for %%f in (default\signmag.notrap\Pass*.h) do @echo %CPP_SIGNMAG_NOTRAP% %%f & @%CPP_SIGNMAG_NOTRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (default\signmag.notrap\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 @for %%f in (default\signmag.notrap\Pass*.hpp) do @echo %CPP_SIGNMAG_NOTRAP% %%f & @%CPP_SIGNMAG_NOTRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (default\signmag.notrap\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\signmag.core\Pass*.h) do @echo %CPP_SIGNMAG_TRAP% %%f & @%CPP_SIGNMAG_TRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\signmag.core\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\signmag.core\Pass*.hpp) do @echo %CPP_SIGNMAG_TRAP% %%f & @%CPP_SIGNMAG_TRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\signmag.core\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\signmag.trap\Error*.h) do @echo %CPP_SIGNMAG_TRAP% %%f & @%CPP_SIGNMAG_TRAP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (default\signmag.trap\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (default\signmag.trap\Error*.hpp) do @echo %CPP_SIGNMAG_TRAP% %%f & @%CPP_SIGNMAG_TRAP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (default\signmag.trap\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (default\onescomp.core\Pass*.h) do @echo %CPP_ONESCOMP_NOTRAP% %%f & @%CPP_ONESCOMP_NOTRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\onescomp.core\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\onescomp.core\Pass*.hpp) do @echo %CPP_ONESCOMP_NOTRAP% %%f & @%CPP_ONESCOMP_NOTRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\onescomp.core\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 @for %%f in (default\onescomp.notrap\Pass*.h) do @echo %CPP_ONESCOMP_NOTRAP% %%f & @%CPP_ONESCOMP_NOTRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (default\onescomp.notrap\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 @for %%f in (default\onescomp.notrap\Pass*.hpp) do @echo %CPP_ONESCOMP_NOTRAP% %%f & @%CPP_ONESCOMP_NOTRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (default\onescomp.notrap\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\onescomp.core\Pass*.h) do @echo %CPP_ONESCOMP_TRAP% %%f & @%CPP_ONESCOMP_TRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\onescomp.core\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\onescomp.core\Pass*.hpp) do @echo %CPP_ONESCOMP_TRAP% %%f & @%CPP_ONESCOMP_TRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\onescomp.core\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\onescomp.trap\Error*.h) do @echo %CPP_ONESCOMP_TRAP% %%f & @%CPP_ONESCOMP_TRAP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (default\onescomp.trap\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (default\onescomp.trap\Error*.hpp) do @echo %CPP_ONESCOMP_TRAP% %%f & @%CPP_ONESCOMP_TRAP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (default\onescomp.trap\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
 
 @echo Checking ZCC nonconforming errors
 @echo ====
