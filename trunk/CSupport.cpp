@@ -5432,8 +5432,87 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool ha
 
 		const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
 		if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
+		if (virtual_machine::twos_complement==target_machine->C_signed_int_representation() && 0==(old_type.base_type_index-C_TYPE::INT)%2 && !bool_options[boolopt::int_traps] && res_int>target_machine->signed_max(machine_type))
+			{	// trap representation; need to get it into -INT_MAX-1 form
+			res_int -= 1;
+			assert(res_int<=target_machine->signed_max(machine_type));
+			parse_tree* tmp = _new_buffer<parse_tree>(1);	// XXX we recycle this variable later
+			if (NULL==tmp) return false;
+			if (!VM_to_literal(*tmp,res_int,src,types)) return false;
+
+			res_int = 1;
+			parse_tree* const tmp2 = _new_buffer<parse_tree>(1);
+			if (NULL==tmp2)
+				{
+				tmp->destroy();
+				_flush(tmp);
+				return false;
+				}
+			if (!VM_to_literal(*tmp2,res_int,src,types))
+				{
+				tmp2->destroy();
+				_flush(tmp2);
+				tmp->destroy();
+				_flush(tmp);
+				return false;
+				}
+
+			parse_tree* const tmp3 = _new_buffer<parse_tree>(1);
+			if (NULL==tmp3)
+				{
+				tmp2->destroy();
+				_flush(tmp2);
+				tmp->destroy();
+				_flush(tmp);
+				return false;
+				}
+			tmp3->clear();
+			tmp3->grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+			tmp3->grab_index_token_location_from<0,0>(src);
+			tmp3->fast_set_arg<2>(tmp);
+			tmp3->core_flag_update();
+			tmp3->flags |= PARSE_STRICT_UNARY_EXPRESSION;
+			tmp3->subtype = C99_UNARY_SUBTYPE_NEG;
+			assert(is_C99_unary_operator_expression<'-'>(*tmp3));
+
+			tmp = _new_buffer<parse_tree>(1);
+			if (NULL==tmp)
+				{
+				tmp2->destroy();
+				_flush(tmp2);
+				tmp3->destroy();
+				_flush(tmp3);
+				return false;
+				}
+			tmp->clear();
+			tmp->grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+			tmp->grab_index_token_location_from<0,0>(src);
+			tmp->fast_set_arg<2>(tmp2);
+			tmp->core_flag_update();
+			tmp->flags |= PARSE_STRICT_UNARY_EXPRESSION;
+			tmp->subtype = C99_UNARY_SUBTYPE_NEG;
+			assert(is_C99_unary_operator_expression<'-'>(*tmp));
+
+			parse_tree tmp5;
+			tmp5.clear();
+			tmp5.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+			tmp5.grab_index_token_location_from<0,0>(src);
+			tmp5.fast_set_arg<1>(tmp3);
+			tmp5.fast_set_arg<2>(tmp);
+
+			tmp5.core_flag_update();
+			tmp5.flags |= PARSE_STRICT_ADD_EXPRESSION;
+			tmp5.subtype = C99_ADD_SUBTYPE_MINUS;
+			assert(is_C99_add_operator_expression<'-'>(tmp5));
+
+			src.destroy();
+			src = tmp5;
+			src.type_code = old_type;
+			return true;
+			}
+
 		parse_tree tmp;
-		if (!VM_to_literal(tmp,res_int,src,types)) return false;
+		if (!VM_to_literal(tmp,res_int,src,types)) return false;	// two's-complement non-trapping INT_MIN dies if it gets here
 
 		if (negative_signed_int)
 			// convert to parsed - literal
