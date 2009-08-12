@@ -5902,6 +5902,19 @@ static bool terse_locate_mult_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
+// auxilliary structure to aggregate useful information for type promotions
+struct promote_aux
+{
+	size_t promoted_type;
+	virtual_machine::std_int_enum machine_type;
+	unsigned short bitcount;
+
+	promote_aux(size_t base_type_index)
+	:	promoted_type(default_promote_type(base_type_index)),
+		machine_type(machine_type_from_type_index(promoted_type)),
+		bitcount(target_machine->C_bit(machine_type)) {};
+};
+
 static bool eval_mult_expression(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_C99_mult_operator_expression<'*'>(src));
@@ -5949,31 +5962,27 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 		};
 	if (lhs_converted && rhs_converted)
 		{
-		const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
-		const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
-		const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
-		const virtual_machine::std_int_enum machine_type_lhs = machine_type_from_type_index(promoted_type_lhs);
-		const virtual_machine::std_int_enum machine_type_rhs = machine_type_from_type_index(promoted_type_rhs);
-		const virtual_machine::std_int_enum machine_type_old = machine_type_from_type_index(promoted_type_old);
-		const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
-		const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
-		const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
+		const promote_aux old(old_type.base_type_index);
+		const promote_aux lhs(src.data<1>()->type_code.base_type_index);
+		assert(old.bitcount>=lhs.bitcount);
+		const promote_aux rhs(src.data<2>()->type_code.base_type_index);
+		assert(old.bitcount>=rhs.bitcount);
 
 		// handle sign-extension of lhs, rhs
-		if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-			target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
-		if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-			target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
-		const bool lhs_negative = res_int.test(bitcount_old-1);
-		const bool rhs_negative = rhs_int.test(bitcount_old-1);
-		if (0==(promoted_type_old-C_TYPE::INT)%2)
+		if (old.bitcount>lhs.bitcount && 0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
+			target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
+		if (old.bitcount>rhs.bitcount && 0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
+			target_machine->sign_extend(rhs_int,rhs.machine_type,old.machine_type);
+		const bool lhs_negative = res_int.test(old.bitcount-1);
+		const bool rhs_negative = rhs_int.test(old.bitcount-1);
+		if (0==(old.promoted_type-C_TYPE::INT)%2)
 			{	// signed integer result: overflow is undefined
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(machine_type_old));
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(old.machine_type));
 			const bool tweak_ub = rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation() && !bool_options[boolopt::int_traps];
-			if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,machine_type_old);
-			if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+			if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,old.machine_type);
+			if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,old.machine_type);
 			if (tweak_ub) ub += 1;
 			if (ub<lhs_test || ub<rhs_test)
 				{
@@ -5994,9 +6003,9 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 			lhs_test *= rhs_test;
 			if (rhs_negative!=lhs_negative)
 				{	// valid result, but not representable: do not reduce (errors out spuriously)
-				if (tweak_ub && target_machine->signed_max(machine_type_old)<lhs_test) return false;
+				if (tweak_ub && target_machine->signed_max(old.machine_type)<lhs_test) return false;
 
-				target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+				target_machine->signed_additive_inverse(lhs_test,old.machine_type);
 				// convert to parsed - literal
 				parse_tree tmp;
 				if (!VM_to_literal(tmp,lhs_test,src,types)) return false;
@@ -6009,8 +6018,8 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 			res_int = lhs_test;
 			}
 		else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-			target_machine->C_cast_signed_to_unsigned(res_int,machine_type_old);
-			target_machine->C_cast_signed_to_unsigned(rhs_int,machine_type_old);
+			target_machine->C_cast_signed_to_unsigned(res_int,old.machine_type);
+			target_machine->C_cast_signed_to_unsigned(rhs_int,old.machine_type);
 			res_int *= rhs_int;
 			}
 		// convert to parsed + literal
@@ -6078,30 +6087,26 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 	// implementation-defined whether negative results round away or to zero (standard prefers to zero, so default to that)
 	if (lhs_converted && rhs_converted)
 		{
-		const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
-		const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
-		const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
-		const virtual_machine::std_int_enum machine_type_lhs = machine_type_from_type_index(promoted_type_lhs);
-		const virtual_machine::std_int_enum machine_type_rhs = machine_type_from_type_index(promoted_type_rhs);
-		const virtual_machine::std_int_enum machine_type_old = machine_type_from_type_index(promoted_type_old);
-		const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
-		const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
-		const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
+		const promote_aux old(old_type.base_type_index);
+		const promote_aux lhs(src.data<1>()->type_code.base_type_index);
+		assert(old.bitcount>=lhs.bitcount);
+		const promote_aux rhs(src.data<2>()->type_code.base_type_index);
+		assert(old.bitcount>=rhs.bitcount);
 
 		// handle sign-extension of lhs, rhs
-		if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-			target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
-		if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-			target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
-		const bool lhs_negative = res_int.test(bitcount_old-1);
-		const bool rhs_negative = rhs_int.test(bitcount_old-1);
-		if (0==(promoted_type_old-C_TYPE::INT)%2)
+		if (old.bitcount>lhs.bitcount && 0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
+			target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
+		if (old.bitcount>rhs.bitcount && 0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
+			target_machine->sign_extend(rhs_int,rhs.machine_type,old.machine_type);
+		const bool lhs_negative = res_int.test(old.bitcount-1);
+		const bool rhs_negative = rhs_int.test(old.bitcount-1);
+		if (0==(old.promoted_type-C_TYPE::INT)%2)
 			{	// signed integer result
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(machine_type_old));
-			if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,machine_type_old);
-			if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(old.machine_type));
+			if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,old.machine_type);
+			if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,old.machine_type);
 			if (rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation()) ub += 1;
 			if (lhs_test<rhs_test)
 				{
@@ -6135,7 +6140,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 			if (rhs_negative!=lhs_negative)
 				{
 				if (round_away) lhs_test += 1;
-				target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+				target_machine->signed_additive_inverse(lhs_test,old.machine_type);
 				// convert to parsed - literal
 				parse_tree tmp;
 				if (!VM_to_literal(tmp,lhs_test,src,types)) return false;
@@ -6156,8 +6161,8 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 			res_int = lhs_test;
 			}
 		else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-			target_machine->C_cast_signed_to_unsigned(res_int,machine_type_old);
-			target_machine->C_cast_signed_to_unsigned(rhs_int,machine_type_old);
+			target_machine->C_cast_signed_to_unsigned(res_int,old.machine_type);
+			target_machine->C_cast_signed_to_unsigned(rhs_int,old.machine_type);
 			res_int /= rhs_int;
 			}
 
@@ -6228,30 +6233,26 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 		};
 	if (lhs_converted && rhs_converted)
 		{
-		const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
-		const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
-		const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
-		const virtual_machine::std_int_enum machine_type_lhs = machine_type_from_type_index(promoted_type_lhs);
-		const virtual_machine::std_int_enum machine_type_rhs = machine_type_from_type_index(promoted_type_rhs);
-		const virtual_machine::std_int_enum machine_type_old = machine_type_from_type_index(promoted_type_old);
-		const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
-		const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
-		const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
+		const promote_aux old(old_type.base_type_index);
+		const promote_aux lhs(src.data<1>()->type_code.base_type_index);
+		assert(old.bitcount>=lhs.bitcount);
+		const promote_aux rhs(src.data<2>()->type_code.base_type_index);
+		assert(old.bitcount>=rhs.bitcount);
 
 		// handle sign-extension of lhs, rhs
-		if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-			target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
-		if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-			target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
-		const bool lhs_negative = res_int.test(bitcount_old-1);
-		const bool rhs_negative = rhs_int.test(bitcount_old-1);
-		if (0==(promoted_type_old-C_TYPE::INT)%2)
+		if (old.bitcount>lhs.bitcount && 0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
+			target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
+		if (old.bitcount>rhs.bitcount && 0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
+			target_machine->sign_extend(rhs_int,rhs.machine_type,old.machine_type);
+		const bool lhs_negative = res_int.test(old.bitcount-1);
+		const bool rhs_negative = rhs_int.test(old.bitcount-1);
+		if (0==(old.promoted_type-C_TYPE::INT)%2)
 			{	// signed integer result
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(machine_type_old));
-			if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,machine_type_old);
-			if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(old.machine_type));
+			if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,old.machine_type);
+			if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,old.machine_type);
 			if (rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation()) ub += 1;
 
 			lhs_test %= rhs_test;
@@ -6277,8 +6278,8 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 			res_int = lhs_test;
 			}
 		else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-			target_machine->C_cast_signed_to_unsigned(res_int,machine_type_old);
-			target_machine->C_cast_signed_to_unsigned(rhs_int,machine_type_old);
+			target_machine->C_cast_signed_to_unsigned(res_int,old.machine_type);
+			target_machine->C_cast_signed_to_unsigned(rhs_int,old.machine_type);
 			res_int %= rhs_int;
 			}
 
@@ -6574,35 +6575,31 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 				};
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int;
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+			const promote_aux old(old_type.base_type_index);
+			const promote_aux lhs(src.data<1>()->type_code.base_type_index);
+			assert(old.bitcount>=lhs.bitcount);
+			const promote_aux rhs(src.data<2>()->type_code.base_type_index);
+			assert(old.bitcount>=rhs.bitcount);
 			const bool lhs_converted = intlike_literal_to_VM(res_int,*src.data<1>());
 			const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
+			if (lhs_converted && old.bitcount>lhs.bitcount && 0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
+				// handle sign-extension
+				target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
+			if (rhs_converted && old.bitcount>rhs.bitcount && 0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
+				// handle sign-extension
+				target_machine->sign_extend(rhs_int,rhs.machine_type,old.machine_type);
 			if (lhs_converted && rhs_converted)
-				{	//! \todo deal with signed integer arithmetic
-				const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
-				const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
-				const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
-				const virtual_machine::std_int_enum machine_type_lhs = machine_type_from_type_index(promoted_type_lhs);
-				const virtual_machine::std_int_enum machine_type_rhs = machine_type_from_type_index(promoted_type_rhs);
-				const virtual_machine::std_int_enum machine_type_old = machine_type_from_type_index(promoted_type_old);
-				const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
-				const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
-				const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
-
-				// handle sign-extension of lhs, rhs
-				if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-					target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
-				if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-					target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
-				const bool lhs_negative = res_int.test(bitcount_old-1);
-				const bool rhs_negative = rhs_int.test(bitcount_old-1);
-				if (0==(promoted_type_old-C_TYPE::INT)%2)
+				{
+				if (0==(old.promoted_type-C_TYPE::INT)%2)
 					{	// signed integer result
 					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
 					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(machine_type_old));
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(old.machine_type));
+					const bool lhs_negative = res_int.test(old.bitcount-1);
+					const bool rhs_negative = rhs_int.test(old.bitcount-1);
 					bool result_is_negative = false;
-					if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,machine_type_old);
-					if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+					if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,old.machine_type);
+					if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,old.machine_type);
 					if (rhs_negative!=lhs_negative)
 						{	// cancellation...safe
 						switch(cmp(lhs_test,rhs_test))
@@ -6637,7 +6634,7 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 							};
 						lhs_test += rhs_test;
 						// if we can't render it, do not reduce
-						if (tweak_ub && target_machine->signed_max(machine_type_old)<lhs_test) return false;
+						if (tweak_ub && target_machine->signed_max(old.machine_type)<lhs_test) return false;
 						}
 
 					if (result_is_negative)
@@ -6654,8 +6651,8 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 					res_int = lhs_test;
 					}
 				else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-					target_machine->C_cast_signed_to_unsigned(res_int,machine_type_old);
-					target_machine->C_cast_signed_to_unsigned(rhs_int,machine_type_old);
+					target_machine->C_cast_signed_to_unsigned(res_int,old.machine_type);
+					target_machine->C_cast_signed_to_unsigned(rhs_int,old.machine_type);
 					res_int += rhs_int;
 					}
 
@@ -6741,31 +6738,27 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 			const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
 			if (lhs_converted && rhs_converted)
 				{	//! \todo deal with signed integer arithmetic
-				const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
-				const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
-				const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
-				const virtual_machine::std_int_enum machine_type_lhs = machine_type_from_type_index(promoted_type_lhs);
-				const virtual_machine::std_int_enum machine_type_rhs = machine_type_from_type_index(promoted_type_rhs);
-				const virtual_machine::std_int_enum machine_type_old = machine_type_from_type_index(promoted_type_old);
-				const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
-				const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
-				const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
+				const promote_aux old(old_type.base_type_index);
+				const promote_aux lhs(src.data<1>()->type_code.base_type_index);
+				assert(old.bitcount>=lhs.bitcount);
+				const promote_aux rhs(src.data<2>()->type_code.base_type_index);
+				assert(old.bitcount>=rhs.bitcount);
 
 				// handle sign-extension of lhs, rhs
-				if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-					target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
-				if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-					target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
-				const bool lhs_negative = res_int.test(bitcount_old-1);
-				const bool rhs_negative = rhs_int.test(bitcount_old-1);
-				if (0==(promoted_type_old-C_TYPE::INT)%2)
+				if (old.bitcount>lhs.bitcount && 0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
+					target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
+				if (old.bitcount>rhs.bitcount && 0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
+					target_machine->sign_extend(rhs_int,rhs.machine_type,old.machine_type);
+				const bool lhs_negative = res_int.test(old.bitcount-1);
+				const bool rhs_negative = rhs_int.test(old.bitcount-1);
+				if (0==(old.promoted_type-C_TYPE::INT)%2)
 					{	// signed integer result
 					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
 					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(machine_type_old));
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(old.machine_type));
 					bool result_is_negative = false;
-					if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,machine_type_old);
-					if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+					if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,old.machine_type);
+					if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,old.machine_type);
 					if (rhs_negative==lhs_negative)
 						{	// cancellation: safe
 						switch(cmp(lhs_test,rhs_test))
@@ -6800,7 +6793,7 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 							};
 						lhs_test += rhs_test;
 						// if we can't render it, do not reduce
-						if (tweak_ub && target_machine->signed_max(machine_type_old)<lhs_test) return false;
+						if (tweak_ub && target_machine->signed_max(old.machine_type)<lhs_test) return false;
 						}
 
 					if (result_is_negative)
@@ -6817,8 +6810,8 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 					res_int = lhs_test;
 					}
 				else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-					target_machine->C_cast_signed_to_unsigned(res_int,machine_type_old);
-					target_machine->C_cast_signed_to_unsigned(rhs_int,machine_type_old);
+					target_machine->C_cast_signed_to_unsigned(res_int,old.machine_type);
+					target_machine->C_cast_signed_to_unsigned(rhs_int,old.machine_type);
 					res_int -= rhs_int;
 					}
 
@@ -10559,37 +10552,33 @@ void C99_PPHackTree(parse_tree& src,const type_system& types)
 			const bool rhs_converted = C99_intlike_literal_to_VM(rhs_int,*src.data<2>());
 			if (lhs_converted && rhs_converted)
 				{	//! \todo deal with signed integer arithmetic
-				const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
-				const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
-				const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
-				const virtual_machine::std_int_enum machine_type_lhs = (virtual_machine::std_int_enum)((promoted_type_lhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-				const virtual_machine::std_int_enum machine_type_rhs = (virtual_machine::std_int_enum)((promoted_type_rhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-				const virtual_machine::std_int_enum machine_type_old = (virtual_machine::std_int_enum)((promoted_type_old-C_TYPE::INT)/2+virtual_machine::std_int_int);
-				const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
-				const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
-				const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
+				const promote_aux old(old_type.base_type_index);
+				const promote_aux lhs(src.data<1>()->type_code.base_type_index);
+				assert(old.bitcount>=lhs.bitcount);
+				const promote_aux rhs(src.data<2>()->type_code.base_type_index);
+				assert(old.bitcount>=rhs.bitcount);
 
 				// handle sign-extension of lhs, rhs
-				if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-					target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
-				if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-					target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
+				if (old.bitcount>lhs.bitcount && 0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
+					target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
+				if (old.bitcount>rhs.bitcount && 0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
+					target_machine->sign_extend(rhs_int,rhs.machine_type,old.machine_type);
 #ifndef NDEBUG
-				const bool lhs_negative = res_int.test(bitcount_old-1);
-				const bool rhs_negative = rhs_int.test(bitcount_old-1);
+				const bool lhs_negative = res_int.test(old.bitcount-1);
+				const bool rhs_negative = rhs_int.test(old.bitcount-1);
 #endif
 				assert(lhs_negative && !rhs_negative);
-				assert(0==(promoted_type_old-C_TYPE::INT)%2);
+				assert(0==(old.promoted_type-C_TYPE::INT)%2);
 				unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
 				unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
-				unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(machine_type_old));
-				target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+				unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(old.machine_type));
+				target_machine->signed_additive_inverse(lhs_test,old.machine_type);
 				ub += 1;
 				assert(ub>=lhs_test && ub>=rhs_test);
 				ub -= lhs_test;
 				assert(ub>=rhs_test);
 				lhs_test += rhs_test;
-				assert(target_machine->signed_max(machine_type_old)<lhs_test);
+				assert(target_machine->signed_max(old.machine_type)<lhs_test);
 				// ok...valid but won't reduce.  pick an argument and mock this up
 				src.eval_to_arg<2>(0);
 				return;
@@ -10632,37 +10621,33 @@ void CPP_PPHackTree(parse_tree& src,const type_system& types)
 			const bool rhs_converted = CPP_intlike_literal_to_VM(rhs_int,*src.data<2>());
 			if (lhs_converted && rhs_converted)
 				{	//! \todo deal with signed integer arithmetic
-				const size_t promoted_type_lhs = default_promote_type(src.data<1>()->type_code.base_type_index);
-				const size_t promoted_type_rhs = default_promote_type(src.data<2>()->type_code.base_type_index);
-				const size_t promoted_type_old = default_promote_type(old_type.base_type_index);
-				const virtual_machine::std_int_enum machine_type_lhs = (virtual_machine::std_int_enum)((promoted_type_lhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-				const virtual_machine::std_int_enum machine_type_rhs = (virtual_machine::std_int_enum)((promoted_type_rhs-C_TYPE::INT)/2+virtual_machine::std_int_int);
-				const virtual_machine::std_int_enum machine_type_old = (virtual_machine::std_int_enum)((promoted_type_old-C_TYPE::INT)/2+virtual_machine::std_int_int);
-				const unsigned short bitcount_old = target_machine->C_bit(machine_type_old);
-				const unsigned short bitcount_lhs = target_machine->C_bit(machine_type_lhs);
-				const unsigned short bitcount_rhs = target_machine->C_bit(machine_type_rhs);
+				const promote_aux old(old_type.base_type_index);
+				const promote_aux lhs(src.data<1>()->type_code.base_type_index);
+				assert(old.bitcount>=lhs.bitcount);
+				const promote_aux rhs(src.data<2>()->type_code.base_type_index);
+				assert(old.bitcount>=rhs.bitcount);
 
 				// handle sign-extension of lhs, rhs
-				if (bitcount_old>bitcount_lhs && 0==(promoted_type_lhs-C_TYPE::INT)%2 && res_int.test(bitcount_lhs-1))
-					target_machine->sign_extend(res_int,machine_type_lhs,machine_type_old);
-				if (bitcount_old>bitcount_rhs && 0==(promoted_type_rhs-C_TYPE::INT)%2 && rhs_int.test(bitcount_rhs-1))
-					target_machine->sign_extend(rhs_int,machine_type_rhs,machine_type_old);
+				if (old.bitcount>lhs.bitcount && 0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
+					target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
+				if (old.bitcount>rhs.bitcount && 0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
+					target_machine->sign_extend(rhs_int,rhs.machine_type,old.machine_type);
 #ifndef NDEBUG
-				const bool lhs_negative = res_int.test(bitcount_old-1);
-				const bool rhs_negative = rhs_int.test(bitcount_old-1);
+				const bool lhs_negative = res_int.test(old.bitcount-1);
+				const bool rhs_negative = rhs_int.test(old.bitcount-1);
 #endif
 				assert(lhs_negative && !rhs_negative);
-				assert(0==(promoted_type_old-C_TYPE::INT)%2);
+				assert(0==(old.promoted_type-C_TYPE::INT)%2);
 				unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
 				unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
-				unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(machine_type_old));
-				target_machine->signed_additive_inverse(lhs_test,machine_type_old);
+				unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(old.machine_type));
+				target_machine->signed_additive_inverse(lhs_test,old.machine_type);
 				ub += 1;
 				assert(ub>=lhs_test && ub>=rhs_test);
 				ub -= lhs_test;
 				assert(ub>=rhs_test);
 				lhs_test += rhs_test;
-				assert(target_machine->signed_max(machine_type_old)<lhs_test);
+				assert(target_machine->signed_max(old.machine_type)<lhs_test);
 				// ok...valid but won't reduce.  pick an argument and mock this up
 				src.eval_to_arg<2>(0);
 				return;
