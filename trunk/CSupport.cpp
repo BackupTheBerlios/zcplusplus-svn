@@ -5838,7 +5838,7 @@ static bool terse_C99_augment_mult_expression(parse_tree& src, size_t& i, const 
 	assert(i<src.size<0>());
 	if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i]))
 		{
-		if (1<=i && (PARSE_MULT_EXPRESSION & src.data<0>()[i-1].flags))
+		if (1<=i && (inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]),(PARSE_MULT_EXPRESSION & src.data<0>()[i-1].flags)))
 			{
 			merge_binary_infix_argument(src,i,PARSE_STRICT_MULT_EXPRESSION);
 			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
@@ -7520,8 +7520,8 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 			break;
 			}
 	case 3:	{	// integer literal == integer literal
-			intlike_literal_to_VM(lhs_int,*src.data<1>());
-			intlike_literal_to_VM(rhs_int,*src.data<2>());
+			if (!intlike_literal_to_VM(lhs_int,*src.data<1>())) return false;
+			if (!intlike_literal_to_VM(rhs_int,*src.data<2>())) return false;
 			force_decimal_literal(src,(lhs_int==rhs_int)==is_equal_op ? "1" : "0",types);
 			return true;
 			}
