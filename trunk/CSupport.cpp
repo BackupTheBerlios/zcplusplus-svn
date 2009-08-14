@@ -5969,17 +5969,29 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 		assert(old.bitcount>=rhs.bitcount);
 
 		// handle sign-extension of lhs, rhs
-		if (old.bitcount>lhs.bitcount && 0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
-			target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
-		if (old.bitcount>rhs.bitcount && 0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
-			target_machine->sign_extend(rhs_int,rhs.machine_type,old.machine_type);
-		const bool lhs_negative = res_int.test(old.bitcount-1);
-		const bool rhs_negative = rhs_int.test(old.bitcount-1);
+		if (0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
+			{
+			if (1==(old.promoted_type-C_TYPE::INT)%2)
+				// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+				target_machine->C_cast_signed_to_unsigned(res_int,lhs.machine_type);
+			else if (old.bitcount>lhs.bitcount)
+				target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
+			};
+		if (0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
+			{
+			if (1==(old.promoted_type-C_TYPE::INT)%2)
+				// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+				target_machine->C_cast_signed_to_unsigned(rhs_int,rhs.machine_type);
+			else if (old.bitcount>rhs.bitcount)
+				target_machine->sign_extend(rhs_int,lhs.machine_type,old.machine_type);
+			};
 		if (0==(old.promoted_type-C_TYPE::INT)%2)
 			{	// signed integer result: overflow is undefined
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(old.machine_type));
+			const bool lhs_negative = res_int.test(old.bitcount-1);
+			const bool rhs_negative = rhs_int.test(old.bitcount-1);
 			const bool tweak_ub = rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation() && !bool_options[boolopt::int_traps];
 			if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,old.machine_type);
 			if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,old.machine_type);
@@ -6017,11 +6029,9 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 				}
 			res_int = lhs_test;
 			}
-		else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-			target_machine->C_cast_signed_to_unsigned(res_int,old.machine_type);
-			target_machine->C_cast_signed_to_unsigned(rhs_int,old.machine_type);
+		else
 			res_int *= rhs_int;
-			}
+
 		// convert to parsed + literal
 		parse_tree tmp;
 		if (!VM_to_literal(tmp,res_int,src,types)) return false;
@@ -6094,17 +6104,29 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 		assert(old.bitcount>=rhs.bitcount);
 
 		// handle sign-extension of lhs, rhs
-		if (old.bitcount>lhs.bitcount && 0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
-			target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
-		if (old.bitcount>rhs.bitcount && 0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
-			target_machine->sign_extend(rhs_int,rhs.machine_type,old.machine_type);
-		const bool lhs_negative = res_int.test(old.bitcount-1);
-		const bool rhs_negative = rhs_int.test(old.bitcount-1);
+		if (0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
+			{
+			if (1==(old.promoted_type-C_TYPE::INT)%2)
+				// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+				target_machine->C_cast_signed_to_unsigned(res_int,lhs.machine_type);
+			else if (old.bitcount>lhs.bitcount)
+				target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
+			};
+		if (0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
+			{
+			if (1==(old.promoted_type-C_TYPE::INT)%2)
+				// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+				target_machine->C_cast_signed_to_unsigned(rhs_int,rhs.machine_type);
+			else if (old.bitcount>rhs.bitcount)
+				target_machine->sign_extend(rhs_int,lhs.machine_type,old.machine_type);
+			};
 		if (0==(old.promoted_type-C_TYPE::INT)%2)
 			{	// signed integer result
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(old.machine_type));
+			const bool lhs_negative = res_int.test(old.bitcount-1);
+			const bool rhs_negative = rhs_int.test(old.bitcount-1);
 			if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,old.machine_type);
 			if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,old.machine_type);
 			if (rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation()) ub += 1;
@@ -6160,11 +6182,8 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 
 			res_int = lhs_test;
 			}
-		else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-			target_machine->C_cast_signed_to_unsigned(res_int,old.machine_type);
-			target_machine->C_cast_signed_to_unsigned(rhs_int,old.machine_type);
+		else
 			res_int /= rhs_int;
-			}
 
 		// convert to parsed + literal
 		parse_tree tmp;
@@ -6240,17 +6259,29 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 		assert(old.bitcount>=rhs.bitcount);
 
 		// handle sign-extension of lhs, rhs
-		if (old.bitcount>lhs.bitcount && 0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
-			target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
-		if (old.bitcount>rhs.bitcount && 0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
-			target_machine->sign_extend(rhs_int,rhs.machine_type,old.machine_type);
-		const bool lhs_negative = res_int.test(old.bitcount-1);
-		const bool rhs_negative = rhs_int.test(old.bitcount-1);
+		if (0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
+			{
+			if (1==(old.promoted_type-C_TYPE::INT)%2)
+				// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+				target_machine->C_cast_signed_to_unsigned(res_int,lhs.machine_type);
+			else if (old.bitcount>lhs.bitcount)
+				target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
+			};
+		if (0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
+			{
+			if (1==(old.promoted_type-C_TYPE::INT)%2)
+				// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+				target_machine->C_cast_signed_to_unsigned(rhs_int,rhs.machine_type);
+			else if (old.bitcount>rhs.bitcount)
+				target_machine->sign_extend(rhs_int,lhs.machine_type,old.machine_type);
+			};
 		if (0==(old.promoted_type-C_TYPE::INT)%2)
 			{	// signed integer result
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(old.machine_type));
+			const bool lhs_negative = res_int.test(old.bitcount-1);
+			const bool rhs_negative = rhs_int.test(old.bitcount-1);
 			if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,old.machine_type);
 			if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,old.machine_type);
 			if (rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation()) ub += 1;
@@ -6277,11 +6308,8 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 
 			res_int = lhs_test;
 			}
-		else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-			target_machine->C_cast_signed_to_unsigned(res_int,old.machine_type);
-			target_machine->C_cast_signed_to_unsigned(rhs_int,old.machine_type);
+		else
 			res_int %= rhs_int;
-			}
 
 		// convert to parsed + literal
 		parse_tree tmp;
@@ -6582,12 +6610,22 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 			assert(old.bitcount>=rhs.bitcount);
 			const bool lhs_converted = intlike_literal_to_VM(res_int,*src.data<1>());
 			const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
-			if (lhs_converted && old.bitcount>lhs.bitcount && 0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
-				// handle sign-extension
-				target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
-			if (rhs_converted && old.bitcount>rhs.bitcount && 0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
-				// handle sign-extension
-				target_machine->sign_extend(rhs_int,rhs.machine_type,old.machine_type);
+			if (lhs_converted && 0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
+				{
+				if (1==(old.promoted_type-C_TYPE::INT)%2)
+					// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+					target_machine->C_cast_signed_to_unsigned(res_int,lhs.machine_type);
+				else if (old.bitcount>lhs.bitcount)
+					target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
+				};
+			if (rhs_converted && 0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
+				{
+				if (1==(old.promoted_type-C_TYPE::INT)%2)
+					// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+					target_machine->C_cast_signed_to_unsigned(rhs_int,rhs.machine_type);
+				else if (old.bitcount>rhs.bitcount)
+					target_machine->sign_extend(rhs_int,lhs.machine_type,old.machine_type);
+				};
 			if (lhs_converted && rhs_converted)
 				{
 				if (0==(old.promoted_type-C_TYPE::INT)%2)
@@ -6650,11 +6688,8 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 						};
 					res_int = lhs_test;
 					}
-				else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-					target_machine->C_cast_signed_to_unsigned(res_int,old.machine_type);
-					target_machine->C_cast_signed_to_unsigned(rhs_int,old.machine_type);
+				else
 					res_int += rhs_int;
-					}
 
 				// convert to parsed + literal
 				parse_tree tmp;
@@ -6745,17 +6780,29 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 				assert(old.bitcount>=rhs.bitcount);
 
 				// handle sign-extension of lhs, rhs
-				if (old.bitcount>lhs.bitcount && 0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
-					target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
-				if (old.bitcount>rhs.bitcount && 0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
-					target_machine->sign_extend(rhs_int,rhs.machine_type,old.machine_type);
-				const bool lhs_negative = res_int.test(old.bitcount-1);
-				const bool rhs_negative = rhs_int.test(old.bitcount-1);
+				if (0==(lhs.promoted_type-C_TYPE::INT)%2 && res_int.test(lhs.bitcount-1))
+					{
+					if (1==(old.promoted_type-C_TYPE::INT)%2)
+						// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+						target_machine->C_cast_signed_to_unsigned(res_int,lhs.machine_type);
+					else if (old.bitcount>lhs.bitcount)
+						target_machine->sign_extend(res_int,lhs.machine_type,old.machine_type);
+					};
+				if (0==(rhs.promoted_type-C_TYPE::INT)%2 && rhs_int.test(rhs.bitcount-1))
+					{
+					if (1==(old.promoted_type-C_TYPE::INT)%2)
+						// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+						target_machine->C_cast_signed_to_unsigned(rhs_int,rhs.machine_type);
+					else if (old.bitcount>rhs.bitcount)
+						target_machine->sign_extend(rhs_int,lhs.machine_type,old.machine_type);
+					};
 				if (0==(old.promoted_type-C_TYPE::INT)%2)
 					{	// signed integer result
 					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_test(res_int);
 					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
 					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> ub(target_machine->signed_max(old.machine_type));
+					const bool lhs_negative = res_int.test(old.bitcount-1);
+					const bool rhs_negative = rhs_int.test(old.bitcount-1);
 					bool result_is_negative = false;
 					if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,old.machine_type);
 					if (lhs_negative) target_machine->signed_additive_inverse(lhs_test,old.machine_type);
@@ -6809,11 +6856,8 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 						};
 					res_int = lhs_test;
 					}
-				else{	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
-					target_machine->C_cast_signed_to_unsigned(res_int,old.machine_type);
-					target_machine->C_cast_signed_to_unsigned(rhs_int,old.machine_type);
+				else
 					res_int -= rhs_int;
-					}
 
 				// convert to parsed + literal
 				parse_tree tmp;
