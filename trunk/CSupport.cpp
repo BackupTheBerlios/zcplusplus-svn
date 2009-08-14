@@ -5370,6 +5370,21 @@ static void force_unary_positive_literal(parse_tree& dest,const parse_tree& src)
 	assert(is_C99_unary_operator_expression<'+'>(dest));
 }
 
+static void force_unary_negative_token(parse_tree& dest,parse_tree* src,const parse_tree& loc_src)
+{
+	assert(NULL!=src);
+	dest.clear();
+	dest.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+	dest.grab_index_token_location_from<0,0>(loc_src);
+	dest.fast_set_arg<2>(src);
+	dest.core_flag_update();
+	dest.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+	dest.subtype = C99_UNARY_SUBTYPE_NEG;
+	// do not handle type here: C++ operator overloading risk
+	assert(NULL!=dest.index_tokens[0].src_filename);
+	assert(is_C99_unary_operator_expression<'-'>(dest));
+}
+
 static bool terse_locate_C99_bitwise_complement(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -5416,6 +5431,60 @@ static bool terse_locate_CPP_bitwise_complement(parse_tree& src, size_t& i, cons
 	return false;
 }
 
+static bool construct_twos_complement_int_min(parse_tree& dest, const type_system& types, const virtual_machine::std_int_enum machine_type, const parse_tree& src_loc)
+{
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp_int(target_machine->signed_max(machine_type));
+	parse_tree* const tmp = _new_buffer<parse_tree>(1);	// XXX we recycle this variable later
+	if (NULL==tmp) return false;
+	if (!VM_to_literal(*tmp,tmp_int,src_loc,types)) return false;
+
+	tmp_int = 1;
+	parse_tree* const tmp2 = _new_buffer<parse_tree>(1);
+	if (NULL==tmp2)
+		{
+		tmp->destroy();
+		_flush(tmp);
+		return false;
+		}
+	if (!VM_to_literal(*tmp2,tmp_int,src_loc,types))
+		{
+		tmp2->destroy();
+		_flush(tmp2);
+		tmp->destroy();
+		_flush(tmp);
+		return false;
+		}
+
+	parse_tree* const tmp3 = _new_buffer<parse_tree>(1);
+	if (NULL==tmp3)
+		{
+		tmp2->destroy();
+		_flush(tmp2);
+		tmp->destroy();
+		_flush(tmp);
+		return false;
+		}
+	force_unary_negative_token(*tmp3,tmp,src_loc);
+	tmp3->type_code = tmp->type_code;
+
+	parse_tree tmp4;
+	tmp4.clear();
+	tmp4.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+	tmp4.grab_index_token_location_from<0,0>(src_loc);
+	tmp4.fast_set_arg<1>(tmp3);
+	tmp4.fast_set_arg<2>(tmp2);
+
+	tmp4.core_flag_update();
+	tmp4.flags |= PARSE_STRICT_ADD_EXPRESSION;
+	tmp4.subtype = C99_ADD_SUBTYPE_MINUS;
+	assert(is_C99_add_operator_expression<'-'>(tmp4));
+
+	dest.destroy();
+	dest = tmp4;
+	// do not handle type here: C++ operator overloading risk
+	return true;
+}
+
 static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool hard_error,func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_complement_expression,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
 	assert(is_bitwise_complement_expression(src));
@@ -5432,81 +5501,12 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool ha
 
 		const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
 		if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
-		if (virtual_machine::twos_complement==target_machine->C_signed_int_representation() && 0==(old_type.base_type_index-C_TYPE::INT)%2 && !bool_options[boolopt::int_traps] && res_int>target_machine->signed_max(machine_type))
+		if (	virtual_machine::twos_complement==target_machine->C_signed_int_representation()
+			&& 	0==(old_type.base_type_index-C_TYPE::INT)%2
+			&& 	!bool_options[boolopt::int_traps]
+			&&	res_int>target_machine->signed_max(machine_type)
+			&&	construct_twos_complement_int_min(src,types,machine_type,src))
 			{	// trap representation; need to get it into -INT_MAX-1 form
-			res_int -= 1;
-			assert(res_int<=target_machine->signed_max(machine_type));
-			parse_tree* tmp = _new_buffer<parse_tree>(1);	// XXX we recycle this variable later
-			if (NULL==tmp) return false;
-			if (!VM_to_literal(*tmp,res_int,src,types)) return false;
-
-			res_int = 1;
-			parse_tree* const tmp2 = _new_buffer<parse_tree>(1);
-			if (NULL==tmp2)
-				{
-				tmp->destroy();
-				_flush(tmp);
-				return false;
-				}
-			if (!VM_to_literal(*tmp2,res_int,src,types))
-				{
-				tmp2->destroy();
-				_flush(tmp2);
-				tmp->destroy();
-				_flush(tmp);
-				return false;
-				}
-
-			parse_tree* const tmp3 = _new_buffer<parse_tree>(1);
-			if (NULL==tmp3)
-				{
-				tmp2->destroy();
-				_flush(tmp2);
-				tmp->destroy();
-				_flush(tmp);
-				return false;
-				}
-			tmp3->clear();
-			tmp3->grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-			tmp3->grab_index_token_location_from<0,0>(src);
-			tmp3->fast_set_arg<2>(tmp);
-			tmp3->core_flag_update();
-			tmp3->flags |= PARSE_STRICT_UNARY_EXPRESSION;
-			tmp3->subtype = C99_UNARY_SUBTYPE_NEG;
-			assert(is_C99_unary_operator_expression<'-'>(*tmp3));
-
-			tmp = _new_buffer<parse_tree>(1);
-			if (NULL==tmp)
-				{
-				tmp2->destroy();
-				_flush(tmp2);
-				tmp3->destroy();
-				_flush(tmp3);
-				return false;
-				}
-			tmp->clear();
-			tmp->grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-			tmp->grab_index_token_location_from<0,0>(src);
-			tmp->fast_set_arg<2>(tmp2);
-			tmp->core_flag_update();
-			tmp->flags |= PARSE_STRICT_UNARY_EXPRESSION;
-			tmp->subtype = C99_UNARY_SUBTYPE_NEG;
-			assert(is_C99_unary_operator_expression<'-'>(*tmp));
-
-			parse_tree tmp5;
-			tmp5.clear();
-			tmp5.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-			tmp5.grab_index_token_location_from<0,0>(src);
-			tmp5.fast_set_arg<1>(tmp3);
-			tmp5.fast_set_arg<2>(tmp);
-
-			tmp5.core_flag_update();
-			tmp5.flags |= PARSE_STRICT_ADD_EXPRESSION;
-			tmp5.subtype = C99_ADD_SUBTYPE_MINUS;
-			assert(is_C99_add_operator_expression<'-'>(tmp5));
-
-			src.destroy();
-			src = tmp5;
 			src.type_code = old_type;
 			return true;
 			}
@@ -5838,7 +5838,7 @@ static bool terse_C99_augment_mult_expression(parse_tree& src, size_t& i, const 
 	assert(i<src.size<0>());
 	if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i]))
 		{
-		if (1<=i && (inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]),(PARSE_MULT_EXPRESSION & src.data<0>()[i-1].flags)))
+		if (1<=i && (PARSE_MULT_EXPRESSION & src.data<0>()[i-1].flags))
 			{
 			merge_binary_infix_argument(src,i,PARSE_STRICT_MULT_EXPRESSION);
 			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
@@ -5903,6 +5903,7 @@ static bool terse_locate_mult_expression(parse_tree& src, size_t& i)
 }
 
 // auxilliary structure to aggregate useful information for type promotions
+// this will malfunction badly for anything other than an integer type
 class promote_aux : public virtual_machine::promotion_info
 {
 public:
@@ -6260,7 +6261,7 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 
 			res_int = lhs_test;
 			}
-		else
+		else	// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
 			res_int %= rhs_int;
 
 		// convert to parsed + literal
@@ -6459,7 +6460,7 @@ static bool terse_C99_augment_add_expression(parse_tree& src, size_t& i, const t
 	assert(i<src.size<0>());
 	if (is_C99_unary_operator_expression<'+'>(src.data<0>()[i]) || is_C99_unary_operator_expression<'-'>(src.data<0>()[i]))
 		{
-		if (1<=i && (PARSE_ADD_EXPRESSION & src.data<0>()[i-1].flags))
+		if (1<=i && (inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]),(PARSE_ADD_EXPRESSION & src.data<0>()[i-1].flags)))
 			{
 			merge_binary_infix_argument(src,i,PARSE_STRICT_ADD_EXPRESSION);
 			assert(is_C99_add_operator_expression(src.data<0>()[i]));
@@ -6519,6 +6520,31 @@ static bool terse_locate_add_expression(parse_tree& src, size_t& i)
 			}
 		}
 	return false;
+}
+
+static void C99_CPP_binary_minus_to_unary_minus(parse_tree& x)
+{
+	assert(is_C99_add_operator_expression<'-'>(x));
+	x.DeleteIdx<1>(0);
+	x.core_flag_update();
+	x.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+	BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_NEG==C99_ADD_SUBTYPE_MINUS);
+	assert(is_C99_unary_operator_expression<'-'>(x));
+}
+
+// this one hides a slight inefficiency: negative literals take 2 dynamic memory allocations, positive literals take one
+static bool VM_to_signed_literal(parse_tree& x,const bool is_negative, const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,const parse_tree& src,const type_system& types)
+{
+	if (is_negative)
+		{
+		parse_tree* tmp = _new_buffer<parse_tree>(1);
+		if (NULL==tmp) return false;
+		if (!VM_to_literal(*tmp,src_int,src,types)) return false;
+		force_unary_negative_token(x,tmp,*tmp);
+		}
+	else if (!VM_to_literal(x,src_int,src,types))
+		return false;
+	return true;
 }
 
 static bool eval_add_expression(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
@@ -6635,6 +6661,123 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 				force_unary_positive_literal(src,tmp);
 				src.type_code = old_type;
 				return true;
+				}
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_lhs_int;
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_rhs_int;
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_lhs_int;
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_rhs_int;
+			// fear C++ operator overloading
+			const int want_lhs_details 	= lhs_converted ? 0
+										: is_C99_add_operator_expression<'+'>(*src.data<1>()) && converts_to_arithmeticlike(src.data<1>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<1>()->data<2>()->type_code.base_type_index) ? 1
+										: is_C99_add_operator_expression<'-'>(*src.data<1>()) && converts_to_arithmeticlike(src.data<1>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<1>()->data<2>()->type_code.base_type_index) ? 2 : 0;
+			if (!lhs_converted && !want_lhs_details) break;	// nothing to work with
+			// fear C++ operator overloading
+			const int want_rhs_details 	= rhs_converted ? 0
+										: is_C99_add_operator_expression<'+'>(*src.data<2>()) && converts_to_arithmeticlike(src.data<2>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<2>()->data<2>()->type_code.base_type_index) ? 1
+										: is_C99_add_operator_expression<'-'>(*src.data<2>()) && converts_to_arithmeticlike(src.data<2>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<2>()->data<2>()->type_code.base_type_index) ? 2 : 0;
+			if (!rhs_converted && !want_rhs_details) break;	// nothing to work with
+
+			const bool lhs_lhs_converted = want_lhs_details && intlike_literal_to_VM(lhs_lhs_int,*src.data<1>()->data<1>());
+			const bool lhs_rhs_converted = want_lhs_details && intlike_literal_to_VM(lhs_rhs_int,*src.data<1>()->data<2>());
+			const bool rhs_lhs_converted = want_rhs_details && intlike_literal_to_VM(rhs_lhs_int,*src.data<2>()->data<1>());
+			const bool rhs_rhs_converted = want_rhs_details && intlike_literal_to_VM(rhs_rhs_int,*src.data<2>()->data<2>());
+
+			const bool lhs_lhs_negative = lhs_lhs_converted && target_machine->C_promote_integer(lhs_lhs_int,promote_aux(src.data<1>()->data<1>()->type_code.base_type_index),lhs);
+			const bool lhs_rhs_negative = lhs_rhs_converted && target_machine->C_promote_integer(lhs_rhs_int,promote_aux(src.data<1>()->data<2>()->type_code.base_type_index),lhs);
+			if (rhs_lhs_converted) target_machine->C_promote_integer(rhs_lhs_int,promote_aux(src.data<2>()->data<1>()->type_code.base_type_index),rhs);
+			if (rhs_rhs_converted) target_machine->C_promote_integer(rhs_rhs_int,promote_aux(src.data<2>()->data<2>()->type_code.base_type_index),rhs);
+
+			if (rhs_converted && 2==want_lhs_details)
+				{
+				const bool rhs_cancel_lhs_lhs = lhs_lhs_converted && rhs_negative!=lhs_lhs_negative;
+				const bool rhs_cancel_lhs_rhs = lhs_rhs_converted && rhs_negative==lhs_rhs_negative;
+				if (rhs_cancel_lhs_lhs || rhs_cancel_lhs_rhs)
+					{
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
+					if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,old.machine_type);
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_lhs_test(lhs_lhs_int);
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_rhs_test(lhs_rhs_int);
+					if (rhs_cancel_lhs_lhs && lhs_lhs_negative) target_machine->signed_additive_inverse(lhs_lhs_test,lhs.machine_type);
+					if (rhs_cancel_lhs_rhs && lhs_rhs_negative) target_machine->signed_additive_inverse(lhs_rhs_test,lhs.machine_type);
+					if (rhs_cancel_lhs_rhs && rhs_test==lhs_rhs_test)
+						{	// lose two terms
+							//! \bug needs test case
+						src.c_array<1>()->eval_to_arg<1>(0);
+						src.eval_to_arg<1>(0);
+						//! \todo reality-check (watch out for sudden typecasting)
+						src.type_code = old_type;
+						return true;
+						};
+					if (rhs_cancel_lhs_lhs && rhs_test==lhs_lhs_test)
+						{	// lose two terms
+							//! \test cpp/default/twoscomp.notrap/Pass_min_int.h, cpp/default/twoscomp.notrap/Pass_min_int.hpp
+						C99_CPP_binary_minus_to_unary_minus(*src.c_array<1>());
+						src.eval_to_arg<1>(0);
+						//! \todo reality-check (watch out for sudden typecasting)
+						src.type_code = old_type;
+						return true;
+						};
+					if (rhs_cancel_lhs_rhs && rhs_test<lhs_rhs_test)
+						{	// lose rhs
+							//! \bug needs test case
+						lhs_rhs_test -= rhs_test;
+
+						parse_tree tmp;
+						if (!VM_to_signed_literal(tmp,lhs_rhs_negative,lhs_rhs_test,*src.c_array<1>()->c_array<2>(),types)) return false;
+						src.c_array<1>()->c_array<2>()->destroy();
+						*src.c_array<1>()->c_array<2>() = tmp;
+
+						src.eval_to_arg<1>(0);
+						//! \todo reality-check (watch out for sudden typecasting)
+						src.type_code = old_type;
+						return true;
+						}
+					if (rhs_cancel_lhs_lhs && rhs_test<lhs_lhs_test)
+						{	// lose rhs
+							//! \bug needs test case
+						lhs_lhs_test -= rhs_test;
+
+						parse_tree tmp;
+						if (!VM_to_signed_literal(tmp,lhs_lhs_negative,lhs_lhs_test,*src.c_array<1>()->c_array<1>(),types)) return false;
+						src.c_array<1>()->c_array<2>()->destroy();
+						*src.c_array<1>()->c_array<2>() = tmp;
+
+						src.eval_to_arg<1>(0);
+						//! \todo reality-check (watch out for sudden typecasting)
+						src.type_code = old_type;
+						return true;
+						}
+					if (rhs_cancel_lhs_rhs /* && rhs_test>lhs_rhs_test */)
+						{	// lose lhs_rhs
+							//! \bug needs test case
+						rhs_test -= lhs_rhs_test;
+
+						parse_tree tmp;
+						if (!VM_to_signed_literal(tmp,rhs_negative,rhs_test,*src.c_array<2>(),types)) return false;
+						src.c_array<2>()->destroy();
+						*src.c_array<2>() = tmp;
+
+						src.c_array<1>()->eval_to_arg<1>(0);
+						//! \todo reality-check (watch out for sudden typecasting)
+						src.type_code = old_type;
+						return true;
+						}
+					if (rhs_cancel_lhs_lhs /* && rhs_test>lhs_lhs_test */)
+						{	// lose lhs_lhs
+							//! \bug needs test case
+						rhs_test -= lhs_lhs_test;
+
+						parse_tree tmp;
+						if (!VM_to_signed_literal(tmp,rhs_negative,rhs_test,*src.c_array<2>(),types)) return false;
+						src.c_array<2>()->destroy();
+						*src.c_array<2>() = tmp;
+
+						C99_CPP_binary_minus_to_unary_minus(*src.c_array<1>());
+						//! \todo reality-check (watch out for sudden typecasting)
+						src.type_code = old_type;
+						return true;
+						}
+					}
 				}
 			break;
 			}
@@ -7484,10 +7627,91 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 			break;
 			}
 	case 3:	{	// integer literal == integer literal
-			if (!intlike_literal_to_VM(lhs_int,*src.data<1>())) return false;
-			if (!intlike_literal_to_VM(rhs_int,*src.data<2>())) return false;
-			force_decimal_literal(src,(lhs_int==rhs_int)==is_equal_op ? "1" : "0",types);
-			return true;
+			const promote_aux lhs(src.data<1>()->type_code.base_type_index);
+			const promote_aux rhs(src.data<2>()->type_code.base_type_index);
+			const promote_aux old(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index));
+			assert(old.bitcount>=lhs.bitcount);
+			assert(old.bitcount>=rhs.bitcount);
+			const bool lhs_converted = intlike_literal_to_VM(lhs_int,*src.data<1>());
+			const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
+			if (lhs_converted) target_machine->C_promote_integer(lhs_int,lhs,old);
+			if (rhs_converted) target_machine->C_promote_integer(rhs_int,rhs,old);
+			if (lhs_converted && rhs_converted)
+				{
+				force_decimal_literal(src,(lhs_int==rhs_int)==is_equal_op ? "1" : "0",types);
+				return true;
+				};
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_lhs_int;
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_rhs_int;
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_lhs_int;
+			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_rhs_int;
+			// fear C++ operator overloading
+			const int want_lhs_details 	= lhs_converted ? 0
+										: is_C99_add_operator_expression<'+'>(*src.data<1>()) && converts_to_arithmeticlike(src.data<1>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<1>()->data<2>()->type_code.base_type_index) ? 1
+										: is_C99_add_operator_expression<'-'>(*src.data<1>()) && converts_to_arithmeticlike(src.data<1>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<1>()->data<2>()->type_code.base_type_index) ? 2 : 0;
+			if (!lhs_converted && !want_lhs_details) break;	// nothing to work with
+			// fear C++ operator overloading
+			const int want_rhs_details 	= rhs_converted ? 0
+										: is_C99_add_operator_expression<'+'>(*src.data<2>()) && converts_to_arithmeticlike(src.data<2>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<2>()->data<2>()->type_code.base_type_index) ? 1
+										: is_C99_add_operator_expression<'-'>(*src.data<2>()) && converts_to_arithmeticlike(src.data<2>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<2>()->data<2>()->type_code.base_type_index) ? 2 : 0;
+			if (!rhs_converted && !want_rhs_details) break;	// nothing to work with
+
+			const bool lhs_lhs_converted = want_lhs_details && intlike_literal_to_VM(lhs_lhs_int,*src.data<1>()->data<1>());
+			const bool lhs_rhs_converted = want_lhs_details && intlike_literal_to_VM(lhs_rhs_int,*src.data<1>()->data<2>());
+			const bool rhs_lhs_converted = want_rhs_details && intlike_literal_to_VM(rhs_lhs_int,*src.data<2>()->data<1>());
+			const bool rhs_rhs_converted = want_rhs_details && intlike_literal_to_VM(rhs_rhs_int,*src.data<2>()->data<2>());
+
+			const bool lhs_lhs_negative = lhs_lhs_converted && target_machine->C_promote_integer(lhs_lhs_int,promote_aux(src.data<1>()->data<1>()->type_code.base_type_index),lhs);
+			const bool lhs_rhs_negative = lhs_rhs_converted && target_machine->C_promote_integer(lhs_rhs_int,promote_aux(src.data<1>()->data<2>()->type_code.base_type_index),lhs);
+			const bool rhs_lhs_negative = rhs_lhs_converted && target_machine->C_promote_integer(rhs_lhs_int,promote_aux(src.data<2>()->data<1>()->type_code.base_type_index),rhs);
+			const bool rhs_rhs_negative = rhs_rhs_converted && target_machine->C_promote_integer(rhs_rhs_int,promote_aux(src.data<2>()->data<2>()->type_code.base_type_index),rhs);
+
+			if (2==want_lhs_details && 2==want_rhs_details)
+				{	// ...-... == ...-...
+				const bool lhs_lhs_cancels_rhs_lhs = lhs_lhs_converted && rhs_lhs_converted && lhs_lhs_negative==rhs_lhs_negative;
+				const bool lhs_lhs_cancels_rhs_rhs = lhs_lhs_converted && rhs_lhs_converted && lhs_lhs_negative!=rhs_rhs_negative;
+				const bool lhs_rhs_cancels_rhs_lhs = lhs_rhs_converted && rhs_lhs_converted && lhs_rhs_negative!=rhs_lhs_negative;
+				const bool lhs_rhs_cancels_rhs_rhs = lhs_rhs_converted && rhs_lhs_converted && lhs_rhs_negative==rhs_rhs_negative;
+				if (lhs_lhs_cancels_rhs_lhs || lhs_lhs_cancels_rhs_rhs || lhs_rhs_cancels_rhs_lhs || lhs_rhs_cancels_rhs_rhs)
+					{
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_lhs_test(lhs_lhs_int);
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_rhs_test(lhs_rhs_int);
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_lhs_test(rhs_lhs_int);
+					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_rhs_test(rhs_rhs_int);
+
+					if (lhs_lhs_negative && (lhs_lhs_cancels_rhs_lhs || lhs_lhs_cancels_rhs_rhs)) target_machine->signed_additive_inverse(lhs_lhs_test,lhs.machine_type);
+					if (lhs_rhs_negative && (lhs_rhs_cancels_rhs_lhs || lhs_rhs_cancels_rhs_rhs)) target_machine->signed_additive_inverse(lhs_rhs_test,lhs.machine_type);
+					if (rhs_lhs_negative && (lhs_lhs_cancels_rhs_lhs || lhs_rhs_cancels_rhs_lhs)) target_machine->signed_additive_inverse(rhs_lhs_test,rhs.machine_type);
+					if (rhs_rhs_negative && (lhs_lhs_cancels_rhs_rhs || lhs_rhs_cancels_rhs_rhs)) target_machine->signed_additive_inverse(rhs_rhs_test,rhs.machine_type);
+
+					// memory conserving transforms first
+					if (lhs_lhs_cancels_rhs_lhs && lhs_lhs_test==rhs_lhs_test)
+						{	//! \bug needs test case
+						C99_CPP_binary_minus_to_unary_minus(*src.c_array<1>());
+						C99_CPP_binary_minus_to_unary_minus(*src.c_array<2>());
+						return true;
+						};
+					if (lhs_lhs_cancels_rhs_rhs && lhs_lhs_test==rhs_rhs_test)
+						{	//! \bug needs test case
+						C99_CPP_binary_minus_to_unary_minus(*src.c_array<1>());
+						src.c_array<2>()->eval_to_arg<1>(0);
+						return true;
+						};
+					if (lhs_rhs_cancels_rhs_lhs && lhs_rhs_test==rhs_lhs_test)
+						{	//! \bug needs test case
+						src.c_array<1>()->eval_to_arg<1>(0);
+						C99_CPP_binary_minus_to_unary_minus(*src.c_array<2>());
+						return true;
+						};
+					if (lhs_rhs_cancels_rhs_rhs && lhs_rhs_test==rhs_rhs_test)
+						{	//! \bug needs test case
+						src.c_array<1>()->eval_to_arg<1>(0);
+						src.c_array<2>()->eval_to_arg<1>(0);
+						return true;
+						};
+					};
+				}
+//			break;
 			}
 	};
 	
@@ -7664,6 +7888,7 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
 	if (intlike_literal_to_VM(lhs_int,*src.data<1>()) && intlike_literal_to_VM(rhs_int,*src.data<2>()))
 		{
+		const promote_aux old(old_type.base_type_index);
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int(lhs_int);
 		res_int &= rhs_int;
 
@@ -7677,19 +7902,22 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 			// lhs & rhs = rhs; conserve type
 			src.eval_to_arg<2>(0);
 		else{
-			const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(src.type_code.base_type_index);
-			const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
-			if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
-			parse_tree tmp;
-			if (!VM_to_literal(tmp,res_int,src,types)) return false;
-
-			if (negative_signed_int)
-				{	// convert to parsed - literal
-				src.DeleteIdx<1>(0);
-				force_unary_negative_literal(src,tmp);
+			const bool negative_signed_int = old.is_signed && res_int.test(old.bitcount-1);
+			if (negative_signed_int) target_machine->signed_additive_inverse(res_int,old.machine_type);
+			if (	virtual_machine::twos_complement==target_machine->C_signed_int_representation()
+				&& 	old.is_signed
+				&& 	!bool_options[boolopt::int_traps]
+				&&	res_int>target_machine->signed_max(old.machine_type)
+				&&	construct_twos_complement_int_min(src,types,old.machine_type,src))
+				{	// trap representation; need to get it into -INT_MAX-1 form
+				src.type_code = old_type;
+				return true;
 				}
-			else	// convert to positive literal
-				src = tmp;
+
+			parse_tree tmp;
+			if (!VM_to_signed_literal(tmp,negative_signed_int,res_int,src,types)) return false;
+			src.destroy();
+			src = tmp;
 			}
 		src.type_code = old_type;
 		return true;
@@ -7835,26 +8063,29 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 	if (intlike_literal_to_VM(lhs_int,*src.data<1>()) && intlike_literal_to_VM(rhs_int,*src.data<2>()))
 		{
 		const type_spec old_type = src.type_code;
-
+		const promote_aux old(old_type.base_type_index);
 		unsigned_fixed_int<VM_MAX_BIT_PLATFORM> res_int(lhs_int);
 		res_int ^= rhs_int;
 //		res_int.mask_to(target_machine->C_bit(machine_type));	// shouldn't need this
 
 		if (int_has_trapped(src,res_int,hard_error)) return false;
 
-		const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(src.type_code.base_type_index);
-		const bool negative_signed_int = 0==(src.type_code.base_type_index-C_TYPE::INT)%2 && res_int.test(target_machine->C_bit(machine_type)-1);
-		if (negative_signed_int) target_machine->signed_additive_inverse(res_int,machine_type);
-		parse_tree tmp;
-		if (!VM_to_literal(tmp,res_int,src,types)) return false;
-
-		if (negative_signed_int)
-			{	// convert to parsed - literal
-			src.DeleteIdx<1>(0);
-			force_unary_negative_literal(src,tmp);
+		const bool negative_signed_int = old.is_signed && res_int.test(old.bitcount-1);
+		if (negative_signed_int) target_machine->signed_additive_inverse(res_int,old.machine_type);
+		if (	virtual_machine::twos_complement==target_machine->C_signed_int_representation()
+			&& 	old.is_signed
+			&& 	!bool_options[boolopt::int_traps]
+			&&	res_int>target_machine->signed_max(old.machine_type)
+			&&	construct_twos_complement_int_min(src,types,old.machine_type,src))
+			{	// trap representation; need to get it into -INT_MAX-1 form
+			src.type_code = old_type;
+			return true;
 			}
-		else	// convert to positive literal
-			src = tmp;
+
+		parse_tree tmp;
+		if (!VM_to_signed_literal(tmp,negative_signed_int,res_int,src,types)) return false;
+		src.destroy();
+		src = tmp;
 		src.type_code = old_type;
 		return true;
 		}

@@ -22,6 +22,7 @@ function run_tests {
 	local CPP_SIGNMAG_TRAP="../../z_cpp --int-sign-magnitude --int-traps"
 	local CPP_ONESCOMP_NOTRAP="../../z_cpp --int-ones-complement"
 	local CPP_ONESCOMP_TRAP="../../z_cpp --int-ones-complement --int-traps"
+	local CPP_TWOSCOMP_NOTRAP="../../z_cpp --int-twos-complement"
 
 	echo Checking ISO error requirements
 	echo ====
@@ -80,6 +81,8 @@ function run_tests {
 	for F in default/onescomp.core/Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP_ONESCOMP_TRAP $F; if $CPP_ONESCOMP_TRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 	for F in default/onescomp.trap/Error*.h; do let ++REJECT_TEST; echo $CPP_ONESCOMP_TRAP $F; if $CPP_ONESCOMP_TRAP $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
 	for F in default/onescomp.trap/Error*.hpp; do let ++REJECT_TEST; echo $CPP_ONESCOMP_TRAP $F; if $CPP_ONESCOMP_TRAP $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
+	for F in default/twoscomp.notrap/Pass*.h; do let ++ACCEPT_TEST; echo $CPP_TWOSCOMP_NOTRAP $F; if $CPP_TWOSCOMP_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in default/twoscomp.notrap/Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP_TWOSCOMP_NOTRAP $F; if $CPP_TWOSCOMP_NOTRAP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 
 	echo Checking ZCC nonconforming errors
 	echo ====

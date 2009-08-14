@@ -1,0 +1,30 @@
+SUFFIXES h hpp
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+#include <limits.h>
+
+// two's complement: obvious INT_MIN is trap representation
+// check internal relations
+TRUE_EXPRESSION -(INT_MIN+1)==INT_MAX
+TRUE_EXPRESSION -(LONG_MIN+1)==LONG_MAX
+TRUE_EXPRESSION -(LLONG_MIN+1)==LLONG_MAX
+
+// non-trapping machines accept -0
+// | : impractical (have to start with obvious INT_MIN)
+// ~ : use INT_MAX
+// ^ : try INT_MAX vs -1 (randdriver)
+// & : (randdriver)
+TRUE_EXPRESSION INT_MIN==~INT_MAX
+TRUE_EXPRESSION LONG_MIN==~LONG_MAX
+TRUE_EXPRESSION LLONG_MIN==~LLONG_MAX
+
+// spot-check ^
+TRUE_EXPRESSION INT_MIN==(INT_MAX ^ -1)
+TRUE_EXPRESSION LONG_MIN==(LONG_MAX ^ -1L)
+TRUE_EXPRESSION LLONG_MIN==(LLONG_MAX ^ -1LL)
+
+// spot-check &
+TRUE_EXPRESSION INT_MIN==(INT_MIN+1 & INT_MIN+2)
+TRUE_EXPRESSION LONG_MIN==(LONG_MIN+1 & LONG_MIN+2)
+TRUE_EXPRESSION LLONG_MIN==(LLONG_MIN+1 & LLONG_MIN+2)
+

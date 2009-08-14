@@ -9,6 +9,7 @@ VAR CPP_SIGNMAG_NOTRAP ../../z_cpp --int-sign-magnitude
 VAR CPP_SIGNMAG_TRAP ../../z_cpp --int-sign-magnitude --int-traps
 VAR CPP_ONESCOMP_NOTRAP ../../z_cpp --int-ones-complement
 VAR CPP_ONESCOMP_TRAP ../../z_cpp --int-ones-complement --int-traps
+VAR CPP_TWOSCOMP_NOTRAP ../../z_cpp --int-twos-complement
 
 ECHO Checking ISO error requirements
 ERROR CPP_ISO Error*
@@ -39,6 +40,7 @@ PASS CPP_ONESCOMP_NOTRAP default/onescomp.core/Pass*
 PASS CPP_ONESCOMP_NOTRAP default/onescomp.notrap/Pass*
 PASS CPP_ONESCOMP_TRAP default/onescomp.core/Pass*
 ERROR CPP_ONESCOMP_TRAP default/onescomp.trap/Error*
+PASS CPP_TWOSCOMP_NOTRAP default/twoscomp.notrap/Pass*
 
 ECHO Checking ZCC nonconforming errors
 ERROR CPP default.nonconforming/Error*
