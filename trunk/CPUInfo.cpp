@@ -96,6 +96,19 @@ void CPUInfo::unsigned_additive_inverse(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&
 	src_int = tmp;
 }
 
+bool CPUInfo::C_promote_integer(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& x,const promotion_info& src_type, const promotion_info& dest_type) const
+{
+	if (src_type.is_signed && x.test(src_type.bitcount-1))
+		{
+		if (!dest_type.is_signed)
+			// unsigned integer result: C99 6.3.1.3p2 dictates modulo conversion to unsigned
+			C_cast_signed_to_unsigned(x,src_type.machine_type);
+		else if (dest_type.bitcount>src_type.bitcount)
+			sign_extend(x,src_type.machine_type,dest_type.machine_type);
+		};
+	return dest_type.is_signed && x.test(dest_type.bitcount-1);
+}
+
 }	// end namespace virtual_machine
 
 #undef C_sizeof_char

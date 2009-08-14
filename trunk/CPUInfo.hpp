@@ -29,6 +29,14 @@ enum maxima
 	std_int_enum_max = std_int_long_long
 	};
 
+// helper struct for type-promotions; derive from this non-virtually
+struct promotion_info
+{
+	virtual_machine::std_int_enum machine_type;
+	unsigned short bitcount;
+	bool is_signed;	// as in std::numeric_limits
+};
+
 // adjust this upwards as needed
 #define VM_MAX_BIT_PLATFORM 64
 
@@ -129,6 +137,9 @@ public:
 	template<std_int_enum x> const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& unsigned_max() const {return unsigned_maxima[x-1];}
 	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& signed_max(std_int_enum x) const {return signed_maxima[x-1];};
 	template<std_int_enum x> const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& signed_max() const {return signed_maxima[x-1];}
+
+	// return value is weird...it's true iff the promoted x is a negative numeral
+	bool C_promote_integer(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& x,const promotion_info& src_type, const promotion_info& dest_type) const;
 };
 
 #undef SELECT_TARGET_WCHAR_T

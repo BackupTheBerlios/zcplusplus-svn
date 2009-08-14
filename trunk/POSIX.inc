@@ -13,7 +13,7 @@ CXX = g++
 EXEEXT = exe
 OBJEXT = o
 
-CFLAGS = -fargument-alias -finline -Os -Wall --pedantic
+CFLAGS = -fargument-alias -finline -Os -Wall -Wno-long-long --pedantic
 CXXFLAGS =
 ARCH_FLAGS = -mconsole -mno-cygwin -march=pentium -mtune=pentium3
 LINK_FLAGS = 
