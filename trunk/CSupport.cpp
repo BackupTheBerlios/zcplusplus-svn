@@ -826,6 +826,20 @@ static size_t default_promote_type(size_t i)
 	return i;
 }
 
+// auxilliary structure to aggregate useful information for type promotions
+// this will malfunction badly for anything other than an integer type
+class promote_aux : public virtual_machine::promotion_info
+{
+public:
+	promote_aux(size_t base_type_index)
+	{
+		const size_t promoted_type = default_promote_type(base_type_index);
+		machine_type = machine_type_from_type_index(promoted_type);
+		bitcount = target_machine->C_bit(machine_type);
+		is_signed = !((promoted_type-C_TYPE::INT)%2);
+	};
+};
+
 static const char* literal_suffix(size_t i)
 {
 	switch(i)
@@ -3587,7 +3601,8 @@ static bool is_CPP_bitwise_complement_expression(const parse_tree& src)
 			&&	NULL==src.index_tokens[1].token.first
 			&&	src.empty<0>()
 			&&	src.empty<1>()
-			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
+			&&	1==src.size<2>() && (PARSE_EXPRESSION & src.data<2>()->flags);
+//			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
 }
 
 #define C99_MULT_SUBTYPE_DIV 1
@@ -3924,11 +3939,51 @@ bool convert_to(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest,const C_PPIntCore&
 	return true;
 }
 
+// forward-declare to handle recursion
+static bool C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src);
+
 static bool _C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
 {
-	assert(src.is_atomic());
-	assert(PARSE_PRIMARY_EXPRESSION & src.flags);
 	assert(C_TYPE::INTEGERLIKE!=src.type_code.base_type_index);
+
+	if (	virtual_machine::twos_complement==target_machine->C_signed_int_representation()
+		&&  !bool_options[boolopt::int_traps]
+		&&	is_C99_add_operator_expression<'-'>(src))
+		{
+		const promote_aux old(src.type_code.base_type_index);
+		if (old.is_signed)
+			{
+			const promote_aux lhs(src.data<1>()->type_code.base_type_index);
+			assert(old.bitcount>=lhs.bitcount);
+			if (lhs.is_signed)
+				{
+				unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_int;
+				unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_int;
+				if (	C99_intlike_literal_to_VM(lhs_int,*src.data<1>())
+					&&	C99_intlike_literal_to_VM(rhs_int,*src.data<2>()))
+					{
+					const promote_aux rhs(src.data<2>()->type_code.base_type_index);
+					assert(old.bitcount>=rhs.bitcount);
+					assert(old.bitcount>rhs.bitcount || rhs.is_signed);
+					if (lhs_int.test(lhs.bitcount-1) && (!rhs.is_signed || !rhs_int.test(rhs.bitcount-1)))
+						{	// lhs -, rhs +: could land exactly on INT_MIN/LONG_MIN/LLONG_MIN
+						target_machine->signed_additive_inverse(lhs_int,lhs.machine_type);
+						lhs_int += rhs_int;
+						lhs_int -= 1;
+						if (lhs_int==target_machine->signed_max(old.machine_type))
+							{
+							lhs_int += 1;
+							dest = lhs_int;
+							return true;	// signed additive inverse on twos-complement nontrapping machines has INT_MIN/LONG_MIN/LLONG_MIN as a fixed point
+							}
+						}
+					}
+				}
+			}
+		}
+
+	if (!src.is_atomic() || !(PARSE_PRIMARY_EXPRESSION & src.flags))
+		return false;
 
 	if (C_TESTFLAG_CHAR_LITERAL & src.index_tokens[0].flags)
 		{
@@ -3950,7 +4005,8 @@ static bool _C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& 
 
 static bool _CPP_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest, const parse_tree& src)
 {
-	assert(src.is_atomic());
+	//! \todo: similar code for handling LLONG_MIN as above.  Need that only for zcc; can't test in preprocessor as the true reserved word won't make it this far.
+	if (!src.is_atomic()) return false;
 	// intercept true, false
 	if 		(token_is_string<4>(src.index_tokens[0].token,"true"))
 		{
@@ -3994,20 +4050,17 @@ static bool C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 {
 	const POD_pair<const parse_tree*,bool> actual = _find_intlike_literal(&src);
 
-	if (	!actual.first->is_atomic()
-		||	!(PARSE_PRIMARY_EXPRESSION & actual.first->flags)
-		||	C_TYPE::INTEGERLIKE==actual.first->type_code.base_type_index)
+	if (C_TYPE::INTEGERLIKE==actual.first->type_code.base_type_index)
 		return false;	
 
 	if (!_C99_intlike_literal_to_VM(dest,*actual.first)) return false;
 	if (actual.second)
 		{
-		const size_t promoted_type = default_promote_type(src.type_code.base_type_index);
-		const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(promoted_type);
-		if (0==(promoted_type-C_TYPE::INT)%2)
-			target_machine->signed_additive_inverse(dest,machine_type);
+		const promote_aux old(src.type_code.base_type_index);
+		if (old.is_signed)
+			target_machine->signed_additive_inverse(dest,old.machine_type);
 		else
-			target_machine->unsigned_additive_inverse(dest,machine_type);
+			target_machine->unsigned_additive_inverse(dest,old.machine_type);
 		};
 	return true;
 }
@@ -4016,23 +4069,20 @@ static bool CPP_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& d
 {
 	const POD_pair<const parse_tree*,bool> actual = _find_intlike_literal(&src);
 
-	if (!actual.first->is_atomic()) return false;
 	if (!_CPP_intlike_literal_to_VM(dest,*actual.first))
 		{
-		if (	!(PARSE_PRIMARY_EXPRESSION & actual.first->flags)
-			||	C_TYPE::INTEGERLIKE==actual.first->type_code.base_type_index)
+		if (C_TYPE::INTEGERLIKE==actual.first->type_code.base_type_index)
 			return false;	
 
 		if (!_C99_intlike_literal_to_VM(dest,*actual.first)) return false;
 		};
 	if (actual.second)
 		{
-		const size_t promoted_type = default_promote_type(src.type_code.base_type_index);
-		const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(promoted_type);
-		if (0==(promoted_type-C_TYPE::INT)%2)
-			target_machine->signed_additive_inverse(dest,machine_type);
+		const promote_aux old(src.type_code.base_type_index);
+		if (old.is_signed)
+			target_machine->signed_additive_inverse(dest,old.machine_type);
 		else
-			target_machine->unsigned_additive_inverse(dest,machine_type);
+			target_machine->unsigned_additive_inverse(dest,old.machine_type);
 		};
 	return true;
 }
@@ -4060,12 +4110,7 @@ static void _label_one_literal(parse_tree& src,const type_system& types)
 		if (C_TESTFLAG_STRING_LITERAL==src.index_tokens[0].flags)
 			{
 			src.type_code.set_type(C_TYPE::CHAR);
-#if 2
 			src.type_code.set_static_array_size(LengthOfCStringLiteral(src.index_tokens[0].token.first,src.index_tokens[0].token.second));
-#else
-			src.type_code.qualifier_vector.second[0] |= type_spec::lvalue;	// C99 unclear; C++98 states lvalueness of string literals explicitly
-			src.type_code.static_array_size = LengthOfCStringLiteral(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
-#endif
 			return;
 			}
 		else if (C_TESTFLAG_CHAR_LITERAL==src.index_tokens[0].flags)
@@ -5012,7 +5057,7 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,func_trai
 	assert(is_C99_unary_operator_expression<'-'>(src));
 	bool is_true = false;
 	if (literal_converts_to_bool(*src.data<2>(),is_true) && !is_true && (1==(src.type_code.base_type_index-C_TYPE::INT)%2 || virtual_machine::twos_complement==target_machine->C_signed_int_representation() || bool_options[boolopt::int_traps]))
-		{	// -0=0 most of the time (except for trap-signed-int machines using sign/magnitude or one's-complement integers
+		{	// -0==0
 			// deal with unary - not being allowed to actually return -0 on these machines later
 		const type_spec old_type = src.type_code;
 		force_decimal_literal(src,"0",types);
@@ -5901,20 +5946,6 @@ static bool terse_locate_mult_expression(parse_tree& src, size_t& i)
 		}
 	return false;
 }
-
-// auxilliary structure to aggregate useful information for type promotions
-// this will malfunction badly for anything other than an integer type
-class promote_aux : public virtual_machine::promotion_info
-{
-public:
-	promote_aux(size_t base_type_index)
-	{
-		const size_t promoted_type = default_promote_type(base_type_index);
-		machine_type = machine_type_from_type_index(promoted_type);
-		bitcount = target_machine->C_bit(machine_type);
-		is_signed = !((promoted_type-C_TYPE::INT)%2);
-	};
-};
 
 static bool eval_mult_expression(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
 {
