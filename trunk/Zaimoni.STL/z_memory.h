@@ -48,6 +48,17 @@ extern "C"
 #endif
 int _memory_block_start_valid(const void* x);
 
+/*! 
+ * checks that no guard bytes have been overwritten anywhere
+ * this exposes a post-condition that triggers a memory-manager crash
+ * really should be bool/_Bool return value
+ * 
+ * \return int 1 if ok, 0 if memory overwrites detected
+ */
+#ifdef __cplusplus
+extern "C"
+#endif
+int _no_obvious_overwrites(void);
 
 #ifdef __cplusplus
 

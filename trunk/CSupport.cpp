@@ -9277,7 +9277,8 @@ flush_token(parse_tree& x, const size_t i, const size_t n, T target)
 	assert(x.size<0>()-i>=n);
 	size_t offset = 0;
 	size_t j = 0;
-	do	if (robust_token_is_string<sizeof(T)-1>(x.data<0>()[i+j].index_tokens[0].token,target))
+//	??? why should template-matching "auto" get 4 rather than 5 for sizeof?
+	do	if (robust_token_is_string<sizeof(T)>(x.data<0>()[i+j].index_tokens[0].token,target))
 			++offset;
 		else if (0<offset)
 			x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];

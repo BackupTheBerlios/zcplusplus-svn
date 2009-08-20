@@ -85,6 +85,24 @@ size_t AppRunning = 0;	// Controls Microsoft bypass
 static AIMutex RAMBlock;	// RAM Block.  Must unlock for exit()
 #endif
 
+struct _track_pointer {
+	char* _address;
+	size_t _size;
+};
+
+#ifndef __cplusplus
+typedef struct _track_pointer _track_pointer;
+#endif
+
+union _track_toggle {
+	char* raw;
+	_track_pointer* records;
+};
+
+#ifndef __cplusplus
+typedef union _track_toggle _track_toggle;
+#endif
+
 //! internal usage of RawBlock
 //!	<br>RawBlock+0: start of 8-byte records: 1st 4 is address, 2nd 4 is size allocated
 //!	<br>Pointers are allocated from the top down.
@@ -93,7 +111,7 @@ static AIMutex RAMBlock;	// RAM Block.  Must unlock for exit()
 //!	<br>** Ptr: start of allocated memory
 //!	<br>** sizeof(void*) after: NULL [guard bytes]
 
-static char* RawBlock = NULL;
+static _track_toggle RawBlock = {NULL};
 static size_t SizeOfRawBlock = 0;
 static size_t CountPointersAllocated = 0;
 static size_t PageSize = 0;
@@ -126,15 +144,6 @@ static void __ReportErrorAndCrash(const char* const FatalErrorMessage)
 	exit(EXIT_FAILURE);
 }
 
-struct _track_pointer {
-	char* _address;
-	size_t _size;
-};
-
-#ifndef __cplusplus
-typedef struct _track_pointer _track_pointer;
-#endif
-
 inline void InitBlock(void* memblock, size_t size)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/15/1999
 #ifdef __cplusplus
@@ -148,42 +157,31 @@ inline void InitBlock(void* memblock, size_t size)
 
 #ifdef __cplusplus
 inline size_t& PTRSIZE_FROM_IDX(size_t CurrIdx)
-{return reinterpret_cast<_track_pointer*>(RawBlock)[CurrIdx-1]._size;}
+{return RawBlock.records[CurrIdx-1]._size;}
 #else
-#define PTRSIZE_FROM_IDX(CurrIdx) ((_track_pointer*)(RawBlock))[CurrIdx-1]._size
+#define PTRSIZE_FROM_IDX(CurrIdx) RawBlock.records[CurrIdx-1]._size
 #endif
 
 #ifdef __cplusplus
 inline char*& CHARPTR_FROM_IDX(size_t CurrIdx)
-{return reinterpret_cast<_track_pointer*>(RawBlock)[CurrIdx-1]._address;}
+{return RawBlock.records[CurrIdx-1]._address;}
 #else
-#define CHARPTR_FROM_IDX(CurrIdx) ((_track_pointer*)(RawBlock))[CurrIdx-1]._address
+#define CHARPTR_FROM_IDX(CurrIdx) RawBlock.records[CurrIdx-1]._address
 #endif
 
 inline size_t HOLESIZE(size_t CurrIdxSubOne)
 {
-#ifdef __cplusplus
-	return   reinterpret_cast<_track_pointer*>(RawBlock)[CurrIdxSubOne-1]._address
-			-reinterpret_cast<_track_pointer*>(RawBlock)[CurrIdxSubOne]._address
-			-reinterpret_cast<_track_pointer*>(RawBlock)[CurrIdxSubOne]._size
-#else
-	return   ((_track_pointer*)(RawBlock))[CurrIdxSubOne-1]._address
-			-((_track_pointer*)(RawBlock))[CurrIdxSubOne]._address
-			-((_track_pointer*)(RawBlock))[CurrIdxSubOne]._size
-#endif
+	return   RawBlock.records[CurrIdxSubOne-1]._address
+			-RawBlock.records[CurrIdxSubOne]._address
+			-RawBlock.records[CurrIdxSubOne]._size
 			-sizeof(size_t)-sizeof(void*);
 }
 
 // uses global variable HighBoundPtrSpace
 inline size_t HOLESIZE_AT_IDX1(void)
 {return	 HighBoundPtrSpace
-#ifdef __cplusplus
-		-reinterpret_cast<_track_pointer*>(RawBlock)[0]._address
-		-reinterpret_cast<_track_pointer*>(RawBlock)[0]._size
-#else
-		-((_track_pointer*)(RawBlock))[0]._address
-		-((_track_pointer*)(RawBlock))[0]._size
-#endif
+		-RawBlock.records[0]._address
+		-RawBlock.records[0]._size
 		-sizeof(void*);}
 
 static void* __ExpandV2(void* memblock, size_t CurrIdx, size_t size)
@@ -208,7 +206,7 @@ ExitUnchanged:
 }
 
 static size_t
-__IdxOfPointerInPtrList(const void* const Target, size_t Idx, char* BasePtrIndex)
+__IdxOfPointerInPtrList(const void* const Target, size_t Idx, const _track_pointer* const BasePtrIndex)
 {	// FORMALLY CORRECT: Kenneth Boyd, 10/30/1999
 	// this routine checks to see if Target was allocated by RAMManager, by scanning the
 	// list pointed to by BasePtrIndex.  It 1 above the index if found, 0 otherwise
@@ -217,11 +215,7 @@ __IdxOfPointerInPtrList(const void* const Target, size_t Idx, char* BasePtrIndex
 	// "sufficiently large tables".  On the other hand...recent pointers are likely to both
 	// be deleted first, and to be near the end of the table.
 	while(0<Idx)
-#ifdef __cplusplus
-		if (Target==reinterpret_cast<_track_pointer*>(BasePtrIndex)[--Idx]._address)
-#else
-		if (Target==((_track_pointer*)(BasePtrIndex))[--Idx]._address)
-#endif
+		if (Target==BasePtrIndex[--Idx]._address)
 			return Idx+1;
 	return 0;
 }
@@ -296,28 +290,26 @@ static void __OnePassInsertSort(_track_pointer* OffsetIntoPtrIndex, size_t CurrI
 }
 #endif
 
-static void __RegisterPtr(void* memblock, size_t size, char* BasePtrIndex)
+static void __RegisterPtr(void* memblock, size_t size, _track_pointer* const base)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/20/1999
 	// MS C++: ASM already efficient, do not use inline ASM
 	if (NULL!=memblock)
 		{
 		InitBlock(memblock,size);
 		{
+		_track_pointer* const target = base+ CountPointersAllocated++;
 #ifdef __cplusplus
-		_track_pointer* CurrentOffset = reinterpret_cast<_track_pointer*>(BasePtrIndex)+ CountPointersAllocated++;
-		CurrentOffset->_address=reinterpret_cast<char*>(memblock);
+		target->_address=reinterpret_cast<char*>(memblock);
 #else
-		_track_pointer* CurrentOffset = ((_track_pointer*)(BasePtrIndex))+ CountPointersAllocated++;
-		CurrentOffset->_address=((char*)(memblock));
+		target->_address=((char*)(memblock));
 #endif
-		CurrentOffset->_size=size;
-		__OnePassInsertSort(CurrentOffset,CountPointersAllocated);
+		target->_size=size;
+		__OnePassInsertSort(target,CountPointersAllocated);
 		};
 		}
 }
 
-static void
-__ReleaseNextIndexPage(void)
+static void __ReleaseNextIndexPage(void)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/17/1999
 	StrictHighBoundIndexPages-=PageSize;
 #ifdef _WIN32
@@ -329,7 +321,7 @@ __ReleaseNextIndexPage(void)
 
 static void __CompactIndexRAM(void)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/15/1999
-	size_t SpareIndexRAM = (StrictHighBoundIndexPages-RawBlock)-sizeof(_track_pointer)*CountPointersAllocated;
+	size_t SpareIndexRAM = (StrictHighBoundIndexPages-RawBlock.raw)-sizeof(_track_pointer)*CountPointersAllocated;
 	if (2*PageSize<SpareIndexRAM) __ReleaseNextIndexPage();
 }
 
@@ -338,8 +330,8 @@ static void __MetaFree(size_t CurrIdx)
 	// all error checking is done in free() or realloc().
 	// remove entry from MasterList
 	if (CurrIdx<CountPointersAllocated)
-		memmove(RawBlock+sizeof(_track_pointer)*(CurrIdx-1),
-				RawBlock+sizeof(_track_pointer)*CurrIdx,
+		memmove(RawBlock.records+(CurrIdx-1),
+				RawBlock.records+CurrIdx,
 				sizeof(_track_pointer)*(CountPointersAllocated-CurrIdx));
 	CHARPTR_FROM_IDX(CountPointersAllocated) = NULL;
 	PTRSIZE_FROM_IDX(CountPointersAllocated) = 0;
@@ -350,7 +342,7 @@ static void __MetaFree(size_t CurrIdx)
 
 static void __DesperateCompactIndexRAM(void)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/16/1999
-	size_t SpareIndexRAM = (StrictHighBoundIndexPages-RawBlock)-sizeof(_track_pointer)*CountPointersAllocated;
+	size_t SpareIndexRAM = (StrictHighBoundIndexPages-RawBlock.raw)-sizeof(_track_pointer)*CountPointersAllocated;
 	if (PageSize+sizeof(_track_pointer)<SpareIndexRAM)
 		__ReleaseNextIndexPage();
 }
@@ -403,11 +395,7 @@ static void* __CreateAtBottom(size_t size)
 #else
 #error must implement alignment code
 #endif
-#ifdef __cplusplus
-		SparePtrRAM = reinterpret_cast<_track_pointer*>(RawBlock)[CountPointersAllocated-1]._address-LowBoundPtrSpace-sizeof(size_t);
-#else
-		SparePtrRAM = ((_track_pointer*)(RawBlock))[CountPointersAllocated-1]._address-LowBoundPtrSpace-sizeof(size_t);
-#endif
+		SparePtrRAM = RawBlock.records[CountPointersAllocated-1]._address-LowBoundPtrSpace-sizeof(size_t);
 		TargetPtr = CHARPTR_FROM_IDX(CountPointersAllocated);
 		};
 	TargetPtr -= TargetSize;
@@ -436,11 +424,7 @@ static void __ReleaseNextPtrPages(size_t PageCount)
 
 static void __CompactPtrRAM(void)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/15/1999
-#ifdef __cplusplus
-	size_t SparePtrRAM = reinterpret_cast<_track_pointer*>(RawBlock)[CountPointersAllocated-1]._address-LowBoundPtrSpace;
-#else
-	size_t SparePtrRAM = ((_track_pointer*)(RawBlock))[CountPointersAllocated-1]._address-LowBoundPtrSpace;
-#endif
+	size_t SparePtrRAM = RawBlock.records[CountPointersAllocated-1]._address-LowBoundPtrSpace;
 	if (2*PageSize<=SparePtrRAM)
 		{
 		size_t PageCount = 0;
@@ -455,11 +439,7 @@ static void __CompactPtrRAM(void)
 
 static void __DesperateCompactPtrRAM(void)
 {	// FORMALLY CORRECT: Kenneth Boyd, 9/16/1999
-#ifdef __cplusplus
-	size_t SparePtrRAM = reinterpret_cast<_track_pointer*>(RawBlock)[CountPointersAllocated-1]._address-LowBoundPtrSpace;
-#else
-	size_t SparePtrRAM = ((_track_pointer*)(RawBlock))[CountPointersAllocated-1]._address-LowBoundPtrSpace;
-#endif
+	size_t SparePtrRAM = RawBlock.records[CountPointersAllocated-1]._address-LowBoundPtrSpace;
 	if (PageSize<=SparePtrRAM)
 		{
 		size_t PageCount = 0;
@@ -497,15 +477,15 @@ static void FlushMemoryManager(void)
 #ifdef __cplusplus
 	RAMBlock.Lock();
 #endif
-	if (NULL!=RawBlock)
+	if (NULL!=RawBlock.raw)
 		{
 #ifdef _WIN32
-		VirtualFree(RawBlock,SizeOfRawBlock,MEM_DECOMMIT);
-		VirtualFree(RawBlock,0,MEM_RELEASE);
+		VirtualFree(RawBlock.raw,SizeOfRawBlock,MEM_DECOMMIT);
+		VirtualFree(RawBlock.raw,0,MEM_RELEASE);
 #else
 #error Must implement FlushMemoryManager()
 #endif
-		RawBlock = NULL;
+		RawBlock.raw = NULL;
 		};
 #ifdef __cplusplus
 	RAMBlock.UnLock();
@@ -528,28 +508,28 @@ static void __EmergencyInitialize(void)
 	};
 
 #ifdef __cplusplus
-	RawBlock = reinterpret_cast<char*>(VirtualAlloc(NULL,BaseSize,MEM_RESERVE,PAGE_EXECUTE_READWRITE));
+	RawBlock.raw = reinterpret_cast<char*>(VirtualAlloc(NULL,BaseSize,MEM_RESERVE,PAGE_EXECUTE_READWRITE));
 #else
-	RawBlock = ((char*)(VirtualAlloc(NULL,BaseSize,MEM_RESERVE,PAGE_EXECUTE_READWRITE)));
+	RawBlock.raw = ((char*)(VirtualAlloc(NULL,BaseSize,MEM_RESERVE,PAGE_EXECUTE_READWRITE)));
 #endif
-	while(NULL==RawBlock && AllocateStep!=BaseSize)
+	while(NULL==RawBlock.raw && AllocateStep!=BaseSize)
 		{
 		BaseSize -= AllocateStep;
 #ifdef __cplusplus
-		RawBlock = reinterpret_cast<char*>(VirtualAlloc(NULL,BaseSize,MEM_RESERVE,PAGE_EXECUTE_READWRITE));
+		RawBlock.raw = reinterpret_cast<char*>(VirtualAlloc(NULL,BaseSize,MEM_RESERVE,PAGE_EXECUTE_READWRITE));
 #else
-		RawBlock = ((char*)(VirtualAlloc(NULL,BaseSize,MEM_RESERVE,PAGE_EXECUTE_READWRITE)));
+		RawBlock.raw = ((char*)(VirtualAlloc(NULL,BaseSize,MEM_RESERVE,PAGE_EXECUTE_READWRITE)));
 #endif
 		};
 #else
 #error Must implement void __EmergencyInitialize(void);
 #endif
 
-	if (NULL!=RawBlock)
+	if (NULL!=RawBlock.raw)
 		{
-		StrictHighBoundIndexPages = RawBlock;
+		StrictHighBoundIndexPages = RawBlock.raw;
 		SizeOfRawBlock = BaseSize;
-		HighBoundPtrSpace = RawBlock+SizeOfRawBlock;
+		HighBoundPtrSpace = RawBlock.raw+SizeOfRawBlock;
 		LowBoundPtrSpace = HighBoundPtrSpace;
 		atexit(FlushMemoryManager);
 		if (__CommitNextIndexPage()) return;
@@ -559,20 +539,16 @@ static void __EmergencyInitialize(void)
 
 static void __DetectOverwrites(void)
 {	// FORMALLY CORRECT: Kenneth Boyd, 11/3/1999
-	size_t Idx = CountPointersAllocated;
-#ifdef __cplusplus
-	_track_pointer* PtrRecordBase = reinterpret_cast<_track_pointer*>(RawBlock);
-#else
-	_track_pointer* PtrRecordBase = ((_track_pointer*)(RawBlock));
-#endif
-	if (0<Idx)
+	size_t i = CountPointersAllocated;
+	_track_pointer* PtrRecordBase = RawBlock.records;
+	if (0<i)
 		{
-		size_t Idx2 = Idx;
+		size_t j = i;
 		{
 		char* LowBoundLastBlock = NULL;
 		char* HighBoundLastBlock = NULL;
 		do	{
-			_track_pointer* CurrentOffset = PtrRecordBase+ --Idx2;
+			_track_pointer* CurrentOffset = PtrRecordBase+ --j;
 #ifdef TRULY_WARY
 			if ((unsigned long)StrictHighBoundIndexPages<(unsigned long)CurrentOffset+sizeof(_track_pointer))
 				__ReportErrorAndCrash(AlphaPointerTableOverextended);
@@ -585,17 +561,17 @@ static void __DetectOverwrites(void)
 			LowBoundLastBlock = LowBoundThisBlock;
 			HighBoundLastBlock = HighBoundThisBlock;
 			}
-		while(0<Idx2);
+		while(0<j);
 		}
-		Idx2 = Idx;
+		j = i;
 		do	{
-			_track_pointer* CurrentOffset = PtrRecordBase+ --Idx2;
+			_track_pointer* CurrentOffset = PtrRecordBase+ --j;
 			if (_msize(CurrentOffset->_address)!=CurrentOffset->_size)	// #1
 				__ReportErrorAndCrash(PointerSizeInfoCorrupted);
 			}
-		while(0<Idx2);
+		while(0<j);
 		do	{
-			_track_pointer* CurrentOffset = PtrRecordBase+ --Idx;
+			_track_pointer* CurrentOffset = PtrRecordBase+ --i;
 			char* Target = CurrentOffset->_address;
 			size_t TargetSize = CurrentOffset->_size;
 #ifdef __cplusplus
@@ -616,8 +592,62 @@ static void __DetectOverwrites(void)
 				__ReportErrorAndCrash(Buffer);
 				};
 			}
-		while(0<Idx);
+		while(0<i);
 		};
+}
+
+// same as above, but suitable for assert()
+// use int to avoid C/C++ issues (what is bool?)
+#ifdef __cplusplus
+extern "C"
+#endif
+int _no_obvious_overwrites(void)
+{	// FORMALLY CORRECT: Kenneth Boyd, 11/3/1999
+	size_t i = CountPointersAllocated;
+	_track_pointer* PtrRecordBase = RawBlock.records;
+	if (0<i)
+		{
+		size_t j = i;
+		{
+		char* LowBoundLastBlock = NULL;
+		char* HighBoundLastBlock = NULL;
+		do	{
+			_track_pointer* CurrentOffset = PtrRecordBase+ --j;
+#ifdef TRULY_WARY
+			if ((unsigned long)StrictHighBoundIndexPages<(unsigned long)CurrentOffset+sizeof(_track_pointer))
+				return 0;
+#endif
+			char* Target = CurrentOffset->_address;
+			char* LowBoundThisBlock = Target-sizeof(size_t);
+			char* HighBoundThisBlock = Target+CurrentOffset->_size+sizeof(void*);
+			if (NULL!=LowBoundLastBlock && HighBoundLastBlock>LowBoundThisBlock)
+				return 0;
+			LowBoundLastBlock = LowBoundThisBlock;
+			HighBoundLastBlock = HighBoundThisBlock;
+			}
+		while(0<j);
+		}
+		j = i;
+		do	{
+			_track_pointer* CurrentOffset = PtrRecordBase+ --j;
+			if (_msize(CurrentOffset->_address)!=CurrentOffset->_size)	// #1
+				return 0;
+			}
+		while(0<j);
+		do	{
+			_track_pointer* CurrentOffset = PtrRecordBase+ --i;
+			char* Target = CurrentOffset->_address;
+			size_t TargetSize = CurrentOffset->_size;
+#ifdef __cplusplus
+			if (NULL!=reinterpret_cast<void**>(Target+TargetSize)[0])	// #2
+#else
+			if (NULL!=((void**)(Target+TargetSize))[0])	// #2
+#endif
+				return 0;
+			}
+		while(0<i);
+		};
+	return 1;
 }
 
 #ifdef __cplusplus
@@ -634,10 +664,10 @@ void* _cdecl malloc(size_t size)
 #ifdef __cplusplus
 	RAMBlock.Lock();
 #endif
-	if (NULL==RawBlock) __EmergencyInitialize();
+	if (NULL==RawBlock.raw) __EmergencyInitialize();
 	__DetectOverwrites();
 	{	// space check: can we store the allocated pointer in the pointer index?
-	size_t SpareIndexRAM = StrictHighBoundIndexPages-RawBlock-sizeof(_track_pointer)*CountPointersAllocated;
+	size_t SpareIndexRAM = StrictHighBoundIndexPages-RawBlock.raw-sizeof(_track_pointer)*CountPointersAllocated;
 	if (sizeof(_track_pointer)>SpareIndexRAM && !__CommitNextIndexPage())
 		{
 #ifdef __cplusplus
@@ -649,7 +679,7 @@ void* _cdecl malloc(size_t size)
 	{
 	void* Tmp = __FindHole(size,LowBoundPtrSpace,CountPointersAllocated,HighBoundPtrSpace);
 	if (NULL==Tmp) Tmp = __CreateAtBottom(size);
-	if (NULL!=Tmp) __RegisterPtr(Tmp,size,RawBlock);
+	if (NULL!=Tmp) __RegisterPtr(Tmp,size,RawBlock.records);
 #ifdef __cplusplus
 	RAMBlock.UnLock();
 #endif
@@ -677,12 +707,12 @@ extern "C"
 void _cdecl free(void* memblock)
 {	// FORMALLY CORRECT: Kenneth Boyd, 6/2/2008
 	if (	NULL!=memblock	/* C90 */
-		&&  NULL!=RawBlock)	/* handle race condition issues at program shutdown */
+		&&  NULL!=RawBlock.raw)	/* handle race condition issues at program shutdown */
 		{
 #ifdef __cplusplus
 		RAMBlock.Lock();
 #endif
-		size_t CurrIdx = __IdxOfPointerInPtrList(memblock,CountPointersAllocated,RawBlock);
+		size_t CurrIdx = __IdxOfPointerInPtrList(memblock,CountPointersAllocated,RawBlock.records);
 		if (!CurrIdx)
 			// error reporting
 			__ReportErrorAndCrash(FreeNonNULLInvalid);
@@ -737,7 +767,7 @@ void* _cdecl realloc(void* memblock, size_t size)
 	RAMBlock.Lock();
 #endif
 	__DetectOverwrites();
-	size_t CurrIdx = __IdxOfPointerInPtrList(memblock,CountPointersAllocated,RawBlock);
+	size_t CurrIdx = __IdxOfPointerInPtrList(memblock,CountPointersAllocated,RawBlock.records);
 	if (!CurrIdx)
 		// error reporting
 		__ReportErrorAndCrash(ReallocNonNULLInvalid);
@@ -765,11 +795,11 @@ void* _cdecl realloc(void* memblock, size_t size)
 		PTRSIZE_FROM_IDX(CurrIdx) = size;
 #ifdef __cplusplus
 		CHARPTR_FROM_IDX(CurrIdx) = reinterpret_cast<char*>(Tmp);
-		__OnePassInsertSort(reinterpret_cast<_track_pointer*>(RawBlock)+CurrIdx-1,CurrIdx);
+		__OnePassInsertSort(RawBlock.records+CurrIdx-1,CurrIdx);
 		RAMBlock.UnLock();
 #else
 		CHARPTR_FROM_IDX(CurrIdx) = ((char*)(Tmp));
-		__OnePassInsertSort(((_track_pointer*)(RawBlock))+CurrIdx-1,CurrIdx);
+		__OnePassInsertSort(RawBlock.records+CurrIdx-1,CurrIdx);
 #endif
 		return Tmp;
 		};
@@ -785,8 +815,8 @@ void* _cdecl realloc(void* memblock, size_t size)
 		if (NULL!=Tmp)
 			{
 			memmove(Tmp,memblock,size);
-			__MetaFree(__IdxOfPointerInPtrList(memblock,CountPointersAllocated,RawBlock));
-			__RegisterPtr(Tmp,size,RawBlock);
+			__MetaFree(__IdxOfPointerInPtrList(memblock,CountPointersAllocated,RawBlock.records));
+			__RegisterPtr(Tmp,size,RawBlock.records);
 			};
 		};
 #ifdef __cplusplus
@@ -807,7 +837,7 @@ void* _expand(void* memblock, size_t size)
 	RAMBlock.Lock();
 #endif
 	__DetectOverwrites();
-	size_t CurrIdx = __IdxOfPointerInPtrList(memblock,CountPointersAllocated,RawBlock);
+	size_t CurrIdx = __IdxOfPointerInPtrList(memblock,CountPointersAllocated,RawBlock.records);
 	if (!CurrIdx)
 		// error reporting
 		__ReportErrorAndCrash(ExpandNonNULLInvalid);
@@ -828,7 +858,7 @@ int _memory_block_start_valid(const void* x)
 #ifdef __cplusplus
 	RAMBlock.Lock();
 #endif
-	size_t i = __IdxOfPointerInPtrList(x,CountPointersAllocated,RawBlock);
+	size_t i = __IdxOfPointerInPtrList(x,CountPointersAllocated,RawBlock.records);
 #ifdef __cplusplus
 	RAMBlock.UnLock();
 #endif
