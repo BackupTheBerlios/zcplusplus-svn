@@ -1517,7 +1517,17 @@ robust_token_is_string(const POD_pair<const char*,size_t>& x,const char* const t
 {
 	assert(NULL!=target);
 	assert(targ_len==strlen(target));
-	return NULL!=x.first && targ_len==x.second && !strncmp(x.first,target,targ_len);
+	return NULL!=x.first && targ_len==x.second
+		&& !strncmp(x.first,target,targ_len);
+}
+
+static inline bool
+robust_token_is_string(const POD_pair<const char*,size_t>& x,const char* const target)
+{
+	assert(NULL!=target);
+	const size_t targ_len = strlen(target);
+	return NULL!=x.first && targ_len==x.second
+		&& !strncmp(x.first,target,targ_len);
 }
 
 template<size_t targ_len>
@@ -7696,7 +7706,6 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 			const bool lhs_rhs_negative = lhs_rhs_converted && target_machine->C_promote_integer(lhs_rhs_int,promote_aux(src.data<1>()->data<2>()->type_code.base_type_index),lhs);
 			const bool rhs_lhs_negative = rhs_lhs_converted && target_machine->C_promote_integer(rhs_lhs_int,promote_aux(src.data<2>()->data<1>()->type_code.base_type_index),rhs);
 			const bool rhs_rhs_negative = rhs_rhs_converted && target_machine->C_promote_integer(rhs_rhs_int,promote_aux(src.data<2>()->data<2>()->type_code.base_type_index),rhs);
-
 			if (2==want_lhs_details && 2==want_rhs_details)
 				{	// ...-... == ...-...
 				const bool lhs_lhs_cancels_rhs_lhs = lhs_lhs_converted && rhs_lhs_converted && lhs_lhs_negative==rhs_lhs_negative;
@@ -7740,6 +7749,8 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 						src.c_array<2>()->eval_to_arg<1>(0);
 						return true;
 						};
+#if 0
+#endif
 					};
 				}
 //			break;
@@ -9268,17 +9279,14 @@ bool check_for_typedef(type_spec& dest,const char* const src,const type_system& 
 }
 
 //! \todo does this need to be in ParseTree.hpp?
-template<class T>
-size_t
-//typename boost::enable_if<boost::is_array<T>, size_t>::type
-flush_token(parse_tree& x, const size_t i, const size_t n, T target)
+size_t 
+flush_token(parse_tree& x, const size_t i, const size_t n, const char* const target)
 {
 	assert(x.size<0>()>i);
 	assert(x.size<0>()-i>=n);
 	size_t offset = 0;
 	size_t j = 0;
-//	??? why should template-matching "auto" get 4 rather than 5 for sizeof?
-	do	if (robust_token_is_string<sizeof(T)>(x.data<0>()[i+j].index_tokens[0].token,target))
+	do	if (robust_token_is_string(x.data<0>()[i+j].index_tokens[0].token,target))
 			++offset;
 		else if (0<offset)
 			x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
@@ -9354,7 +9362,6 @@ public:
 				INFORM("storage-class specifier register disallowed at translation-unit level (C99 6.9p2)");
 				zcc_errors.inc_error();
 				decl_count -= flush_token(x,i,decl_count,"register");
-				assert(0<decl_count);
 				flags &= ~C99_CPP0X_DECLSPEC_REGISTER;
 				}
 			if (C99_DECLSPEC_AUTO & flags)
@@ -9367,7 +9374,6 @@ public:
 				INFORM("storage-class specifier auto disallowed at translation-unit level (C99 6.9p2)");
 				zcc_errors.inc_error();
 				decl_count -= flush_token(x,i,decl_count,"auto");
-				assert(0<decl_count);
 				flags &= ~C99_DECLSPEC_AUTO;
 				};
 			if (1<storage_count)
@@ -9407,10 +9413,8 @@ bool CPP_locate_qualified_name(parse_tree& x, size_t i)
 	size_t span = 1;
 	size_t resize_to = x.data<0>()[i].index_tokens[0].token.second;
 	while(x.size<0>()-i>span && CPP_ok_for_toplevel_qualified_name(x.data<0>()[i+span]) && (C_TESTFLAG_IDENTIFIER & x.data<0>()[i+span].index_tokens[0].flags ? token_is_string<2>(x.data<0>()[i+span-1].index_tokens[0].token,"::") : !token_is_string<2>(x.data<0>()[i+span-1].index_tokens[0].token,"::")))
-		{
-		++span;
-		resize_to += x.data<0>()[i+span].index_tokens[0].token.second;
-		}
+		resize_to += x.data<0>()[i+span++].index_tokens[0].token.second;
+
 	//! \todo handle templates later
 	if (1<=span && token_is_string<2>(x.data<0>()[i+span-1].index_tokens[0].token,"::")) x.c_array<0>()[i].flags |= parse_tree::INVALID;
 	if (1>=span) return span;
@@ -9489,8 +9493,9 @@ public:
 	bool operator()(parse_tree& x,const size_t i)
 		{
 		BOOST_STATIC_ASSERT(CHAR_BIT*sizeof(uintmax_t)>=STATIC_SIZE(CPP0X_decl_specifiers));
-		if (!x.is_atomic()) return false;
-		const errr Idx = linear_find(x.index_tokens[0].token.first,x.index_tokens[0].token.second,CPP0X_decl_specifiers,STATIC_SIZE(CPP0X_decl_specifiers));
+		assert(x.size<0>()>i);
+		if (!x.data<0>()[i].is_atomic()) return false;
+		const errr Idx = linear_find(x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second,CPP0X_decl_specifiers,STATIC_SIZE(CPP0X_decl_specifiers));
 		if (0<=Idx)
 			{
 			flags |= (1ULL<<Idx);
@@ -9499,9 +9504,9 @@ public:
 			};
 		// not a decl-specifier; bail out if we already have a type
 		if (base_type.base_type_index) return false;
-		if (PARSE_PRIMARY_TYPE & x.flags)
+		if (PARSE_PRIMARY_TYPE & x.data<0>()[i].flags)
 			{
-			base_type.value_copy(x.type_code);
+			base_type.value_copy(x.data<0>()[i].type_code);
 			return true;
 			}
 		{	// handle typedefs
@@ -9577,7 +9582,7 @@ public:
 		{
 		assert(x.size<0>()>i);
 		assert(x.size<0>()-i>=decl_count);
-		if ((C99_CPP0X_DECLSPEC_TYPEDEF | C99_CPP0X_DECLSPEC_REGISTER | C99_CPP0X_DECLSPEC_STATIC | C99_CPP0X_DECLSPEC_EXTERN | CPP_DECLSPEC_MUTABLE) & flags)
+		if ((C99_CPP0X_DECLSPEC_TYPEDEF | C99_CPP0X_DECLSPEC_REGISTER | C99_CPP0X_DECLSPEC_STATIC | C99_CPP0X_DECLSPEC_EXTERN | CPP_DECLSPEC_MUTABLE | CPP_DECLSPEC_VIRTUAL | CPP_DECLSPEC_EXPLICIT | CPP_DECLSPEC_FRIEND) & flags)
 			{	// storage class specifiers
 			const char* specs[5];
 			unsigned int storage_count = 0;
@@ -9598,7 +9603,6 @@ public:
 				INFORM("storage-class specifier register allowed only to objects named in a block, or function parameters (C++98 7.1.1p2)");
 				zcc_errors.inc_error();
 				decl_count -= flush_token(x,i,decl_count,"register");
-				assert(0<decl_count);
 				flags &= ~C99_CPP0X_DECLSPEC_REGISTER;
 				}
 			if (CPP_DECLSPEC_MUTABLE & flags)
@@ -9611,7 +9615,6 @@ public:
 				INFORM("storage-class specifier mutable only allowed for non-static non-const non-reference class data members (C++0X 7.1.1p10)");
 				zcc_errors.inc_error();
 				decl_count -= flush_token(x,i,decl_count,"mutable");
-				assert(0<decl_count);
 				flags &= ~CPP_DECLSPEC_MUTABLE;
 				};
 			if (1<storage_count)
@@ -9637,7 +9640,6 @@ public:
 				INFORM("function specifier virtual allowed only for class member functions (C++98 7.1.2p5)");
 				zcc_errors.inc_error();
 				decl_count -= flush_token(x,i,decl_count,"virtual");
-				assert(0<decl_count);
 				flags &= ~CPP_DECLSPEC_VIRTUAL;
 				};
 			if (CPP_DECLSPEC_EXPLICIT & flags)
@@ -9648,7 +9650,6 @@ public:
 				INFORM("function specifier explicit allowed only for constructors (C++98 7.1.2p6)");
 				zcc_errors.inc_error();
 				decl_count -= flush_token(x,i,decl_count,"explicit");
-				assert(0<decl_count);
 				flags &= ~CPP_DECLSPEC_EXPLICIT;
 				};
 			// friend is only usable within a class
@@ -9660,7 +9661,6 @@ public:
 				INFORM("decl-specifier friend only useful within a class definition (C++98 7.1.4)");
 				zcc_errors.inc_error();
 				decl_count -= flush_token(x,i,decl_count,"friend");
-				assert(0<decl_count);
 				flags &= ~CPP_DECLSPEC_FRIEND;
 				};
 			return 1>=storage_count;
@@ -9742,12 +9742,13 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 			if (src.size<0>()-i<=decl_count)
 				{	// unterminated declaration
 					//! \bug need test case
-				message_header(src.data<0>()[i].index_tokens[0]);
+				if (src.size<0>()>i) message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("declaration cut off by end of scope (C99 6.7p1)");
 				zcc_errors.inc_error();
 				// remove from parse
-				src.DeleteNSlotsAt<0>(decl_count,i);
+				if (src.size<0>()>i)
+					src.DeleteNSlotsAt<0>(decl_count,i);
 				return;
 				};
 			if (src.data<0>()[i+decl_count].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count].index_tokens[0].token))
@@ -9944,7 +9945,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 
 	size_t i = 0;
 	while(i<src.size<0>())
-		{	
+		{
 		conserve_tokens(src.c_array<0>()[i]);
 		// namespace scanner
 		// need some scheme to handle unnamed namespaces (probably alphabetical counter after something illegal so unmatchable)
@@ -10086,12 +10087,13 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			if (src.size<0>()-i<=decl_count)
 				{	// unterminated declaration
 					//! \bug need test case
-				message_header(src.data<0>()[i].index_tokens[0]);
+				if (src.size<0>()>i) message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("declaration cut off by end of scope (C++98 7p1)");
 				zcc_errors.inc_error();
 				// remove from parse
-				src.DeleteNSlotsAt<0>(decl_count,i);
+				if (src.size<0>()>i)
+					src.DeleteNSlotsAt<0>(decl_count,i);
 				return;
 				};
 			if (src.data<0>()[i+decl_count].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count].index_tokens[0].token))
