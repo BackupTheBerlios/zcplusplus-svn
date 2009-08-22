@@ -19,6 +19,7 @@ ERROR CPP_ISO define.C99/Error*
 ERROR CPP_ISO defined.C99/Error*
 ERROR CPP_ISO ifdef.C99/Error*
 ERROR CPP_ISO if.C99/Error*
+ERROR CPP_ISO line.C99/Error*
 ERROR CPP_ISO pragma.C99/Error*
 
 ECHO Checking ZCC warnings on ISO-accepted code

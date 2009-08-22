@@ -1068,7 +1068,7 @@ RestartAfterInclude:
 					if (PP::LINE==directive_type)
 						{
 						if (C99_VA_ARGS_flinch(*TokenList[i],sizeof("#line ")-1))
-							{	//! \todo need test case (but need to distinguish error from the other one that'll happen)
+							{	//! \test cpp/line.C99/Error_VA_ARGS.h, cpp/line.C99/Error_VA_ARGS.hpp
 							message_header(*TokenList[i]);
 							INFORM("discarding #line directive");
 							TokenList.DeleteIdx(i);
@@ -4008,10 +4008,10 @@ CPreprocessor::use_line_directive_and_discard(autovalarray_ptr<Token<char>* >& T
 		||	!C_PPDecimalInteger::is(TokenList[i]->data()+critical_offset,first_token_len,line_number)
 		||	-1==cmp(line_number,"1",sizeof("1")-1)
 		||	 1==cmp(line_number,"2147483647",sizeof("2147483647")-1))	// constant should be stringized 2^31-1
-		{	//! \test Error_line1.hpp
-			//! \test Error_line2.hpp
-			//! \test Error_line3.hpp
-			//! \test Error_line4.hpp
+		{	//! \test cpp/line.C99/Error_badnum1.h, cpp/line.C99/Error_badnum1.hpp
+			//! \test cpp/line.C99/Error_badnum2.h, cpp/line.C99/Error_badnum2.hpp
+			//! \test cpp/line.C99/Error_badnum3.h, cpp/line.C99/Error_badnum3.hpp
+			//! \test cpp/line.C99/Error_badnum4.h, cpp/line.C99/Error_badnum4.hpp
 		message_header(*TokenList[i]);
 		INC_INFORM(ERR_STR);
 		INFORM("#line does not have a line number between 1 and 2147483647 inclusive (C99 6.10.4p3/C++0x 16.4p3)");
@@ -4033,17 +4033,10 @@ CPreprocessor::use_line_directive_and_discard(autovalarray_ptr<Token<char>* >& T
 			{
 			size_t j = i+1;
 			//! \todo loops should stop at first (valid) #line directive
-			if (TokenList[i]->logical_line.first<numeric_line_number)
-				{
-				const size_t inc_delta = numeric_line_number - TokenList[i]->logical_line.first;
-				while(j<TokenList.size())
-					TokenList[j++]->logical_line.first += inc_delta;
-				}
-			else{
-				const size_t dec_delta = TokenList[i]->logical_line.first - numeric_line_number;
-				while(j<TokenList.size())
-					TokenList[j++]->logical_line.first -= dec_delta;
-				}
+			// remember that unsigned arithmetic is modulo
+			const size_t delta = numeric_line_number - TokenList[i]->logical_line.first;
+			while(j<TokenList.size())
+				TokenList[j++]->logical_line.first += delta;
 			};
 		}
 
