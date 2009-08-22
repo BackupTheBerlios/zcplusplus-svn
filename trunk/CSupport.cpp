@@ -9680,7 +9680,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				decl_offset += initdecl_span;
 				if (src.size<0>()-(i+decl_count)<=decl_offset)
 					{	// unterminated declaration: error
-						//! \bug need test case
+						//! \test zcc/decl.C99/Error_scope.h
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("declaration cut off by end of scope (C99 6.7p1)");
@@ -10052,7 +10052,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				decl_offset += initdecl_span;
 				if (src.size<0>()-(i+decl_count)<=decl_offset)
 					{	// unterminated declaration: error
-						//! \bug need test case
+						//! \test zcc/decl.C99/Error_scope.hpp
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("declaration cut off by end of scope (C++98 7p1)");
