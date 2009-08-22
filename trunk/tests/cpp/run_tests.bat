@@ -16,6 +16,7 @@
 @set CPP_ONESCOMP_NOTRAP=..\..\z_cpp --int-ones-complement
 @set CPP_ONESCOMP_TRAP=..\..\z_cpp --int-ones-complement --int-traps
 @set CPP_TWOSCOMP_NOTRAP=..\..\z_cpp --int-twos-complement
+@set CPP_TWOSCOMP_TRAP=..\..\z_cpp --int-twos-complement --int-traps
 
 @echo Checking ISO error requirements
 @echo ====
@@ -122,6 +123,14 @@
 @for %%f in (default\twoscomp.notrap\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 @for %%f in (default\twoscomp.notrap\Pass*.hpp) do @echo %CPP_TWOSCOMP_NOTRAP% %%f & @%CPP_TWOSCOMP_NOTRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (default\twoscomp.notrap\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\twoscomp.trap\Pass*.h) do @echo %CPP_TWOSCOMP_TRAP% %%f & @%CPP_TWOSCOMP_TRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\twoscomp.trap\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\twoscomp.trap\Pass*.hpp) do @echo %CPP_TWOSCOMP_TRAP% %%f & @%CPP_TWOSCOMP_TRAP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\twoscomp.trap\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\twoscomp.trap\Error*.h) do @echo %CPP_TWOSCOMP_TRAP% %%f & @%CPP_TWOSCOMP_TRAP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (default\twoscomp.trap\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (default\twoscomp.trap\Error*.hpp) do @echo %CPP_TWOSCOMP_TRAP% %%f & @%CPP_TWOSCOMP_TRAP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (default\twoscomp.trap\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
 
 @echo Checking ZCC nonconforming errors
 @echo ====
