@@ -6563,16 +6563,6 @@ static bool terse_locate_add_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
-static void C99_CPP_binary_minus_to_unary_minus(parse_tree& x)
-{
-	assert(is_C99_add_operator_expression<'-'>(x));
-	x.DeleteIdx<1>(0);
-	x.core_flag_update();
-	x.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-	BOOST_STATIC_ASSERT(C99_UNARY_SUBTYPE_NEG==C99_ADD_SUBTYPE_MINUS);
-	assert(is_C99_unary_operator_expression<'-'>(x));
-}
-
 // this one hides a slight inefficiency: negative literals take 2 dynamic memory allocations, positive literals take one
 static bool VM_to_signed_literal(parse_tree& x,const bool is_negative, const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,const parse_tree& src,const type_system& types)
 {
@@ -6702,123 +6692,6 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 				force_unary_positive_literal(src,tmp);
 				src.type_code = old_type;
 				return true;
-				}
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_lhs_int;
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_rhs_int;
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_lhs_int;
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_rhs_int;
-			// fear C++ operator overloading
-			const int want_lhs_details 	= lhs_converted ? 0
-										: is_C99_add_operator_expression<'+'>(*src.data<1>()) && converts_to_arithmeticlike(src.data<1>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<1>()->data<2>()->type_code.base_type_index) ? 1
-										: is_C99_add_operator_expression<'-'>(*src.data<1>()) && converts_to_arithmeticlike(src.data<1>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<1>()->data<2>()->type_code.base_type_index) ? 2 : 0;
-			if (!lhs_converted && !want_lhs_details) break;	// nothing to work with
-			// fear C++ operator overloading
-			const int want_rhs_details 	= rhs_converted ? 0
-										: is_C99_add_operator_expression<'+'>(*src.data<2>()) && converts_to_arithmeticlike(src.data<2>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<2>()->data<2>()->type_code.base_type_index) ? 1
-										: is_C99_add_operator_expression<'-'>(*src.data<2>()) && converts_to_arithmeticlike(src.data<2>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<2>()->data<2>()->type_code.base_type_index) ? 2 : 0;
-			if (!rhs_converted && !want_rhs_details) break;	// nothing to work with
-
-			const bool lhs_lhs_converted = want_lhs_details && intlike_literal_to_VM(lhs_lhs_int,*src.data<1>()->data<1>());
-			const bool lhs_rhs_converted = want_lhs_details && intlike_literal_to_VM(lhs_rhs_int,*src.data<1>()->data<2>());
-			const bool rhs_lhs_converted = want_rhs_details && intlike_literal_to_VM(rhs_lhs_int,*src.data<2>()->data<1>());
-			const bool rhs_rhs_converted = want_rhs_details && intlike_literal_to_VM(rhs_rhs_int,*src.data<2>()->data<2>());
-
-			const bool lhs_lhs_negative = lhs_lhs_converted && target_machine->C_promote_integer(lhs_lhs_int,promote_aux(src.data<1>()->data<1>()->type_code.base_type_index),lhs);
-			const bool lhs_rhs_negative = lhs_rhs_converted && target_machine->C_promote_integer(lhs_rhs_int,promote_aux(src.data<1>()->data<2>()->type_code.base_type_index),lhs);
-			if (rhs_lhs_converted) target_machine->C_promote_integer(rhs_lhs_int,promote_aux(src.data<2>()->data<1>()->type_code.base_type_index),rhs);
-			if (rhs_rhs_converted) target_machine->C_promote_integer(rhs_rhs_int,promote_aux(src.data<2>()->data<2>()->type_code.base_type_index),rhs);
-
-			if (rhs_converted && 2==want_lhs_details)
-				{
-				const bool rhs_cancel_lhs_lhs = lhs_lhs_converted && rhs_negative!=lhs_lhs_negative;
-				const bool rhs_cancel_lhs_rhs = lhs_rhs_converted && rhs_negative==lhs_rhs_negative;
-				if (rhs_cancel_lhs_lhs || rhs_cancel_lhs_rhs)
-					{
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_test(rhs_int);
-					if (rhs_negative) target_machine->signed_additive_inverse(rhs_test,old.machine_type);
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_lhs_test(lhs_lhs_int);
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_rhs_test(lhs_rhs_int);
-					if (rhs_cancel_lhs_lhs && lhs_lhs_negative) target_machine->signed_additive_inverse(lhs_lhs_test,lhs.machine_type);
-					if (rhs_cancel_lhs_rhs && lhs_rhs_negative) target_machine->signed_additive_inverse(lhs_rhs_test,lhs.machine_type);
-					if (rhs_cancel_lhs_rhs && rhs_test==lhs_rhs_test)
-						{	// lose two terms
-							//! \bug needs test case
-						src.c_array<1>()->eval_to_arg<1>(0);
-						src.eval_to_arg<1>(0);
-						//! \todo reality-check (watch out for sudden typecasting)
-						src.type_code = old_type;
-						return true;
-						};
-					if (rhs_cancel_lhs_lhs && rhs_test==lhs_lhs_test)
-						{	// lose two terms
-							//! \test cpp/default/twoscomp.notrap/Pass_min_int.h, cpp/default/twoscomp.notrap/Pass_min_int.hpp
-						C99_CPP_binary_minus_to_unary_minus(*src.c_array<1>());
-						src.eval_to_arg<1>(0);
-						//! \todo reality-check (watch out for sudden typecasting)
-						src.type_code = old_type;
-						return true;
-						};
-					if (rhs_cancel_lhs_rhs && rhs_test<lhs_rhs_test)
-						{	// lose rhs
-							//! \bug needs test case
-						lhs_rhs_test -= rhs_test;
-
-						parse_tree tmp;
-						if (!VM_to_signed_literal(tmp,lhs_rhs_negative,lhs_rhs_test,*src.c_array<1>()->c_array<2>(),types)) return false;
-						src.c_array<1>()->c_array<2>()->destroy();
-						*src.c_array<1>()->c_array<2>() = tmp;
-
-						src.eval_to_arg<1>(0);
-						//! \todo reality-check (watch out for sudden typecasting)
-						src.type_code = old_type;
-						return true;
-						}
-					if (rhs_cancel_lhs_lhs && rhs_test<lhs_lhs_test)
-						{	// lose rhs
-							//! \bug needs test case
-						lhs_lhs_test -= rhs_test;
-
-						parse_tree tmp;
-						if (!VM_to_signed_literal(tmp,lhs_lhs_negative,lhs_lhs_test,*src.c_array<1>()->c_array<1>(),types)) return false;
-						src.c_array<1>()->c_array<2>()->destroy();
-						*src.c_array<1>()->c_array<2>() = tmp;
-
-						src.eval_to_arg<1>(0);
-						//! \todo reality-check (watch out for sudden typecasting)
-						src.type_code = old_type;
-						return true;
-						}
-					if (rhs_cancel_lhs_rhs /* && rhs_test>lhs_rhs_test */)
-						{	// lose lhs_rhs
-							//! \bug needs test case
-						rhs_test -= lhs_rhs_test;
-
-						parse_tree tmp;
-						if (!VM_to_signed_literal(tmp,rhs_negative,rhs_test,*src.c_array<2>(),types)) return false;
-						src.c_array<2>()->destroy();
-						*src.c_array<2>() = tmp;
-
-						src.c_array<1>()->eval_to_arg<1>(0);
-						//! \todo reality-check (watch out for sudden typecasting)
-						src.type_code = old_type;
-						return true;
-						}
-					if (rhs_cancel_lhs_lhs /* && rhs_test>lhs_lhs_test */)
-						{	// lose lhs_lhs
-							//! \bug needs test case
-						rhs_test -= lhs_lhs_test;
-
-						parse_tree tmp;
-						if (!VM_to_signed_literal(tmp,rhs_negative,rhs_test,*src.c_array<2>(),types)) return false;
-						src.c_array<2>()->destroy();
-						*src.c_array<2>() = tmp;
-
-						C99_CPP_binary_minus_to_unary_minus(*src.c_array<1>());
-						//! \todo reality-check (watch out for sudden typecasting)
-						src.type_code = old_type;
-						return true;
-						}
-					}
 				}
 			break;
 			}
@@ -7682,77 +7555,6 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 				force_decimal_literal(src,(lhs_int==rhs_int)==is_equal_op ? "1" : "0",types);
 				return true;
 				};
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_lhs_int;
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_rhs_int;
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_lhs_int;
-			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_rhs_int;
-			// fear C++ operator overloading
-			const int want_lhs_details 	= lhs_converted ? 0
-										: is_C99_add_operator_expression<'+'>(*src.data<1>()) && converts_to_arithmeticlike(src.data<1>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<1>()->data<2>()->type_code.base_type_index) ? 1
-										: is_C99_add_operator_expression<'-'>(*src.data<1>()) && converts_to_arithmeticlike(src.data<1>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<1>()->data<2>()->type_code.base_type_index) ? 2 : 0;
-			if (!lhs_converted && !want_lhs_details) break;	// nothing to work with
-			// fear C++ operator overloading
-			const int want_rhs_details 	= rhs_converted ? 0
-										: is_C99_add_operator_expression<'+'>(*src.data<2>()) && converts_to_arithmeticlike(src.data<2>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<2>()->data<2>()->type_code.base_type_index) ? 1
-										: is_C99_add_operator_expression<'-'>(*src.data<2>()) && converts_to_arithmeticlike(src.data<2>()->data<1>()->type_code.base_type_index) && converts_to_arithmeticlike(src.data<2>()->data<2>()->type_code.base_type_index) ? 2 : 0;
-			if (!rhs_converted && !want_rhs_details) break;	// nothing to work with
-
-			const bool lhs_lhs_converted = want_lhs_details && intlike_literal_to_VM(lhs_lhs_int,*src.data<1>()->data<1>());
-			const bool lhs_rhs_converted = want_lhs_details && intlike_literal_to_VM(lhs_rhs_int,*src.data<1>()->data<2>());
-			const bool rhs_lhs_converted = want_rhs_details && intlike_literal_to_VM(rhs_lhs_int,*src.data<2>()->data<1>());
-			const bool rhs_rhs_converted = want_rhs_details && intlike_literal_to_VM(rhs_rhs_int,*src.data<2>()->data<2>());
-
-			const bool lhs_lhs_negative = lhs_lhs_converted && target_machine->C_promote_integer(lhs_lhs_int,promote_aux(src.data<1>()->data<1>()->type_code.base_type_index),lhs);
-			const bool lhs_rhs_negative = lhs_rhs_converted && target_machine->C_promote_integer(lhs_rhs_int,promote_aux(src.data<1>()->data<2>()->type_code.base_type_index),lhs);
-			const bool rhs_lhs_negative = rhs_lhs_converted && target_machine->C_promote_integer(rhs_lhs_int,promote_aux(src.data<2>()->data<1>()->type_code.base_type_index),rhs);
-			const bool rhs_rhs_negative = rhs_rhs_converted && target_machine->C_promote_integer(rhs_rhs_int,promote_aux(src.data<2>()->data<2>()->type_code.base_type_index),rhs);
-			if (2==want_lhs_details && 2==want_rhs_details)
-				{	// ...-... == ...-...
-				const bool lhs_lhs_cancels_rhs_lhs = lhs_lhs_converted && rhs_lhs_converted && lhs_lhs_negative==rhs_lhs_negative;
-				const bool lhs_lhs_cancels_rhs_rhs = lhs_lhs_converted && rhs_lhs_converted && lhs_lhs_negative!=rhs_rhs_negative;
-				const bool lhs_rhs_cancels_rhs_lhs = lhs_rhs_converted && rhs_lhs_converted && lhs_rhs_negative!=rhs_lhs_negative;
-				const bool lhs_rhs_cancels_rhs_rhs = lhs_rhs_converted && rhs_lhs_converted && lhs_rhs_negative==rhs_rhs_negative;
-				if (lhs_lhs_cancels_rhs_lhs || lhs_lhs_cancels_rhs_rhs || lhs_rhs_cancels_rhs_lhs || lhs_rhs_cancels_rhs_rhs)
-					{
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_lhs_test(lhs_lhs_int);
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> lhs_rhs_test(lhs_rhs_int);
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_lhs_test(rhs_lhs_int);
-					unsigned_fixed_int<VM_MAX_BIT_PLATFORM> rhs_rhs_test(rhs_rhs_int);
-
-					if (lhs_lhs_negative && (lhs_lhs_cancels_rhs_lhs || lhs_lhs_cancels_rhs_rhs)) target_machine->signed_additive_inverse(lhs_lhs_test,lhs.machine_type);
-					if (lhs_rhs_negative && (lhs_rhs_cancels_rhs_lhs || lhs_rhs_cancels_rhs_rhs)) target_machine->signed_additive_inverse(lhs_rhs_test,lhs.machine_type);
-					if (rhs_lhs_negative && (lhs_lhs_cancels_rhs_lhs || lhs_rhs_cancels_rhs_lhs)) target_machine->signed_additive_inverse(rhs_lhs_test,rhs.machine_type);
-					if (rhs_rhs_negative && (lhs_lhs_cancels_rhs_rhs || lhs_rhs_cancels_rhs_rhs)) target_machine->signed_additive_inverse(rhs_rhs_test,rhs.machine_type);
-
-					// memory conserving transforms first
-					if (lhs_lhs_cancels_rhs_lhs && lhs_lhs_test==rhs_lhs_test)
-						{	//! \bug needs test case
-						C99_CPP_binary_minus_to_unary_minus(*src.c_array<1>());
-						C99_CPP_binary_minus_to_unary_minus(*src.c_array<2>());
-						return true;
-						};
-					if (lhs_lhs_cancels_rhs_rhs && lhs_lhs_test==rhs_rhs_test)
-						{	//! \bug needs test case
-						C99_CPP_binary_minus_to_unary_minus(*src.c_array<1>());
-						src.c_array<2>()->eval_to_arg<1>(0);
-						return true;
-						};
-					if (lhs_rhs_cancels_rhs_lhs && lhs_rhs_test==rhs_lhs_test)
-						{	//! \bug needs test case
-						src.c_array<1>()->eval_to_arg<1>(0);
-						C99_CPP_binary_minus_to_unary_minus(*src.c_array<2>());
-						return true;
-						};
-					if (lhs_rhs_cancels_rhs_rhs && lhs_rhs_test==rhs_rhs_test)
-						{	//! \bug needs test case
-						src.c_array<1>()->eval_to_arg<1>(0);
-						src.c_array<2>()->eval_to_arg<1>(0);
-						return true;
-						};
-#if 0
-#endif
-					};
-				}
 //			break;
 			}
 	};
@@ -9253,7 +9055,7 @@ static void conserve_tokens(parse_tree& x)
 //! \todo really should be somewhere in natural-language output
 void INFORM_separated_list(const char* const* x,size_t x_len, const char* const sep)
 {
-	assert(NULL!=sep && !*sep);
+	assert(NULL!=sep && *sep);
 	assert(NULL!=x);
 	if (0<x_len)
 		{
@@ -9353,7 +9155,7 @@ public:
 			if (C99_CPP0X_DECLSPEC_EXTERN & flags)
 				specs[storage_count++] = "extern";
 			if (C99_CPP0X_DECLSPEC_REGISTER & flags)
-				{	//! \bug needs test case
+				{	//! \test zcc/decl.C99/Error_register_global.h
 				//! \todo should be warning for --do-what-i-mean
 				specs[storage_count++] = "register";
 				++erased_count;
@@ -9365,7 +9167,7 @@ public:
 				flags &= ~C99_CPP0X_DECLSPEC_REGISTER;
 				}
 			if (C99_DECLSPEC_AUTO & flags)
-				{	//! \bug needs test case
+				{	//! \test zcc/decl.C99/Error_auto_global.h
 				//! \todo should be warning for --do-what-i-mean
 				specs[storage_count++] = "auto";
 				++erased_count;
@@ -9377,7 +9179,10 @@ public:
 				flags &= ~C99_DECLSPEC_AUTO;
 				};
 			if (1<storage_count)
-				{	//! \bug needs test case
+				{	//! \test zcc/decl.C99/Error_extern_static.h
+					//! \test zcc/decl.C99/Error_extern_typedef.h
+					//! \test zcc/decl.C99/Error_static_typedef.h
+					//! \test zcc/decl.C99/Error_extern_static_typedef.h
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("declaration has too many storage-class specifiers: ");
@@ -9514,7 +9319,7 @@ public:
 		if (CPP_locate_qualified_name(x,i))
 			{
 			if (parse_tree::INVALID & x.data<0>()[i].flags)
-				{	//! \todo error
+				{	//! \test zcc/decl.C99/Error_doublecolon_type.hpp
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("qualified-name may not end in :: (C++98 7.1.5.3p1, 5.1p8)");
@@ -9594,7 +9399,7 @@ public:
 			if (C99_CPP0X_DECLSPEC_EXTERN & flags)
 				specs[storage_count++] = "extern";
 			if (C99_CPP0X_DECLSPEC_REGISTER & flags)
-				{	//! \bug needs test case
+				{	//! \test zcc/default/decl.C99/Error_register_global.hpp
 				//! \todo should be warning for --do-what-i-mean
 				specs[storage_count++] = "register";
 				++erased_count;
@@ -9606,7 +9411,7 @@ public:
 				flags &= ~C99_CPP0X_DECLSPEC_REGISTER;
 				}
 			if (CPP_DECLSPEC_MUTABLE & flags)
-				{	//! \bug needs test case
+				{	//! \test zcc/default/decl.C99/Error_mutable_global.hpp
 				//! \todo should be warning for --do-what-i-mean
 				specs[storage_count++] = "mutable";
 				++erased_count;
@@ -9618,13 +9423,16 @@ public:
 				flags &= ~CPP_DECLSPEC_MUTABLE;
 				};
 			if (1<storage_count)
-				{	//! \bug needs test case
+				{	//! \test zcc/decl.C99/Error_extern_static.hpp
+					//! \test zcc/decl.C99/Error_extern_typedef.hpp
+					//! \test zcc/decl.C99/Error_static_typedef.hpp
+					//! \test zcc/decl.C99/Error_extern_static_typedef.hpp
 				//! \todo should be warning for --do-what-i-mean
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("declaration has too many storage-class specifiers: ");
 				INFORM_separated_list(specs,storage_count,", ");
-				INFORM(" (C99 6.7.1p2)");
+				INFORM(" (C++0X 7.1.1p1)");
 				zcc_errors.inc_error();
 				}
 			storage_count -= erased_count;
@@ -9633,7 +9441,7 @@ public:
 			// typedef must have a function type to tolerate anything (but kills inline)
 			// virtual and explicit can only be used in class declarations: erase (C++0X 7.1.2p5, 7.1.2p6
 			if (CPP_DECLSPEC_VIRTUAL & flags)
-				{	//! \bug needs test case
+				{	//! \test zcc/default/decl.C99/Error_virtual_global.hpp
 				//! \todo should be warning for --do-what-i-mean
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
@@ -9643,7 +9451,7 @@ public:
 				flags &= ~CPP_DECLSPEC_VIRTUAL;
 				};
 			if (CPP_DECLSPEC_EXPLICIT & flags)
-				{	//! \bug needs test case
+				{	//! \test zcc/default/decl.C99/Error_explicit_global.hpp
 				//! \todo should be warning for --do-what-i-mean
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
@@ -9654,7 +9462,7 @@ public:
 				};
 			// friend is only usable within a class
 			if (CPP_DECLSPEC_FRIEND & flags)
-				{	//! \bug needs test case
+				{	//! \test zcc/default/decl.C99/Error_friend_global.hpp
 				//! \todo should be warning for --do-what-i-mean
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
@@ -9741,7 +9549,11 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 			const bool coherent_storage_specifiers = declFind.analyze_flags_global(src,i,decl_count);
 			if (src.size<0>()-i<=decl_count)
 				{	// unterminated declaration
-					//! \bug need test case
+					//! \test zcc/decl.C99/Error_extern_scope.h
+					//! \test zcc/decl.C99/Error_static_scope.h
+					//! \test zcc/decl.C99/Error_typedef_scope.h
+					//! \test zcc/decl.C99/Error_register_scope.h
+					//! \test zcc/decl.C99/Error_auto_scope.h
 				if (src.size<0>()>i) message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("declaration cut off by end of scope (C99 6.7p1)");
@@ -9753,7 +9565,11 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				};
 			if (src.data<0>()[i+decl_count].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count].index_tokens[0].token))
 				{	// C99 7p2 error: must declare something
-					//! \bug need test case
+					//! \test zcc/decl.C99/Error_extern_semicolon.h
+					//! \test zcc/decl.C99/Error_static_semicolon.h
+					//! \test zcc/decl.C99/Error_typedef_semicolon.h
+					//! \test zcc/decl.C99/Error_register_semicolon.h
+					//! \test zcc/decl.C99/Error_auto_semicolon.h
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("declaration must declare something (C99 6.7p2)");
@@ -9826,28 +9642,29 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 							{
 							if (bootstrap==tmp->first)
 								{	// warn if there is a prior, consistent definition
-									//! \bug needs test case
+									//! \test zcc/decl.C99/Warn_redeclare_typedef.h
+									//! \todo control this warning with an option --no-OAOO or --no-DRY
 								message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
 								INC_INFORM(WARN_STR);
-								INC_INFORM("redeclaring ");
-								INC_INFORM(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
-								INC_INFORM(", prior typedef at ");
+								INC_INFORM("redeclaring typedef ");
+								INFORM(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
 								INC_INFORM(tmp->second);
 								INC_INFORM(':');
-								INFORM(tmp->third);
+								INC_INFORM(tmp->third);
+								INFORM(": prior typedef");
 								if (bool_options[boolopt::warnings_are_errors])
 									zcc_errors.inc_error();
 								}
 							else{	// error if there is a prior, inconsistent definition
-									//! \bug needs test case
+									//! \test zcc/decl.C99/Warn_redeclare_typedef.h
 								message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
 								INC_INFORM(ERR_STR);
-								INC_INFORM("redeclaring ");
-								INC_INFORM(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
-								INC_INFORM(", prior typedef at ");
+								INC_INFORM("redeclaring typedef ");
+								INFORM(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
 								INC_INFORM(tmp->second);
 								INC_INFORM(':');
-								INFORM(tmp->third);
+								INC_INFORM(tmp->third);
+								INFORM(": prior typedef");
 								zcc_errors.inc_error();
 								}	
 							// do not re-register if there is a prior definition
@@ -10086,7 +9903,14 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			const bool coherent_storage_specifiers = declFind.analyze_flags_global(src,i,decl_count);
 			if (src.size<0>()-i<=decl_count)
 				{	// unterminated declaration
-					//! \bug need test case
+					//! \test zcc/decl.C99/Error_extern_scope.hpp
+					//! \test zcc/decl.C99/Error_static_scope.hpp
+					//! \test zcc/decl.C99/Error_typedef_scope.hpp
+					//! \test zcc/decl.C99/Error_register_scope.hpp
+					//! \test zcc/decl.C99/Error_mutable_scope.hpp
+					//! \test zcc/decl.C99/Error_virtual_scope.hpp
+					//! \test zcc/decl.C99/Error_friend_scope.hpp
+					//! \test zcc/decl.C99/Error_explicit_scope.hpp
 				if (src.size<0>()>i) message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("declaration cut off by end of scope (C++98 7p1)");
@@ -10098,7 +9922,14 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				};
 			if (src.data<0>()[i+decl_count].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count].index_tokens[0].token))
 				{	// must declare something
-					//! \bug need test case
+					//! \test zcc/decl.C99/Error_extern_semicolon.hpp
+					//! \test zcc/decl.C99/Error_static_semicolon.hpp
+					//! \test zcc/decl.C99/Error_typedef_semicolon.hpp
+					//! \test zcc/decl.C99/Error_register_semicolon.hpp
+					//! \test zcc/decl.C99/Error_mutable_semicolon.hpp
+					//! \test zcc/decl.C99/Error_virtual_semicolon.hpp
+					//! \test zcc/decl.C99/Error_friend_semicolon.hpp
+					//! \test zcc/decl.C99/Error_explicit_semicolon.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("declaration must declare something (C++98 7p4)");
@@ -10183,28 +10014,29 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 							{
 							if (bootstrap==tmp->first)
 								{	// warn if there is a prior, consistent definition
-									//! \bug needs test case
+									//! \test zcc/decl.C99/Warn_redeclare_typedef.hpp
+									//! \todo control this warning with an option --no-OAOO or --no-DRY
 								message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
 								INC_INFORM(WARN_STR);
-								INC_INFORM("redeclaring ");
-								INC_INFORM(fullname);
-								INC_INFORM(", prior typedef at ");
+								INC_INFORM("redeclaring typedef ");
+								INFORM(fullname);
 								INC_INFORM(tmp->second);
 								INC_INFORM(':');
-								INFORM(tmp->third);
+								INC_INFORM(tmp->third);
+								INFORM(": prior typedef");
 								if (bool_options[boolopt::warnings_are_errors])
 									zcc_errors.inc_error();
 								}
 							else{	// error if there is a prior, inconsistent definition
-									//! \bug needs test case
+									//! \test zcc/decl.C99/Error_redeclare_typedef.hpp
 								message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
 								INC_INFORM(ERR_STR);
-								INC_INFORM("redeclaring ");
-								INC_INFORM(fullname);
-								INC_INFORM(", prior typedef at ");
+								INC_INFORM("redeclaring typedef ");
+								INFORM(fullname);
 								INC_INFORM(tmp->second);
 								INC_INFORM(':');
-								INFORM(tmp->third);
+								INC_INFORM(tmp->third);
+								INFORM(": prior typedef");
 								zcc_errors.inc_error();
 								}
 							// do not re-register if there is a prior definition
