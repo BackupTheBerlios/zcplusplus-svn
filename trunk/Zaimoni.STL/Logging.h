@@ -38,6 +38,7 @@ EXTERN_C void _inform(const char* const B, size_t len);		/* Windows GUI crippled
 EXTERN_C void _inc_inform(const char* const B, size_t len);	/* only C stdio */
 EXTERN_C void _log(const char* const B, size_t len);		/* Windows GUI crippled (assumes len := strlen() */
 
+#ifdef __cplusplus
 /* overloadable adapters for C++ and debug-mode code */
 /* all-uppercased because we may use macro wrappers on these */
 void FATAL(const char* const B) NO_RETURN;
@@ -51,20 +52,6 @@ inline void INC_INFORM(const char* const B) {_inc_inform(B,strlen(B));}
 inline void INFORM(const char* const B) {_inform(B,strlen(B));}
 inline void LOG(const char* const B) {_log(B,strlen(B));}
 
-void SEVERE_WARNING(const char* const B);	// useful for Console class
-void WARNING(const char* const B);			// useful for Console class
-
-inline bool WARN(bool A, const char* const B)
-{
-	if (A)
-		{
-		WARNING(B);
-		return true;
-		}
-	return false;
-}
-
-#ifdef __cplusplus
 /* have C++, so function overloading */
 inline void INFORM(const char* const B, size_t len) {_inform(B,len);}
 inline void INC_INFORM(const char* const B, size_t len) {_inc_inform(B,len);}
@@ -144,7 +131,7 @@ inline void INC_INFORM(unsigned char B) {return INC_INFORM((uintmax_t)(B));}
 #define ARG_TRACE_LOG INFORM_INC(_file); INFORM_INC(":"); INFORM(_line)
 
 #define AUDIT_IF_RETURN(A,B) if (A) {LOG(#A "; returning " #B); return B;}
-#define AUDIT_STATEMENT(A) {LOG(#A); A;}
+#define AUDIT_STATEMENT(A) {A;}
 #define DEBUG_STATEMENT(A) A
 /* Interoperate with Microsoft: return code 3 */
 #define DEBUG_FAIL_OR_LEAVE(A,B) if (A) FATAL_CODE(#A,3)

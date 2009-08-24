@@ -10,10 +10,12 @@
 
 #ifdef __cplusplus
 namespace zaimoni {
-#endif
 
 /* C string tests */
-inline bool is_empty_string(const char* const LHS) {return NULL==LHS || '\x00'==LHS[0];}
+inline bool is_empty_string(const char* const x) {return NULL==x || '\0'==x[0];}
+#else
+#define is_empty_string(x) (NULL==x || '\0'==x[0])
+#endif
 
 #ifdef __cplusplus
 

@@ -241,13 +241,13 @@ LangConf::Error(const char* msg, const char* filename, size_t line, size_t posit
 		};
 	if (0==leading_space)
 		{
-		SEVERE_WARNING(msg);
+		INFORM(msg);
 		return;
 		};
 	char* target = reinterpret_cast<char*>(calloc(strlen(msg)+leading_space,1));
 	if (NULL==target)
 		{
-		SEVERE_WARNING(msg);
+		INFORM(msg);
 		return;
 		};
 	char* tracking_target = target;
@@ -266,7 +266,7 @@ LangConf::Error(const char* msg, const char* filename, size_t line, size_t posit
 	strcpy(tracking_target,": error: ");
 	tracking_target += sizeof(": error: ")-1;
 	strcpy(tracking_target,msg);
-	SEVERE_WARNING(target);
+	INFORM(target);
 	free(target);
 }
 

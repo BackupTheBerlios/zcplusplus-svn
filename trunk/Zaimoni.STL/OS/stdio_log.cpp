@@ -8,46 +8,38 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#ifndef __cplusplus
-#include <stdbool.h>
-#endif
 
 /* define this *first* */
 #ifdef __cplusplus
 extern "C" {
 #endif
-void
-_fatal(const char* const B)
+void _fatal(const char* const B)
 {
 	fwrite(B,strlen(B),1,stderr);
 	fwrite("\n",1,1,stderr);
 	exit(EXIT_FAILURE);
 }
 
-void
-_fatal_code(const char* const B,int exit_code)
+void _fatal_code(const char* const B,int exit_code)
 {
 	fwrite(B,strlen(B),1,stderr);
 	fwrite("\n",1,1,stderr);
 	exit(exit_code);
 }
 
-void
-_inform(const char* const B, size_t len)
+void _inform(const char* const B, size_t len)
 {
 	fwrite(B,len,1,stderr);
 	fwrite("\n",1,1,stderr);
 }
 
-void
-_inc_inform(const char* const B, size_t len)
+void _inc_inform(const char* const B, size_t len)
 {
 	fwrite(B,len,1,stderr);
 }
 
 /* this is going to be relocated later */
-void
-_log(const char* const B, size_t len)
+void _log(const char* const B, size_t len)
 {
 	fwrite(B,len,1,stderr);
 	fwrite("\n",1,1,stderr);
@@ -56,31 +48,4 @@ _log(const char* const B, size_t len)
 #ifdef __cplusplus
 }	/* end extern "C" */
 #endif
-
-bool
-WARN(int A, const char* const B)
-{
-	if (A)
-		{
-		fwrite(B,strlen(B),1,stderr);
-		fwrite("\n",1,1,stderr);
-		return true;
-		}
-	return false;
-}
-
-void
-SEVERE_WARNING(const char* const B)
-{
-	fwrite(B,strlen(B),1,stderr);
-	fwrite("\n",1,1,stderr);
-}
-
-void
-WARNING(const char* const B)
-{
-	fwrite(B,strlen(B),1,stderr);
-	fwrite("\n",1,1,stderr);
-}
-
 #endif
