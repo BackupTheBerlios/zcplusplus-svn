@@ -1640,7 +1640,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 							continue;
 							}
 						assert(!macros_object_expansion_pre_eval[object_macro_index]->empty());
-						{	//! \test the cpp/default/Preprocess_*.h/hpp test cases
+						{	//! \test cpp/default/Preprocess_*.h/hpp
 						size_t discard = 0;
 						dynamic_macro_replace_once(*TokenList[i],discard,TokenList[i]->size(),macros_object,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion_pre_eval,NULL);
 						}
@@ -1741,7 +1741,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 									continue;
 									}
 								assert(!macros_function_expansion_pre_eval[function_macro_index]->empty());
-								{	//! \test default/Preprocess_... family of test cases
+								{	//! \test default/Preprocess_*.h/hpp 
 								Token<char>* Tmp = new Token<char>(*macros_function_expansion_pre_eval[function_macro_index]);
 								Tmp->logical_line = TokenList[i]->logical_line;
 								if (!nonrecursive_macro_replacement_list(Tmp->data()))
@@ -2049,7 +2049,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 				}
 			}
 #undef CPP_INCLUDE_NOT_FOUND
-		//! also tested in a number of data transform test cases
+		//! also tested in a number of data transform tests
 		//! \test Pass_include_local.hpp
 		if (!IncludeTokenList.empty())
 			{	// not sure whether C99 5.1.1.2 4 requires preprocessing the whole header before pasting, but it permits it
@@ -3260,7 +3260,7 @@ CPreprocessor::predefined_macro_replace_once(Token<char>& x, size_t& critical_of
 			macro_value = FileBuffer;
 			}
 		else if (!strcmp(macro_identifier_default[macro_index].first,"__LINE__"))
-			macro_value = ltoa((long)(x.logical_line.second),Buffer,10);
+			macro_value = ltoa((long)(x.logical_line.first),Buffer,10);
 		else if (!strcmp(macro_identifier_default[macro_index].first,"__TIME__"))
 			macro_value = time_buffer;
 		else{
@@ -4022,7 +4022,7 @@ CPreprocessor::use_line_directive_and_discard(autovalarray_ptr<Token<char>* >& T
 	critical_offset += first_token_len;
 	}
 	if (i+1 < TokenList.size())
-		{	//! \bug need data-transform test case
+		{	//! \test cpp/line.C99/Preprocess_42.h, cpp/line.C99/Preprocess_42.hpp
 			// Behavior is undefined if the syntax is bad (line number with malformed filename string), so don't worry about this happening too early.
 		size_t numeric_line_number;
 		{	// don't worry about failure (pre-validated above), *but* as errno should be a synchronized global we have to lock it anyway
@@ -4060,7 +4060,8 @@ CPreprocessor::use_line_directive_and_discard(autovalarray_ptr<Token<char>* >& T
 	//! \todo: extension?  C99 spec requires narrow string literals only
 	if (   C_TESTFLAG_STRING_LITERAL!=second_token_flags
 		|| 'L'==TokenList[i]->data()[critical_offset])
-		{	//! \bug need test cases
+		{	//! \test cpp/line.C99/Error_badfile1.h, cpp/line.C99/Error_badfile1.hpp
+			//! \test cpp/line.C99/Error_badfile2.h, cpp/line.C99/Error_badfile2.hpp
 		message_header(*TokenList[i]);
 		INC_INFORM(ERR_STR);
 		INFORM("#line wants a narrow string literal for the new __FILE__ (C99 6.10.4p1/C++98 16.4p1)");
@@ -4070,7 +4071,7 @@ CPreprocessor::use_line_directive_and_discard(autovalarray_ptr<Token<char>* >& T
 		}
 
 	if (i+1 < TokenList.size())
-		{	//! \bug need data-transform test case
+		{	//! \test cpp/line.C99/Preprocess_42.h, cpp/line.C99/Preprocess_42.hpp
 		//! \todo loops should stop at first (valid) #line directive with a filename
 		// unescape the string, if needed
 		const char* new_FILE = NULL;

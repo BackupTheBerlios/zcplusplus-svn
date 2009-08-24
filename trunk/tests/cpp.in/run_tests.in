@@ -51,6 +51,7 @@ ERROR CPP default.nonconforming/Error*
 
 ECHO Checking ZCC content transforms
 TEXTTRANSFORM CPP default/Preprocess*
+TEXTTRANSFORM CPP line.C99/Preprocess*
 
 EPILOG
 
