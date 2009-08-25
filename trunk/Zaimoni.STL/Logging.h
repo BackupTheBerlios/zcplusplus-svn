@@ -107,6 +107,21 @@ inline void LOG(unsigned char B) {return LOG((uintmax_t)(B));}
 inline void INC_INFORM(unsigned char B) {return INC_INFORM((uintmax_t)(B));}
 #endif
 
+#else	/* !defined(__cplusplus) */
+#ifdef NDEBUG
+#	define FATAL(B) _fatal(B)
+#	define FATAL_CODE(B,CODE) _fatal_code(B,CODE)
+#elif defined(__GNUC__)
+#	define FATAL(B) _fatal((_LOG(__PRETTY_FUNCTION__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B))
+#	define FATAL_CODE(B,CODE) _fatal_code((LOG(__PRETTY_FUNCTION__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE)
+#else
+/* if no extensions, assume C99 */
+#	define FATAL(B) _fatal((LOG(__func__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B));
+#	define FATAL_CODE(B,CODE) _fatal_code((LOG(__func__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE);
+#endif
+#define INC_INFORM(B) _inc_inform(B,strlen(B))
+#define INFORM(B) _inform(B,strlen(B))
+#define LOG(B) _log(B,strlen(B))
 #endif
 
 /* this should look like an assert even in NDEBUG mode */
@@ -115,15 +130,14 @@ inline void INC_INFORM(unsigned char B) {return INC_INFORM((uintmax_t)(B));}
 /* match assert.h C standard header, which uses NDEBUG */
 #ifndef NDEBUG	/* self-aware version */
 /* use similar extensions on other compilers */
-#ifdef __GNUC__
-#define FATAL(B) FATAL((LOG(__PRETTY_FUNCTION__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B))
-#define FATAL_CODE(B,CODE) FATAL_CODE((LOG(__PRETTY_FUNCTION__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE)
+#ifdef __cplusplus
+#	ifdef __GNUC__
+#		define FATAL(B) FATAL((LOG(__PRETTY_FUNCTION__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B))
+#		define FATAL_CODE(B,CODE) FATAL_CODE((LOG(__PRETTY_FUNCTION__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE)
+#	else	/* if no extensions, assume C99 */		
+#		define FATAL(B) FATAL((LOG(__func__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B));
+#		define FATAL_CODE(B,CODE) FATAL_CODE((LOG(__func__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE);
 #endif
-
-/* if no extensions, assume C99 */
-#ifndef FATAL
-#define FATAL(B) FATAL((LOG(__func__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B));
-#define FATAL_CODE(B,CODE) FATAL_CODE((LOG(__func__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE);
 #endif
 
 #define ARG_TRACE_PARAMS , const char* const _file, long _line

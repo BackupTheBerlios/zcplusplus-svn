@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+# http://www.boost.org/more/license_info.html
+# Boost Software License - Version 1.0 - August 17th, 2003
+
 # Permission is hereby granted, free of charge, to any person or organization
 # obtaining a copy of the software and accompanying documentation covered by
 # this license (the "Software") to use, reproduce, display, distribute,
@@ -22,6 +25,14 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+# backward fixup note
+# old version of configuring *.exe objects was
+# ObjfileTuple = ('main','Mockup','Agent','render_curses')
+# ProgName = 'Skirmish'
+# 
+# This didn't work well for Z.C++.  New style is
+# ProgObjects = {'Skirmish':('main','Mockup','Agent','render_curses')}
+
 from string import join
 from os import stat,getcwd
 from os.path import isfile
@@ -33,7 +44,7 @@ C_compiler = 'gcc'
 C_system_includedirs = [C_compiler_master_directory+'/include']
 C_system_libdirs = [C_compiler_master_directory+'/lib']
 CPP_compiler = 'g++'
-CPP_system_includedirs = [C_compiler_master_directory+'/include']
+CPP_system_includedirs = [C_compiler_master_directory+'/include',C_compiler_master_directory+'/include/c++/3.4.5']
 C_backtrack_dirs = []
 
 def InjectAlternateSystemHeaderDir(Dirname):
@@ -139,7 +150,7 @@ def ExtractHeaders(Target):
 	HeaderCache[Target] = LineList2
 	return LineList2
 	
-def CoreCRules(LineList):
+def CoreCPPRules(LineList):
 #	if C_hard_nonsystem_includedirs:
 #		LineList.append('\t '+ join(map(lambda x: '-I '+x,C_hard_nonsystem_includedirs),' ') +' -I- \\\n')
 #	if C_soft_nonsystem_includedirs:
@@ -152,6 +163,22 @@ def CoreCRules(LineList):
 		LineList.append('\tas -o $*.o $*.s\n')
 	else:
 		LineList.append('\t -o $*.o -c -xc++ -pipe $<\n')
+	if object_strip:
+		LineList.append('\t'+object_strip+'\n')
+
+def CoreCRules(LineList):
+#	if C_hard_nonsystem_includedirs:
+#		LineList.append('\t '+ join(map(lambda x: '-I '+x,C_hard_nonsystem_includedirs),' ') +' -I- \\\n')
+#	if C_soft_nonsystem_includedirs:
+#		LineList.append('\t '+ join(map(lambda x: '-I '+x,C_soft_nonsystem_includedirs),' ') +' \\\n')
+#	if C_defines:
+#		LineList.append('\t '+ join(map(lambda x: '-D'+x,C_defines),' ') +' \\\n')
+	if C_assembly_preprocessing:
+		LineList.append('\t -o $*.s -S -xc -pipe $<\n')
+		LineList.append('\t'+C_assembly_preprocessing+'\n')
+		LineList.append('\tas -o $*.o $*.s\n')
+	else:
+		LineList.append('\t -o $*.o -c -xc -pipe $<\n')
 	if object_strip:
 		LineList.append('\t'+object_strip+'\n')
 
@@ -222,9 +249,10 @@ def MakeMakefile():
 		LineList.append('# defines\n')
 	LineList.append('# processing details\n')
 
-	LineList.append(CPP_suffix+'.o:\n')
-	LineList.append('\t$(CXX) $(CFLAGS) $(CXXFLAGS) $(ARCH_FLAGS) $(OTHER_INCLUDEDIR) $(C_MACROS) $(CXX_MACROS) \\\n')
-	CoreCRules(LineList)
+	if CPP_suffix:
+		LineList.append(CPP_suffix+'.o:\n')
+		LineList.append('\t$(CXX) $(CFLAGS) $(CXXFLAGS) $(ARCH_FLAGS) $(OTHER_INCLUDEDIR) $(C_MACROS) $(CXX_MACROS) \\\n')
+		CoreCPPRules(LineList)
 
 	if C_enabled:
 		LineList.append('\n.c.o:\n')
