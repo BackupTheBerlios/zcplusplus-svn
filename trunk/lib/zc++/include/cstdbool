@@ -1,7 +1,6 @@
 // cstdbool
 // wrapper for stdbool.h
-
-// This file is subject to the Boost licence.
+// (C)2009 Kenneth Boyd, license: MIT.txt
 
 #ifndef __CSTDBOOL__
 #define __CSTDBOOL__ 1

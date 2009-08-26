@@ -1,7 +1,6 @@
 /* stdbool.h */
 /* C99 7.16: define following macros: __bool_true_false_are_defined, bool, true, false */
-
-/* This file is subject to the Boost licence. */
+/* (C)2009 Kenneth Boyd, license: MIT.txt */
 
 #ifndef __STDBOOL_H__
 #define __STDBOOL_H__ 1

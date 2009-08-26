@@ -1,7 +1,6 @@
 // ciso646
 // not-that-useful wrapper for iso646.h
-
-// This file is subject to the Boost licence.
+// (C)2009 Kenneth Boyd, license: MIT.txt
 
 #ifndef __CISO646__
 #define __CISO646__ 1

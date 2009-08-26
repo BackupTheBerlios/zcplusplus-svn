@@ -1,7 +1,6 @@
 /* iso646.h */
 /* C99 7.9: define following macros (which are reserved keywords in C++) */
-
-/* This file is subject to the Boost licence. */
+/* (C)2009 Kenneth Boyd, license: MIT.txt */
 
 #ifndef __ISO646_H__
 #define __ISO646_H__ 1
