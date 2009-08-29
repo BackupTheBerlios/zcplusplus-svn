@@ -38,6 +38,10 @@ EXTERN_C void _inform(const char* const B, size_t len);		/* Windows GUI crippled
 EXTERN_C void _inc_inform(const char* const B, size_t len);	/* only C stdio */
 EXTERN_C void _log(const char* const B, size_t len);		/* Windows GUI crippled (assumes len := strlen() */
 
+#define INC_INFORM_STRING_LITERAL(B) _inc_inform(B,sizeof(B)-1)
+#define INFORM_STRING_LITERAL(B) _inform(B,sizeof(B)-1)
+#define LOG_STRING_LITERAL(B) _log(B,sizeof(B)-1)
+
 #ifdef __cplusplus
 /* overloadable adapters for C++ and debug-mode code */
 /* all-uppercased because we may use macro wrappers on these */
@@ -112,12 +116,15 @@ inline void INC_INFORM(unsigned char B) {return INC_INFORM((uintmax_t)(B));}
 #	define FATAL(B) _fatal(B)
 #	define FATAL_CODE(B,CODE) _fatal_code(B,CODE)
 #elif defined(__GNUC__)
-#	define FATAL(B) _fatal((_LOG(__PRETTY_FUNCTION__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B))
-#	define FATAL_CODE(B,CODE) _fatal_code((LOG(__PRETTY_FUNCTION__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE)
+#	define FATAL(B) _fatal((_LOG(__PRETTY_FUNCTION__),LOG_STRING_LITERAL(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B))
+#	define FATAL_CODE(B,CODE) _fatal_code((LOG(__PRETTY_FUNCTION__),LOG_STRING_LITERAL(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE)
+#elif 1300<=_MSC_VER	/* __FUNCDNAME__ extension cuts in at Visual C++ .NET 2002 */
+#	define FATAL(B) _fatal((_LOG(__FUNCDNAME__),LOG_STRING_LITERAL(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B))
+#	define FATAL_CODE(B,CODE) _fatal_code((LOG(__FUNCDNAME__),LOG_STRING_LITERAL(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE)
 #else
 /* if no extensions, assume C99 */
-#	define FATAL(B) _fatal((LOG(__func__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B));
-#	define FATAL_CODE(B,CODE) _fatal_code((LOG(__func__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE);
+#	define FATAL(B) _fatal((LOG(__func__),LOG_STRING_LITERAL(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B));
+#	define FATAL_CODE(B,CODE) _fatal_code((LOG(__func__),LOG_STRING_LITERAL(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE);
 #endif
 #define INC_INFORM(B) _inc_inform(B,strlen(B))
 #define INFORM(B) _inform(B,strlen(B))
@@ -132,26 +139,29 @@ inline void INC_INFORM(unsigned char B) {return INC_INFORM((uintmax_t)(B));}
 /* use similar extensions on other compilers */
 #ifdef __cplusplus
 #	ifdef __GNUC__
-#		define FATAL(B) FATAL((LOG(__PRETTY_FUNCTION__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B))
-#		define FATAL_CODE(B,CODE) FATAL_CODE((LOG(__PRETTY_FUNCTION__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE)
+#		define FATAL(B) FATAL((LOG(__PRETTY_FUNCTION__),LOG_STRING_LITERAL(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B))
+#		define FATAL_CODE(B,CODE) FATAL_CODE((LOG(__PRETTY_FUNCTION__),LOG_STRING_LITERAL(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE)
+#	elif 1300<=_MSC_VER	/* __FUNCDNAME__ extension cuts in at Visual C++ .NET 2002 */
+#		define FATAL(B) FATAL((LOG(__FUNCDNAME__),LOG_STRING_LITERAL(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B))
+#		define FATAL_CODE(B,CODE) FATAL_CODE((LOG(__FUNCDNAME__),LOG_STRING_LITERAL(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE)
 #	else	/* if no extensions, assume C99 */		
-#		define FATAL(B) FATAL((LOG(__func__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B));
-#		define FATAL_CODE(B,CODE) FATAL_CODE((LOG(__func__),LOG(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE);
+#		define FATAL(B) FATAL((LOG(__func__),LOG_STRING_LITERAL(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B));
+#		define FATAL_CODE(B,CODE) FATAL_CODE((LOG(__func__),LOG_STRING_LITERAL(__FILE__ ":" DEEP_STRINGIZE(__LINE__)),B),CODE);
 #endif
 #endif
 
 #define ARG_TRACE_PARAMS , const char* const _file, long _line
 #define ARG_TRACE_ARGS , __FILE__, __LINE__
-#define ARG_TRACE_LOG INFORM_INC(_file); INFORM_INC(":"); INFORM(_line)
+#define ARG_TRACE_LOG INFORM_INC(_file); INFORM_INC_STRING_LITERAL(":"); INFORM(_line)
 
-#define AUDIT_IF_RETURN(A,B) if (A) {LOG(#A "; returning " #B); return B;}
+#define AUDIT_IF_RETURN(A,B) if (A) {LOG_STRING_LITERAL(#A "; returning " #B); return B;}
 #define AUDIT_STATEMENT(A) {A;}
 #define DEBUG_STATEMENT(A) A
 /* Interoperate with Microsoft: return code 3 */
 #define DEBUG_FAIL_OR_LEAVE(A,B) if (A) FATAL_CODE(#A,3)
 
-#define VERIFY(A,B) if (A) FATAL((LOG(#A),B))
-#define REPORT(A,B) if (A) INFORM((LOG(#A),B))
+#define VERIFY(A,B) if (A) FATAL((LOG_STRING_LITERAL(#A),B))
+#define REPORT(A,B) if (A) INFORM((LOG_STRING_LITERAL(#A),B))
 #define DEBUG_LOG(A) LOG(A)
 
 #else	/* fast version */
