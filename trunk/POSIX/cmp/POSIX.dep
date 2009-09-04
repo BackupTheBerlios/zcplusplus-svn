@@ -1,0 +1,5 @@
+OBJECTS_CMP = cmp.o
+OBJECTS_CMP_LINK_PRIORITY = cmp.o
+
+# dependencies
+cmp.o: c:/MingWin.aux/Headers.lib/Zaimoni.STL/Logging.h c:/MingWin.aux/Headers.lib/Zaimoni.STL/Compiler.h c:/MingWin.aux/Headers.lib/Zaimoni.STL/flat_alg.h

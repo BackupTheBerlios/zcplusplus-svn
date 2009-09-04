@@ -1,0 +1,25 @@
+# NMake makefile
+
+.SUFFIXES:
+.SUFFIXES:  .c .obj .exe
+
+!INCLUDE ..\..\NMake.inc
+
+# GNU targets we know about
+all: cmp.exe
+
+clean:
+	del *.obj *.exe *.manifest
+
+# dependencies
+!INCLUDE NMake.dep
+
+cmp.exe : $(OBJECTS_CMP_LINK_PRIORITY)
+	$(CC) $(LINK_FLAGS) /OUT:cmp.exe $(OBJECTS_CMP) $(host_libdir)\z_stdio_log.lib
+
+# inference rules
+# global project search paths for headers
+# processing details
+
+# default .c.obj
+

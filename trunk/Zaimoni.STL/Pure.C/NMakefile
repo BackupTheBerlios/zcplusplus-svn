@@ -26,7 +26,7 @@ uninstall:
 format_util.obj: format_util.c format_util.h
 
 auto_int.h : int_probe.c
-	$(CC) -oint_probe.exe $(CFLAGS) int_probe.c
+	$(CC) /OUT:int_probe.exe $(CFLAGS) int_probe.c
 	.\int_probe.exe > auto_int.h
 	del int_probe.exe.manifest
 	del int_probe.exe
