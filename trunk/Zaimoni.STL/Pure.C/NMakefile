@@ -1,0 +1,40 @@
+# Makefile for pure.C directory
+# assumes M$ NMake
+
+.SUFFIXES:
+.SUFFIXES: .c .lib .obj
+
+!INCLUDE ..\NMake.inc
+
+# /Wall warns on system headers in VC 2008, not good
+CFLAGS = /O1 /EHsc /MD /W3
+
+LIBS = z_format_util.lib
+
+# GNU targets we know about
+all: $(LIBS) auto_int.h
+
+clean:
+	del *.lib *.obj auto_int.h
+
+install: $(libdir)\z_format_util.lib $(libdir)\z_logging.lib
+
+uninstall:
+	del $(libdir)\z_format_util.lib
+
+# rules
+format_util.obj: format_util.c format_util.h
+
+auto_int.h : int_probe.c
+	$(CC) -oint_probe.exe $(CFLAGS) int_probe.c
+	.\int_probe.exe > auto_int.h
+	del int_probe.exe.manifest
+	del int_probe.exe
+
+# defaulting .c.obj
+z_format_util.lib: format_util.obj
+	$(AR) /OUT:z_format_util.lib format_util.obj
+
+$(libdir)\z_format_util.lib: z_format_util.lib
+	copy /Y z_format_util.lib $(libdir)\z_format_util.lib
+

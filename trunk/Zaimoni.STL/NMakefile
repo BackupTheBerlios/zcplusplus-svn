@@ -1,0 +1,32 @@
+# NMake makefile for Zaimoni.STL
+# pure.C must be done first: Pure.C/auto_int.h is a generated file
+
+# GNU targets we know about
+all:
+	cd pure.C
+	nmake /F NMakefile all
+	cd stdio.log
+	nmake /F NMakefile all
+	cd ..\..
+
+clean:
+	cd pure.C
+	nmake /F NMakefile clean
+	cd stdio.log
+	nmake /F NMakefile clean
+	cd ..\..
+
+install:
+	cd pure.C
+	nmake /F NMakefile install
+	cd stdio.log
+	nmake /F NMakefile install
+	cd ..\..
+
+uninstall:
+	cd pure.C
+	nmake /F NMakefile uninstall
+	cd stdio.log
+	nmake /F NMakefile uninstall
+	cd ..\..
+
