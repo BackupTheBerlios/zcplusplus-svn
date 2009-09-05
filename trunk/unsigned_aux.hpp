@@ -7,84 +7,84 @@
 #include "Zaimoni.STL/Logging.h"
 
 // utility core to keep executable size from bloating too much
-void _unsigned_copy(unsigned char* _x, uintmax_t src, unsigned int i);
-void _mask_to(unsigned char* LHS, size_t LHS_len, size_t bitcount);
-void _unsigned_sum(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS);
-void _unsigned_sum(unsigned char* LHS, size_t LHS_len, uintmax_t RHS);
-void _unsigned_diff(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS);
-void _unsigned_diff(unsigned char* LHS, size_t LHS_len, uintmax_t RHS);
-unsigned int _int_log2(unsigned char* buf, size_t buf_len);
-void _bitwise_compl(unsigned char* buf, size_t buf_len);
-void _bitwise_and(unsigned char* buf, size_t buf_len, const unsigned char* RHS);
-void _bitwise_xor(unsigned char* buf, size_t buf_len, const unsigned char* RHS);
-void _bitwise_or(unsigned char* buf, size_t buf_len, const unsigned char* RHS);
-void _unsigned_mult(unsigned char* buf, const size_t buf_len, const unsigned char* LHS, size_t LHS_len, const unsigned char* RHS, size_t RHS_len);
-void _unsigned_right_shift(unsigned char* buf, size_t buf_len, uintmax_t bit_right_shift);
-void _unsigned_left_shift(unsigned char* buf, size_t buf_len, uintmax_t bit_left_shift);
-int _unsigned_cmp(const unsigned char* LHS, size_t LHS_len, const unsigned char* RHS);
-int _unsigned_cmp(const unsigned char* LHS, size_t LHS_len, uintmax_t RHS);
-uintmax_t _to_uint(const unsigned char* LHS, size_t LHS_len);
+void _unsigned_copy(unsigned char* x, uintmax_t src, unsigned int i);
+void _mask_to(unsigned char* x, size_t x_len, size_t bitcount);
+void _unsigned_sum(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs);
+void _unsigned_sum(unsigned char* lhs, size_t lhs_len, uintmax_t rhs);
+void _unsigned_diff(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs);
+void _unsigned_diff(unsigned char* lhs, size_t lhs_len, uintmax_t rhs);
+unsigned int _int_log2(unsigned char* x, size_t x_len);
+void _bitwise_compl(unsigned char* x, size_t x_len);
+void _bitwise_and(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs);
+void _bitwise_xor(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs);
+void _bitwise_or(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs);
+void _unsigned_mult(unsigned char* buf, const size_t buf_len, const unsigned char* lhs, size_t lhs_len, const unsigned char* rhs, size_t rhs_len);
+void _unsigned_right_shift(unsigned char* x, size_t x_len, uintmax_t bit_right_shift);
+void _unsigned_left_shift(unsigned char* x, size_t x_len, uintmax_t bit_left_shift);
+int _unsigned_cmp(const unsigned char* lhs, size_t lhs_len, const unsigned char* rhs);
+int _unsigned_cmp(const unsigned char* lhs, size_t lhs_len, uintmax_t rhs);
+uintmax_t _to_uint(const unsigned char* x, size_t x_len);
 void _remainder_quotient(const size_t buf_len,unsigned char* dividend_remainder,const unsigned char* divisor,unsigned char* quotient);
 
-inline void unsigned_copy(unsigned char* _x, uintmax_t src, unsigned int i)
+inline void unsigned_copy(unsigned char* x, uintmax_t src, unsigned int i)
 {
-	assert(NULL!=_x);
+	assert(NULL!=x);
 	assert(0<i);
-	_unsigned_copy(_x,src,i);
+	_unsigned_copy(x,src,i);
 }
 
-inline void mask_to(unsigned char* LHS, size_t LHS_len, size_t bitcount)
+inline void mask_to(unsigned char* x, size_t x_len, size_t bitcount)
 {
-	assert(NULL!=LHS);
-	assert(0<LHS_len);
-	_mask_to(LHS,LHS_len,bitcount);
-}
-
-template<unsigned int i>
-inline void unsigned_copy(unsigned char* _x, uintmax_t src)
-{
-	ZAIMONI_STATIC_ASSERT(0<i);
-	assert(NULL!=_x);
-	_unsigned_copy(_x,src,i);
+	assert(NULL!=x);
+	assert(0<x_len);
+	_mask_to(x,x_len,bitcount);
 }
 
 template<unsigned int i>
-inline void unsigned_copy(unsigned char* _x, const unsigned char* src)
+inline void unsigned_copy(unsigned char* x, uintmax_t src)
 {
 	ZAIMONI_STATIC_ASSERT(0<i);
-	assert(NULL!=_x);
+	assert(NULL!=x);
+	_unsigned_copy(x,src,i);
+}
+
+template<unsigned int i>
+inline void unsigned_copy(unsigned char* x, const unsigned char* src)
+{
+	ZAIMONI_STATIC_ASSERT(0<i);
+	assert(NULL!=x);
 	assert(NULL!=src);
-	memmove(_x,src,i);
+	memmove(x,src,i);
 }
 
-inline void unsigned_sum(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
+inline void unsigned_sum(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs)
 {
-	assert(NULL!=LHS);
-	assert(NULL!=RHS);
-	assert(0<LHS_len);
-	_unsigned_sum(LHS,LHS_len,RHS);
+	assert(NULL!=lhs);
+	assert(NULL!=rhs);
+	assert(0<lhs_len);
+	_unsigned_sum(lhs,lhs_len,rhs);
 }
 
-inline void unsigned_sum(unsigned char* LHS, size_t LHS_len, uintmax_t RHS)
+inline void unsigned_sum(unsigned char* lhs, size_t lhs_len, uintmax_t rhs)
 {
-	assert(NULL!=LHS);
-	assert(0<LHS_len);
-	_unsigned_sum(LHS,LHS_len,RHS);
+	assert(NULL!=lhs);
+	assert(0<lhs_len);
+	_unsigned_sum(lhs,lhs_len,rhs);
 }
 
-inline void unsigned_diff(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
+inline void unsigned_diff(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs)
 {
-	assert(NULL!=LHS);
-	assert(NULL!=RHS);
-	assert(0<LHS_len);
-	_unsigned_diff(LHS,LHS_len,RHS);
+	assert(NULL!=lhs);
+	assert(NULL!=rhs);
+	assert(0<lhs_len);
+	_unsigned_diff(lhs,lhs_len,rhs);
 }
 
-inline void unsigned_diff(unsigned char* LHS, size_t LHS_len, uintmax_t RHS)
+inline void unsigned_diff(unsigned char* lhs, size_t lhs_len, uintmax_t rhs)
 {
-	assert(NULL!=LHS);
-	assert(0<LHS_len);
-	_unsigned_diff(LHS,LHS_len,RHS);
+	assert(NULL!=lhs);
+	assert(0<lhs_len);
+	_unsigned_diff(lhs,lhs_len,rhs);
 }
 
 inline unsigned int int_log2(unsigned char* buf, size_t buf_len)
@@ -94,90 +94,90 @@ inline unsigned int int_log2(unsigned char* buf, size_t buf_len)
 	return _int_log2(buf,buf_len);
 }
 
-inline void bitwise_compl(unsigned char* buf, size_t buf_len)
+inline void bitwise_compl(unsigned char* x, size_t x_len)
+{
+	assert(NULL!=x);
+	assert(0<x_len);
+	_bitwise_compl(x,x_len);
+}
+
+inline void bitwise_and(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs)
+{
+	assert(NULL!=lhs);
+	assert(NULL!=rhs);
+	assert(0<lhs_len);
+	_bitwise_and(lhs,lhs_len,rhs);
+}
+
+inline void bitwise_xor(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs)
+{
+	assert(NULL!=lhs);
+	assert(NULL!=lhs);
+	assert(0<lhs_len);
+	_bitwise_xor(lhs,lhs_len,rhs);
+}
+
+inline void bitwise_or(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs)
+{
+	assert(NULL!=lhs);
+	assert(NULL!=rhs);
+	assert(0<lhs_len);
+	_bitwise_or(lhs,lhs_len,rhs);
+}
+
+inline void unsigned_mult(unsigned char* buf, const size_t buf_len, const unsigned char* lhs, const size_t lhs_len, const unsigned char* rhs, const size_t rhs_len)
 {
 	assert(NULL!=buf);
 	assert(0<buf_len);
-	_bitwise_compl(buf,buf_len);
+	assert(NULL!=lhs);
+	assert(0<lhs_len);
+	assert(NULL!=rhs);
+	assert(0<rhs_len);
+	_unsigned_mult(buf,buf_len,lhs,lhs_len,rhs,rhs_len);
 }
 
-inline void bitwise_and(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
+inline void unsigned_right_shift(unsigned char* x, size_t x_len, uintmax_t bit_right_shift)
 {
-	assert(NULL!=LHS);
-	assert(NULL!=RHS);
-	assert(0<LHS_len);
-	_bitwise_and(LHS,LHS_len,RHS);
+	assert(NULL!=x);
+	assert(0<x_len);
+	_unsigned_right_shift(x,x_len,bit_right_shift);
 }
 
-inline void bitwise_xor(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
+inline void unsigned_left_shift(unsigned char* x, size_t x_len, uintmax_t bit_right_shift)
 {
-	assert(NULL!=LHS);
-	assert(NULL!=RHS);
-	assert(0<LHS_len);
-	_bitwise_xor(LHS,LHS_len,RHS);
+	assert(NULL!=x);
+	assert(0<x_len);
+	_unsigned_left_shift(x,x_len,bit_right_shift);
 }
 
-inline void bitwise_or(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
+inline int unsigned_cmp(const unsigned char* lhs, size_t lhs_len, const unsigned char* rhs)
 {
-	assert(NULL!=LHS);
-	assert(NULL!=RHS);
-	assert(0<LHS_len);
-	_bitwise_or(LHS,LHS_len,RHS);
+	assert(NULL!=lhs);
+	assert(NULL!=rhs);
+	assert(0<lhs_len);
+	return _unsigned_cmp(lhs,lhs_len,rhs);
 }
 
-inline void unsigned_mult(unsigned char* buf, const size_t buf_len, const unsigned char* LHS, const size_t LHS_len, const unsigned char* RHS, const size_t RHS_len)
+inline int unsigned_cmp(const unsigned char* lhs, size_t lhs_len, uintmax_t rhs)
 {
-	assert(NULL!=buf);
-	assert(0<buf_len);
-	assert(NULL!=LHS);
-	assert(0<LHS_len);
-	assert(NULL!=RHS);
-	assert(0<RHS_len);
-	_unsigned_mult(buf,buf_len,LHS,LHS_len,RHS,RHS_len);
+	assert(NULL!=lhs);
+	assert(0<lhs_len);
+	return _unsigned_cmp(lhs,lhs_len,rhs);
 }
 
-inline void unsigned_right_shift(unsigned char* buf, size_t buf_len, uintmax_t bit_right_shift)
+inline uintmax_t to_uint(const unsigned char* x, size_t x_len)
 {
-	assert(NULL!=buf);
-	assert(0<buf_len);
-	_unsigned_right_shift(buf,buf_len,bit_right_shift);
+	assert(NULL!=x);
+	assert(0<x_len);
+	return _to_uint(x,x_len);
 }
 
-inline void unsigned_left_shift(unsigned char* buf, size_t buf_len, uintmax_t bit_right_shift)
+template<size_t x_len>
+inline uintmax_t to_uint(const unsigned char* x)
 {
-	assert(NULL!=buf);
-	assert(0<buf_len);
-	_unsigned_left_shift(buf,buf_len,bit_right_shift);
-}
-
-inline int unsigned_cmp(const unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
-{
-	assert(NULL!=LHS);
-	assert(NULL!=RHS);
-	assert(0<LHS_len);
-	return _unsigned_cmp(LHS,LHS_len,RHS);
-}
-
-inline int unsigned_cmp(const unsigned char* LHS, size_t LHS_len, uintmax_t RHS)
-{
-	assert(NULL!=LHS);
-	assert(0<LHS_len);
-	return _unsigned_cmp(LHS,LHS_len,RHS);
-}
-
-inline uintmax_t to_uint(const unsigned char* LHS, size_t LHS_len)
-{
-	assert(NULL!=LHS);
-	assert(0<LHS_len);
-	return _to_uint(LHS,LHS_len);
-}
-
-template<size_t LHS_len>
-inline uintmax_t to_uint(const unsigned char* LHS)
-{
-	ZAIMONI_STATIC_ASSERT(0<LHS_len);
-	assert(NULL!=LHS);
-	return _to_uint(LHS,LHS_len);
+	ZAIMONI_STATIC_ASSERT(0<x_len);
+	assert(NULL!=x);
+	return _to_uint(x,x_len);
 }
 
 inline void remainder_quotient(size_t buf_len,unsigned char* dividend_remainder,const unsigned char* divisor,unsigned char* quotient)

@@ -11,204 +11,205 @@
 #endif
 
 //! \todo rethink this for hosting machines where sizeof(char)==sizeof(uintmax_t)
-void _unsigned_copy(unsigned char* _x, uintmax_t src, unsigned int i)
+void _unsigned_copy(unsigned char* x, uintmax_t src, unsigned int i)
 {
 	do	{
 		--i;
-		_x[i] = ((src & ((uintmax_t)(UCHAR_MAX)<<(i*CHAR_BIT)))>>(i*CHAR_BIT));
+		x[i] = ((src & ((uintmax_t)(UCHAR_MAX)<<(i*CHAR_BIT)))>>(i*CHAR_BIT));
 		}
 	while(0<i);
 }
 
-void _mask_to(unsigned char* LHS, size_t LHS_len, size_t bitcount)
+void _mask_to(unsigned char* x, size_t x_len, size_t bitcount)
 {
 	const size_t target_bytes = bitcount/CHAR_BIT;
 	const size_t target_bits = bitcount%CHAR_BIT;
-	if (target_bytes>=LHS_len) return;
+	if (target_bytes>=x_len) return;
 	if (0==target_bits)
-		memset(LHS+target_bytes,0,LHS_len-target_bytes);
+		memset(x+target_bytes,0,x_len-target_bytes);
 	else{
-		if (target_bytes+1U<LHS_len) memset(LHS+target_bytes+1U,0,LHS_len-target_bytes-1U);
-		LHS[target_bytes] &= (UCHAR_MAX>>(CHAR_BIT-target_bits));
+		if (target_bytes+1U<x_len)
+			memset(x+target_bytes+1U,0,x_len-target_bytes-1U);
+		x[target_bytes] &= (UCHAR_MAX>>(CHAR_BIT-target_bits));
 		}
 }
 
-void _unsigned_sum(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
+void _unsigned_sum(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs)
 {
 	size_t i = 0;
 #if FAST_ROUTE
 	unsigned int tmp = 0;
 	do	{
-		tmp += LHS[i];
-		tmp += RHS[i];
-		LHS[i] = (tmp & UCHAR_MAX);
+		tmp += lhs[i];
+		tmp += rhs[i];
+		lhs[i] = (tmp & UCHAR_MAX);
 		tmp >>= CHAR_BIT;
 		}
-	while(LHS_len > ++i);
+	while(lhs_len > ++i);
 #else
 	bool carry = false;
 	do	{
-		if (carry && UCHAR_MAX>LHS[i])
+		if (carry && UCHAR_MAX>lhs[i])
 			{
-			LHS[i] += 1;
+			lhs[i] += 1;
 			carry = false;
 			}
 
 		if (carry)
-			LHS[i] = RHS[i];
-		else if (UCHAR_MAX-LHS[i]>=RHS[i])
-			LHS[i] += RHS[i];
+			lhs[i] = rhs[i];
+		else if (UCHAR_MAX-lhs[i]>=rhs[i])
+			lhs[i] += rhs[i];
 		else{
-			LHS[i] = RHS[i]-(UCHAR_MAX-LHS[i])
-			LHS[i] -= 1;
+			lhs[i] = rhs[i]-(UCHAR_MAX-lhs[i])
+			lhs[i] -= 1;
 			carry = true;
 			}
 		}
-	while(LHS_len > ++i);
+	while(lhs_len > ++i);
 #endif
 }
 
-void _unsigned_sum(unsigned char* LHS, size_t LHS_len, uintmax_t RHS)
+void _unsigned_sum(unsigned char* lhs, size_t lhs_len, uintmax_t rhs)
 {
 	size_t i = 0;
 #if FAST_ROUTE
 	unsigned int tmp = 0;
 	do	{
-		tmp += LHS[i];
-		tmp += (RHS & UCHAR_MAX);
-		LHS[i] = (tmp & UCHAR_MAX);
+		tmp += lhs[i];
+		tmp += (rhs & UCHAR_MAX);
+		lhs[i] = (tmp & UCHAR_MAX);
 		tmp >>= CHAR_BIT;
-		RHS >>= CHAR_BIT;
+		rhs >>= CHAR_BIT;
 		}
-	while(LHS_len > ++i && (RHS || tmp));
+	while(lhs_len > ++i && (rhs || tmp));
 #else
 	bool carry = false;
 	do	{
-		if (carry && UCHAR_MAX>LHS[i])
+		if (carry && UCHAR_MAX>lhs[i])
 			{
-			LHS[i] += 1;
+			lhs[i] += 1;
 			carry = false;
 			}
 
-		const unsigned char RHS_image = (RHS & UCHAR_MAX);
-		RHS >>= CHAR_BIT;
+		const unsigned char rhs_image = (rhs & UCHAR_MAX);
+		rhs >>= CHAR_BIT;
 		if (carry)
-			LHS[i] = RHS_image;
-		else if (UCHAR_MAX-LHS[i]>=RHS_image)
-			LHS[i] += RHS_image;
+			lhs[i] = rhs_image;
+		else if (UCHAR_MAX-lhs[i]>=rhs_image)
+			lhs[i] += rhs_image;
 		else{
-			LHS[i] = RHS_image-(UCHAR_MAX-LHS[i])
-			LHS[i] -= 1;
+			lhs[i] = rhs_image-(UCHAR_MAX-lhs[i])
+			lhs[i] -= 1;
 			carry = true;
 			}
 		}
-	while(LHS_len > ++i && RHS);
+	while(lhs_len > ++i && rhs);
 #endif
 }
 
-void _unsigned_diff(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
+void _unsigned_diff(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs)
 {
 	size_t i = 0;
 	bool carry = false;
 	do	{
 		if (carry)
 			{
-			LHS[i] -= 1;
-			carry = (UCHAR_MAX == LHS[i]);
+			lhs[i] -= 1;
+			carry = (UCHAR_MAX == lhs[i]);
 			};
 
-		carry = carry ||  LHS[i]<RHS[i];
-		LHS[i] -= RHS[i];
+		carry = carry ||  lhs[i]<rhs[i];
+		lhs[i] -= rhs[i];
 		}
-	while(LHS_len > ++i);
+	while(lhs_len > ++i);
 }
 
-void _unsigned_diff(unsigned char* LHS, size_t LHS_len, uintmax_t RHS)
+void _unsigned_diff(unsigned char* lhs, size_t lhs_len, uintmax_t rhs)
 {
 	size_t i = 0;
 	bool carry = false;
 	do	{
-		const unsigned char RHS_image = RHS;
-		RHS >>= CHAR_BIT;
+		const unsigned char rhs_image = rhs;
+		rhs >>= CHAR_BIT;
 		if (carry)
 			{
-			LHS[i] -= 1;
-			carry = (UCHAR_MAX == LHS[i]);
+			lhs[i] -= 1;
+			carry = (UCHAR_MAX == lhs[i]);
 			};
 
-		carry = carry || LHS[i]<RHS_image;
-		LHS[i] -= RHS_image;
+		carry = carry || lhs[i]<rhs_image;
+		lhs[i] -= rhs_image;
 		}
-	while(LHS_len > ++i && (RHS || carry));
+	while(lhs_len > ++i && (rhs || carry));
 }
 
-unsigned int _int_log2(unsigned char* buf, size_t buf_len)
+unsigned int _int_log2(unsigned char* x, size_t x_len)
 {
-	while(0<buf_len)
+	while(0<x_len)
 		{
 		size_t i = CHAR_BIT;
-		--buf_len;
-		do	if (buf[buf_len] & (1U<< --i)) return buf_len*CHAR_BIT+i;
+		--x_len;
+		do	if (x[x_len] & (1U<< --i)) return x_len*CHAR_BIT+i;
 		while(0<i);
 		};
 	return 0;
 }
 
-void _bitwise_compl(unsigned char* buf, size_t buf_len)
+void _bitwise_compl(unsigned char* x, size_t x_len)
 {
-	while(0<buf_len)
+	while(0<x_len)
 		{
-		--buf_len;
-		buf[buf_len] = ~buf[buf_len];
+		--x_len;
+		x[x_len] = ~x[x_len];
 		};
 }
 
-void _bitwise_and(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
+void _bitwise_and(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs)
 {
-	while(0<LHS_len)
+	while(0<lhs_len)
 		{
-		--LHS_len;
-		LHS[LHS_len] &= RHS[LHS_len];
+		--lhs_len;
+		lhs[lhs_len] &= rhs[lhs_len];
 		};
 }
 
-void _bitwise_xor(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
+void _bitwise_xor(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs)
 {
-	while(0<LHS_len)
+	while(0<lhs_len)
 		{
-		--LHS_len;
-		LHS[LHS_len] ^= RHS[LHS_len];
+		--lhs_len;
+		lhs[lhs_len] ^= rhs[lhs_len];
 		};
 }
 
-void _bitwise_or(unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
+void _bitwise_or(unsigned char* lhs, size_t lhs_len, const unsigned char* rhs)
 {
-	while(0<LHS_len)
+	while(0<lhs_len)
 		{
-		--LHS_len;
-		LHS[LHS_len] |= RHS[LHS_len];
+		--lhs_len;
+		lhs[lhs_len] |= rhs[lhs_len];
 		};
 }
 
-void _unsigned_mult(unsigned char* buf, const size_t buf_len, const unsigned char* LHS, size_t LHS_len, const unsigned char* RHS, size_t RHS_len)
+void _unsigned_mult(unsigned char* buf, const size_t buf_len, const unsigned char* lhs, size_t lhs_len, const unsigned char* rhs, size_t rhs_len)
 {
 	memset(buf,0,buf_len);
 	// trim off leading zeros
-	while(2<=RHS_len && 0==RHS[RHS_len-1]) --RHS_len;
-	while(2<=LHS_len && 0==LHS[LHS_len-1]) --LHS_len;
-	if (1==LHS_len && 0==LHS[0]) return;	// multiply by 0 is 0
-	if (1==RHS_len && 0==RHS[0]) return;
+	while(2<=rhs_len && 0==rhs[rhs_len-1]) --rhs_len;
+	while(2<=lhs_len && 0==lhs[lhs_len-1]) --lhs_len;
+	if (1==lhs_len && 0==lhs[0]) return;	// multiply by 0 is 0
+	if (1==rhs_len && 0==rhs[0]) return;
 #if FAST_ROUTE
 	size_t k = 0;
 	unsigned int tmp = 0;
 	unsigned int tmp2 = 0;
 	do	{
-		if (LHS_len+RHS_len-2U>=k)
+		if (lhs_len+rhs_len-2U>=k)
 			{
 			size_t i = k+1;
 			do	{
-				if (LHS_len<= --i || RHS_len<=k-i) continue;
-				tmp += (unsigned int)(LHS[i])*(unsigned int)(RHS[k-i]);	// exploits: UCHAR_MAX*UCHAR_MAX-1 = (UCHAR_MAX+1)*(UCHAR_MAX-1)
+				if (lhs_len<= --i || rhs_len<=k-i) continue;
+				tmp += (unsigned int)(lhs[i])*(unsigned int)(rhs[k-i]);	// exploits: UCHAR_MAX*UCHAR_MAX-1 = (UCHAR_MAX+1)*(UCHAR_MAX-1)
 				tmp2 += (tmp >> CHAR_BIT);
 				tmp &= UCHAR_MAX;
 				}
@@ -221,27 +222,27 @@ void _unsigned_mult(unsigned char* buf, const size_t buf_len, const unsigned cha
 		}
 	while(buf_len> ++k);
 #else
-#error _unsigned_mult(unsigned char* buf, const size_t buf_len, const unsigned char* LHS, const size_t LHS_len, const unsigned char* RHS, const size_t RHS_len) not implemented
+#error _unsigned_mult(unsigned char* buf, const size_t buf_len, const unsigned char* lhs, const size_t lhs_len, const unsigned char* rhs, const size_t rhs_len) not implemented
 #endif
 }
 
 void
-_unsigned_right_shift(unsigned char* buf, size_t buf_len, uintmax_t bit_right_shift)
+_unsigned_right_shift(unsigned char* x, size_t x_len, uintmax_t bit_right_shift)
 {
 	if (0==bit_right_shift) return;
 	const uintmax_t whole_bytes = bit_right_shift/CHAR_BIT;
-	if (buf_len<=whole_bytes)
+	if (x_len<=whole_bytes)
 		{
-		memset(buf,0,buf_len);
+		memset(x,0,x_len);
 		return;
 		}
 
 	const unsigned int left_over_bits = bit_right_shift%CHAR_BIT;
-	const size_t content_span = buf_len-(size_t)(whole_bytes);
+	const size_t content_span = x_len-(size_t)(whole_bytes);
 	if (0==left_over_bits)
 		{
-		memmove(buf,buf+whole_bytes,content_span);
-		memset(buf+content_span,0,whole_bytes);
+		memmove(x,x+whole_bytes,content_span);
+		memset(x+content_span,0,whole_bytes);
 		return;
 		};
 
@@ -251,41 +252,41 @@ _unsigned_right_shift(unsigned char* buf, size_t buf_len, uintmax_t bit_right_sh
 		{
 		while(content_span_sub1>i)
 			{
-			buf[i] = (buf[i+whole_bytes]>>left_over_bits);
-			buf[i] += ((buf[i+whole_bytes+1]%(1U<<left_over_bits))<<(CHAR_BIT-left_over_bits));
+			x[i] = (x[i+whole_bytes]>>left_over_bits);
+			x[i] += ((x[i+whole_bytes+1]%(1U<<left_over_bits))<<(CHAR_BIT-left_over_bits));
 			++i;
 			};
-		buf[content_span_sub1] = (buf[content_span_sub1+whole_bytes]>>left_over_bits);
-		memset(buf+content_span,0,whole_bytes);
+		x[content_span_sub1] = (x[content_span_sub1+whole_bytes]>>left_over_bits);
+		memset(x+content_span,0,whole_bytes);
 		}
 	else{
 		while(content_span_sub1>i)
 			{
-			buf[i] >>= left_over_bits;
-			buf[i] += ((buf[i+1]%(1U<<left_over_bits))<<(CHAR_BIT-left_over_bits));
+			x[i] >>= left_over_bits;
+			x[i] += ((x[i+1]%(1U<<left_over_bits))<<(CHAR_BIT-left_over_bits));
 			++i;
 			};
-		buf[content_span_sub1] = (buf[content_span_sub1+whole_bytes]>>left_over_bits);
+		x[content_span_sub1] = (x[content_span_sub1+whole_bytes]>>left_over_bits);
 		}
 }
 
 void
-_unsigned_left_shift(unsigned char* buf, size_t buf_len, uintmax_t bit_left_shift)
+_unsigned_left_shift(unsigned char* x, size_t x_len, uintmax_t bit_left_shift)
 {
 	if (0==bit_left_shift) return;
 	const uintmax_t whole_bytes = bit_left_shift/CHAR_BIT;
-	if (buf_len<=whole_bytes)
+	if (x_len<=whole_bytes)
 		{
-		memset(buf,0,buf_len);
+		memset(x,0,x_len);
 		return;
 		}
 
 	const unsigned int left_over_bits = bit_left_shift%CHAR_BIT;
-	const size_t content_span = buf_len-(size_t)(whole_bytes);
+	const size_t content_span = x_len-(size_t)(whole_bytes);
 	if (0==left_over_bits)
 		{
-		memmove(buf+whole_bytes,buf,content_span);
-		memset(buf,0,content_span);
+		memmove(x+whole_bytes,x,content_span);
+		memset(x,0,content_span);
 		return;
 		};
 
@@ -294,57 +295,56 @@ _unsigned_left_shift(unsigned char* buf, size_t buf_len, uintmax_t bit_left_shif
 		{
 		while(0<i)
 			{
-			buf[i+whole_bytes] = ((buf[i]%(1U<<(CHAR_BIT-left_over_bits)))<<left_over_bits);
-			buf[i+whole_bytes] += (buf[i-1]>>(CHAR_BIT-left_over_bits));
+			x[i+whole_bytes] = ((x[i]%(1U<<(CHAR_BIT-left_over_bits)))<<left_over_bits);
+			x[i+whole_bytes] += (x[i-1]>>(CHAR_BIT-left_over_bits));
 			--i;
 			};
-		buf[whole_bytes] = ((buf[0]%(1U<<(CHAR_BIT-left_over_bits)))<<left_over_bits);
-		memset(buf,0,whole_bytes);
+		x[whole_bytes] = ((x[0]%(1U<<(CHAR_BIT-left_over_bits)))<<left_over_bits);
+		memset(x,0,whole_bytes);
 		}
 	else{
 		while(0<i)
 			{
-			(buf[i] %= (1U<<(CHAR_BIT-left_over_bits)))<<=left_over_bits;
-			buf[i] += (buf[i-1]>>(CHAR_BIT-left_over_bits));
+			(x[i] %= (1U<<(CHAR_BIT-left_over_bits)))<<=left_over_bits;
+			x[i] += (x[i-1]>>(CHAR_BIT-left_over_bits));
 			--i;
 			};
-		(buf[0] %= (1U<<(CHAR_BIT-left_over_bits)))<<=left_over_bits;
+		(x[0] %= (1U<<(CHAR_BIT-left_over_bits)))<<=left_over_bits;
 		}
 }
 
 int
-_unsigned_cmp(const unsigned char* LHS, size_t LHS_len, const unsigned char* RHS)
+_unsigned_cmp(const unsigned char* lhs, size_t lhs_len, const unsigned char* rhs)
 {	// reverse memcmp
 	do	{
-		--LHS_len;
-		if (LHS[LHS_len]<RHS[LHS_len]) return -1;
-		if (LHS[LHS_len]>RHS[LHS_len]) return 1;
+		--lhs_len;
+		if (lhs[lhs_len]<rhs[lhs_len]) return -1;
+		if (lhs[lhs_len]>rhs[lhs_len]) return 1;
 		}
-	while(0<LHS_len);
+	while(0<lhs_len);
 	return 0;
 }
 
 int
-_unsigned_cmp(const unsigned char* LHS, size_t LHS_len, uintmax_t RHS)
+_unsigned_cmp(const unsigned char* lhs, size_t lhs_len, uintmax_t rhs)
 {	// reverse memcmp
 	do	{
-		--LHS_len;
-		const unsigned char RHS_image = ((RHS & (uintmax_t)(UCHAR_MAX)<<(LHS_len*CHAR_BIT))>>(LHS_len*CHAR_BIT));
-		if (LHS[LHS_len]<RHS_image) return -1;
-		if (LHS[LHS_len]>RHS_image) return 1;
+		--lhs_len;
+		const unsigned char rhs_image = ((rhs & (uintmax_t)(UCHAR_MAX)<<(lhs_len*CHAR_BIT))>>(lhs_len*CHAR_BIT));
+		if (lhs[lhs_len]<rhs_image) return -1;
+		if (lhs[lhs_len]>rhs_image) return 1;
 		}
-	while(0<LHS_len);
+	while(0<lhs_len);
 	return 0;
 }
 
-uintmax_t
-_to_uint(const unsigned char* LHS, size_t LHS_len)
+uintmax_t _to_uint(const unsigned char* x, size_t x_len)
 {
-	uintmax_t tmp = LHS[--LHS_len];
-	while(0<LHS_len)
+	uintmax_t tmp = x[--x_len];
+	while(0<x_len)
 		{
 		tmp <<= CHAR_BIT;
-		tmp += LHS[--LHS_len];
+		tmp += x[--x_len];
 		};
 	return tmp;
 }
