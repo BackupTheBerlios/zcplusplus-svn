@@ -93,8 +93,7 @@ bool type_spec::dereference()
 		{
 		if (0== --pointer_power)
 			{
-			free(extent_vector);
-			extent_vector = NULL;
+			FREE_AND_NULL(extent_vector);
 			qualifier_vector.second[old_ptr_power] = '\0';
 			assert(lvalue & qualifier_vector.second[old_ptr_power-1]);	// result of dereference is a C/C++ lvalue; problem is elsewhere if this triggers
 			}
@@ -135,8 +134,7 @@ void type_spec::destroy()
 {
 	if (0<base_type_index)
 		{
-		free(extent_vector);
-		extent_vector = NULL;
+		FREE_AND_NULL(extent_vector);
 		if (sizeof(unsigned char*)<=pointer_power_after_array_decay())
 			{
 			free(qualifier_vector.first);
@@ -154,8 +152,7 @@ void type_spec::set_type(size_t _base_type_index)
 {
 	if (0<base_type_index)
 		{
-		free(extent_vector);
-		extent_vector = NULL;
+		FREE_AND_NULL(extent_vector);
 		if (sizeof(unsigned char*)<=pointer_power_after_array_decay())
 			{
 			free(qualifier_vector.first);

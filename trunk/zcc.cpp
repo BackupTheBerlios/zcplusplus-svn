@@ -8,7 +8,6 @@
 #include "CPreproc.hpp"
 #include "load_src.hpp"
 #include "AtomicString.h"
-#include "cpp_util.h"
 #include "filesystem.h"
 #include "errors.hpp"
 #include "langroute.hpp"

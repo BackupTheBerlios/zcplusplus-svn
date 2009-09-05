@@ -41,8 +41,7 @@ static void clean_cache(void)
 
 EXTERN_C const char* register_substring(const char* const x,const unsigned long x_len)
 {
-	if (NULL==x) return NULL;
-	if (0==x_len) return NULL;
+	if (NULL==x || 0==x_len) return NULL;
 	size_t LB = 0;
 	size_t StrictUB = string_cache_size;
 	while(LB<StrictUB)
@@ -80,8 +79,7 @@ EXTERN_C const char* register_substring(const char* const x,const unsigned long 
 
 EXTERN_C const char* is_substring_registered(const char* const x,const unsigned long x_len)
 {
-	if (NULL==x) return NULL;
-	if (0==x_len) return NULL;
+	if (NULL==x || 0==x_len) return NULL;
 	size_t LB = 0;
 	size_t StrictUB = string_cache_size;
 	while(LB<StrictUB)

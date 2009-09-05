@@ -14,10 +14,6 @@
 #define OUTPUT_VERBOSE 1
 #define OUTPUT_SILENT 2
 
-/*! \bug Once And Only Once violation (cf. cpp_util.h) */
-#define STRING_LITERAL_TO_STDOUT(A) fwrite(A,sizeof(A)-1,1,stdout)
-#define C_STRING_TO_STDOUT(A) fwrite(A,strlen(A),1,stdout)
-
 static int output_mode = OUTPUT_DEFAULT;
 static FILE* files[2] = { NULL, NULL };
 static const char* filenames[2] = { NULL, NULL };

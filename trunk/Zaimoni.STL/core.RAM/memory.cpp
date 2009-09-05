@@ -899,7 +899,7 @@ void* operator new(size_t NewSize) throw (std::bad_alloc)
 	return Tmp;
 }
 
-void* operator new(size_t NewSize, const std::nothrow_t& tracer) throw ()
+void* operator new[](std::size_t NewSize) throw (std::bad_alloc)
 {
 	void* Tmp = calloc(1,NewSize);
 	while(NULL==Tmp && NULL!=ZaimoniNewHandler)
@@ -911,7 +911,7 @@ void* operator new(size_t NewSize, const std::nothrow_t& tracer) throw ()
 	return Tmp;
 }
 
-void* operator new[](std::size_t NewSize) throw (std::bad_alloc)
+void* operator new(size_t NewSize, const std::nothrow_t& tracer) throw ()
 {
 	void* Tmp = calloc(1,NewSize);
 	while(NULL==Tmp && NULL!=ZaimoniNewHandler)
