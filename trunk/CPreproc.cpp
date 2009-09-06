@@ -2735,8 +2735,11 @@ static void balanced_character_kill(Token<char>& x, autovalarray_ptr<POD_triple<
 	assert(target.first<target.second);
 	assert(1==pretokenized[target.first].second);
 	assert(1==pretokenized[target.second].second);
-	x.c_array()[pretokenized[target.first].first] = ' ';
-	x.c_array()[pretokenized[target.second].first] = ' ';
+	{
+	char* const tmp = x.c_array();
+	tmp[pretokenized[target.first].first] = ' ';
+	tmp[pretokenized[target.second].first] = ' ';
+	}
 	parenpair_stack.DeleteIdx(target_idx);
 	pretokenized.DeleteIdx(target.second);
 	pretokenized.DeleteIdx(target.first);

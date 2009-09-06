@@ -1849,8 +1849,7 @@ static size_t LengthOfCPPSystemHeader(const char* src)
 	return 0;
 }
 
-//! \bug ZParser needs this as well.  Lift out into a pp_support function hook.
-static void C99_bad_syntax_tokenized(const char* const x, size_t x_len, lex_flags& flags, const char* const src_filename, size_t line_no)
+static void _bad_syntax_tokenized(const char* const x, size_t x_len, lex_flags& flags, const char* const src_filename, size_t line_no, func_traits<signed int (*)(const char* const, size_t)>::function_type find_pp_code)
 {
 	assert(NULL!=x);
 	assert(NULL!=src_filename && '\0'!= *src_filename);
@@ -1920,7 +1919,7 @@ static void C99_bad_syntax_tokenized(const char* const x, size_t x_len, lex_flag
 		}
 	else if (C_TESTFLAG_PP_OP_PUNC & flags)
 		{	// language-sensitive token blacklisting
-		const signed int pp_code = CPurePreprocessingOperatorPunctuationCode(x,x_len);
+		const signed int pp_code = find_pp_code(x,x_len);
 		assert(0<pp_code);
 		C_PP_ENCODE(flags,pp_code);
 		}
@@ -1972,126 +1971,14 @@ static void C99_bad_syntax_tokenized(const char* const x, size_t x_len, lex_flag
 		}
 }
 
+static void C99_bad_syntax_tokenized(const char* const x, size_t x_len, lex_flags& flags, const char* const src_filename, size_t line_no)
+{
+	_bad_syntax_tokenized(x,x_len,flags,src_filename,line_no,CPurePreprocessingOperatorPunctuationCode);
+}
+
 static void CPP_bad_syntax_tokenized(const char* const x, size_t x_len, lex_flags& flags, const char* const src_filename, size_t line_no)
 {
-	assert(NULL!=x);
-	assert(NULL!=src_filename && '\0'!= *src_filename);
-	assert(x_len<=strlen(x));
-	assert((C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_PP_OP_PUNC | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_IDENTIFIER) & flags);
-
-	// reality checks on relation between flag constants and enums
-	BOOST_STATIC_ASSERT((C_PPFloatCore::F<<10)==C_TESTFLAG_F);
-	BOOST_STATIC_ASSERT((C_PPFloatCore::L<<10)==C_TESTFLAG_L);
-
-	BOOST_STATIC_ASSERT((C_PPIntCore::U<<10)==C_TESTFLAG_U);
-	BOOST_STATIC_ASSERT((C_PPIntCore::L<<10)==C_TESTFLAG_L);
-	BOOST_STATIC_ASSERT((C_PPIntCore::UL<<10)==(C_TESTFLAG_L | C_TESTFLAG_U));
-	BOOST_STATIC_ASSERT((C_PPIntCore::LL<<10)==C_TESTFLAG_LL);
-	BOOST_STATIC_ASSERT((C_PPIntCore::ULL<<10)==(C_TESTFLAG_LL | C_TESTFLAG_U));
-
-	if (C_TESTFLAG_PP_NUMERAL==flags)
-		{
-		union_quartet<C_PPIntCore,C_PPFloatCore,C_PPDecimalFloat,C_PPHexFloat> test;
-		if 		(C_PPDecimalFloat::is(x,x_len,test.third))
-			{
-			flags |= C_TESTFLAG_FLOAT | C_TESTFLAG_DECIMAL;
-			}
-		else if	(C_PPHexFloat::is(x,x_len,test.fourth))
-			{
-			flags |= C_TESTFLAG_FLOAT | C_TESTFLAG_HEXADECIMAL;
-			}
-		else if (C_PPIntCore::is(x,x_len,test.first))
-			{
-			assert(C_PPIntCore::ULL>=test.first.hinted_type);
-			flags |= (((lex_flags)(test.first.hinted_type))<<10);
-			assert(8==test.first.radix || 10==test.first.radix || 16==test.first.radix);
-			switch(test.first.radix)
-			{
-			case 8:		{
-						flags |= C_TESTFLAG_INTEGER | C_TESTFLAG_OCTAL;
-						break;
-						}
-			case 10:	{
-						flags |= C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL;
-						break;
-						}
-			case 16:	{
-						flags |= C_TESTFLAG_INTEGER | C_TESTFLAG_HEXADECIMAL;
-						break;
-						}
-			};
-			}
-		if 		(flags & C_TESTFLAG_FLOAT)
-			{
-			assert(C_PPFloatCore::L>=test.second.hinted_type);
-			flags |= (((lex_flags)(test.second.hinted_type))<<10);
-			};
-		if (C_TESTFLAG_PP_NUMERAL==flags)
-			{
-			INC_INFORM(src_filename);
-			INC_INFORM(':');
-			INC_INFORM(line_no);
-			INC_INFORM(": ");
-			INC_INFORM(ERR_STR);
-			INC_INFORM("invalid preprocessing number");
-			INC_INFORM(x,x_len);
-			INFORM(" (C99 6.4.4.1p1,6.4.4.2p1/C++98 2.13.1,2.13.3)");
-			zcc_errors.inc_error();
-			return;
-			}
-		}
-	else if (C_TESTFLAG_PP_OP_PUNC & flags)
-		{	// language-sensitive token blacklisting
-		const signed int pp_code = CPPPurePreprocessingOperatorPunctuationCode(x,x_len);
-		assert(0<pp_code);
-		C_PP_ENCODE(flags,pp_code);
-		}
-	else if (C_TESTFLAG_STRING_LITERAL==flags)
-		{	// This gets in by C99 6.6p10, as 6.6p6 doesn't list string literals as legitimate
-		if (!IsLegalCString(x,x_len))
-			{
-			INC_INFORM(src_filename);
-			INC_INFORM(':');
-			INC_INFORM(line_no);
-			INC_INFORM(": ");
-			INC_INFORM(ERR_STR);
-			INC_INFORM(x,x_len);
-			INFORM(" : invalid string (C99 6.4.5p1/C++98 2.13.4)");
-			zcc_errors.inc_error();
-			return;
-			}
-		else if (bool_options[boolopt::pedantic])
-			{
-			INC_INFORM(src_filename);
-			INC_INFORM(':');
-			INC_INFORM(line_no);
-			INC_INFORM(": ");
-			INC_INFORM(WARN_STR);
-			INC_INFORM(x,x_len);
-			INFORM(" : string literals in integer constant expressions are only permitted, not required (C99 6.6p10)");
-			if (bool_options[boolopt::warnings_are_errors])
-				{
-				zcc_errors.inc_error();
-				return;
-				}
-			}
-		}
-	else if (C_TESTFLAG_CHAR_LITERAL==flags)
-		{
-		if (!IsLegalCCharacterLiteral(x,x_len))
-			{
-			INC_INFORM(src_filename);
-			INC_INFORM(':');
-			INC_INFORM(line_no);
-			INC_INFORM(": ");
-			INC_INFORM(ERR_STR);
-			INC_INFORM("invalid character literal ");
-			INC_INFORM(x,x_len);
-			INFORM(" (C99 6.4.4.4p1/C++98 2.13.2)");
-			zcc_errors.inc_error();
-			return;
-			}
-		}
+	_bad_syntax_tokenized(x,x_len,flags,src_filename,line_no,CPPPurePreprocessingOperatorPunctuationCode);
 }
 
 //! \todo fix these to not assume perfect matching character sets
@@ -7548,8 +7435,8 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 			assert(old.bitcount>=rhs.bitcount);
 			const bool lhs_converted = intlike_literal_to_VM(lhs_int,*src.data<1>());
 			const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
-			if (lhs_converted) target_machine->C_promote_integer(lhs_int,lhs,old);
-			if (rhs_converted) target_machine->C_promote_integer(rhs_int,rhs,old);
+			const bool lhs_negative = lhs_converted && target_machine->C_promote_integer(lhs_int,lhs,old);
+			const bool rhs_negative = rhs_converted && target_machine->C_promote_integer(rhs_int,rhs,old);
 			if (lhs_converted && rhs_converted)
 				{
 				force_decimal_literal(src,(lhs_int==rhs_int)==is_equal_op ? "1" : "0",types);
