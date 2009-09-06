@@ -428,14 +428,8 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> s_max(target_machine.signed_max<virtual_machine::std_int_char>());
 	tmp[LIMITS_SCHAR_MAX_LINE]->append(z_ucharint_toa(s_max,buf+1,10)-1);
 	if (target_machine.char_is_signed_char()) tmp[LIMITS_CHAR_MAX_LINE]->append(buf);
-	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
-		{
-		s_max += 1;
-		tmp[LIMITS_SCHAR_MIN_LINE]->append(z_ucharint_toa(s_max,buf+1,10));
-		}
-	else{
-		tmp[LIMITS_SCHAR_MIN_LINE]->append(buf+1);
-		}
+	const bool twos_complement_non_trapping = virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps];
+	tmp[LIMITS_SCHAR_MIN_LINE]->append(twos_complement_non_trapping ? z_ucharint_toa(s_max += 1,buf+1,10) : buf+1);
 	if (target_machine.char_is_signed_char()) tmp[LIMITS_CHAR_MIN_LINE]->append(buf+1);
 
 	// unsigned short limits
@@ -444,14 +438,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// signed short limits
 	s_max = target_machine.signed_max<virtual_machine::std_int_short>();
 	tmp[LIMITS_SHRT_MAX_LINE]->append(z_ucharint_toa(s_max,buf+1,10)-1);
-	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
-		{
-		s_max += 1;
-		tmp[LIMITS_SHRT_MIN_LINE]->append(z_ucharint_toa(s_max,buf+1,10));
-		}
-	else{
-		tmp[LIMITS_SHRT_MIN_LINE]->append(buf+1);
-		}
+	tmp[LIMITS_SHRT_MIN_LINE]->append(twos_complement_non_trapping ? z_ucharint_toa(s_max += 1,buf+1,10) : buf+1);
 
 	// unsigned int limits
 	tmp[LIMITS_UINT_MAX_LINE]->append(z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_int>(),buf+1,10)-1);
@@ -459,14 +446,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// signed int limits
 	s_max = target_machine.signed_max<virtual_machine::std_int_int>();
 	tmp[LIMITS_INT_MAX_LINE]->append(z_ucharint_toa(s_max,buf+1,10)-1);
-	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
-		{
-		s_max += 1;
-		tmp[LIMITS_INT_MIN_LINE]->append(z_ucharint_toa(s_max,buf+1,10));
-		}
-	else{
-		tmp[LIMITS_INT_MIN_LINE]->append(buf+1);
-		}
+	tmp[LIMITS_INT_MIN_LINE]->append(twos_complement_non_trapping ? z_ucharint_toa(s_max += 1,buf+1,10) : buf+1);
 
 	// unsigned long limits
 	tmp[LIMITS_ULONG_MAX_LINE]->append(z_ucharint_toa(target_machine.unsigned_max<virtual_machine::std_int_long>(),buf+1,10)-1,"UL");
@@ -474,14 +454,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	s_max = target_machine.signed_max<virtual_machine::std_int_long>();
 	tmp[LIMITS_LONG_MAX_LINE]->append(z_ucharint_toa(s_max,buf+1,10)-1);
 	tmp[LIMITS_LONG_MAX_LINE]->append('L');
-	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
-		{
-		s_max += 1;
-		tmp[LIMITS_LONG_MIN_LINE]->append(z_ucharint_toa(s_max,buf+1,10));
-		}
-	else{
-		tmp[LIMITS_LONG_MIN_LINE]->append(buf+1);
-		}
+	tmp[LIMITS_LONG_MIN_LINE]->append(twos_complement_non_trapping ? z_ucharint_toa(s_max += 1,buf+1,10) : buf+1);
 	tmp[LIMITS_LONG_MIN_LINE]->append('L');
 
 	// unsigned long long limits
@@ -489,7 +462,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	// signed long long limits
 	s_max = target_machine.signed_max<virtual_machine::std_int_long_long>();
 	tmp[LIMITS_LLONG_MAX_LINE]->append(z_ucharint_toa(s_max,buf+1,10)-1,"LL");
-	if (virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps])
+	if (twos_complement_non_trapping)
 		{
 		tmp[LIMITS_LLONG_MIN_LINE]->append("(-1-");
 		tmp[LIMITS_LLONG_MIN_LINE]->append(buf+1,"LL)");
