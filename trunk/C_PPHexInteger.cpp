@@ -8,8 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool
-C_PPHexInteger::is(const char* x,size_t token_len,C_PPHexInteger& target)
+bool C_PPHexInteger::is(const char* x,size_t token_len,C_PPHexInteger& target)
 {
 	assert(NULL!=x);
 	assert(0<token_len);
@@ -55,14 +54,7 @@ uintmax_t C_PPHexInteger::bits_required() const
 		++LHS_ptr;
 		};
 	assert(IsHexadecimalDigit(*LHS_ptr));
-	if ('8'<= *LHS_ptr)
-		return 4U*LHS_digit_span;
-	else if ('4'<= *LHS_ptr)
-		return 4U*LHS_digit_span-1U;
-	else if ('2'<= *LHS_ptr)
-		return 4U*LHS_digit_span-2U;
-	else
-		return 4U*LHS_digit_span-3U;
+	return 4U*LHS_digit_span-('8'<= *LHS_ptr ? 0U : '4'<= *LHS_ptr ? 1U : '2'<= *LHS_ptr ? 2U : 3U);
 }
 
 int cmp(const C_PPHexInteger& LHS, const C_PPHexInteger& RHS)

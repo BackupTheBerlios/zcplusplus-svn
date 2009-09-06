@@ -53,14 +53,7 @@ uintmax_t C_PPDecimalInteger::bits_required() const
 		++LHS_ptr;
 		};
 	assert('0'<= *LHS_ptr && '9'>= *LHS_ptr);
-	if ('8'<= *LHS_ptr)
-		return 4U*LHS_digit_span;
-	if ('4'<= *LHS_ptr)
-		return 4U*LHS_digit_span-1U;
-	else if ('2'<= *LHS_ptr)
-		return 4U*LHS_digit_span-2U;
-	else
-		return 4U*LHS_digit_span-3U;
+	return 4U*LHS_digit_span-('8'<= *LHS_ptr ? 0U : '4'<= *LHS_ptr ? 1U : '2'<= *LHS_ptr ? 2U : 3U);
 }
 
 int cmp(const C_PPDecimalInteger& LHS, const C_PPDecimalInteger& RHS)

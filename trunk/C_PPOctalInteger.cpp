@@ -49,12 +49,7 @@ uintmax_t C_PPOctalInteger::bits_required() const
 		++LHS_ptr;
 		};
 	assert('0'<= *LHS_ptr && '7'>= *LHS_ptr);
-	if ('4'<= *LHS_ptr)
-		return 3U*LHS_digit_span;
-	else if ('2'<= *LHS_ptr)
-		return 3U*LHS_digit_span-1U;
-	else
-		return 3U*LHS_digit_span-2U;
+	return 3U*LHS_digit_span-('4'<= *LHS_ptr ? 0U : '2'<= *LHS_ptr ? 1U : 2U);
 }
 
 int cmp(const C_PPOctalInteger& LHS, const C_PPOctalInteger& RHS)

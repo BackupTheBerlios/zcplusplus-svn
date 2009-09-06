@@ -7435,8 +7435,8 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 			assert(old.bitcount>=rhs.bitcount);
 			const bool lhs_converted = intlike_literal_to_VM(lhs_int,*src.data<1>());
 			const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
-			const bool lhs_negative = lhs_converted && target_machine->C_promote_integer(lhs_int,lhs,old);
-			const bool rhs_negative = rhs_converted && target_machine->C_promote_integer(rhs_int,rhs,old);
+			if (lhs_converted) target_machine->C_promote_integer(lhs_int,lhs,old);
+			if (rhs_converted) target_machine->C_promote_integer(rhs_int,rhs,old);
 			if (lhs_converted && rhs_converted)
 				{
 				force_decimal_literal(src,(lhs_int==rhs_int)==is_equal_op ? "1" : "0",types);
