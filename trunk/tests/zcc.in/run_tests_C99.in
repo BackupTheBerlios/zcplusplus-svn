@@ -5,7 +5,7 @@ PROLOG
 VAR CPP ../../zcc --pedantic
 
 ECHO Checking ISO error requirements
-ERROR CPP_ISO decl.C99/Error*
+ERROR CPP decl.C99/Error*
 
 ECHO Checking ISO acceptance requirements
 PASS CPP Pass*
