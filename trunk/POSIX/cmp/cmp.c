@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <fcntl.h>
-#include "Zaimoni.STL/Logging.h"
+#include "../../Zaimoni.STL/Logging.h"
 
 #define OUTPUT_DEFAULT 0
 #define OUTPUT_VERBOSE 1
@@ -155,6 +155,8 @@ int main(int argc, char* argv[])
 		/* clamp byte number and line number at INT_MAX, to avoid undefined behavior */
 		if (INT_MAX>bytenum) ++bytenum;
 		if ('\n'==file0_char && INT_MAX>linenum) ++linenum;
+		file0_char = fgetc(files[0]);
+		file1_char = fgetc(files[1]);
 		};
 	if (already_errored) exit(EXIT_FAILURE);
 	{
