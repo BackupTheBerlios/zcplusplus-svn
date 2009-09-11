@@ -1,0 +1,21 @@
+Where is the source?
+* bin: binary directory, for example distribution
+* doc: documentation directory
+* freezer: hard-to-replicate source code that used to be in Z.C++, but no longer is.
+* include: this would be the general include directory.
+* lib: this would be the binary library directory.
+** lib/MSVC32.zcc : include directory for getting MSVC 32-bit builds going.  Known-good for MSVC 2008 Express.
+** lib/zc++ : include directory for core Z.C++ files (C++ specific, those that are safe for all versions)
+** lib/zcc : include director for core ZCC files (C++ specific, those that are safe for all versions)
+* POSIX: POSIX compatibility utilities.  *NIX systems should use the native one (if it works), so not part of the main build.
+** POSIX/cmp : Z.C++ cmp reimplementation.
+* tests: Regression test sets.
+** tests/cpp : tests for the C/C++ preprocessor z_cpp.
+** tests/cpp.in : maintenance files for the C/C++ preprocessor tests.
+** tests/zcc : tests for the C/C++ vaporware compiler zcc.
+** tests/zcc.in : maintenance files for the C/C++ compiler tests.
+* tools: scripts, etc. for test drivers
+** MakeMake.py : Python script for generating makefiles.
+** preproc_testbuilder.py : converts __.in files to synchronized test case sets.
+** testdriver_gen.py : converts __.in files to test driver scripts/batch files
+** keyword_error_gen.py : not sure if this is staying.
