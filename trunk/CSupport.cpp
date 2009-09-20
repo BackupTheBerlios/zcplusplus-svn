@@ -9578,6 +9578,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				// ;: done
 				if (src.data<0>()[i+decl_count+decl_offset].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token))
 					{
+					src.c_array<0>()[i+decl_count+decl_offset].flags |= parse_tree::GOOD_LINE_BREAK;
 					++decl_offset;
 					break;
 					};
@@ -9686,6 +9687,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				// GCC uses <unknown> and handles uniqueness at link time
 				src.c_array<0>()[i].c_array<2>()[0].grab_index_token_from_str_literal<0>("<unknown>",C_TESTFLAG_IDENTIFIER);	// pretend it's an identifier
 				src.c_array<0>()[i].c_array<2>()[0].grab_index_token_location_from<0,0>(src.data<0>()[i].data<2>()[1]);	// inject it at where the namespace body starts
+				src.c_array<0>()[i].flags |= parse_tree::GOOD_LINE_BREAK;
 				assert(is_CPP_namespace(src.data<0>()[i]));
 
 				if (active_namespace)
@@ -9745,6 +9747,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			src.c_array<0>()[i+1].clear();
 			src.c_array<0>()[i+2].clear();
 			src.DeleteNSlotsAt<0>(2,i+1);
+			src.c_array<0>()[i].flags |= parse_tree::GOOD_LINE_BREAK;
 			assert(is_CPP_namespace(src.data<0>()[i]));
 			// handle named namespace
 			if (NULL==active_namespace)
@@ -9950,6 +9953,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				// ;: done
 				if (src.data<0>()[i+decl_count+decl_offset].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token))
 					{
+					src.c_array<0>()[i+decl_count+decl_offset].flags |= parse_tree::GOOD_LINE_BREAK;
 					++decl_offset;
 					break;
 					};

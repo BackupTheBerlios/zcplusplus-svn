@@ -215,26 +215,69 @@ void INC_INFORM(const parse_tree& src)
 #define USER_MASK (ULONG_MAX-((1U<<parse_tree::PREDEFINED_STRICT_UB)-1))
 	const lex_flags my_rank = src.flags & USER_MASK;
 	bool need_parens = (1==src.size<1>()) ? my_rank>(src.data<1>()->flags & USER_MASK) : false;
+	bool need_space = false;
 	if (need_parens) INC_INFORM('(');
 	size_t i = 0;
-	while(src.size<1>()>i) INC_INFORM(src.data<1>()[i++]);
-	if (need_parens) INC_INFORM(')');
+	while(src.size<1>()>i)
+		{
+		if (need_space) INC_INFORM(' ');
+		need_space = !(src.data<1>()[i].flags & parse_tree::GOOD_LINE_BREAK);
+		INC_INFORM(src.data<1>()[i++]);
+		}
+	if (need_parens)
+		{
+		INC_INFORM(')');
+		need_space = false;
+		};
 	// first index token
-	if (NULL!=src.index_tokens[0].token.first) INC_INFORM(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
+	if (NULL!=src.index_tokens[0].token.first)
+		{
+		if (need_space) INC_INFORM(' ');
+		INC_INFORM(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
+		need_space = true;
+		}
 	// infix data
 	need_parens = (1==src.size<0>()) ? my_rank>(src.data<0>()->flags & USER_MASK) : false;
-	if (need_parens) INC_INFORM('(');
+	if (need_parens)
+		{
+		INC_INFORM('(');
+		need_space = false;
+		}
 	i = 0;
-	while(src.size<0>()>i) INC_INFORM(src.data<0>()[i++]);
-	if (need_parens) INC_INFORM(')');
+	while(src.size<0>()>i)
+		{
+		if (need_space) INC_INFORM(' ');
+		need_space = !(src.data<0>()[i].flags & parse_tree::GOOD_LINE_BREAK);
+		INC_INFORM(src.data<0>()[i++]);
+		}
+	if (need_parens)
+		{
+		INC_INFORM(')');
+		need_space = false;
+		};
 	// second index token
-	if (NULL!=src.index_tokens[1].token.first) INC_INFORM(src.index_tokens[1].token.first,src.index_tokens[1].token.second);
+	if (NULL!=src.index_tokens[1].token.first)
+		{
+		if (need_space) INC_INFORM(' ');
+		INC_INFORM(src.index_tokens[1].token.first,src.index_tokens[1].token.second);
+		need_space = true;
+		}
 	// postfix data
 	need_parens = (1==src.size<2>()) ? my_rank>(src.data<2>()->flags & USER_MASK) : false;
-	if (need_parens) INC_INFORM('(');
+	if (need_parens)
+		{
+		INC_INFORM('(');
+		need_space = false;
+		}
 	i = 0;
-	while(src.size<2>()>i) INC_INFORM(src.data<2>()[i++]);
+	while(src.size<2>()>i)
+		{
+		if (need_space) INC_INFORM(' ');
+		need_space = !(src.data<2>()[i].flags & parse_tree::GOOD_LINE_BREAK);
+		INC_INFORM(src.data<2>()[i++]);
+		}
 	if (need_parens) INC_INFORM(')');
+	if (src.flags & parse_tree::GOOD_LINE_BREAK) INC_INFORM('\n');
 #undef USER_MASK
 }
 

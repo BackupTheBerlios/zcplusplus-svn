@@ -416,14 +416,14 @@ int main(int argc, char* argv[])
 		//! \todo parse the resulting TokenList...
 		ZParser parser(target_machine,string_options[stringopt::lang]);
 		if (bool_options[boolopt::test]) parser.set_debug(true);
-#if 1
-		parser.parse(TokenList,ParsedList);
-#else
 		const bool export_to_object_ok = parser.parse(TokenList,ParsedList);
 		if (export_to_object_ok)
 			{
+			// export to source code
+			const size_t ParsedList_size = ParsedList.size();
+			size_t i = 0;
+			while(i<ParsedList_size) INFORM(*ParsedList[i++]);
 			};
-#endif
 		return EXIT_SUCCESS;
 		}
 	catch(const std::bad_alloc&)

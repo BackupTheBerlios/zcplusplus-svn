@@ -36,8 +36,9 @@ struct parse_tree
 	enum core_flags {	// standardize bitflag use
 		INVALID = (1<<2),	// invalid node
 		CONSTANT_EXPRESSION = (1<<3),	// compile-time constant expression
+		GOOD_LINE_BREAK = (1<<4),	// good place for a line break in INC_INFORM
 		RESERVED_MASK = 3,	// lowest two bits are used to track memory ownership of weak_token
-		PREDEFINED_STRICT_UB = 4	// number of bits reserved by parse_tree
+		PREDEFINED_STRICT_UB = 5	// number of bits reserved by parse_tree
 	};
 
 	weak_token index_tokens[2];	//!< 0: left, 1: right
@@ -364,6 +365,6 @@ public:
 };
 
 void INC_INFORM(const parse_tree& src);
-inline void INFORM(const parse_tree& src) {INC_INFORM(src); INFORM(" ");}
+inline void INFORM(const parse_tree& src) {INC_INFORM(src); INC_INFORM("\n");}
 
 #endif
