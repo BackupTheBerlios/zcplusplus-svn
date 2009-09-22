@@ -24,6 +24,7 @@
 #include "Zaimoni.STL/LexParse/Token.hpp"
 #include "Zaimoni.STL/LexParse/LangConf.hpp"
 #include "Zaimoni.STL/search.hpp"
+#include "Zaimoni.STL/Pure.C/format_util.h"
 
 #include "DebugCSupport.h"
 
@@ -34,10 +35,10 @@ using namespace zaimoni;
 #define WARN_STR "warning: "
 
 #define INSTALL_TO "\\CPP_App\\Z.C++"
-#define ZCC_VERSION "0.0.1"
+#define ZCC_VERSION "0.0.3"
 #define ZCC_VERSION_MAJOR 0
 #define ZCC_VERSION_MINOR 0
-#define ZCC_VERSION_PATCH 1
+#define ZCC_VERSION_PATCH 3
 
 //! \todo this should be language-sensitive; LangConf not a good location
 static const char* const fixed_system_include_search[] = {
@@ -214,6 +215,9 @@ static const POD_pair<const char*,size_t> C99_CPP0x_locked_macros_default[]
 		DICT_STRUCT("__cplusplus"),				// undefined/C99, define to 1 for C++0x
 		DICT_STRUCT("defined"),					// must be undefined or else undefined behavior, even not considering C99 6.10.8 p4
 		DICT_STRUCT("_Pragma"),					// considering the syntactical role of the _Pragma operator, lock it even though the standards don't require us to. 
+		DICT_STRUCT("__TIMESTAMP__"),			// lock down our extension macros
+		DICT_STRUCT("__COUNTER__"),				// lock down our extension macros
+		DICT_STRUCT("__INCLUDE_LEVEL__"),		// lock down our extension macros
 		DICT_STRUCT("__ZCC__"),					// lock down our identity
 		DICT_STRUCT("__ZCC_MINOR__"),			// lock down our identity
 		DICT_STRUCT("__ZCC_PATCHLEVEL__")		// lock down our identity
@@ -226,14 +230,20 @@ static const POD_pair<const char*,const char*> C99_macro_identifier_default[]
 		{"__LINE__", NULL},
 		{"__STDC__", "1"},
 		{"__STDC_HOSTED__", "1"},
-		{"__STDC_VERSION__", "1"},	// end standard-mandated macros
-		{"__ZCC__", STRINGIZE(ZCC_VERSION_MAJOR)},				// identity : major version
-		{"__ZCC_MINOR__", STRINGIZE(ZCC_VERSION_MINOR)},		// minor version
-		{"__ZCC_PATCHLEVEL__", STRINGIZE(ZCC_VERSION_PATCH)}	// patchlevel
+		{"__STDC_VERSION__", "1"},		// end standard-mandated macros
+		{"__TIMESTAMP__", NULL},		// extension: GCC, CLang, MSVC
+		{"__COUNTER__", NULL},			// extension: GCC, CLang, MSVC
+		{"__INCLUDE_LEVEL__", NULL},	// extension: GCC, CLang
+		{"__ZCC__", DEEP_STRINGIZE(ZCC_VERSION_MAJOR)},				// identity : major version
+		{"__ZCC_MINOR__", DEEP_STRINGIZE(ZCC_VERSION_MINOR)},		// minor version
+		{"__ZCC_PATCHLEVEL__", DEEP_STRINGIZE(ZCC_VERSION_PATCH)}	// patchlevel
 	};
 
 static const POD_pair<const char*,const char*> CPP0x_macro_identifier_default[]
- =	{	{"__DATE__", NULL},			// start standard-mandated macros
+ =	{	{"__TIMESTAMP__", NULL},		// extension: GCC, CLang, MSVC
+		{"__COUNTER__", NULL},			// extension: GCC, CLang, MSVC
+		{"__INCLUDE_LEVEL__", NULL},	// extension: GCC, CLang
+		{"__DATE__", NULL},			// start standard-mandated macros
 		{"__TIME__", NULL},
 		{"__FILE__", NULL},
 		{"__LINE__", NULL},
@@ -241,13 +251,15 @@ static const POD_pair<const char*,const char*> CPP0x_macro_identifier_default[]
 		{"__STDC_HOSTED__", "1"},
 		{"__STDC_VERSION__", "1"},
 		{"__cplusplus", "1"},		// end standard-mandated macros
-		{"__ZCC__", "0"},			// identity : major version
-		{"__ZCC_MINOR__", "0"},		// minor version
-		{"__ZCC_PATCHLEVEL__", "0"}	// patchlevel
+		{"__ZCC__", DEEP_STRINGIZE(ZCC_VERSION_MAJOR)},				// identity : major version
+		{"__ZCC_MINOR__", DEEP_STRINGIZE(ZCC_VERSION_MINOR)},		// minor version
+		{"__ZCC_PATCHLEVEL__", DEEP_STRINGIZE(ZCC_VERSION_PATCH)}	// patchlevel
 	};
 
 CPreprocessor::CPreprocessor(const virtual_machine::CPUInfo& _target_machine, const char* const _lang)
-:	lang_code(lang_index(_lang)),
+:	counter_macro(0),
+	include_level(0),
+	lang_code(lang_index(_lang)),
 	lang(lexer_from_lang(lang_code)),
 	target_machine(_target_machine),
 	macro_identifier_default(NULL),
@@ -668,16 +680,19 @@ bool CPreprocessor::preprocess(autovalarray_ptr<Token<char>* >& TokenList)
 	// this is subject to the Y10K bug, per standard.
 	// construct __DATE__, __TIME__ macro targets
 	{
-	char time_date_buffer[26];	// C99 requires length 26
+	time_date_buffer[0] = '"';
+	time_buffer[0]='"';
+	date_buffer[0]='"';
 	time_t start_time = time(NULL);
-	strcpy(time_date_buffer,ctime(&start_time));
+	strcpy(time_date_buffer+1,ctime(&start_time));
+	strcpy(time_date_buffer+1+24,"\"");
 	// have base buffer, construct time
-	strncpy(time_buffer+1,time_date_buffer+11,8);
+	strncpy(time_buffer+1,time_date_buffer+12,8);
 	time_buffer[0]='"';
 	strcpy(time_buffer+9,"\"");
 	// construct date
-	strncpy(date_buffer+1,time_date_buffer+4,7);
-	strncpy(date_buffer+8,time_date_buffer+20,4);
+	strncpy(date_buffer+1,time_date_buffer+5,7);
+	strncpy(date_buffer+8,time_date_buffer+21,4);
 	date_buffer[0]='"';
 	strcpy(date_buffer+12,"\"");
 	}
@@ -2056,7 +2071,9 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 				// this implies:
 				// * conditional-compilation directives must be balanced for each file
 				// * #line directives never escape files anyway
+			++include_level;
 			_preprocess(IncludeTokenList, locked_macros, macros_object, macros_object_expansion, macros_object_expansion_pre_eval, macros_function, macros_function_arglist, macros_function_expansion, macros_function_expansion_pre_eval, include_file_index, include_file_cache, min_types);
+			--include_level;
 			if (!IncludeTokenList.empty())
 				{
 				size_t j = IncludeTokenList.size();
@@ -3247,8 +3264,8 @@ CPreprocessor::predefined_macro_replace_once(Token<char>& x, size_t& critical_of
 	if (-1!=macro_index)
 		{
 		const char* macro_value = NULL;
-		char Buffer[10];
-		char FileBuffer[MAX_PATH+2];
+		char buf[10];
+		char file_buf[MAX_PATH+2];
 		if (NULL!=macro_identifier_default[macro_index].second)
 			// value known, substitute in
 			macro_value = macro_identifier_default[macro_index].second;
@@ -3256,16 +3273,22 @@ CPreprocessor::predefined_macro_replace_once(Token<char>& x, size_t& critical_of
 		else if (!strcmp(macro_identifier_default[macro_index].first,"__FILE__"))
 			{
 			assert(NULL!=x.src_filename);
-			FileBuffer[0] = '"';
-			strcpy(FileBuffer+1,x.src_filename);
-			FileBuffer[1+strlen(x.src_filename)] = '"';
-			FileBuffer[2+strlen(x.src_filename)] = '\x00';
-			macro_value = FileBuffer;
+			file_buf[0] = '"';
+			strcpy(file_buf+1,x.src_filename);
+			file_buf[1+strlen(x.src_filename)] = '"';
+			file_buf[2+strlen(x.src_filename)] = '\0';
+			macro_value = file_buf;
 			}
 		else if (!strcmp(macro_identifier_default[macro_index].first,"__LINE__"))
-			macro_value = ltoa((long)(x.logical_line.first),Buffer,10);
+			macro_value = z_umaxtoa(x.logical_line.first,buf,10);
 		else if (!strcmp(macro_identifier_default[macro_index].first,"__TIME__"))
 			macro_value = time_buffer;
+		else if (!strcmp(macro_identifier_default[macro_index].first,"__TIMESTAMP__"))
+			macro_value = time_date_buffer;
+		else if (!strcmp(macro_identifier_default[macro_index].first,"__COUNTER__"))
+			macro_value = z_umaxtoa(counter_macro++,buf,10);
+		else if (!strcmp(macro_identifier_default[macro_index].first,"__INCLUDE_LEVEL__"))
+			macro_value = z_umaxtoa(include_level,buf,10);
 		else{
 			assert(!strcmp(macro_identifier_default[macro_index].first,"__DATE__"));
 			macro_value = date_buffer;
@@ -3861,7 +3884,9 @@ CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,
 		INFORM(date_buffer);
 		INC_INFORM("#define __TIME__ ");
 		INFORM(time_buffer);
-		i = 4;
+		INC_INFORM("#define __TIMESTAMP__ ");
+		INFORM(time_date_buffer);
+		i = 7;
 		while(i<macro_identifier_default_count)
 			{
 			INC_INFORM("#define ");

@@ -39,6 +39,8 @@ public:
 	void set_debug(bool _debug_mode) {debug_mode = _debug_mode;};
 	bool require_padding(char lhs, char rhs) const;
 private:
+	uintmax_t counter_macro;
+	uintmax_t include_level;
 	size_t lang_code;
 	zaimoni::LangConf& lang;					//!< lexer corresponding to the language being preprocessed
 	const virtual_machine::CPUInfo& target_machine;	//!< target machine information
@@ -46,6 +48,7 @@ private:
 	const zaimoni::POD_pair<const char*,size_t>* macro_locked_default; 
 	size_t macro_identifier_default_count;
 	size_t macro_locked_default_count;
+	char time_date_buffer[26+3];	//!< for __TIMESTAMP__ predefined macro
 	char date_buffer[14];	//!< for __DATE__ predefined macro
 	char time_buffer[11];	//!< for __TIME__ predefined macro
 	bool debug_mode;		//!< triggers some diagnostics
