@@ -9,6 +9,7 @@ VAR CPP_ISO ../../zcc --pedantic
 ECHO Checking ISO error requirements
 ERROR CPP_ISO decl.C99/Error*
 ERROR CPP_ISO namespace.CPP/Error*
+ERROR CPP_ISO staticassert.C1X/Error*
 
 ECHO Checking ZCC warnings on ISO-accepted code
 WARN CPP_ISO namespace.CPP/Warn*

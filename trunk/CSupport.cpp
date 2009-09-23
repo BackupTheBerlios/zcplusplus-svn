@@ -436,6 +436,7 @@ BOOST_STATIC_ASSERT(NONATOMIC_PREPROC_OP_LB<C_PREPROC_OP_STRICT_UB);
 
 static const POD_pair<const char*,size_t> valid_keyword[]
 	=	{	DICT_STRUCT("__asm"),		// reserved to the implementation, so OK to make a keyword for C only
+			DICT_STRUCT("_Static_Assert"),	// C1X keyword not in C++0X
 			DICT_STRUCT("restrict"),	// C99 keywords not in C++98
 			DICT_STRUCT("_Bool"),
 			DICT_STRUCT("_Complex"),
@@ -514,15 +515,16 @@ static const POD_pair<const char*,size_t> valid_keyword[]
 			DICT_STRUCT("xor"),
 			DICT_STRUCT("xor_eq"),		// end C++98 alternate-operators
 			DICT_STRUCT("constexpr"),	// C++0X keywords we pay attention to
-			DICT_STRUCT("thread_local")		
+			DICT_STRUCT("static_assert"),
+			DICT_STRUCT("thread_local")
 		};
 
 //! \todo some way to test that constexpr, thread_local are locked only for C++0X mode
 
 // think about C++0x keywords later.
 #define C_KEYWORD_NONSTRICT_LB 0
-#define CPP_KEYWORD_NONSTRICT_LB 5
-#define C_KEYWORD_STRICT_UB 38
+#define CPP_KEYWORD_NONSTRICT_LB 6
+#define C_KEYWORD_STRICT_UB 39
 #define CPP_KEYWORD_STRICT_UB STATIC_SIZE(valid_keyword)
 
 BOOST_STATIC_ASSERT(C_KEYWORD_NONSTRICT_LB<C_KEYWORD_STRICT_UB);
@@ -9416,6 +9418,55 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 	while(i<src.size<0>())
 		{
 		conserve_tokens(src.c_array<0>()[i]);
+		// C static assertion scanner
+		if (robust_token_is_string<14>(src.data<0>()[i].index_tokens[0].token,"_Static_Assert"))
+			{	// _Static_Assert ( constant-expression , string-literal ) ;
+			// find the next ';'
+			size_t j = i;
+			while(src.size<0>()> ++j
+				  && (!src.data<0>()[j].is_atomic() || !robust_token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)));
+			if (src.size<0>()==j)
+				{	//! \test zcc/staticassert.C99/Error_scope1.h
+					//! \test zcc/staticassert.C99/Error_scope2.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("static assertion cut off by end of scope");
+				zcc_errors.inc_error();
+				src.DeleteNSlotsAt<0>(j-i,i);
+				continue;
+				};
+			if (   !is_naked_parentheses_pair(src.data<0>()[i+1])
+				|| 3>src.data<0>()[i+1].size<0>()
+				|| !src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2].is_atomic()
+				|| !src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].is_atomic()
+				|| !robust_token_is_char<','>(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2].index_tokens[0].token)
+				|| C_TESTFLAG_STRING_LITERAL!=src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].flags)
+				{	//! \test zcc/staticassert.C99/Error_badarg1.h
+					//! \test zcc/staticassert.C99/Error_badarg2.h
+					//! \test zcc/staticassert.C99/Error_badarg3.h
+					//! \test zcc/staticassert.C99/Error_badarg5.h
+					//! \test zcc/staticassert.C99/Error_badarg6.h
+					//! \test zcc/staticassert.C99/Error_badarg7.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("malformed static assertion");
+				zcc_errors.inc_error();
+				src.DeleteNSlotsAt<0>(j-i+1,i);
+				continue;
+				};
+			if (2!=j-i)
+				{	//! \test zcc/staticassert.C99/Error_badarg4.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("garbage between static assertion arguments and terminating ;");
+				zcc_errors.inc_error();
+				src.DeleteNSlotsAt<0>(j-i+1,i);
+				continue;
+				};
+			//! \todo actually use the static assertion correctly.
+			src.DeleteNSlotsAt<0>(j-i+1,i);
+			continue;
+			};
 		// general declaration scanner 
 		// we intercept typedefs as part of general variable declaration detection (weird storage qualifier)
 		// intercept declarations as follows
@@ -9652,6 +9703,55 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 	while(i<src.size<0>())
 		{
 		conserve_tokens(src.c_array<0>()[i]);
+		// C++ static assertion scanner
+		if (robust_token_is_string<13>(src.data<0>()[i].index_tokens[0].token,"static_assert"))
+			{	// static_assert ( constant-expression , string-literal ) ;
+			// find the next ';'
+			size_t j = i;
+			while(src.size<0>()> ++j
+				  && (!src.data<0>()[j].is_atomic() || !robust_token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)));
+			if (src.size<0>()==j)
+				{	//! \test zcc/staticassert.C99/Error_scope1.hpp
+					//! \test zcc/staticassert.C99/Error_scope2.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("static assertion cut off by end of scope");
+				zcc_errors.inc_error();
+				src.DeleteNSlotsAt<0>(j-i,i);
+				continue;
+				};
+			if (   !is_naked_parentheses_pair(src.data<0>()[i+1])
+				|| 3>src.data<0>()[i+1].size<0>()
+				|| !src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2].is_atomic()
+				|| !src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].is_atomic()
+				|| !robust_token_is_char<','>(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2].index_tokens[0].token)
+				|| C_TESTFLAG_STRING_LITERAL!=src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].flags)
+				{	//! \test zcc/staticassert.C99/Error_badarg1.hpp
+					//! \test zcc/staticassert.C99/Error_badarg2.hpp
+					//! \test zcc/staticassert.C99/Error_badarg3.hpp
+					//! \test zcc/staticassert.C99/Error_badarg5.hpp
+					//! \test zcc/staticassert.C99/Error_badarg6.hpp
+					//! \test zcc/staticassert.C99/Error_badarg7.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("malformed static assertion");
+				zcc_errors.inc_error();
+				src.DeleteNSlotsAt<0>(j-i+1,i);
+				continue;
+				};
+			if (2!=j-i)
+				{	//! \test zcc/staticassert.C99/Error_badarg4.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("garbage between static assertion arguments and terminating ;");
+				zcc_errors.inc_error();
+				src.DeleteNSlotsAt<0>(j-i+1,i);
+				continue;
+				};
+			//! \todo actually use the static assertion correctly.
+			src.DeleteNSlotsAt<0>(j-i+1,i);
+			continue;
+			};
 		// namespace scanner
 		// need some scheme to handle unnamed namespaces (probably alphabetical counter after something illegal so unmatchable)
 		// C++0X has inline namespaces; ignore these for now (well, maybe not: consuming the inline will prevent problems)
