@@ -3,6 +3,7 @@
 #include "ZParser.hpp"
 
 #include "CSupport.hpp"
+#include "errors.hpp"
 #include "errcount.hpp"
 #include "langroute.hpp"
 #include "ParseTree.hpp"
@@ -55,7 +56,12 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 			i = pretokenized.size();
 			do	{
 				--i;
+				// XXX optimized for preprocessor -- should actually be its own hook
+				// disable pedantic warnings to avoid fake warnings about string literals
+				const bool pedantic_backup = bool_options[boolopt::pedantic];
+				bool_options[boolopt::pedantic] = false;
 				lang.pp_support->AddPostLexFlags(TokenList.front()->data()+pretokenized[i].first, pretokenized[i].second, pretokenized[i].third, TokenList.front()->src_filename, TokenList.front()->original_line.first);
+				bool_options[boolopt::pedantic] = pedantic_backup;
 				if (	(C_TESTFLAG_PP_OP_PUNC & pretokenized[i].third)
 					&& 	(C_DISALLOW_POSTPROCESSED_SOURCE & lang.pp_support->GetPPOpPuncFlags(C_PP_DECODE(pretokenized[i].third))))
 					{

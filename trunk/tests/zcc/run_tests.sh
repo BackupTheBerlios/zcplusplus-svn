@@ -36,6 +36,8 @@ function run_tests {
 	echo ====
 	for F in Pass*.h; do let ++ACCEPT_TEST; echo $CPP_ISO $F; if $CPP_ISO $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 	for F in Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP_ISO $F; if $CPP_ISO $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in staticassert.C1X/Pass*.h; do let ++ACCEPT_TEST; echo $CPP_ISO $F; if $CPP_ISO $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in staticassert.C1X/Pass*.hpp; do let ++ACCEPT_TEST; echo $CPP_ISO $F; if $CPP_ISO $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 
 	echo -E $BAD_PASS of $REJECT_TEST rejection tests accepted
 	if test -n "$BAD_PASS_NAME"; then echo -E $BAD_PASS_NAME; fi

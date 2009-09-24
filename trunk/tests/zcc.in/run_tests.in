@@ -16,6 +16,7 @@ WARN CPP_ISO namespace.CPP/Warn*
 
 ECHO Checking ISO acceptance requirements
 PASS CPP_ISO Pass*
+PASS CPP_ISO staticassert.C1X/Pass*
 
 EPILOG
 
