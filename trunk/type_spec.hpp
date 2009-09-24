@@ -42,8 +42,9 @@ struct type_spec
 	bool decays_to_nonnull_pointer() const {return 0==pointer_power && 0<static_array_size;};
 
 	void set_static_array_size(size_t _size);
-	void set_pointer_power(size_t _size);
+	void set_pointer_power(size_t _size);	// ACID, throws std::bad_alloc on failure
 	void value_copy(const type_spec& src);	// XXX properly operator= in C++, but type_spec has to be POD
+											// ACID, throws std::bad_alloc on failure
 	bool dereference();
 	unsigned char& qualifier(size_t i) {return sizeof(unsigned char*)>pointer_power_after_array_decay() ? qualifier_vector.second[i] : qualifier_vector.first[i];};
 	template<size_t i> unsigned char& qualifier() {return sizeof(unsigned char*)>pointer_power_after_array_decay() ? qualifier_vector.second[i] : qualifier_vector.first[i];}

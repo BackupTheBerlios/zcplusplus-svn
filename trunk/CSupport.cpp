@@ -8892,6 +8892,7 @@ static bool CPP_CondenseParseTree(parse_tree& src,const type_system& types)
 	return true;
 }
 
+//! \todo check that the fact all literals are already legal-form is used
 static void C99_ContextFreeParse(parse_tree& src,const type_system& types)
 {
 	assert(src.is_raw_list());
@@ -8901,6 +8902,7 @@ static void C99_ContextFreeParse(parse_tree& src,const type_system& types)
 	C99_notice_primary_type(src);
 }
 
+//! \todo check that the fact all literals are already legal-form is used
 static void CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 {
 	assert(src.is_raw_list());
@@ -9539,6 +9541,7 @@ static void conserve_tokens(parse_tree& x)
 		if (tmp)
 			{
 			assert(tmp!=x.index_tokens[0].token.first);
+			free(const_cast<char*>(x.index_tokens[0].token.first));
 			x.index_tokens[0].token.first = tmp;
 			x.control_index_token<0>(false);
 			}
@@ -9549,6 +9552,7 @@ static void conserve_tokens(parse_tree& x)
 		if (tmp)
 			{
 			assert(tmp!=x.index_tokens[1].token.first);
+			free(const_cast<char*>(x.index_tokens[1].token.first));
 			x.index_tokens[1].token.first = tmp;
 			x.control_index_token<1>(false);
 			}
@@ -10011,6 +10015,7 @@ size_t CPP_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& targ
 // return: 1 typespec record (for now, other languages may have more demanding requirements)
 // incoming: n typespec records, flag for trailing ...
 // will need: typedef map: identifier |-> typespec record
+//! \todo check that the fact all literals are already legal-form is used
 static void C99_ContextParse(parse_tree& src,type_system& types)
 {
 	//! \todo type-vectorize as part of the lexical-forward loop.  Need to handle in type_spec, which is required to be POD to allow C memory management:
@@ -10111,7 +10116,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				C99_PPHackTree(parsetree,types);
 				// final, when above is working properly
 				if (!parsetree.is_atomic())
-					{
+					{	//! \bug need test cases
 					parsetree.destroy();	// efficiency
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -10123,7 +10128,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				// end snip from CPreproc
 				bool is_true = false;
 				if (!C99_literal_converts_to_bool(parsetree,is_true))
-					{
+					{	//! \bug need test cases
 					parsetree.destroy();	// efficiency
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -10133,8 +10138,9 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					continue;
 					};
 				parsetree.destroy();	// efficiency
+				//! \test zcc/staticassert.C1X/Pass_autosucceed.h
 				if (!is_true)
-					{	// oops
+					{	//! \test zcc/staticassert.C1X/Error_autofail.h
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					// hmm...really should unescape string before emitting
@@ -10371,6 +10377,7 @@ static bool is_CPP_namespace(const parse_tree& src)
 #endif
 
 // handle namespaces or else
+//! \todo check that the fact all literals are already legal-form is used
 static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* const active_namespace)
 {
 	//! \todo type-vectorize as part of the lexical-forward loop.  Need to handle
@@ -10479,7 +10486,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					}
 				CPP_PPHackTree(parsetree,types);
 				if (!parsetree.is_atomic())
-					{
+					{	//! \bug need test cases
 					parsetree.destroy();	// efficiency
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -10491,7 +10498,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				// end snip from CPreproc
 				bool is_true = false;
 				if (!CPP_literal_converts_to_bool(parsetree,is_true))
-					{
+					{	//! \bug need test cases
 					parsetree.destroy();	// efficiency
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -10501,8 +10508,9 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					continue;
 					};
 				parsetree.destroy();	// efficiency
+				//! \test zcc/staticassert.C1X/Pass_autosucceed.hpp
 				if (!is_true)
-					{	// oops
+					{	//! \test zcc/staticassert.C1X/Error_autofail.hpp
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					// hmm...really should unescape string before emitting

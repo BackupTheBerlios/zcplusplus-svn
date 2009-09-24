@@ -15,9 +15,11 @@
 #undef assert
 #ifdef NDEBUG
 #	define assert(A)	((void)0)
+#	define ZAIMONI_PASSTHROUGH_ASSERT(A)	A
 #else
 /* Interoperate with Microsoft: return code 3 */
 #	define assert(A)	((A) ? (void)0 : FATAL_CODE(#A,3))
+#	define ZAIMONI_PASSTHROUGH_ASSERT(A)	((A) ? (void)0 : FATAL_CODE(#A,3))
 #endif
 
 /*!

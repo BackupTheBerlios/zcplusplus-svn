@@ -20,11 +20,26 @@ void type_spec::set_pointer_power(size_t _size)
 {
 	if (_size==pointer_power) return;
 	assert(0<_size);
-	if (!zaimoni::_resize(extent_vector,_size)) throw std::bad_alloc();
 	const bool shrinking = _size<pointer_power;
 	const size_t old_ptr_power = pointer_power_after_array_decay();
 	const size_t new_ptr_power = old_ptr_power+(_size-pointer_power);	// modulo arithmetic
-	if (!shrinking) memset(extent_vector+pointer_power,0,sizeof(uintmax_t)*(_size-pointer_power));
+	unsigned char* tmp_first = (shrinking || sizeof(unsigned char*)>new_ptr_power) ? NULL : zaimoni::_new_buffer_nonNULL_throws<unsigned char>(new_ptr_power+1);
+	if (!zaimoni::_resize(extent_vector,_size))
+		{
+		free(tmp_first);
+		throw std::bad_alloc();
+		};
+	if (!shrinking)
+		{
+		memset(extent_vector+pointer_power,0,sizeof(uintmax_t)*(_size-pointer_power));
+		if (NULL!=tmp_first)
+			{
+			memcpy(tmp_first,sizeof(unsigned char*)>old_ptr_power ? qualifier_vector.second : qualifier_vector.first,old_ptr_power+1);
+			size_t i = old_ptr_power;
+			while(i<new_ptr_power) qualifier_vector.first[i++] = lvalue;
+			qualifier_vector.first[new_ptr_power] = '\0';
+			}
+		};
 	if (sizeof(unsigned char*)>old_ptr_power)
 		{
 		if (sizeof(unsigned char*)>new_ptr_power)
@@ -37,15 +52,8 @@ void type_spec::set_pointer_power(size_t _size)
 				qualifier_vector.second[new_ptr_power] = '\0';
 				}
 			}
-		else{
-			unsigned char tmp[sizeof(unsigned char*)];
-			memcpy(tmp,qualifier_vector.second,old_ptr_power+1);
-			qualifier_vector.first = zaimoni::_new_buffer_nonNULL_throws<unsigned char>(new_ptr_power+1);
-			memcpy(qualifier_vector.first,tmp,old_ptr_power+1);
-			size_t i = old_ptr_power;
-			while(i<new_ptr_power) qualifier_vector.first[i++] = lvalue;
-			qualifier_vector.first[new_ptr_power] = '\0';
-			}
+		else
+			qualifier_vector.first = tmp_first;
 		}
 	else if (sizeof(unsigned char*)>new_ptr_power)
 		{
@@ -56,27 +64,30 @@ void type_spec::set_pointer_power(size_t _size)
 		memcpy(qualifier_vector.second,tmp,new_ptr_power+1);
 		}
 	else{
-		if (!zaimoni::_resize(qualifier_vector.first,new_ptr_power+1)) throw std::bad_alloc();
 		if (shrinking)
-			memset(qualifier_vector.first+new_ptr_power+1,0,old_ptr_power-new_ptr_power);
+			ZAIMONI_PASSTHROUGH_ASSERT(zaimoni::_resize(qualifier_vector.first,new_ptr_power+1));
 		else{
-			size_t i = old_ptr_power;
-			while(i<new_ptr_power) qualifier_vector.first[i++] = lvalue;
-			qualifier_vector.first[new_ptr_power] = '\0';
+			free(qualifier_vector.first);
+			qualifier_vector.first = tmp_first;
 			}
 		}
 	pointer_power = _size;
 }
 
 // XXX properly operator= in C++, but type_spec has to be POD
+// ACID, throws std::bad_alloc on failure
 void type_spec::value_copy(const type_spec& src)
 {
+	{
+	type_spec tmp;
+	tmp.clear();
+	tmp.base_type_index = src.base_type_index;
+	tmp.set_static_array_size(src.static_array_size);
+	tmp.set_pointer_power(src.pointer_power);
 	destroy();
-	base_type_index = src.base_type_index;
-	static_array_size = src.static_array_size;
-	if (0<src.static_array_size) qualifier_vector.second[0] |= lvalue;
+	*this = tmp;
+	}
 
-	set_pointer_power(src.pointer_power);
 	const size_t new_ptr_power = pointer_power_after_array_decay();
 	if (sizeof(unsigned char*)<=new_ptr_power)
 		memmove(qualifier_vector.first,src.qualifier_vector.first,new_ptr_power+1);

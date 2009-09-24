@@ -186,6 +186,7 @@ parse_tree::collapse_matched_pair(parse_tree& src, const zaimoni::POD_pair<size_
 	return true;
 }
 
+// ACID; throws std::bad_alloc on failure
 void value_copy(parse_tree& dest, const parse_tree& src)
 {	// favor ACID
 	parse_tree_class tmp;
