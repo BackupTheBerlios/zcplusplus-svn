@@ -186,6 +186,55 @@ parse_tree::collapse_matched_pair(parse_tree& src, const zaimoni::POD_pair<size_
 	return true;
 }
 
+void value_copy(parse_tree& dest, const parse_tree& src)
+{	// favor ACID
+	parse_tree_class tmp;
+
+	tmp.type_code.value_copy(src.type_code);
+	if (!src.empty<0>())
+		{
+		size_t i = src.size<0>();
+		if (!tmp.resize<0>(i)) throw std::bad_alloc();
+		zaimoni::autotransform_n(tmp.c_array<0>(),src.data<0>(),i,value_copy);
+		};
+	if (!src.empty<1>())
+		{
+		size_t i = src.size<1>();
+		if (!tmp.resize<1>(i)) throw std::bad_alloc();
+		zaimoni::autotransform_n(tmp.c_array<1>(),src.data<1>(),i,value_copy);
+		}
+	if (!src.empty<2>())
+		{
+		size_t i = src.size<2>();
+		if (!tmp.resize<2>(i)) throw std::bad_alloc();
+		zaimoni::autotransform_n(tmp.c_array<2>(),src.data<2>(),i,value_copy);
+		}
+	// would like a value_copy for weak_token
+	tmp.index_tokens[0] = src.index_tokens[0];
+	tmp.index_tokens[1] = src.index_tokens[1];
+	if (src.own_index_token<0>())
+		{
+		char* tmp2 = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(tmp.index_tokens[0].token.second));
+		memmove(tmp2,src.index_tokens[0].token.first,src.index_tokens[0].token.second);
+		tmp.index_tokens[0].token.first = tmp2;
+		tmp.control_index_token<0>(true);
+		};
+	if (src.own_index_token<1>())
+		{
+		char* tmp2 = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(tmp.index_tokens[1].token.second));
+		memmove(tmp2,src.index_tokens[1].token.first,src.index_tokens[1].token.second);
+		tmp.index_tokens[1].token.first = tmp2;
+		tmp.control_index_token<1>(true);
+		};
+	tmp.flags = src.flags;
+	tmp.subtype = src.subtype;
+
+	dest.destroy();
+	dest = tmp;
+	tmp.clear();
+}
+
+
 void parse_tree::_eval_to_arg(size_t arg_idx, size_t i)
 {
 	parse_tree tmp = data(arg_idx)[i];

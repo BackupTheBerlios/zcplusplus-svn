@@ -356,6 +356,9 @@ private:
 	void _eval_to_arg(size_t arg_idx, size_t i);
 };
 
+// wants to be ACID; throws std::bad_alloc on failure
+void value_copy(parse_tree& dest, const parse_tree& src);
+
 // non-virtual, intentionally
 class parse_tree_class : public parse_tree
 {

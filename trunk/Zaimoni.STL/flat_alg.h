@@ -75,6 +75,17 @@ inline void autotransform_n(IO_Iterator first,size_t N,unary_op op)
 		};
 }
 
+/* forward-iterator version */
+template<class IO_Iterator,class IO_Iterator2,typename binary_op>
+inline void autotransform_n(IO_Iterator first,IO_Iterator2 first2,size_t N,binary_op op)
+{
+	while(0<N)
+		{
+		op(*first++,*first2++);
+		--N;
+		};
+}
+
 /* range version */
 template<typename unary_op,class IO_Iterator>
 inline bool and_range(unary_op op,IO_Iterator first,IO_Iterator last)
