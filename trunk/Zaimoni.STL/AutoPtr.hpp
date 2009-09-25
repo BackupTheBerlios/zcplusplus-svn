@@ -63,7 +63,7 @@ public:
 	const autodel_ptr& operator=(T* src) {_meta_auto_ptr<T>::operator=(src); return *this;};
 	const autodel_ptr& operator=(autodel_ptr& src) {reset(src._ptr); return *this;};
 
-	friend void zaimoni::swap(autodel_ptr& LHS, autodel_ptr& RHS) {std::swap(LHS._ptr,RHS._ptr);};
+	friend void zaimoni::swap(autodel_ptr& lhs, autodel_ptr& rhs) {std::swap(lhs._ptr,rhs._ptr);};
 };
 
 template<typename T>
@@ -83,7 +83,7 @@ public:
 	const autoval_ptr& operator=(T* src) {_meta_auto_ptr<T>::operator=(src); return *this;};
 	const autoval_ptr& operator=(const autoval_ptr& src) {_meta_auto_ptr<T>::operator=(src); return *this;};
 
-	friend void zaimoni::swap(autoval_ptr& LHS, autoval_ptr& RHS) {std::swap(LHS._ptr,RHS._ptr);};
+	friend void zaimoni::swap(autoval_ptr& lhs, autoval_ptr& rhs) {std::swap(lhs._ptr,rhs._ptr);};
 };
 
 template<typename T>
@@ -91,10 +91,18 @@ struct has_MoveInto<autoval_ptr<T> > : public boost::true_type
 {
 };
 
+template<class Derived,class T> struct c_var_array_CRTP;
+
+template<class Derived,class T>
+bool
+operator==(const c_var_array_CRTP<Derived,T>& lhs, const c_var_array_CRTP<Derived,T>& rhs);
+
 // requires: _ptr
 template<class Derived,class T>
 struct c_var_array_CRTP : public c_array_CRTP<c_var_array_CRTP<Derived,T>, T>
 {
+	friend bool operator==<>(const c_var_array_CRTP& lhs, const c_var_array_CRTP& rhs);
+
 	// other support
 	void OverwriteAndNULL(T*& Target) {Target = static_cast<Derived*>(this)->_ptr; static_cast<Derived*>(this)->_ptr = NULL;}
 #ifndef ZAIMONI_FORCE_ISO
@@ -132,6 +140,13 @@ struct c_var_array_CRTP : public c_array_CRTP<c_var_array_CRTP<Derived,T>, T>
 	void rangecheck(size_t i) const { if (i>=size()) FATAL("out-of-bounds array access"); };
 
 	void swap(c_var_array_CRTP& RHS) {std::swap(static_cast<Derived*>(this)->_ptr,static_cast<Derived&>(RHS)._ptr);};
+
+	// Perl grep
+	template<typename U> void destructive_grep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));
+	template<typename U> void destructive_invgrep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));
+
+	// throwing resize
+	void resize(size_t n) {if (!static_cast<Derived*>(this)->Resize(n)) throw std::bad_alloc();};	
 };
 
 template<typename T>
@@ -154,8 +169,8 @@ public:
 #else
 	explicit weakautoarray_ptr() : _ptr(NULL),_size(0) {};
 	explicit weakautoarray_ptr(T*& src,size_t src_size) : _ptr(src),_size(src_size) {src = NULL;};
-	explicit weakautoarray_ptr(size_t n) : _ptr(_new_buffer<T>(n)),_size(0) {};
-	explicit weakautoarray_ptr(weakautoarray_ptr& src) : _ptr(src._ptr),_size(0) {src._ptr=NULL; src._size=0;};
+	explicit weakautoarray_ptr(size_t n) : _ptr(_new_buffer<T>(n)),_size(n) {};
+	explicit weakautoarray_ptr(weakautoarray_ptr& src) : _ptr(src._ptr),_size(src._size) {src._ptr=NULL; src._size=0;};
 #endif
 	~weakautoarray_ptr() {_weak_flush(_ptr);};
 
@@ -163,8 +178,6 @@ public:
 	const weakautoarray_ptr& operator=(T* src);
 #endif
 	const weakautoarray_ptr& operator=(weakautoarray_ptr& src);
-	bool operator==(const weakautoarray_ptr& src) const;
-	bool operator!=(const weakautoarray_ptr& src) const {return !((*this)==src);};
 	template<typename U> bool value_copy_of(const U& src);	// STL interfaces required of U: size(),data()
 	void reset() {_weak_flush(_ptr); this->NULLPtr();};
 
@@ -179,13 +192,10 @@ public:
 	template<typename U,typename op> bool grep(const U& src,op Predicate);
 	template<typename U,typename op> bool invgrep(const U& src,op Predicate);
 
-	template<typename U> void destructive_grep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));
-	template<typename U> void destructive_invgrep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));
-
 	// erase all elements
 	void clear() {_weak_flush(_ptr); this->NULLPtr();};
 
-	friend void zaimoni::swap(weakautoarray_ptr& LHS, weakautoarray_ptr& RHS) {LHS.swap(RHS);};
+	friend void zaimoni::swap(weakautoarray_ptr& lhs, weakautoarray_ptr& rhs) {lhs.swap(rhs);};
 };
 
 template<typename T>
@@ -201,7 +211,8 @@ protected:
 #ifndef ZAIMONI_FORCE_ISO
 	explicit _meta_autoarray_ptr() : _ptr(NULL) {};
 	explicit _meta_autoarray_ptr(T*& src) : _ptr(src) {src = NULL;};
-	explicit _meta_autoarray_ptr(size_t n) : _ptr(_new_buffer<T>(n)) {};
+	explicit _meta_autoarray_ptr(size_t n) : _ptr(n ? _new_buffer_nonNULL_throws<T>(n) : NULL) {};
+	explicit _meta_autoarray_ptr(const std::nothrow_t& tracer, size_t n) : _ptr(_new_buffer<T>(n)) {};
 	explicit _meta_autoarray_ptr(const _meta_autoarray_ptr& src) : _ptr(NULL) {*this=src;};
 #else
 	explicit _meta_autoarray_ptr() : _ptr(NULL),_size(0) {};
@@ -215,7 +226,6 @@ protected:
 	void operator=(T* src);
 #endif
 	void operator=(const _meta_autoarray_ptr& src);
-	bool operator==(const _meta_autoarray_ptr& src) const;
 public:
 	typedef bool UnaryPredicate(const T&);
 
@@ -249,15 +259,7 @@ public:
 	// these two assume T has valid * operator
 	template<typename U> bool grep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*>& Target) const;
 	template<typename U> bool invgrep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*>& Target) const;
-	template<typename U> void destructive_grep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));
-	template<typename U> void destructive_invgrep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));
 
-	// throwing resize
-#ifndef ZAIMONI_FORCE_ISO
-	void resize(size_type n) {if (!_resize(_ptr,n)) throw std::bad_alloc();};
-#else
-	void resize(size_type n) {if (!_resize(_ptr,_size,n)) throw std::bad_alloc();};
-#endif
 	// erase all elements
 	void clear() {_flush(_ptr); this->NULLPtr();};
 };
@@ -270,17 +272,15 @@ public:
 
 	explicit autoarray_ptr() {};
 	explicit autoarray_ptr(T*& src) : _meta_autoarray_ptr<T>(src) {};
-	explicit autoarray_ptr(size_t n) : _meta_autoarray_ptr<T>(n) {};
+	explicit autoarray_ptr(size_t n) : _meta_autoarray_ptr<T>(std::nothrow,n) {};
 	explicit autoarray_ptr(autoarray_ptr& src) : _meta_autoarray_ptr<T>(src._ptr) {};
 //	~autoarray_ptr();	// default OK
 
 	const autoarray_ptr& operator=(T* src) {_meta_autoarray_ptr<T>::operator=(src); return *this;};
 	const autoarray_ptr& operator=(autoarray_ptr& src) {reset(src._ptr); return *this;};
-	bool operator==(const autoarray_ptr& src) const {return _meta_autoarray_ptr<T>::operator==(src);};
-	bool operator!=(const autoarray_ptr& src) const {return !((*this)==src);};
 
 	// swaps
-	friend void zaimoni::swap(autoarray_ptr<T>& LHS, autoarray_ptr<T>& RHS) {LHS.swap(RHS);};
+	friend void zaimoni::swap(autoarray_ptr<T>& lhs, autoarray_ptr<T>& rhs) {lhs.swap(rhs);};
 };
 
 template<typename T>
@@ -300,21 +300,47 @@ public:
 #else
 	explicit autovalarray_ptr(T*& src,size_t src_size) : _meta_autoarray_ptr<T>(src,src_size) {};
 #endif
-	explicit autovalarray_ptr(size_t n) : _meta_autoarray_ptr<T>(n) {};
+	explicit autovalarray_ptr(size_t n) : _meta_autoarray_ptr<T>(std::nothrow,n) {};
 	autovalarray_ptr(const autovalarray_ptr& src) : _meta_autoarray_ptr<T>(src) {};
 //	~autovalarray_ptr();	// default OK
 
 	const autovalarray_ptr& operator=(T* src) {_meta_autoarray_ptr<T>::operator=(src); return *this;};
 	const autovalarray_ptr& operator=(const autovalarray_ptr& src) {_meta_autoarray_ptr<T>::operator=(src); return *this;};
-	bool operator==(const autovalarray_ptr& src) const {return _meta_autoarray_ptr<T>::operator==(src);};
-	bool operator!=(const autovalarray_ptr& src) const {return !((*this)==src);};
 
 	// swaps
-	friend void zaimoni::swap(autovalarray_ptr<T>& LHS, autovalarray_ptr<T>& RHS) {LHS.swap(RHS);};
+	friend void zaimoni::swap(autovalarray_ptr<T>& lhs, autovalarray_ptr<T>& rhs) {lhs.swap(rhs);};
 };
 
 template<typename T>
 struct has_MoveInto<autovalarray_ptr<T> > : public boost::true_type
+{
+};
+
+template<typename T>
+class autovalarray_ptr_throws : public _meta_autoarray_ptr<T>
+{
+public:
+	ZAIMONI_STL_TYPE_GLUE_ARRAY(T);
+
+	explicit autovalarray_ptr_throws() {};
+#ifndef ZAIMONI_FORCE_ISO
+	explicit autovalarray_ptr_throws(T*& src) : _meta_autoarray_ptr<T>(src) {};
+#else
+	explicit autovalarray_ptr_throws(T*& src,size_t src_size) : _meta_autoarray_ptr<T>(src,src_size) {};
+#endif
+	explicit autovalarray_ptr_throws(size_t n) : _meta_autoarray_ptr<T>(n) {};
+	autovalarray_ptr_throws(const autovalarray_ptr_throws& src) : _meta_autoarray_ptr<T>(src) {};
+//	~autovalarray_ptr_throw();	// default OK
+
+	const autovalarray_ptr_throws& operator=(T* src) {_meta_autoarray_ptr<T>::operator=(src); return *this;};
+	const autovalarray_ptr_throws& operator=(const autovalarray_ptr_throws& src) {_meta_autoarray_ptr<T>::operator=(src); return *this;};
+
+	// swaps
+	friend void zaimoni::swap(autovalarray_ptr_throws<T>& lhs, autovalarray_ptr_throws<T>& rhs) {lhs.swap(rhs);};
+};
+
+template<typename T>
+struct has_MoveInto<autovalarray_ptr_throws<T> > : public boost::true_type
 {
 };
 
@@ -392,25 +418,15 @@ weakautoarray_ptr<T>::operator=(weakautoarray_ptr& src)
 }
 
 template<typename T>
-bool
-weakautoarray_ptr<T>::operator==(const weakautoarray_ptr& src) const
-{
-	const size_t TargetSize = src.size();
-	if (TargetSize!=this->size()) return false;
-	if (0==TargetSize) return true;
-	return _value_vector_equal(_ptr,src._ptr,TargetSize);
-}
-
-template<typename T>
 template<typename U>
 bool
 weakautoarray_ptr<T>::value_copy_of(const U& src)
 {
-	const size_t TargetSize = src.size();
-	bool Result = Resize(TargetSize);
-	if (0<TargetSize && Result)
-		_copy_buffer(this->c_array(),src.data(),TargetSize);
-	return Result;
+	const size_t ub = src.size();
+	if (!Resize(ub)) return false;
+	if (0<ub)
+		_copy_buffer(this->c_array(),src.data(),ub);
+	return true;
 }
 
 // Perl grep
@@ -478,57 +494,20 @@ weakautoarray_ptr<T>::invgrep(const U& src,op Predicate)
 	return true;
 }
 
-template<typename T>
-template<typename U>
-void
-weakautoarray_ptr<T>::destructive_grep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type))
-{
-	size_t Idx = this->size();
-	do	if (!equivalence(x,_ptr[--Idx]))
-			{
-			size_t Idx2 = Idx;
-			while(0<Idx2 && !equivalence(x,_ptr[Idx2-1])) --Idx2;
-			if (Idx2<Idx)
-				{
-				DeleteNSlotsAt(Idx2,(Idx-Idx2)+1);
-				Idx = Idx2;
-				}
-			else
-				DeleteIdx(Idx);
-			}
-	while(0<Idx);
-}
-
-template<typename T>
-template<typename U>
-void
-weakautoarray_ptr<T>::destructive_invgrep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type))
-{
-	size_t Idx = this->size();
-	do	if (equivalence(x,_ptr[--Idx]))
-			{
-			size_t Idx2 = Idx;
-			while(0<Idx2 && equivalence(x,_ptr[Idx2-1])) --Idx2;
-			if (Idx2<Idx)
-				{
-				DeleteNSlotsAt(Idx2,(Idx-Idx2)+1);
-				Idx = Idx2;
-				}
-			else
-				DeleteIdx(Idx);
-			}
-	while(0<Idx);
-}
-
-template<typename T>
+template<class Derived,class T>
 bool
-_meta_autoarray_ptr<T>::operator==(const _meta_autoarray_ptr& src) const
+operator==(const c_var_array_CRTP<Derived,T>& lhs, const c_var_array_CRTP<Derived,T>& rhs)
 {
-	const size_t TargetSize = src.size();
-	if (TargetSize!=this->size()) return false;
-	if (0==TargetSize) return true;
-	return _value_vector_equal(_ptr,src._ptr,TargetSize);
+	const size_t ub = rhs.size();
+	if (ub!=lhs.size()) return false;
+	if (0==ub) return true;
+	return _value_vector_equal(lhs._ptr,rhs._ptr,ub);
 }
+
+template<class Derived,class T>
+inline bool
+operator!=(const c_var_array_CRTP<Derived,T>& lhs, const c_var_array_CRTP<Derived,T>& rhs)
+{	return !(lhs==rhs); }
 
 #ifndef ZAIMONI_FORCE_ISO
 template<typename T>
@@ -551,7 +530,7 @@ _meta_autoarray_ptr<T>::operator=(const _meta_autoarray_ptr& src)
 	if (0>=TargetSize)
 		reset();
 	else{
-		resize(TargetSize);
+		this->resize(TargetSize);
 		_value_copy_buffer(this->c_array(),src.data(),TargetSize);
 		};
 }
@@ -561,17 +540,17 @@ template<typename U>
 bool
 _meta_autoarray_ptr<T>::value_copy_of(const U& src)
 {
-	const size_t TargetSize = src.size();
-	bool Result = Resize(TargetSize);
-	if (0<TargetSize && Result)
+	const size_t ub = src.size();
+	if (!Resize(ub)) return false;
+	if (0<ub)
 		try	{
-			_value_copy_buffer(this->c_array(),src.data(),TargetSize);
+			_value_copy_buffer(this->c_array(),src.data(),ub);
 			}
 		catch(const std::bad_alloc&)
 			{
 			return false;
 			}
-	return Result;
+	return true;
 }
 
 template<typename T>
@@ -661,46 +640,46 @@ _meta_autoarray_ptr<T>::invgrep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*
 	return true;
 }
 
-template<typename T>
+template<class Derived,class T>
 template<typename U>
 void
-_meta_autoarray_ptr<T>::destructive_grep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type))
+c_var_array_CRTP<Derived,T>::destructive_grep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type))
 {
-	size_t Idx = this->size();
-	do	if (!equivalence(x,_ptr[--Idx]))
+	size_t i = this->size();
+	do	if (!equivalence(x,static_cast<Derived*>(this)->_ptr[--i]))
 			{
-			size_t Idx2 = Idx;
-			while(0<Idx2 && !equivalence(x,_ptr[Idx2-1])) --Idx2;
-			if (Idx2<Idx)
+			size_t j = i;
+			while(0<j && !equivalence(x,static_cast<Derived*>(this)->_ptr[j-1])) --j;
+			if (j<i)
 				{
-				DeleteNSlotsAt(Idx2,(Idx-Idx2)+1);
-				Idx = Idx2;
+				static_cast<Derived*>(this)->DeleteNSlotsAt(j,(i-j)+1);
+				i = j;
 				}
 			else
-				DeleteIdx(Idx);
+				static_cast<Derived*>(this)->DeleteIdx(i);
 			}
-	while(0<Idx);
+	while(0<i);
 }
 
-template<typename T>
+template<class Derived,class T>
 template<typename U>
 void
-_meta_autoarray_ptr<T>::destructive_invgrep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type))
+c_var_array_CRTP<Derived,T>::destructive_invgrep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type))
 {
-	size_t Idx = this->size();
-	do	if (equivalence(x,_ptr[--Idx]))
+	size_t i = this->size();
+	do	if (equivalence(x,static_cast<Derived*>(this)->_ptr[--i]))
 			{
-			size_t Idx2 = Idx;
-			while(0<Idx2 && equivalence(x,_ptr[Idx2-1])) --Idx2;
-			if (Idx2<Idx)
+			size_t j = i;
+			while(0<j && equivalence(x,static_cast<Derived*>(this)->_ptr[j-1])) --j;
+			if (j<i)
 				{
-				DeleteNSlotsAt(Idx2,(Idx-Idx2)+1);
-				Idx = Idx2;
+				static_cast<Derived*>(this)->DeleteNSlotsAt(j,(i-j)+1);
+				i = j;
 				}
 			else
-				DeleteIdx(Idx);
+				static_cast<Derived*>(this)->DeleteIdx(i);
 			}
-	while(0<Idx);
+	while(0<i);
 }
 
 // Resize won't compile without this [CSVTable.cxx]
