@@ -80,7 +80,7 @@ class CPUInfo;
 namespace zaimoni {
 
 class LangConf;
-template<class T1,class T2,class T3> struct POD_triple;
+template<class T1,class T2> struct POD_pair;
 
 // C preprocessor class has to know about this type
 struct PP_auxfunc
@@ -138,8 +138,8 @@ class CPUInfo;
 
 extern zaimoni::LangConf* CLexer;			// C99
 extern zaimoni::LangConf* CPlusPlusLexer;	// C++0x
-extern const zaimoni::POD_triple<const char* const,size_t,zaimoni::lex_flags> C_atomic_types[];	// to help out the preprocessor, etc.
-extern const zaimoni::POD_triple<const char* const,size_t,zaimoni::lex_flags> CPP_atomic_types[];	// to help out the preprocessor, etc.
+extern const zaimoni::POD_pair<const char* const,size_t> C_atomic_types[];	// to help out the preprocessor, etc.
+extern const zaimoni::POD_pair<const char* const,size_t> CPP_atomic_types[];	// to help out the preprocessor, etc.
 extern const size_t C_int_priority[];
 
 #define C_TYPE_MAX 21

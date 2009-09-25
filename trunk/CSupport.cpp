@@ -877,55 +877,55 @@ static lex_flags literal_flags(size_t i)
 
 /* reference arrays for instantiating type_system class with */
 /* typenames starting with $ are internal, as $ is not a legal C-source character */
-const POD_triple<const char* const,size_t,lex_flags> C_atomic_types[]
+const POD_pair<const char* const,size_t> C_atomic_types[]
 	=	{
-		DICT2_STRUCT("void",0),
-		DICT2_STRUCT("$not-void",0),
-		DICT2_STRUCT("_Bool",0),
-		DICT2_STRUCT("char",0),
-		DICT2_STRUCT("signed char",0),
-		DICT2_STRUCT("unsigned char",0),
-		DICT2_STRUCT("short",0),
-		DICT2_STRUCT("unsigned short",0),
-		DICT2_STRUCT("int",0),
-		DICT2_STRUCT("unsigned int",0),
-		DICT2_STRUCT("long",0),
-		DICT2_STRUCT("unsigned long",0),
-		DICT2_STRUCT("long long",0),
-		DICT2_STRUCT("unsigned long long",0),
-		DICT2_STRUCT("$integer-like",0),
-		DICT2_STRUCT("float",0),
-		DICT2_STRUCT("double",0),
-		DICT2_STRUCT("long double",0),
-		DICT2_STRUCT("float _Complex",0),		/* start C++ extension support: C99 _Complex in C++ (we can do this as _Complex is reserved to the implementation) */
-		DICT2_STRUCT("double _Complex",0),
-		DICT2_STRUCT("long double _Complex",0)
+		DICT_STRUCT("void"),
+		DICT_STRUCT("$not-void"),
+		DICT_STRUCT("_Bool"),
+		DICT_STRUCT("char"),
+		DICT_STRUCT("signed char"),
+		DICT_STRUCT("unsigned char"),
+		DICT_STRUCT("short"),
+		DICT_STRUCT("unsigned short"),
+		DICT_STRUCT("int"),
+		DICT_STRUCT("unsigned int"),
+		DICT_STRUCT("long"),
+		DICT_STRUCT("unsigned long"),
+		DICT_STRUCT("long long"),
+		DICT_STRUCT("unsigned long long"),
+		DICT_STRUCT("$integer-like"),
+		DICT_STRUCT("float"),
+		DICT_STRUCT("double"),
+		DICT_STRUCT("long double"),
+		DICT_STRUCT("float _Complex"),		/* start C++ extension support: C99 _Complex in C++ (we can do this as _Complex is reserved to the implementation) */
+		DICT_STRUCT("double _Complex"),
+		DICT_STRUCT("long double _Complex")
 		};
 
-const POD_triple<const char* const,size_t,lex_flags> CPP_atomic_types[]
+const POD_pair<const char* const,size_t> CPP_atomic_types[]
 	=	{
-		DICT2_STRUCT("void",0),
-		DICT2_STRUCT("$not-void",0),
-		DICT2_STRUCT("bool",0),
-		DICT2_STRUCT("char",0),
-		DICT2_STRUCT("signed char",0),
-		DICT2_STRUCT("unsigned char",0),
-		DICT2_STRUCT("short",0),
-		DICT2_STRUCT("unsigned short",0),
-		DICT2_STRUCT("int",0),
-		DICT2_STRUCT("unsigned int",0),
-		DICT2_STRUCT("long",0),
-		DICT2_STRUCT("unsigned long",0),
-		DICT2_STRUCT("long long",0),
-		DICT2_STRUCT("unsigned long long",0),
-		DICT2_STRUCT("$integer-like",0),
-		DICT2_STRUCT("float",0),
-		DICT2_STRUCT("double",0),
-		DICT2_STRUCT("long double",0),
-		DICT2_STRUCT("float _Complex",0),		/* start C++ extension support: C99 _Complex in C++ (we can do this as _Complex is reserved to the implementation) */
-		DICT2_STRUCT("double _Complex",0),
-		DICT2_STRUCT("long double _Complex",0),
-		DICT2_STRUCT("wchar_t",0)
+		DICT_STRUCT("void"),
+		DICT_STRUCT("$not-void"),
+		DICT_STRUCT("bool"),
+		DICT_STRUCT("char"),
+		DICT_STRUCT("signed char"),
+		DICT_STRUCT("unsigned char"),
+		DICT_STRUCT("short"),
+		DICT_STRUCT("unsigned short"),
+		DICT_STRUCT("int"),
+		DICT_STRUCT("unsigned int"),
+		DICT_STRUCT("long"),
+		DICT_STRUCT("unsigned long"),
+		DICT_STRUCT("long long"),
+		DICT_STRUCT("unsigned long long"),
+		DICT_STRUCT("$integer-like"),
+		DICT_STRUCT("float"),
+		DICT_STRUCT("double"),
+		DICT_STRUCT("long double"),
+		DICT_STRUCT("float _Complex"),		/* start C++ extension support: C99 _Complex in C++ (we can do this as _Complex is reserved to the implementation) */
+		DICT_STRUCT("double _Complex"),
+		DICT_STRUCT("long double _Complex"),
+		DICT_STRUCT("wchar_t")
 		};
 
 BOOST_STATIC_ASSERT(STATIC_SIZE(C_atomic_types)==C_TYPE_MAX);
@@ -3892,13 +3892,8 @@ static bool _C99_intlike_literal_to_VM(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& 
 
 	if (!(C_TESTFLAG_INTEGER & src.index_tokens[0].flags)) return false;
 	C_PPIntCore tmp;
-#ifdef NDEBUG
-	C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,tmp);
-	convert_to(dest,tmp);
-#else
-	assert(C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,tmp));
-	assert(convert_to(dest,tmp));
-#endif
+	ZAIMONI_PASSTHROUGH_ASSERT(C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,tmp));
+	ZAIMONI_PASSTHROUGH_ASSERT(convert_to(dest,tmp));
 	return true;
 }
 
@@ -4023,11 +4018,7 @@ static void _label_one_literal(parse_tree& src,const type_system& types)
 			{
 			src.type_code.set_type(C_TYPE::INTEGERLIKE);
 			C_PPIntCore parse_tmp;
-#ifdef NDEBUG
-			C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,parse_tmp);
-#else
-			assert(C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,parse_tmp));
-#endif
+			ZAIMONI_PASSTHROUGH_ASSERT(C_PPIntCore::is(src.index_tokens[0].token.first,src.index_tokens[0].token.second,parse_tmp));
 			unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp;
 			const unsigned char type_hint = parse_tmp.hinted_type;
 			const bool no_signed = 1==type_hint%2;
@@ -4585,11 +4576,7 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 		else if (converts_to_integerlike(src.data<0>()->type_code.base_type_index))
 			{
 			src.type_code.value_copy(src.data<1>()->type_code);
-#ifndef NDEBUG
-			assert(src.type_code.dereference());
-#else
-			src.type_code.dereference();
-#endif
+			ZAIMONI_PASSTHROUGH_ASSERT(src.type_code.dereference());
 			}
 		else{	// not testable from preprocessor yet (need floating-point literals as extension)
 			src.flags |= parse_tree::INVALID;
@@ -4607,11 +4594,7 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 		if (converts_to_integerlike(src.data<1>()->type_code.base_type_index))
 			{
 			src.type_code.value_copy(src.data<0>()->type_code);
-#ifndef NDEBUG
-			assert(src.type_code.dereference());
-#else
-			src.type_code.dereference();
-#endif
+			ZAIMONI_PASSTHROUGH_ASSERT(src.type_code.dereference());
 			}
 		else{	// autofails in C
 				// not testable from preprocessor yet (need floating-point literals, would be extension regardless)
@@ -8930,31 +8913,19 @@ bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const le
 	case C_BASE_OCTAL:
 		{	// all-zeros is zero, ok with leading 0 prefix
 		C_PPOctalInteger test_oct;
-#ifdef NDEBUG
-		C_PPOctalInteger::is(x,x_len,test_oct);
-#else
-		assert(C_PPOctalInteger::is(x,x_len,test_oct));
-#endif
+		ZAIMONI_PASSTHROUGH_ASSERT(C_PPOctalInteger::is(x,x_len,test_oct));
 		return strspn(test_oct.ptr,"0") == test_oct.digit_span;
 		};
 	case C_BASE_DECIMAL:
 		{	// decimal is easy
 		C_PPDecimalInteger test_dec;
-#ifdef NDEBUG
-		C_PPDecimalInteger::is(x,x_len,test_dec);
-#else
-		assert(C_PPDecimalInteger::is(x,x_len,test_dec));
-#endif
+		ZAIMONI_PASSTHROUGH_ASSERT(C_PPDecimalInteger::is(x,x_len,test_dec));
 		return 1==test_dec.digit_span && '0'==test_dec.ptr[0];
 		};
 	case C_BASE_HEXADECIMAL:
 		{	// all-zeros is zero, but ignore the leading 0x prefix
 		C_PPHexInteger test_hex;
-#ifdef NDEBUG
-		C_PPHexInteger::is(x,x_len,test_hex);
-#else
-		assert(C_PPHexInteger::is(x,x_len,test_hex));
-#endif
+		ZAIMONI_PASSTHROUGH_ASSERT(C_PPHexInteger::is(x,x_len,test_hex));
 		return strspn(test_hex.ptr+2,"0")+2 == test_hex.digit_span;
 		};
 	}
