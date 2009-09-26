@@ -191,24 +191,24 @@ void value_copy(parse_tree& dest, const parse_tree& src)
 {	// favor ACID
 	parse_tree_class tmp;
 
-	tmp.type_code.value_copy(src.type_code);
+	value_copy(tmp.type_code,src.type_code);
 	if (!src.empty<0>())
 		{
 		size_t i = src.size<0>();
 		if (!tmp.resize<0>(i)) throw std::bad_alloc();
-		zaimoni::autotransform_n(tmp.c_array<0>(),src.data<0>(),i,value_copy);
+		zaimoni::autotransform_n<void (*)(parse_tree&,const parse_tree&)>(tmp.c_array<0>(),src.data<0>(),i,value_copy);
 		};
 	if (!src.empty<1>())
 		{
 		size_t i = src.size<1>();
 		if (!tmp.resize<1>(i)) throw std::bad_alloc();
-		zaimoni::autotransform_n(tmp.c_array<1>(),src.data<1>(),i,value_copy);
+		zaimoni::autotransform_n<void (*)(parse_tree&,const parse_tree&)>(tmp.c_array<1>(),src.data<1>(),i,value_copy);
 		}
 	if (!src.empty<2>())
 		{
 		size_t i = src.size<2>();
 		if (!tmp.resize<2>(i)) throw std::bad_alloc();
-		zaimoni::autotransform_n(tmp.c_array<2>(),src.data<2>(),i,value_copy);
+		zaimoni::autotransform_n<void (*)(parse_tree&,const parse_tree&)>(tmp.c_array<2>(),src.data<2>(),i,value_copy);
 		}
 	// would like a value_copy for weak_token
 	tmp.index_tokens[0] = src.index_tokens[0];

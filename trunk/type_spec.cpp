@@ -76,7 +76,7 @@ void type_spec::set_pointer_power(size_t _size)
 
 // XXX properly operator= in C++, but type_spec has to be POD
 // ACID, throws std::bad_alloc on failure
-void type_spec::value_copy(const type_spec& src)
+void value_copy(type_spec& dest,const type_spec& src)
 {
 	{
 	type_spec tmp;
@@ -84,16 +84,16 @@ void type_spec::value_copy(const type_spec& src)
 	tmp.base_type_index = src.base_type_index;
 	tmp.set_static_array_size(src.static_array_size);
 	tmp.set_pointer_power(src.pointer_power);
-	destroy();
-	*this = tmp;
+	dest.destroy();
+	dest = tmp;
 	}
 
-	const size_t new_ptr_power = pointer_power_after_array_decay();
+	const size_t new_ptr_power = dest.pointer_power_after_array_decay();
 	if (sizeof(unsigned char*)<=new_ptr_power)
-		memmove(qualifier_vector.first,src.qualifier_vector.first,new_ptr_power+1);
+		memmove(dest.qualifier_vector.first,src.qualifier_vector.first,new_ptr_power+1);
 	else
-		memmove(qualifier_vector.second,src.qualifier_vector.second,new_ptr_power+1);
-	if (0<pointer_power) memmove(extent_vector,src.extent_vector,sizeof(uintmax_t)*pointer_power);
+		memmove(dest.qualifier_vector.second,src.qualifier_vector.second,new_ptr_power+1);
+	if (0<dest.pointer_power) memmove(dest.extent_vector,src.extent_vector,sizeof(uintmax_t)*dest.pointer_power);
 }
 
 

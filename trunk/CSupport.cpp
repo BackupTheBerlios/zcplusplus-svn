@@ -4438,7 +4438,7 @@ static bool inspect_potential_paren_primary_expression(parse_tree& src)
 				src.flags &= parse_tree::RESERVED_MASK;	// just in case
 				src.flags |= PARSE_PRIMARY_EXPRESSION;
 				src.flags |= (PARSE_PAREN_PRIMARY_PASSTHROUGH & src.data<0>()->flags);
-				src.type_code.value_copy(src.data<0>()->type_code);
+				value_copy(src.type_code,src.data<0>()->type_code);
 				return true;
 				}
 			};
@@ -4575,7 +4575,7 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 			}
 		else if (converts_to_integerlike(src.data<0>()->type_code.base_type_index))
 			{
-			src.type_code.value_copy(src.data<1>()->type_code);
+			value_copy(src.type_code,src.data<1>()->type_code);
 			ZAIMONI_PASSTHROUGH_ASSERT(src.type_code.dereference());
 			}
 		else{	// not testable from preprocessor yet (need floating-point literals as extension)
@@ -4593,7 +4593,7 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 		{
 		if (converts_to_integerlike(src.data<1>()->type_code.base_type_index))
 			{
-			src.type_code.value_copy(src.data<0>()->type_code);
+			value_copy(src.type_code,src.data<0>()->type_code);
 			ZAIMONI_PASSTHROUGH_ASSERT(src.type_code.dereference());
 			}
 		else{	// autofails in C
@@ -5029,7 +5029,7 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 		if (0<src.data<2>()->type_code.pointer_power_after_array_decay())
 			// C++98 5.3.1p6: pointer type allowed for unary +, not for unary - (C99 errors)
 			//! \test default/Pass_if_control27.hpp
-			src.type_code.value_copy(src.data<2>()->type_code);
+			value_copy(src.type_code,src.data<2>()->type_code);
 
 		if 		(is_C99_unary_operator_expression<'+'>(*src.data<2>()))
 			eval_unary_plus(*src.c_array<2>(),types);
@@ -5113,7 +5113,7 @@ static void C_deref_easy_syntax_check(parse_tree& src,const type_system& types)
 	//! \todo: handle *& identity when we have &
 	//! \todo multidimensional array target
 	//! \todo cv-qualified pointer target
-	src.type_code.value_copy(src.data<2>()->type_code);
+	value_copy(src.type_code,src.data<2>()->type_code);
 	// handle lvalueness in indirection type building and/or the dereference stage
 	if (!src.type_code.dereference())
 		//! \test default/Error_if_control24.hpp, default/Error_if_control24.h
@@ -9552,7 +9552,7 @@ bool check_for_typedef(type_spec& dest,const char* const src,const type_system& 
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(src);
 	if (NULL!=tmp)
 		{	//! \todo C++: check for access control if source ends up being a class or struct
-		dest.value_copy(tmp->first);
+		value_copy(dest,tmp->first);
 		return true;
 		}
 	return false;
@@ -9609,7 +9609,7 @@ public:
 		if (base_type.base_type_index) return false;
 		if (PARSE_PRIMARY_TYPE & x.flags)
 			{
-			base_type.value_copy(x.type_code);
+			value_copy(base_type,x.type_code);
 			return true;
 			}
 		// handle typedefs
@@ -9677,7 +9677,7 @@ public:
 		}
 	void fixup_type() { base_type.qualifier<0>() |= ((C99_CPP0X_DECLSPEC_CONST | C99_CPP0X_DECLSPEC_VOLATILE) & flags); };
 	uintmax_t get_flags() const {return flags;};
-	void value_copy_type(type_spec& dest) const {dest.value_copy(base_type);};
+	void value_copy_type(type_spec& dest) const {value_copy(dest,base_type);};
 };
 
 bool CPP_ok_for_toplevel_qualified_name(const parse_tree& x)
@@ -9789,7 +9789,7 @@ public:
 		if (base_type.base_type_index) return false;
 		if (PARSE_PRIMARY_TYPE & x.data<0>()[i].flags)
 			{
-			base_type.value_copy(x.data<0>()[i].type_code);
+			value_copy(base_type,x.data<0>()[i].type_code);
 			return true;
 			}
 		{	// handle typedefs
@@ -9825,7 +9825,7 @@ public:
 				if (NULL!=tmp)
 					{	//! \todo check for access-control if source is a class or struct
 					free(tmp2);
-					base_type.value_copy(tmp->first);
+					value_copy(base_type,tmp->first);
 					return true;
 					};
 				size_t namespace_break_stack_size = count_disjoint_substring_instances(active_namespace,"::");
@@ -9845,7 +9845,7 @@ public:
 							{	//! \todo check for access-control if source is a class or struct
 							free(namespace_break_stack);
 							free(tmp2);
-							base_type.value_copy(tmp->first);
+							value_copy(base_type,tmp->first);
 							return true;
 							};
 						}
@@ -9955,7 +9955,7 @@ public:
 		};
 	void fixup_type() { base_type.qualifier<0>() |= ((C99_CPP0X_DECLSPEC_CONST | C99_CPP0X_DECLSPEC_VOLATILE) & flags); };
 	uintmax_t get_flags() const {return flags;};
-	void value_copy_type(type_spec& dest) const {dest.value_copy(base_type);};
+	void value_copy_type(type_spec& dest) const {value_copy(dest,base_type);};
 };
 
 size_t C99_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
@@ -10063,7 +10063,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				INC_INFORM(ERR_STR);
 				_fatal("insufficient RAM to parse static assertion");
 				};
-			zaimoni::autotransform_n(parsetree.c_array<0>(),src.data<0>()[i+1].data<0>(),k,value_copy);
+			zaimoni::autotransform_n<void (*)(parse_tree&,const parse_tree&)>(parsetree.c_array<0>(),src.data<0>()[i+1].data<0>(),k,value_copy);
 			}
 			// init above correctly
 			// snip from Condense
@@ -10435,7 +10435,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				INC_INFORM(ERR_STR);
 				_fatal("insufficient RAM to parse static assertion");
 				};
-			zaimoni::autotransform_n(parsetree.c_array<0>(),src.data<0>()[i+1].data<0>(),k,value_copy);
+			zaimoni::autotransform_n<void (*)(parse_tree&,const parse_tree&)>(parsetree.c_array<0>(),src.data<0>()[i+1].data<0>(),k,value_copy);
 			}
 			// snip from Condense
 			const size_t starting_errors = zcc_errors.err_count();

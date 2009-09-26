@@ -76,7 +76,7 @@ inline void autotransform_n(IO_Iterator first,size_t N,unary_op op)
 }
 
 /* forward-iterator version */
-template<class IO_Iterator,class IO_Iterator2,typename binary_op>
+template<typename binary_op,class IO_Iterator,class IO_Iterator2>
 inline void autotransform_n(IO_Iterator first,IO_Iterator2 first2,size_t N,binary_op op)
 {
 	while(0<N)
