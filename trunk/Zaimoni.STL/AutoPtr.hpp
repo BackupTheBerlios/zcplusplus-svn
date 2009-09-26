@@ -150,34 +150,34 @@ struct c_var_array_CRTP : public c_array_CRTP<c_var_array_CRTP<Derived,T>, T>
 };
 
 template<typename T>
-class weakautoarray_ptr : public c_var_array_CRTP<weakautoarray_ptr<T>, T>
+class _meta_weakautoarray_ptr : public c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>
 {
 private:
-	friend class c_var_array_CRTP<weakautoarray_ptr<T>, T>;
+	friend class c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>;
 	T* _ptr;
 #ifdef ZAIMONI_FORCE_ISO
 	size_t _size;
 #endif
 public:
-	ZAIMONI_STL_TYPE_GLUE_ARRAY(T);
-
 #ifndef ZAIMONI_FORCE_ISO
-	explicit weakautoarray_ptr() : _ptr(NULL) {};
-	explicit weakautoarray_ptr(T*& src) : _ptr(src) {src = NULL;};
-	explicit weakautoarray_ptr(size_t n) : _ptr(_new_buffer<T>(n)) {};
-	explicit weakautoarray_ptr(weakautoarray_ptr& src) : _ptr(src._ptr) {src._ptr=NULL;};
+	explicit _meta_weakautoarray_ptr() : _ptr(NULL) {};
+	explicit _meta_weakautoarray_ptr(T*& src) : _ptr(src) {src = NULL;};
+	explicit _meta_weakautoarray_ptr(size_t n) : _ptr(n ? _new_buffer_nonNULL_throws<T>(n) : NULL) {};
+	explicit _meta_weakautoarray_ptr(const std::nothrow_t& tracer, size_t n) : _ptr(_new_buffer<T>(n)) {};
+	explicit _meta_weakautoarray_ptr(_meta_weakautoarray_ptr& src) : _ptr(src._ptr) {src._ptr=NULL;};
 #else
-	explicit weakautoarray_ptr() : _ptr(NULL),_size(0) {};
-	explicit weakautoarray_ptr(T*& src,size_t src_size) : _ptr(src),_size(src_size) {src = NULL;};
-	explicit weakautoarray_ptr(size_t n) : _ptr(_new_buffer<T>(n)),_size(n) {};
-	explicit weakautoarray_ptr(weakautoarray_ptr& src) : _ptr(src._ptr),_size(src._size) {src._ptr=NULL; src._size=0;};
+	explicit _meta_weakautoarray_ptr() : _ptr(NULL),_size(0) {};
+	explicit _meta_weakautoarray_ptr(T*& src,size_t src_size) : _ptr(src),_size(src_size) {src = NULL;};
+	explicit _meta_weakautoarray_ptr(size_t n) : _ptr(n ? _new_buffer_nonNULL_throws<T>(n) : NULL),_size(n) {};
+	explicit _meta_weakautoarray_ptr(const std::nothrow_t& tracer, size_t n) : _ptr(_new_buffer<T>(n)),_size(n) {};
+	explicit _meta_weakautoarray_ptr(_meta_weakautoarray_ptr& src) : _ptr(src._ptr),_size(src._size) {src._ptr=NULL; src._size=0;};
 #endif
-	~weakautoarray_ptr() {_weak_flush(_ptr);};
+	~_meta_weakautoarray_ptr() {_weak_flush(_ptr);};
 
 #ifndef ZAIMONI_FORCE_ISO
-	const weakautoarray_ptr& operator=(T* src);
+	void operator=(T* src);
 #endif
-	const weakautoarray_ptr& operator=(weakautoarray_ptr& src);
+	void operator=(const _meta_weakautoarray_ptr& src);
 	template<typename U> bool value_copy_of(const U& src);	// STL interfaces required of U: size(),data()
 	void reset() {_weak_flush(_ptr); this->NULLPtr();};
 
@@ -194,8 +194,46 @@ public:
 
 	// erase all elements
 	void clear() {_weak_flush(_ptr); this->NULLPtr();};
+};
+
+template<typename T>
+class weakautoarray_ptr : public _meta_weakautoarray_ptr<T>
+{
+public:
+	ZAIMONI_STL_TYPE_GLUE_ARRAY(T);
+
+	explicit weakautoarray_ptr() {};
+	explicit weakautoarray_ptr(T*& src) : _meta_weakautoarray_ptr<T>(src) {};
+	explicit weakautoarray_ptr(size_t n) : _meta_weakautoarray_ptr<T>(std::nothrow,n) {};
+	explicit weakautoarray_ptr(weakautoarray_ptr& src) : _meta_weakautoarray_ptr<T>(src._ptr) {};
+//	~weakautoarray_ptr();	// default OK
+
+#ifndef ZAIMONI_FORCE_ISO
+	const weakautoarray_ptr& operator=(T* src) {_meta_weakautoarray_ptr<T>::operator=(src); return *this;};
+#endif
+	const weakautoarray_ptr& operator=(weakautoarray_ptr& src) {reset(src._ptr); return *this;};
 
 	friend void zaimoni::swap(weakautoarray_ptr& lhs, weakautoarray_ptr& rhs) {lhs.swap(rhs);};
+};
+
+template<typename T>
+class weakautoarray_ptr_throws : public _meta_weakautoarray_ptr<T>
+{
+public:
+	ZAIMONI_STL_TYPE_GLUE_ARRAY(T);
+
+	explicit weakautoarray_ptr_throws() {};
+	explicit weakautoarray_ptr_throws(T*& src) : _meta_weakautoarray_ptr<T>(src) {};
+	explicit weakautoarray_ptr_throws(size_t n) : _meta_weakautoarray_ptr<T>(n) {};
+	explicit weakautoarray_ptr_throws(weakautoarray_ptr_throws& src) : _meta_weakautoarray_ptr<T>(src._ptr) {};
+//	~weakautoarray_ptr_throws();	// default OK
+
+#ifndef ZAIMONI_FORCE_ISO
+	const weakautoarray_ptr_throws& operator=(T* src) {_meta_weakautoarray_ptr<T>::operator=(src); return *this;};
+#endif
+	const weakautoarray_ptr_throws& operator=(weakautoarray_ptr_throws& src) {_meta_weakautoarray_ptr<T>::operator=(src); return *this;};
+
+	friend void zaimoni::swap(weakautoarray_ptr_throws& lhs, weakautoarray_ptr_throws& rhs) {lhs.swap(rhs);};
 };
 
 template<typename T>
@@ -217,7 +255,8 @@ protected:
 #else
 	explicit _meta_autoarray_ptr() : _ptr(NULL),_size(0) {};
 	explicit _meta_autoarray_ptr(T*& src,size_t src_size) : _ptr(src),_size(src_size) {src = NULL;};
-	explicit _meta_autoarray_ptr(size_t n) : _ptr(_new_buffer<T>(n)),_size(n) {};
+	explicit _meta_autoarray_ptr(size_t n) : _ptr(_new_buffer<T>(n ? _new_buffer_nonNULL_throws<T>(n) : NULL)),_size(n) {};
+	explicit _meta_autoarray_ptr(const std::nothrow_t& tracer, size_t n) : _ptr(_new_buffer<T>(n)),_size(n) {};
 	explicit _meta_autoarray_ptr(const _meta_autoarray_ptr& src) : _ptr(NULL),_size(0) {*this=src;};
 #endif
 	~_meta_autoarray_ptr() {_flush(_ptr);};
@@ -384,43 +423,34 @@ _meta_auto_ptr<T>::reset(T*& src)
 
 #ifndef ZAIMONI_FORCE_ISO
 template<typename T>
-const weakautoarray_ptr<T>&
-weakautoarray_ptr<T>::operator=(T* src)
+void
+_meta_weakautoarray_ptr<T>::operator=(T* src)
 {
 	if (_ptr!=src)
 		{
 		_weak_flush(_ptr);
 		_ptr = src;
 		}
-	return *this;
 }
 #endif
 
 template<typename T>
-const weakautoarray_ptr<T>&
-weakautoarray_ptr<T>::operator=(weakautoarray_ptr& src)
+void
+_meta_weakautoarray_ptr<T>::operator=(const _meta_weakautoarray_ptr<T>& src)
 {	// this convolution handles a recursion issue
-	if (_ptr!=src._ptr)
-		{
-		T* TmpPtr = src._ptr;
-#ifdef ZAIMONI_FORCE_ISO
-		_size = src._size;
-#endif
-		src.NULLPtr();
-		_weak_flush(_ptr);
-		_ptr = TmpPtr;
-		}
-	else if (&this->_ptr!=&src._ptr)
-		{
-		src.NULLPtr();
-		}
-	return *this;
+	const size_t ub = src.size();
+	if (0>=ub)
+		reset();
+	else{
+		this->resize(ub);
+		_copy_buffer(this->c_array(),src.data(),ub);
+		};
 }
 
 template<typename T>
 template<typename U>
 bool
-weakautoarray_ptr<T>::value_copy_of(const U& src)
+_meta_weakautoarray_ptr<T>::value_copy_of(const U& src)
 {
 	const size_t ub = src.size();
 	if (!Resize(ub)) return false;
@@ -433,7 +463,7 @@ weakautoarray_ptr<T>::value_copy_of(const U& src)
 template<typename T>
 template<typename U,typename op>
 bool
-weakautoarray_ptr<T>::grep(const U& src,op Predicate)
+_meta_weakautoarray_ptr<T>::grep(const U& src,op Predicate)
 {
 	if (src.empty())
 		{
@@ -465,7 +495,7 @@ weakautoarray_ptr<T>::grep(const U& src,op Predicate)
 template<typename T>
 template<typename U,typename op>
 bool
-weakautoarray_ptr<T>::invgrep(const U& src,op Predicate)
+_meta_weakautoarray_ptr<T>::invgrep(const U& src,op Predicate)
 {
 	if (src.empty())
 		{
@@ -526,12 +556,12 @@ template<typename T>
 void
 _meta_autoarray_ptr<T>::operator=(const _meta_autoarray_ptr& src)
 {
-	const size_t TargetSize = src.size();
-	if (0>=TargetSize)
+	const size_t ub = src.size();
+	if (0>=ub)
 		reset();
 	else{
-		this->resize(TargetSize);
-		_value_copy_buffer(this->c_array(),src.data(),TargetSize);
+		this->resize(ub);
+		_value_copy_buffer(this->c_array(),src.data(),ub);
 		};
 }
 
