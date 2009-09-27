@@ -51,8 +51,7 @@ _applyTokenizers(LangConf::Tokenizer** Tokenizers,lex_flags* TokenizerFlags,cons
 	return 0;
 }
 
-void
-LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
+void LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 {
 #ifdef ZAIMONI_FORCE_ISO
 	size_t BufferLength = _msize(Buffer);
@@ -106,14 +105,9 @@ LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 		}
 
 	size_t NewLineLength = (SweepIdx<=(BufferLength>>1)) ? SweepIdx : BufferLength-(SweepIdx+1);
-#ifdef ZAIMONI_FORCE_ISO
-	NewLine = (0<NewLineLength) ? REALLOC(NewLine,NewLineLength+1) : NULL;
+	NewLine = (0<NewLineLength) ? REALLOC(NewLine,ZAIMONI_LEN_WITH_NULL(NewLineLength)) : NULL;
 	if (NULL==NewLine) return;
-	NewLine[NewLineLength] = '\0';
-#else
-	NewLine = REALLOC(NewLine,NewLineLength);
-	if (NULL==NewLine) return;
-#endif
+	ZAIMONI_NULL_TERMINATE(NewLine[NewLineLength]);
 
 	Buffer[SweepIdx] = '\0';
 	if (SweepIdx<=(BufferLength>>1))
@@ -133,8 +127,7 @@ LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 		}	
 }
 
-bool
-LangConf::ApplyGlobalFilters(char*& Target) const
+bool LangConf::ApplyGlobalFilters(char*& Target) const
 {
 	if (NULL!=Target)
 		{	// legal char set is a global filter, but should be fairly late (after comment-stripping)
@@ -144,15 +137,13 @@ LangConf::ApplyGlobalFilters(char*& Target) const
 	return true;
 }
 
-bool
-LangConf::ApplyTokenizingFilters(char*& Target) const
+bool LangConf::ApplyTokenizingFilters(char*& Target) const
 {
 	if (NULL==TokenizingFilters || NULL==Target) return true;
 	return _applyFilters(TokenizingFilters,TokenizingFilters.size(),Target);
 }
 
-size_t
-LangConf::TokenizeCore(const char* Target, lex_flags& Flags) const
+size_t LangConf::TokenizeCore(const char* Target, lex_flags& Flags) const
 {
 	if (IsAtomicSymbol(Target[0]))
 		{
@@ -191,12 +182,10 @@ size_t
 LangConf::UnfilteredNextToken(const char* Target, lex_flags& Flags) const
 {
 	if (NULL==Target) return 0;
-
 	return TokenizeCore(Target,Flags);
 }
 
-size_t
-LangConf::NextToken(char*& Target, lex_flags& Flags) const
+size_t LangConf::NextToken(char*& Target, lex_flags& Flags) const
 {
 	if (NULL==Target) return 0;
 	if (NULL!=TokenizingFilters && !_applyFilters(TokenizingFilters,TokenizingFilters.size(),Target))
@@ -205,8 +194,7 @@ LangConf::NextToken(char*& Target, lex_flags& Flags) const
 	return TokenizeCore(Target,Flags);
 }
 
-bool
-LangConf::InstallTokenizer(Tokenizer* Source,lex_flags SourceFlags)
+bool LangConf::InstallTokenizer(Tokenizer* Source,lex_flags SourceFlags)
 {
 	const size_t StackSize = Tokenizers.size();
 	if (!Tokenizers.InsertSlotAt(StackSize,Source)) return false;
@@ -270,15 +258,13 @@ LangConf::Error(const char* msg, const char* filename, size_t line, size_t posit
 	free(target);
 }
 
-size_t
-LangConf::_len_SingleLineComment(const char* const Test) const
+size_t LangConf::_len_SingleLineComment(const char* const Test) const
 {
 	if (0!=strncmp(Test,SingleLineCommenter,len_SingleLineCommenter)) return 0;
 	return strcspn(Test,"\n");
 }
 
-size_t
-LangConf::_len_MultiLineComment(const char* const Test) const
+size_t LangConf::_len_MultiLineComment(const char* const Test) const
 {
 	if (0!=strncmp(Test,MultiLineCommentStart,len_MultiLineCommentStart)) return 0;
 	const char* const end_comment = strstr(Test+len_MultiLineCommentStart,MultiLineCommentEnd);
@@ -308,8 +294,7 @@ LangConf::_lex_find(const char* const x, size_t x_len, const char* const target,
 	return SIZE_MAX;
 }
 
-void
-LangConf::_compactWSAtIdx(char*& Text,size_t Idx) const
+void LangConf::_compactWSAtIdx(char*& Text,size_t Idx) const
 {
 	size_t TextLength = strlen(Text);
 	Text[++Idx]=' ';
@@ -337,8 +322,7 @@ static bool check_newline(char Test, _error_location& _loc)
 	return false;
 }
 
-void
-LangConf::_flattenComments(char*& Text)
+void LangConf::_flattenComments(char*& Text)
 {	// note: have to be able to lex
 #ifdef ZAIMONI_FORCE_ISO
 	const size_t TextLength = strlen(Text);

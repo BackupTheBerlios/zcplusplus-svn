@@ -104,6 +104,14 @@ union union_pair
 	T2 second;
 };
 
+template<class T1, class T2, class T3>
+union union_triple
+{
+	T1 first;
+	T2 second;
+	T3 third;
+};
+
 template<class T1, class T2, class T3, class T4>
 union union_quartet
 {
@@ -137,6 +145,18 @@ ZAIMONI_POD_STRUCT(ZAIMONI_TEMPLATE_SPEC,ZAIMONI_CLASS_SPEC,_T1)
 
 #define ZAIMONI_TEMPLATE_SPEC template<typename _T1,typename _T2,typename _T3>
 #define ZAIMONI_CLASS_SPEC zaimoni::POD_triple<_T1,_T2,_T3>
+ZAIMONI_POD_STRUCT(ZAIMONI_TEMPLATE_SPEC,ZAIMONI_CLASS_SPEC,_T1)
+#undef ZAIMONI_CLASS_SPEC
+#undef ZAIMONI_TEMPLATE_SPEC
+
+#define ZAIMONI_TEMPLATE_SPEC template<typename _T1,typename _T2>
+#define ZAIMONI_CLASS_SPEC zaimoni::union_pair<_T1,_T2>
+ZAIMONI_POD_STRUCT(ZAIMONI_TEMPLATE_SPEC,ZAIMONI_CLASS_SPEC,_T1)
+#undef ZAIMONI_CLASS_SPEC
+#undef ZAIMONI_TEMPLATE_SPEC
+
+#define ZAIMONI_TEMPLATE_SPEC template<typename _T1,typename _T2,typename _T3>
+#define ZAIMONI_CLASS_SPEC zaimoni::union_triple<_T1,_T2,_T3>
 ZAIMONI_POD_STRUCT(ZAIMONI_TEMPLATE_SPEC,ZAIMONI_CLASS_SPEC,_T1)
 #undef ZAIMONI_CLASS_SPEC
 #undef ZAIMONI_TEMPLATE_SPEC

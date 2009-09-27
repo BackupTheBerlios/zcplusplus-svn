@@ -8,6 +8,10 @@
 #include "Zaimoni.STL/AutoPtr.hpp"
 #include "type_spec.hpp"
 
+class function_type;
+class union_struct_decl;
+class union_struct_def;
+
 class type_system
 {
 public:
@@ -18,7 +22,7 @@ public:
 	const size_t core_types_size;
 	const size_t int_priority_size;
 private:
-	zaimoni::autovalarray_ptr<zaimoni::POD_pair<char*,size_t> > dynamic_types;
+	zaimoni::autovalarray_ptr<zaimoni::POD_triple<char*,size_t,zaimoni::POD_pair<zaimoni::union_triple<function_type*,union_struct_decl*,union_struct_def*>, unsigned char> > > dynamic_types;
 	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> > > typedef_registry;
 	// uncopyable
 	type_system(const type_system& src);

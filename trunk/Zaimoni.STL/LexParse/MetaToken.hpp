@@ -14,7 +14,7 @@ template<class T>
 class MetaToken
 {
 protected:
-	autovalarray_ptr<T> _token;	
+	autovalarray_ptr_throws<T> _token;	
 public:
 	// pairs are: line number, origin (column number)
 	std::pair<size_t,size_t> logical_line;		// where the token actually is
@@ -106,21 +106,19 @@ protected:
 
 template<class T>
 MetaToken<T>::MetaToken(const MetaToken& src,size_t prefix)
-:	_token(prefix),
+:	_token((prefix ? ZAIMONI_LEN_WITH_NULL(prefix) : 0)),
 	logical_line(src.logical_line),
 	original_line(src.original_line),
 	src_filename(src.src_filename),
 	parent_dir(src.parent_dir)
 {
-	assert(prefix<=src._token.size());
 	DEBUG_FAIL_OR_LEAVE(0==prefix,return);
-	if (0==_token.size()) throw std::bad_alloc();	// didn't allocate space properly
 	_value_copy_buffer(_token.c_array(),src._token.data(),prefix);
 }
 
 template<class T>
 MetaToken<T>::MetaToken(const MetaToken& src,size_t offset,size_t token_len)
-:	_token(token_len),
+:	_token((token_len ? ZAIMONI_LEN_WITH_NULL(token_len) : 0)),
 	logical_line(src.logical_line.first,src.logical_line.second+offset),
 	original_line(src.original_line.first,src.original_line.second+offset),
 	src_filename(src.src_filename),
@@ -129,13 +127,12 @@ MetaToken<T>::MetaToken(const MetaToken& src,size_t offset,size_t token_len)
 	assert(offset<src._token.size());
 	assert(token_len<=src._token.size()-offset);
 	DEBUG_FAIL_OR_LEAVE(0==token_len,return);
-	if (0==_token.size()) throw std::bad_alloc();	// didn't allocate space properly
 	_value_copy_buffer(_token.c_array(),src._token.data()+offset,token_len);
 }
 
 template<class T>
 MetaToken<T>::MetaToken(const T* const src,size_t offset,size_t token_len)
-:	_token(token_len),
+:	_token((token_len ? ZAIMONI_LEN_WITH_NULL(token_len) : 0)),
 	logical_line(0,offset),
 	original_line(0,offset),
 	src_filename(NULL),
@@ -145,7 +142,6 @@ MetaToken<T>::MetaToken(const T* const src,size_t offset,size_t token_len)
 	assert(offset<strlen(src));
 	assert(token_len<=strlen(src)-offset);
 	DEBUG_FAIL_OR_LEAVE(0==token_len,return);
-	if (0==_token.size()) throw std::bad_alloc();	// didn't allocate space properly
 	_value_copy_buffer(_token.c_array(),src+offset,token_len);
 }
 
