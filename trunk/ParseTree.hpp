@@ -49,6 +49,8 @@ struct parse_tree
 	// XXX synchronized against type_system.hpp
     type_spec type_code;
 
+	void MoveInto(parse_tree& dest);
+
 	parse_tree* c_array(size_t arg_idx)
 		{
 		assert(STATIC_SIZE(args)>arg_idx);
@@ -364,7 +366,29 @@ class parse_tree_class : public parse_tree
 {
 public:
 	parse_tree_class() {this->clear();};
+	parse_tree_class(const parse_tree_class& src)
+		{
+		this->clear();
+		value_copy(*this,src);
+		};
+	parse_tree_class(const parse_tree& src)
+		{
+		this->clear();
+		value_copy(*this,src);
+		};
 	~parse_tree_class() {this->destroy();};
+	const parse_tree_class& operator=(const parse_tree_class& src)
+		{
+		this->destroy();
+		value_copy(*this,src);
+		return *this;
+		}
+	const parse_tree_class& operator=(const parse_tree& src)
+		{
+		this->destroy();
+		value_copy(*this,src);
+		return *this;
+		}
 };
 
 void INC_INFORM(const parse_tree& src);

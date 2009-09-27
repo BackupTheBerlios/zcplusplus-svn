@@ -164,13 +164,13 @@ public:
 	explicit _meta_weakautoarray_ptr(T*& src) : _ptr(src) {src = NULL;};
 	explicit _meta_weakautoarray_ptr(size_t n) : _ptr(n ? _new_buffer_nonNULL_throws<T>(n) : NULL) {};
 	explicit _meta_weakautoarray_ptr(const std::nothrow_t& tracer, size_t n) : _ptr(_new_buffer<T>(n)) {};
-	explicit _meta_weakautoarray_ptr(_meta_weakautoarray_ptr& src) : _ptr(src._ptr) {src._ptr=NULL;};
+	explicit _meta_weakautoarray_ptr(const _meta_weakautoarray_ptr& src) : _ptr(NULL) {*this=src;};
 #else
 	explicit _meta_weakautoarray_ptr() : _ptr(NULL),_size(0) {};
 	explicit _meta_weakautoarray_ptr(T*& src,size_t src_size) : _ptr(src),_size(src_size) {src = NULL;};
 	explicit _meta_weakautoarray_ptr(size_t n) : _ptr(n ? _new_buffer_nonNULL_throws<T>(n) : NULL),_size(n) {};
 	explicit _meta_weakautoarray_ptr(const std::nothrow_t& tracer, size_t n) : _ptr(_new_buffer<T>(n)),_size(n) {};
-	explicit _meta_weakautoarray_ptr(_meta_weakautoarray_ptr& src) : _ptr(src._ptr),_size(src._size) {src._ptr=NULL; src._size=0;};
+	explicit _meta_weakautoarray_ptr(_meta_weakautoarray_ptr& src) : _ptr(NULL),_size(0) {*this=src;};
 #endif
 	~_meta_weakautoarray_ptr() {_weak_flush(_ptr);};
 
@@ -180,6 +180,8 @@ public:
 	void operator=(const _meta_weakautoarray_ptr& src);
 	template<typename U> bool value_copy_of(const U& src);	// STL interfaces required of U: size(),data()
 	void reset() {_weak_flush(_ptr); this->NULLPtr();};
+	void reset(T*& src);
+	void MoveInto(_meta_weakautoarray_ptr<T>& dest) {dest.reset(_ptr);};
 
 	void TransferOutAndNULL(T*& Target) {_weak_flush(Target); Target = _ptr; this->NULLPtr();}
 	bool Resize(size_t n) {return _weak_resize(_ptr,n);};
@@ -234,6 +236,47 @@ public:
 	const weakautoarray_ptr_throws& operator=(weakautoarray_ptr_throws& src) {_meta_weakautoarray_ptr<T>::operator=(src); return *this;};
 
 	friend void zaimoni::swap(weakautoarray_ptr_throws& lhs, weakautoarray_ptr_throws& rhs) {lhs.swap(rhs);};
+};
+
+template<typename T>
+class weakautovalarray_ptr : public _meta_weakautoarray_ptr<T>
+{
+public:
+	ZAIMONI_STL_TYPE_GLUE_ARRAY(T);
+
+	explicit weakautovalarray_ptr() {};
+	explicit weakautovalarray_ptr(T*& src) : _meta_weakautoarray_ptr<T>(src) {};
+	explicit weakautovalarray_ptr(size_t n) : _meta_weakautoarray_ptr<T>(std::nothrow,n) {};
+	explicit weakautovalarray_ptr(const weakautovalarray_ptr& src) : _meta_weakautoarray_ptr<T>(src) {};
+	explicit weakautovalarray_ptr(const _meta_weakautoarray_ptr<T>& src) : _meta_weakautoarray_ptr<T>(src) {};
+//	~weakautoarray_ptr();	// default OK
+
+#ifndef ZAIMONI_FORCE_ISO
+	const weakautovalarray_ptr& operator=(T* src) {_meta_weakautoarray_ptr<T>::operator=(src); return *this;};
+#endif
+	const weakautovalarray_ptr& operator=(weakautovalarray_ptr& src) {reset(src._ptr); return *this;};
+
+	friend void zaimoni::swap(weakautovalarray_ptr& lhs, weakautovalarray_ptr& rhs) {lhs.swap(rhs);};
+};
+
+template<typename T>
+class weakautovalarray_ptr_throws : public _meta_weakautoarray_ptr<T>
+{
+public:
+	ZAIMONI_STL_TYPE_GLUE_ARRAY(T);
+
+	explicit weakautovalarray_ptr_throws() {};
+	explicit weakautovalarray_ptr_throws(T*& src) : _meta_weakautoarray_ptr<T>(src) {};
+	explicit weakautovalarray_ptr_throws(size_t n) : _meta_weakautoarray_ptr<T>(n) {};
+	explicit weakautovalarray_ptr_throws(const weakautovalarray_ptr_throws& src) : _meta_weakautoarray_ptr<T>(src) {};
+//	~weakautoarray_ptr_throws();	// default OK
+
+#ifndef ZAIMONI_FORCE_ISO
+	const weakautovalarray_ptr_throws& operator=(T* src) {_meta_weakautoarray_ptr<T>::operator=(src); return *this;};
+#endif
+	const weakautovalarray_ptr_throws& operator=(weakautovalarray_ptr_throws& src) {_meta_weakautoarray_ptr<T>::operator=(src); return *this;};
+
+	friend void zaimoni::swap(weakautovalarray_ptr_throws& lhs, weakautovalarray_ptr_throws& rhs) {lhs.swap(rhs);};
 };
 
 template<typename T>
@@ -593,6 +636,19 @@ _meta_autoarray_ptr<T>::reset(T*& src)
 		{
 		if (NULL!=_ptr) _flush(_ptr);
 		_ptr = TmpPtr;
+		};
+}
+
+template<typename T>
+void
+_meta_weakautoarray_ptr<T>::reset(T*& src)
+{	// this convolution handles a recursion issue
+	T* tmp = src;
+	src = NULL;
+	if (tmp!=_ptr)
+		{
+		if (NULL!=_ptr) _weak_flush(_ptr);
+		_ptr = tmp;
 		};
 }
 

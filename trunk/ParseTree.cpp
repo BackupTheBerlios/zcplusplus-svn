@@ -235,6 +235,17 @@ void value_copy(parse_tree& dest, const parse_tree& src)
 	tmp.clear();
 }
 
+void parse_tree::MoveInto(parse_tree& dest)
+{
+	dest.destroy();
+	memmove(dest.index_tokens,index_tokens,2*sizeof(*index_tokens));
+	memmove(dest.args,args,3*sizeof(*args));
+	dest.flags = flags;
+	dest.subtype = subtype;
+	dest.type_code = type_code;
+	clear();
+}
+
 
 void parse_tree::_eval_to_arg(size_t arg_idx, size_t i)
 {
