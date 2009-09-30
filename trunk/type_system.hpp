@@ -10,7 +10,7 @@
 
 class function_type;
 class union_struct_decl;
-class union_struct_def;
+class C_union_struct_def;
 
 class type_system
 {
@@ -22,7 +22,8 @@ public:
 	const size_t core_types_size;
 	const size_t int_priority_size;
 private:
-	zaimoni::autovalarray_ptr<zaimoni::POD_triple<char*,size_t,zaimoni::POD_pair<zaimoni::union_triple<function_type*,union_struct_decl*,union_struct_def*>, unsigned char> > > dynamic_types;
+	typedef zaimoni::POD_triple<const char*,size_t,zaimoni::POD_pair<zaimoni::union_triple<function_type*,union_struct_decl*,C_union_struct_def*>, unsigned char> > dynamic_type_format;
+	zaimoni::autovalarray_ptr<dynamic_type_format> dynamic_types;
 	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> > > typedef_registry;
 	// uncopyable
 	type_system(const type_system& src);
@@ -54,6 +55,13 @@ public:
 
 	void set_typedef(const char* const alias, const char* filename, const size_t lineno, type_spec& src);	// invalidates src
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* get_typedef(const char* const alias) const;
+
+	type_index register_functype(const char* const alias, function_type*& src);
+	type_index register_structdecl(const char* const alias, union_struct_decl*& src);
+	type_index register_C_structdef(const char* const alias, C_union_struct_def*& src);
+	const function_type* get_functype(type_index i);
+	const union_struct_decl* get_structdecl(type_index i);
+	const C_union_struct_def* get_C_structdef(type_index i);
 private:
 	type_index _get_id(const char* const x,size_t x_len) const;
 	const char* _name(type_index id) const;

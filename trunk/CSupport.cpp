@@ -1621,6 +1621,12 @@ inline bool robust_token_is_char<'}'>(const POD_pair<const char*,size_t>& x)
 	return NULL!=x.first && detect_C_right_brace_op(x.first,x.second);
 }
 
+template<char c> inline bool robust_token_is_char(const parse_tree& x)
+{
+	return x.is_atomic()
+		&& robust_token_is_char<c>(x.index_tokens[0].token);
+}
+
 //! \todo if we have an asphyxiates_left_brace, suppress_naked_brackets_and_braces goes obsolete
 static bool asphyxiates_left_bracket(const weak_token& x)
 {
@@ -9982,6 +9988,15 @@ size_t CPP_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& targ
 	return 0;
 }
 
+static size_t span_to_semicolon(const parse_tree* const first,const parse_tree* const last)
+{
+	assert(first);
+	assert(last);
+	const parse_tree* iter = first;
+	while(iter!=last && !robust_token_is_char<';'>(*iter)) ++iter;
+	return iter-first;
+}
+
 // will need: "function-type vector"
 // return: 1 typespec record (for now, other languages may have more demanding requirements)
 // incoming: n typespec records, flag for trailing ...
@@ -10012,10 +10027,8 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		if (robust_token_is_string<14>(src.data<0>()[i].index_tokens[0].token,"_Static_Assert"))
 			{	// _Static_Assert ( constant-expression , string-literal ) ;
 			// find the next ';'
-			size_t j = i;
-			while(src.size<0>()> ++j
-				  && (!src.data<0>()[j].is_atomic() || !robust_token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)));
-			if (src.size<0>()==j)
+			const size_t j = i+span_to_semicolon(src.data<0>()+i,src.end<0>());
+			if (src.size<0>()<=j)
 				{	//! \test zcc/staticassert.C99/Error_scope1.h
 					//! \test zcc/staticassert.C99/Error_scope2.h
 				message_header(src.data<0>()[i].index_tokens[0]);
@@ -10027,9 +10040,8 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				};
 			if (   !is_naked_parentheses_pair(src.data<0>()[i+1])
 				|| 3>src.data<0>()[i+1].size<0>()
-				|| !src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2].is_atomic()
+				|| !robust_token_is_char<','>(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2])
 				|| !src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].is_atomic()
-				|| !robust_token_is_char<','>(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2].index_tokens[0].token)
 				|| C_TESTFLAG_STRING_LITERAL!=src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].flags)
 				{	//! \test zcc/staticassert.C99/Error_badarg1.h
 					//! \test zcc/staticassert.C99/Error_badarg2.h
@@ -10211,8 +10223,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					INFORM("declarator missing (C99 6.7p1)");
 					zcc_errors.inc_error();
 					// find the next semicolon
-					size_t j = i+decl_count+decl_offset;
-					while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
+					const size_t j = i+decl_count+decl_offset+span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>());
 					if (have_we_parsed_yet)
 						src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
 					else
@@ -10226,15 +10237,14 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					INFORM("declarator has no identifier to declare (C99 6.7p1)");
 					zcc_errors.inc_error();
 					// find the next semicolon, unless we have () immediately in which case we have nothing to look for
-					const bool unwind_to_compound_statement = robust_token_is_char<'('>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token) && robust_token_is_char<')'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[1].token);
+					const bool unwind_to_compound_statement = is_naked_parentheses_pair(src.data<0>()[i+decl_count+decl_offset]);
 					if (unwind_to_compound_statement)
 						{
 						assert(!have_we_parsed_yet);
 						src.DeleteNSlotsAt<0>(decl_count+decl_offset+initdecl_span,i);
 						}
 					else{
-						size_t j = i+decl_count+decl_offset;
-						while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
+						const size_t j = i+decl_count+decl_offset+span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>());
 						if (have_we_parsed_yet)
 							src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
 						else
@@ -10384,10 +10394,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		if (robust_token_is_string<13>(src.data<0>()[i].index_tokens[0].token,"static_assert"))
 			{	// static_assert ( constant-expression , string-literal ) ;
 			// find the next ';'
-			size_t j = i;
-			while(src.size<0>()> ++j
-				  && (!src.data<0>()[j].is_atomic() || !robust_token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)));
-			if (src.size<0>()==j)
+			const size_t j = i+span_to_semicolon(src.data<0>()+i,src.end<0>());
+			if (src.size<0>()<=j)
 				{	//! \test zcc/staticassert.C99/Error_scope1.hpp
 					//! \test zcc/staticassert.C99/Error_scope2.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
@@ -10399,9 +10407,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				};
 			if (   !is_naked_parentheses_pair(src.data<0>()[i+1])
 				|| 3>src.data<0>()[i+1].size<0>()
-				|| !src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2].is_atomic()
+				|| !robust_token_is_char<','>(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2])
 				|| !src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].is_atomic()
-				|| !robust_token_is_char<','>(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2].index_tokens[0].token)
 				|| C_TESTFLAG_STRING_LITERAL!=src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].flags)
 				{	//! \test zcc/staticassert.C99/Error_badarg1.hpp
 					//! \test zcc/staticassert.C99/Error_badarg2.hpp
@@ -10708,8 +10715,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					INFORM("declarator missing (C++98 7p1)");
 					zcc_errors.inc_error();
 					// find the next semicolon
-					size_t j = i+decl_count+decl_offset;
-					while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
+					const size_t j = i+decl_count+decl_offset+span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>());
 					if (have_we_parsed_yet)
 						src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
 					else
@@ -10723,15 +10729,14 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					INFORM("declarator has no name to declare (C++98 7p1)");
 					zcc_errors.inc_error();
 					// find the next semicolon, unless we have () immediately in which case we have nothing to look for
-					const bool unwind_to_compound_statement = robust_token_is_char<'('>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token) && robust_token_is_char<')'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[1].token);
+					const bool unwind_to_compound_statement = is_naked_parentheses_pair(src.data<0>()[i+decl_count+decl_offset]);
 					if (unwind_to_compound_statement)
 						{
 						assert(!have_we_parsed_yet);
 						src.DeleteNSlotsAt<0>(decl_count+decl_offset+initdecl_span,i);
 						}
 					else{
-						size_t j = i+decl_count+decl_offset;
-						while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
+						const size_t j = i+decl_count+decl_offset+span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>());
 						if (have_we_parsed_yet)
 							src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
 						else
