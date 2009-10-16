@@ -9997,6 +9997,138 @@ static size_t span_to_semicolon(const parse_tree* const first,const parse_tree* 
 	return iter-first;
 }
 
+static void C99_CPP_handle_static_assertion(parse_tree& src,type_system& types,PP_auxfunc& langinfo,const size_t i,const char* const err)
+{
+	assert(err && *err);
+	// find the next ';'
+	const size_t j = i+span_to_semicolon(src.data<0>()+i,src.end<0>());
+	if (src.size<0>()<=j)
+		{	//! \test zcc/staticassert.C99/Error_scope1.h, zcc/staticassert.C99/Error_scope1.hpp
+			//! \test zcc/staticassert.C99/Error_scope2.h, zcc/staticassert.C99/Error_scope2.hpp
+		message_header(src.data<0>()[i].index_tokens[0]);
+		INC_INFORM(ERR_STR);
+		INFORM("static assertion cut off by end of scope");
+		zcc_errors.inc_error();
+		src.DeleteNSlotsAt<0>(j-i,i);
+		return;
+		};
+	if (   !is_naked_parentheses_pair(src.data<0>()[i+1])
+		|| 3>src.data<0>()[i+1].size<0>()
+		|| !robust_token_is_char<','>(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2])
+		|| !src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].is_atomic()
+		|| C_TESTFLAG_STRING_LITERAL!=src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].flags)
+		{	//! \test zcc/staticassert.C99/Error_badarg1.h, zcc/staticassert.C99/Error_badarg1.hpp
+			//! \test zcc/staticassert.C99/Error_badarg2.h, zcc/staticassert.C99/Error_badarg2.hpp
+			//! \test zcc/staticassert.C99/Error_badarg3.h, zcc/staticassert.C99/Error_badarg3.hpp
+			//! \test zcc/staticassert.C99/Error_badarg5.h, zcc/staticassert.C99/Error_badarg5.hpp
+			//! \test zcc/staticassert.C99/Error_badarg6.h, zcc/staticassert.C99/Error_badarg6.hpp
+			//! \test zcc/staticassert.C99/Error_badarg7.h, zcc/staticassert.C99/Error_badarg7.hpp
+		message_header(src.data<0>()[i].index_tokens[0]);
+		INC_INFORM(ERR_STR);
+		INFORM("malformed static assertion");
+		zcc_errors.inc_error();
+		src.DeleteNSlotsAt<0>(j-i+1,i);
+		return;
+		};
+	if (2!=j-i)
+		{	//! \test zcc/staticassert.C99/Error_badarg4.h, zcc/staticassert.C99/Error_badarg4.hpp
+		message_header(src.data<0>()[i].index_tokens[0]);
+		INC_INFORM(ERR_STR);
+		INFORM("garbage between static assertion arguments and terminating ;");
+		zcc_errors.inc_error();
+		src.DeleteNSlotsAt<0>(j-i+1,i);
+		return;
+		};
+	// actually use the static assertion correctly.
+	parse_tree_class parsetree;
+	{
+	const size_t k = src.data<0>()[i+1].size<0>()-2;
+	if (!parsetree.resize<0>(k))
+		{
+		message_header(src.data<0>()[i].index_tokens[0]);
+		INC_INFORM(ERR_STR);
+		_fatal("insufficient RAM to parse static assertion");
+		};
+	zaimoni::autotransform_n<void (*)(parse_tree&,const parse_tree&)>(parsetree.c_array<0>(),src.data<0>()[i+1].data<0>(),k,value_copy);
+	}
+	// init above correctly
+	// snip from Condense
+	const size_t starting_errors = zcc_errors.err_count();
+	(langinfo.LocateExpression)(parsetree,SIZE_MAX,types);
+	if (starting_errors==zcc_errors.err_count())
+		{
+		while(parsetree.is_raw_list() && 1==parsetree.size<0>()) parsetree.eval_to_arg<0>(0);
+		// end snip from Condense
+		// snip from CPreproc
+		if (!parsetree.is_atomic() && !(langinfo.EvalParseTree)(parsetree,types))
+			{
+			parsetree.destroy();	// efficiency
+			message_header(src.data<0>()[i].index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INFORM(err);
+			zcc_errors.inc_error();
+			src.DeleteNSlotsAt<0>(j-i+1,i);
+			return;
+			}
+		(langinfo.PPHackTree)(parsetree,types);
+		// final, when above is working properly
+		if (!parsetree.is_atomic())
+			{	//! \bug need test cases
+			parsetree.destroy();	// efficiency
+			message_header(src.data<0>()[i].index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INFORM(err);
+			zcc_errors.inc_error();
+			src.DeleteNSlotsAt<0>(j-i+1,i);
+			return;
+			}
+		// end snip from CPreproc
+		bool is_true = false;
+		if (!(langinfo.LiteralConvertsToBool)(parsetree,is_true))
+			{	//! \bug need test cases
+			parsetree.destroy();	// efficiency
+			message_header(src.data<0>()[i].index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INFORM(err);
+			zcc_errors.inc_error();
+			src.DeleteNSlotsAt<0>(j-i+1,i);
+			return;
+			};
+		parsetree.destroy();	// efficiency
+		//! \test zcc/staticassert.C1X/Pass_autosucceed.h, zcc/staticassert.C1X/Pass_autosucceed.hpp
+		if (!is_true)
+			{	//! \test zcc/staticassert.C1X/Error_autofail.h, zcc/staticassert.C1X/Error_autofail.hpp
+			message_header(src.data<0>()[i].index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			// hmm...really should unescape string before emitting
+			const size_t tmp_size = LengthOfCStringLiteral(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.first,src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.second);
+			if (1U>=tmp_size || 'L'== *src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.first)
+				{	//! \todo handle wide-strings later
+				INFORM("(static assertion failure)");
+				zcc_errors.inc_error();
+				src.DeleteNSlotsAt<0>(j-i+1,i);
+				return;
+				};
+
+			char* tmp = _new_buffer<char>(tmp_size);
+			if (NULL==tmp)
+				{
+				INFORM("(static assertion failure)");
+				zcc_errors.inc_error();
+				src.DeleteNSlotsAt<0>(j-i+1,i);
+				return;
+				}
+			UnescapeCString(tmp,src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.first+1,src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.second-2);
+			INFORM(tmp);
+			free(tmp);
+			zcc_errors.inc_error();
+			src.DeleteNSlotsAt<0>(j-i+1,i);
+			return;
+			};
+		}
+	src.DeleteNSlotsAt<0>(j-i+1,i);
+}
+
 // will need: "function-type vector"
 // return: 1 typespec record (for now, other languages may have more demanding requirements)
 // incoming: n typespec records, flag for trailing ...
@@ -10026,133 +10158,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		// C static assertion scanner
 		if (robust_token_is_string<14>(src.data<0>()[i].index_tokens[0].token,"_Static_Assert"))
 			{	// _Static_Assert ( constant-expression , string-literal ) ;
-			// find the next ';'
-			const size_t j = i+span_to_semicolon(src.data<0>()+i,src.end<0>());
-			if (src.size<0>()<=j)
-				{	//! \test zcc/staticassert.C99/Error_scope1.h
-					//! \test zcc/staticassert.C99/Error_scope2.h
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INFORM("static assertion cut off by end of scope");
-				zcc_errors.inc_error();
-				src.DeleteNSlotsAt<0>(j-i,i);
-				continue;
-				};
-			if (   !is_naked_parentheses_pair(src.data<0>()[i+1])
-				|| 3>src.data<0>()[i+1].size<0>()
-				|| !robust_token_is_char<','>(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2])
-				|| !src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].is_atomic()
-				|| C_TESTFLAG_STRING_LITERAL!=src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].flags)
-				{	//! \test zcc/staticassert.C99/Error_badarg1.h
-					//! \test zcc/staticassert.C99/Error_badarg2.h
-					//! \test zcc/staticassert.C99/Error_badarg3.h
-					//! \test zcc/staticassert.C99/Error_badarg5.h
-					//! \test zcc/staticassert.C99/Error_badarg6.h
-					//! \test zcc/staticassert.C99/Error_badarg7.h
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INFORM("malformed static assertion");
-				zcc_errors.inc_error();
-				src.DeleteNSlotsAt<0>(j-i+1,i);
-				continue;
-				};
-			if (2!=j-i)
-				{	//! \test zcc/staticassert.C99/Error_badarg4.h
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INFORM("garbage between static assertion arguments and terminating ;");
-				zcc_errors.inc_error();
-				src.DeleteNSlotsAt<0>(j-i+1,i);
-				continue;
-				};
-			// actually use the static assertion correctly.
-			parse_tree_class parsetree;
-			{
-			const size_t k = src.data<0>()[i+1].size<0>()-2;
-			if (!parsetree.resize<0>(k))
-				{
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				_fatal("insufficient RAM to parse static assertion");
-				};
-			zaimoni::autotransform_n<void (*)(parse_tree&,const parse_tree&)>(parsetree.c_array<0>(),src.data<0>()[i+1].data<0>(),k,value_copy);
-			}
-			// init above correctly
-			// snip from Condense
-			const size_t starting_errors = zcc_errors.err_count();
-			C99_locate_expressions(parsetree,SIZE_MAX,types);
-			if (starting_errors==zcc_errors.err_count())
-				{
-				while(parsetree.is_raw_list() && 1==parsetree.size<0>()) parsetree.eval_to_arg<0>(0);
-				// end snip from Condense
-				// snip from CPreproc
-				if (!parsetree.is_atomic() && !C99_EvalParseTree(parsetree,types))
-					{
-					parsetree.destroy();	// efficiency
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM(" : control expression for static assertion must evaluate to a single integer constant (C1X 6.7.9p3)");
-					zcc_errors.inc_error();
-					src.DeleteNSlotsAt<0>(j-i+1,i);
-					continue;
-					}
-				C99_PPHackTree(parsetree,types);
-				// final, when above is working properly
-				if (!parsetree.is_atomic())
-					{	//! \bug need test cases
-					parsetree.destroy();	// efficiency
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM(" : control expression for static assertion must evaluate to a single integer constant (C1X 6.7.9p3)");
-					zcc_errors.inc_error();
-					src.DeleteNSlotsAt<0>(j-i+1,i);
-					continue;
-					}
-				// end snip from CPreproc
-				bool is_true = false;
-				if (!C99_literal_converts_to_bool(parsetree,is_true))
-					{	//! \bug need test cases
-					parsetree.destroy();	// efficiency
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM(" : control expression for static assertion must evaluate to a single integer constant (C1X 6.7.9p3)");
-					zcc_errors.inc_error();
-					src.DeleteNSlotsAt<0>(j-i+1,i);
-					continue;
-					};
-				parsetree.destroy();	// efficiency
-				//! \test zcc/staticassert.C1X/Pass_autosucceed.h
-				if (!is_true)
-					{	//! \test zcc/staticassert.C1X/Error_autofail.h
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					// hmm...really should unescape string before emitting
-					const size_t tmp_size = LengthOfCStringLiteral(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.first,src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.second);
-					if (1U>=tmp_size || 'L'== *src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.first)
-						{	//! \todo handle wide-strings later
-						INFORM("(static assertion failure)");
-						zcc_errors.inc_error();
-						src.DeleteNSlotsAt<0>(j-i+1,i);
-						continue;
-						};
-					
-					char* tmp = _new_buffer<char>(tmp_size);
-					if (NULL==tmp)
-						{
-						INFORM("(static assertion failure)");
-						zcc_errors.inc_error();
-						src.DeleteNSlotsAt<0>(j-i+1,i);
-						continue;
-						}
-					UnescapeCString(tmp,src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.first+1,src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.second-2);
-					INFORM(tmp);
-					free(tmp);
-					zcc_errors.inc_error();
-					src.DeleteNSlotsAt<0>(j-i+1,i);
-					continue;
-					};
-				}
-			src.DeleteNSlotsAt<0>(j-i+1,i);
+			C99_CPP_handle_static_assertion(src,types,*CLexer->pp_support,i," : control expression for static assertion must evaluate to a single integer constant (C1X 6.7.9p3)");
 			continue;
 			};
 		// general declaration scanner 
@@ -10393,131 +10399,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		// C++ static assertion scanner
 		if (robust_token_is_string<13>(src.data<0>()[i].index_tokens[0].token,"static_assert"))
 			{	// static_assert ( constant-expression , string-literal ) ;
-			// find the next ';'
-			const size_t j = i+span_to_semicolon(src.data<0>()+i,src.end<0>());
-			if (src.size<0>()<=j)
-				{	//! \test zcc/staticassert.C99/Error_scope1.hpp
-					//! \test zcc/staticassert.C99/Error_scope2.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INFORM("static assertion cut off by end of scope");
-				zcc_errors.inc_error();
-				src.DeleteNSlotsAt<0>(j-i,i);
-				continue;
-				};
-			if (   !is_naked_parentheses_pair(src.data<0>()[i+1])
-				|| 3>src.data<0>()[i+1].size<0>()
-				|| !robust_token_is_char<','>(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2])
-				|| !src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].is_atomic()
-				|| C_TESTFLAG_STRING_LITERAL!=src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].flags)
-				{	//! \test zcc/staticassert.C99/Error_badarg1.hpp
-					//! \test zcc/staticassert.C99/Error_badarg2.hpp
-					//! \test zcc/staticassert.C99/Error_badarg3.hpp
-					//! \test zcc/staticassert.C99/Error_badarg5.hpp
-					//! \test zcc/staticassert.C99/Error_badarg6.hpp
-					//! \test zcc/staticassert.C99/Error_badarg7.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INFORM("malformed static assertion");
-				zcc_errors.inc_error();
-				src.DeleteNSlotsAt<0>(j-i+1,i);
-				continue;
-				};
-			if (2!=j-i)
-				{	//! \test zcc/staticassert.C99/Error_badarg4.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INFORM("garbage between static assertion arguments and terminating ;");
-				zcc_errors.inc_error();
-				src.DeleteNSlotsAt<0>(j-i+1,i);
-				continue;
-				};
-			// actually use the static assertion correctly.
-			parse_tree_class parsetree;
-			{	// work on a copy of the argument list
-			const size_t k = src.data<0>()[i+1].size<0>()-2;
-			if (!parsetree.resize<0>(k))
-				{
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				_fatal("insufficient RAM to parse static assertion");
-				};
-			zaimoni::autotransform_n<void (*)(parse_tree&,const parse_tree&)>(parsetree.c_array<0>(),src.data<0>()[i+1].data<0>(),k,value_copy);
-			}
-			// snip from Condense
-			const size_t starting_errors = zcc_errors.err_count();
-			CPP_locate_expressions(parsetree,SIZE_MAX,types);
-			if (starting_errors==zcc_errors.err_count())
-				{
-				while(parsetree.is_raw_list() && 1==parsetree.size<0>()) parsetree.eval_to_arg<0>(0);
-				// end snip from Condense
-				// snip from CPreproc
-				if (!parsetree.is_atomic() && !CPP_EvalParseTree(parsetree,types))
-					{
-					parsetree.destroy();	// efficiency
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM(" : control expression for static assertion must be a constant convertible to bool (C++0X 7p4)");
-					zcc_errors.inc_error();
-					src.DeleteNSlotsAt<0>(j-i+1,i);
-					continue;
-					}
-				CPP_PPHackTree(parsetree,types);
-				if (!parsetree.is_atomic())
-					{	//! \bug need test cases
-					parsetree.destroy();	// efficiency
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM(" : control expression for static assertion must be a constant convertible to bool (C++0X 7p4)");
-					zcc_errors.inc_error();
-					src.DeleteNSlotsAt<0>(j-i+1,i);
-					continue;
-					}
-				// end snip from CPreproc
-				bool is_true = false;
-				if (!CPP_literal_converts_to_bool(parsetree,is_true))
-					{	//! \bug need test cases
-					parsetree.destroy();	// efficiency
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM(" : control expression for static assertion must be a constant convertible to bool (C++0X 7p4)");
-					zcc_errors.inc_error();
-					src.DeleteNSlotsAt<0>(j-i+1,i);
-					continue;
-					};
-				parsetree.destroy();	// efficiency
-				//! \test zcc/staticassert.C1X/Pass_autosucceed.hpp
-				if (!is_true)
-					{	//! \test zcc/staticassert.C1X/Error_autofail.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					// hmm...really should unescape string before emitting
-					const size_t tmp_size = LengthOfCStringLiteral(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.first,src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.second);
-					if (1U>=tmp_size || 'L'== *src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.first)
-						{	//! \todo handle wide-strings later
-						INFORM("(static assertion failure)");
-						zcc_errors.inc_error();
-						src.DeleteNSlotsAt<0>(j-i+1,i);
-						continue;
-						};
-					
-					char* tmp = _new_buffer<char>(tmp_size);
-					if (NULL==tmp)
-						{
-						INFORM("(static assertion failure)");
-						zcc_errors.inc_error();
-						src.DeleteNSlotsAt<0>(j-i+1,i);
-						continue;
-						}
-					UnescapeCString(tmp,src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.first+1,src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.second-2);
-					INFORM(tmp);
-					free(tmp);
-					zcc_errors.inc_error();
-					src.DeleteNSlotsAt<0>(j-i+1,i);
-					continue;
-					};
-				}
-			src.DeleteNSlotsAt<0>(j-i+1,i);
+			C99_CPP_handle_static_assertion(src,types,*CPlusPlusLexer->pp_support,i," : control expression for static assertion must be a constant convertible to bool (C++0X 7p4)");
 			continue;
 			};
 		// namespace scanner
@@ -10868,7 +10750,9 @@ PP_auxfunc C99_aux
 	C99_echo_reserved_keyword,
 	C99_echo_reserved_symbol,
 	C99_ContextFreeParse,
-	C99_ContextParse
+	C99_ContextParse,
+	C99_locate_expressions,
+	C99_literal_converts_to_bool
 	};
 
 PP_auxfunc CPlusPlus_aux
@@ -10887,7 +10771,9 @@ PP_auxfunc CPlusPlus_aux
 	CPP_echo_reserved_keyword,
 	CPP_echo_reserved_symbol,
 	CPP_ContextFreeParse,
-	CPP_ContextParse
+	CPP_ContextParse,
+	CPP_locate_expressions,
+	CPP_literal_converts_to_bool
 	};
 
 #if 0
