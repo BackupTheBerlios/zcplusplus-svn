@@ -1607,8 +1607,7 @@ inline bool robust_token_is_char<'}'>(const POD_pair<const char*,size_t>& x)
 
 template<char c> inline bool robust_token_is_char(const parse_tree& x)
 {
-	return x.is_atomic()
-		&& robust_token_is_char<c>(x.index_tokens[0].token);
+	return x.is_atomic() && token_is_char<c>(x.index_tokens[0].token);
 }
 
 //! \todo if we have an asphyxiates_left_brace, suppress_naked_brackets_and_braces goes obsolete
@@ -10180,7 +10179,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					src.DeleteNSlotsAt<0>(decl_count,i);
 				return;
 				};
-			if (src.data<0>()[i+decl_count].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count].index_tokens[0].token))
+			if (robust_token_is_char<';'>(src.data<0>()[i+decl_count]))
 				{	// C99 7p2 error: must declare something
 					//! \test zcc/decl.C99/Error_extern_semicolon.h
 					//! \test zcc/decl.C99/Error_static_semicolon.h
@@ -10304,7 +10303,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					};
 				//! \todo function declarations can be self-terminating
 				// ;: done
-				if (src.data<0>()[i+decl_count+decl_offset].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token))
+				if (robust_token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset]))
 					{
 					src.c_array<0>()[i+decl_count+decl_offset].flags |= parse_tree::GOOD_LINE_BREAK;
 					++decl_offset;
@@ -10312,14 +10311,14 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					};
 				// ,: iterate
 				// anything else: error
-				if (!src.data<0>()[i+decl_count+decl_offset].is_atomic() || !token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token))
+				if (!robust_token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset]))
 					{
 					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("declaration disoriented by missing , (C99 6.7p1)");
 					// find the next semicolon
 					size_t j = i+decl_count+decl_offset;
-					while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
+					while(!robust_token_is_char<';'>(src.data<0>()[j]) && src.size<0>()> ++j);
 					src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
 					continue;
 					}
@@ -10545,7 +10544,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					src.DeleteNSlotsAt<0>(decl_count,i);
 				return;
 				};
-			if (src.data<0>()[i+decl_count].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count].index_tokens[0].token))
+			if (robust_token_is_char<';'>(src.data<0>()[i+decl_count]))
 				{	// must declare something
 					//! \test zcc/decl.C99/Error_extern_semicolon.hpp
 					//! \test zcc/decl.C99/Error_static_semicolon.hpp
@@ -10684,7 +10683,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					};
 				//! \todo function declarations can be self-terminating
 				// ;: done
-				if (src.data<0>()[i+decl_count+decl_offset].is_atomic() && token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token))
+				if (robust_token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset]))
 					{
 					src.c_array<0>()[i+decl_count+decl_offset].flags |= parse_tree::GOOD_LINE_BREAK;
 					++decl_offset;
@@ -10692,14 +10691,14 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					};
 				// ,: iterate
 				// anything else: error
-				if (!src.data<0>()[i+decl_count+decl_offset].is_atomic() || !token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset].index_tokens[0].token))
+				if (!robust_token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset]))
 					{
 					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("declaration disoriented by missing , (C++98 7p1)");
 					// find the next semicolon
 					size_t j = i+decl_count+decl_offset;
-					while((!src.data<0>()[j].is_atomic() || !token_is_char<';'>(src.data<0>()[j].index_tokens[0].token)) && src.size<0>()> ++j);
+					while(!robust_token_is_char<';'>(src.data<0>()[j]) && src.size<0>()> ++j);
 					src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
 					continue;
 					}
