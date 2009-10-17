@@ -3447,6 +3447,26 @@ static bool is_naked_parentheses_pair(const parse_tree& src)
 			&&	src.empty<1>() && src.empty<2>();
 }
 
+static bool is_naked_brace_pair(const parse_tree& src)
+{
+	return		robust_token_is_char<'{'>(src.index_tokens[0].token)
+			&&	robust_token_is_char<'}'>(src.index_tokens[1].token)
+#ifndef NDEBUG
+			&&	NULL!=src.index_tokens[0].src_filename && NULL!=src.index_tokens[1].src_filename
+#endif
+			&&	src.empty<1>() && src.empty<2>();
+}
+
+static bool is_naked_bracket_pair(const parse_tree& src)
+{
+	return		robust_token_is_char<'['>(src.index_tokens[0].token)
+			&&	robust_token_is_char<']'>(src.index_tokens[1].token)
+#ifndef NDEBUG
+			&&	NULL!=src.index_tokens[0].src_filename && NULL!=src.index_tokens[1].src_filename
+#endif
+			&&	src.empty<1>() && src.empty<2>();
+}
+
 #ifndef NDEBUG
 static bool is_array_deref_strict(const parse_tree& src)
 {
@@ -8897,6 +8917,131 @@ static void C99_ContextFreeParse(parse_tree& src,const type_system& types)
 	C99_notice_primary_type(src);
 }
 
+bool CPP_ok_for_toplevel_qualified_name(const parse_tree& x)
+{
+	if (!x.is_atomic()) return false;
+	if (PARSE_PRIMARY_TYPE & x.flags) return false;
+	if (CPP_echo_reserved_keyword(x.index_tokens[0].token.first,x.index_tokens[0].token.second)) return false;
+	if (C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags) return true;
+	if (token_is_string<2>(x.index_tokens[0].token,"::")) return true;
+	return false;
+}
+
+void CPP_notice_scope_glue(parse_tree& src)
+{
+	assert(!src.empty<0>());
+	size_t i = 0;
+	{
+	size_t offset = 0;
+	while(i+offset<src.size<0>())
+		{
+		if (robust_token_is_string<2>(src.data<0>()[i],"::"))
+			{
+			const bool is_global = (0<i) && !CPP_ok_for_toplevel_qualified_name(src.data<0>()[i-1]);
+			size_t resize_to = src.data<0>()[i].index_tokens[0].token.second;
+			size_t forward_span = 0;
+			bool last_scope = true;
+			bool have_suppressed_consecutive_scope = false;
+			while(i+offset+forward_span+1<src.size<0>() && CPP_ok_for_toplevel_qualified_name(src.data<0>()[i+forward_span+1]))
+				{
+				const bool this_scope = robust_token_is_string<2>(src.data<0>()[i+forward_span+1],"::");
+				if (!last_scope && !this_scope) break;
+				if (last_scope && this_scope)
+					{
+					if (!have_suppressed_consecutive_scope)
+						{	//! \test zcc/decl.C99/Error_consecutive_doublecolon_type.hpp
+						simple_error(src.c_array<0>()[i]," consecutive :: operators in nested-name-specifier");
+						have_suppressed_consecutive_scope = true;
+						}
+					// remove from parse
+					src.DestroyNAtAndRotateTo<0>(1,i+forward_span,src.size<0>()-offset);
+					offset += 1;
+					continue;
+					}
+				last_scope = this_scope;
+				++forward_span;
+				resize_to += src.data<0>()[i+forward_span].index_tokens[0].token.second;
+				};
+			// assemble this into something identifier-like
+			if (!is_global)
+				{
+				--i;
+				++forward_span;
+				resize_to += src.data<0>()[i].index_tokens[0].token.second;
+				};
+			if (0<forward_span)
+				{
+				char* tmp = _new_buffer<char>(ZAIMONI_LEN_WITH_NULL(resize_to));
+				if (NULL==tmp)
+					{
+					if (0==offset) throw std::bad_alloc();
+					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+					offset = 0;
+					tmp = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(resize_to));
+					};
+				strncpy(tmp,src.data<0>()[i].index_tokens[0].token.first,src.data<0>()[i].index_tokens[0].token.second);
+				size_t j = 1;
+				do	strncat(tmp,src.data<0>()[i+j].index_tokens[0].token.first,src.data<0>()[i+j].index_tokens[0].token.second);
+				while(forward_span>= ++j);
+				const char* tmp2 = is_string_registered(tmp);
+				if (NULL==tmp2)
+					{
+					src.c_array<0>()[i].grab_index_token_from_str_literal<0>(tmp,C_TESTFLAG_IDENTIFIER);	// well...not really, but it'll substitute for one
+					src.c_array<0>()[i].control_index_token<0>(true);
+					}
+				else{
+					free(tmp);
+					src.c_array<0>()[i].grab_index_token_from_str_literal<0>(tmp2,C_TESTFLAG_IDENTIFIER);	// well...not really, but it'll substitute for one
+					};
+				j = 1;
+				do	src.c_array<0>()[i+j].destroy();
+				while(forward_span>= ++j);
+				src.DestroyNAtAndRotateTo<0>(forward_span,i+1,src.size<0>()-offset);
+				offset += forward_span;
+				};
+			if (last_scope)
+				{	// might be able to save: new, delete, operator ___, destructor name
+				if (	i+offset+1>=src.size<0>()
+					||	(   !robust_token_is_string<3>(src.data<0>()[i+1],"new")
+						 && !robust_token_is_string<6>(src.data<0>()[i+1],"delete")
+						 && !robust_token_is_string<8>(src.data<0>()[i+1],"operator")
+						 && !robust_token_is_char<'~'>(src.data<0>()[i+1])))	// no, compl does not interoperate for destructor names
+					//! \test zcc/decl.C99/Error_doublecolon_type.hpp
+					simple_error(src.c_array<0>()[i]," nested-name-specifier ending in ::");
+				}
+			};
+		++i;
+		};
+	if (0<offset) src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+	}
+
+	// efficiency tuning: we have to have no empty slots at top level before recursing,
+	// to mitigate risk of dynamic memory allocation failure
+	i = 0;
+	while(i<src.size<0>())
+		{
+		if (is_naked_parentheses_pair(src.data<0>()[i]))
+			{
+			if (!src.data<0>()[i].empty<0>())
+				// recurse into (...)
+				CPP_notice_scope_glue(src.c_array<0>()[i]);
+			}
+		else if (is_naked_brace_pair(src.data<0>()[i]))
+			{
+			if (!src.data<0>()[i].empty<0>())
+				// recurse into {...}
+				CPP_notice_scope_glue(src.c_array<0>()[i]);
+			}
+		else if (is_naked_bracket_pair(src.data<0>()[i]))
+			{
+			if (!src.data<0>()[i].empty<0>())
+				// recurse into [...]
+				CPP_notice_scope_glue(src.c_array<0>()[i]);
+			}
+		++i;
+		};
+}
+
 //! \todo check that the fact all literals are already legal-form is used
 static void CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 {
@@ -8906,6 +9051,7 @@ static void CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 	if (!_match_pairs(src)) return;
 	// handle core type specifiers
 	CPP_notice_primary_type(src);
+	CPP_notice_scope_glue(src);
 }
 
 //! \test if.C99/Pass_zero.hpp, if.C99/Pass_zero.h
@@ -9627,6 +9773,8 @@ public:
 		// handle typedefs
 		if (check_for_typedef(base_type,x.index_tokens[0].token.first,types)) return true;
 		//! \todo handle other known types
+		// note: we have to handle typedefs of unions/structs, anonymous or otherwise ....
+		// worse, the typedef need not be *before* the union/struct declaration
 		return false;
 		};
 	bool analyze_flags_global(parse_tree& x, size_t i, size_t& decl_count)
@@ -9691,49 +9839,6 @@ public:
 	uintmax_t get_flags() const {return flags;};
 	void value_copy_type(type_spec& dest) const {value_copy(dest,base_type);};
 };
-
-bool CPP_ok_for_toplevel_qualified_name(const parse_tree& x)
-{
-	if (!x.is_atomic()) return false;
-	if (PARSE_PRIMARY_TYPE & x.flags) return false;
-	if (CPP_echo_reserved_keyword(x.index_tokens[0].token.first,x.index_tokens[0].token.second)) return false;
-	if (C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags) return true;
-	if (token_is_string<2>(x.index_tokens[0].token,"::")) return true;
-	return false;
-}
-
-bool CPP_locate_qualified_name(parse_tree& x, size_t i)
-{
-	assert(x.size<0>()>i);
-	if (!CPP_ok_for_toplevel_qualified_name(x.data<0>()[i])) return NULL;
-	size_t span = 1;
-	size_t resize_to = x.data<0>()[i].index_tokens[0].token.second;
-	while(x.size<0>()-i>span && CPP_ok_for_toplevel_qualified_name(x.data<0>()[i+span]) && (C_TESTFLAG_IDENTIFIER & x.data<0>()[i+span].index_tokens[0].flags ? token_is_string<2>(x.data<0>()[i+span-1].index_tokens[0].token,"::") : !token_is_string<2>(x.data<0>()[i+span-1].index_tokens[0].token,"::")))
-		resize_to += x.data<0>()[i+span++].index_tokens[0].token.second;
-
-	//! \todo handle templates later
-	if (1<=span && token_is_string<2>(x.data<0>()[i+span-1].index_tokens[0].token,"::")) x.c_array<0>()[i].flags |= parse_tree::INVALID;
-	if (1>=span) return span;
-	{
-	char* tmp = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(resize_to));
-	strncpy(tmp,x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second);
-	size_t j = 1;
-	do	strncat(tmp,x.data<0>()[i+j].index_tokens[0].token.first,x.data<0>()[i+j].index_tokens[0].token.second);
-	while(span> ++j);
-	const char* tmp2 = is_string_registered(tmp);
-	if (NULL==tmp2)
-		{
-		x.c_array<0>()[i].grab_index_token_from_str_literal<0>(tmp,C_TESTFLAG_IDENTIFIER);	// well...not really, but it'll substitute for one
-		x.c_array<0>()[i].control_index_token<0>(true);
-		}
-	else{
-		free(tmp);
-		x.c_array<0>()[i].grab_index_token_from_str_literal<0>(tmp2,C_TESTFLAG_IDENTIFIER);	// well...not really, but it'll substitute for one
-		}
-	}
-	x.DeleteNSlotsAt<0>(span-1,i+1);
-	return true;
-}
 
 //! \todo belongs elsewhere
 size_t count_disjoint_substring_instances(const char* const src,const char* const match)
@@ -9807,16 +9912,11 @@ public:
 			}
 		{	// handle typedefs
 		// determine what fully-qualified name would be
-		if (CPP_locate_qualified_name(x,i))
+		if (   x.data<0>()[i].is_atomic()
+			&& !(PARSE_TYPE & x.data<0>()[i].flags)
+			&& !CPP_echo_reserved_keyword(x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second)
+			&& (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags))
 			{
-			if (parse_tree::INVALID & x.data<0>()[i].flags)
-				{	//! \test zcc/decl.C99/Error_doublecolon_type.hpp
-				message_header(x.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INFORM("qualified-name may not end in :: (C++98 7.1.5.3p1, 5.1p8)");
-				zcc_errors.inc_error();
-				return false;
-				};
 			if (!strncmp(x.data<0>()[i].index_tokens[0].token.first,"::",2))
 				{	// fully-qualified
 				assert(2<x.data<0>()[i].index_tokens[0].token.second);
