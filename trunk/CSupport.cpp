@@ -1526,6 +1526,28 @@ token_is_string(const POD_pair<const char*,size_t>& x,const char* const target)
 	return targ_len==x.second && !strncmp(x.first,target,targ_len);
 }
 
+static inline bool
+token_is_string(const POD_pair<const char*,size_t>& x,const char* const target)
+{
+	assert(NULL!=target);
+	assert(NULL!=x.first);
+	const size_t targ_len = strlen(target);
+	return targ_len==x.second && !strncmp(x.first,target,targ_len);
+}
+
+template<size_t targ_len>
+static inline bool
+robust_token_is_string(const parse_tree& x,const char* const target)
+{
+	return x.is_atomic() && token_is_string<targ_len>(x.index_tokens[0].token,target);
+}
+
+static inline bool
+robust_token_is_string(const parse_tree& x,const char* const target)
+{
+	return x.is_atomic() && token_is_string(x.index_tokens[0].token,target);
+}
+
 template<char c>
 static inline bool
 token_is_char(const POD_pair<const char*,size_t>& x)
@@ -2976,9 +2998,10 @@ bool CCharLiteralIsFalse(const char* x,size_t x_len)
 
 /* strict type categories of parsing */
 #define PARSE_PRIMARY_TYPE ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-19))
+#define PARSE_UNION_TYPE ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-20))
 
 // check for collision with lowest three bits
-BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>=19);
+BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>=20);
 
 /* nonstrict expression types */
 #define PARSE_POSTFIX_EXPRESSION (PARSE_PRIMARY_EXPRESSION | PARSE_STRICT_POSTFIX_EXPRESSION)
@@ -3000,7 +3023,7 @@ BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>
 #define PARSE_EXPRESSION (PARSE_PRIMARY_EXPRESSION | PARSE_STRICT_POSTFIX_EXPRESSION | PARSE_STRICT_UNARY_EXPRESSION | PARSE_STRICT_CAST_EXPRESSION | PARSE_STRICT_PM_EXPRESSION | PARSE_STRICT_MULT_EXPRESSION | PARSE_STRICT_ADD_EXPRESSION | PARSE_STRICT_SHIFT_EXPRESSION | PARSE_STRICT_RELATIONAL_EXPRESSION | PARSE_STRICT_EQUALITY_EXPRESSION | PARSE_STRICT_BITAND_EXPRESSION | PARSE_STRICT_BITXOR_EXPRESSION | PARSE_STRICT_BITOR_EXPRESSION | PARSE_STRICT_LOGICAND_EXPRESSION | PARSE_STRICT_LOGICOR_EXPRESSION | PARSE_STRICT_CONDITIONAL_EXPRESSION | PARSE_STRICT_ASSIGNMENT_EXPRESSION | PARSE_STRICT_COMMA_EXPRESSION)
 
 /* nonstrict type categories */
-#define PARSE_TYPE PARSE_PRIMARY_TYPE
+#define PARSE_TYPE (PARSE_PRIMARY_TYPE | PARSE_UNION_TYPE)
 
 /* already-parsed */
 #define PARSE_OBVIOUS (PARSE_EXPRESSION | PARSE_TYPE | parse_tree::INVALID)
@@ -9548,14 +9571,14 @@ bool check_for_typedef(type_spec& dest,const char* const src,const type_system& 
 }
 
 //! \todo does this need to be in ParseTree.hpp?
-size_t 
+static size_t 
 flush_token(parse_tree& x, const size_t i, const size_t n, const char* const target)
 {
 	assert(x.size<0>()>i);
 	assert(x.size<0>()-i>=n);
 	size_t offset = 0;
 	size_t j = 0;
-	do	if (robust_token_is_string(x.data<0>()[i+j].index_tokens[0].token,target))
+	do	if (robust_token_is_string(x.data<0>()[i+j],target))
 			++offset;
 		else if (0<offset)
 			x.c_array<0>()[i+j-offset] = x.data<0>()[i+j];
@@ -10140,7 +10163,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		{
 		conserve_tokens(src.c_array<0>()[i]);
 		// C static assertion scanner
-		if (robust_token_is_string<14>(src.data<0>()[i].index_tokens[0].token,"_Static_Assert"))
+		if (robust_token_is_string<14>(src.data<0>()[i],"_Static_Assert"))
 			{	// _Static_Assert ( constant-expression , string-literal ) ;
 			C99_CPP_handle_static_assertion(src,types,*CLexer->pp_support,i," : control expression for static assertion must evaluate to a single integer constant (C1X 6.7.9p3)");
 			continue;
@@ -10381,7 +10404,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		{
 		conserve_tokens(src.c_array<0>()[i]);
 		// C++ static assertion scanner
-		if (robust_token_is_string<13>(src.data<0>()[i].index_tokens[0].token,"static_assert"))
+		if (robust_token_is_string<13>(src.data<0>()[i],"static_assert"))
 			{	// static_assert ( constant-expression , string-literal ) ;
 			C99_CPP_handle_static_assertion(src,types,*CPlusPlusLexer->pp_support,i," : control expression for static assertion must be a constant convertible to bool (C++0X 7p4)");
 			continue;
@@ -10391,7 +10414,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		// C++0X has inline namespaces; ignore these for now (well, maybe not: consuming the inline will prevent problems)
 		// C++0X has more complicated using namespace directives: ignore these for now
 		// basic namespace; C++98 and C++0X agree on what this is
-		if (robust_token_is_string<9>(src.data<0>()[i].index_tokens[0].token,"namespace"))
+		if (robust_token_is_string<9>(src.data<0>()[i],"namespace"))
 			{	// fail if: end of token stream
 				// fail if: next token is a type
 				// accept if: next token is {} (unnamed namespace)
