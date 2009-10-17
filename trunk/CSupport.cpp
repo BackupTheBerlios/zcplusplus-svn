@@ -538,10 +538,6 @@ static const char* C99_echo_reserved_keyword(const char* x,size_t x_len)
 	do	if (x_len==valid_keyword[C_KEYWORD_NONSTRICT_LB + --i].second && !strncmp(valid_keyword[C_KEYWORD_NONSTRICT_LB + i].first,x,x_len))
 			return valid_keyword[C_KEYWORD_NONSTRICT_LB + i].first;
 	while(0<i);
-	i = C_PREPROC_OP_STRICT_UB;
-	do	if (x_len==valid_pure_preprocessing_op_punc[--i].second && !strncmp(valid_pure_preprocessing_op_punc[i].first,x,x_len))
-			return valid_pure_preprocessing_op_punc[i].first;
-	while(0<i);
 	return NULL;
 }
 
@@ -553,10 +549,6 @@ static const char* CPP_echo_reserved_keyword(const char* x,size_t x_len)
 	do	if (x_len==valid_keyword[CPP_KEYWORD_NONSTRICT_LB + --i].second && !strncmp(valid_keyword[CPP_KEYWORD_NONSTRICT_LB + i].first,x,x_len))
 			return valid_keyword[CPP_KEYWORD_NONSTRICT_LB + i].first;
 	while(0<i);
-	i = CPP_PREPROC_OP_STRICT_UB;
-	do	if (x_len==valid_pure_preprocessing_op_punc[--i].second && !strncmp(valid_pure_preprocessing_op_punc[i].first,x,x_len))
-			return valid_pure_preprocessing_op_punc[i].first;
-	while(0<i);
 	return NULL;
 }
 
@@ -564,11 +556,7 @@ static const char* C99_echo_reserved_symbol(const char* x,size_t x_len)
 {
 	assert(NULL!=x);
 	assert(x_len<=strlen(x));
-	size_t i = C_KEYWORD_STRICT_UB-C_KEYWORD_NONSTRICT_LB;
-	do	if (x_len==valid_keyword[C_KEYWORD_NONSTRICT_LB + --i].second && !strncmp(valid_keyword[C_KEYWORD_NONSTRICT_LB + i].first,x,x_len))
-			return valid_keyword[C_KEYWORD_NONSTRICT_LB + i].first;
-	while(0<i);
-	i = C_PREPROC_OP_STRICT_UB;
+	size_t i = C_PREPROC_OP_STRICT_UB;
 	do	if (x_len==valid_pure_preprocessing_op_punc[--i].second && !strncmp(valid_pure_preprocessing_op_punc[i].first,x,x_len))
 			return valid_pure_preprocessing_op_punc[i].first;
 	while(0<i);
@@ -579,11 +567,7 @@ static const char* CPP_echo_reserved_symbol(const char* x,size_t x_len)
 {
 	assert(NULL!=x);
 	assert(x_len<=strlen(x));
-	size_t i = CPP_KEYWORD_STRICT_UB-CPP_KEYWORD_NONSTRICT_LB;
-	do	if (x_len==valid_keyword[CPP_KEYWORD_NONSTRICT_LB + --i].second && !strncmp(valid_keyword[CPP_KEYWORD_NONSTRICT_LB + i].first,x,x_len))
-			return valid_keyword[CPP_KEYWORD_NONSTRICT_LB + i].first;
-	while(0<i);
-	i = CPP_PREPROC_OP_STRICT_UB;
+	size_t i = CPP_PREPROC_OP_STRICT_UB;
 	do	if (x_len==valid_pure_preprocessing_op_punc[--i].second && !strncmp(valid_pure_preprocessing_op_punc[i].first,x,x_len))
 			return valid_pure_preprocessing_op_punc[i].first;
 	while(0<i);
@@ -9690,6 +9674,7 @@ bool CPP_ok_for_toplevel_qualified_name(const parse_tree& x)
 {
 	if (!x.is_atomic()) return false;
 	if (PARSE_PRIMARY_TYPE & x.flags) return false;
+	if (CPP_echo_reserved_keyword(x.index_tokens[0].token.first,x.index_tokens[0].token.second)) return false;
 	if (C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags) return true;
 	if (token_is_string<2>(x.index_tokens[0].token,"::")) return true;
 	return false;
