@@ -1,0 +1,6 @@
+SUFFIXES h hpp
+// incomplete enum tag
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+enum
+

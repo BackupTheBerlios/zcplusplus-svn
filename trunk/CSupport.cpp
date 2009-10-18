@@ -3835,6 +3835,271 @@ static bool is_C99_conditional_operator_expression(const parse_tree& src)
 			&&	1==src.size<2>() && (PARSE_EXPRESSION & src.data<2>()->flags);
 }
 
+#ifndef NDEBUG
+static bool is_C99_anonymous_specifier(const parse_tree& src,const char* const spec_name)
+{
+	if (	robust_token_is_string(src.index_tokens[0].token,spec_name)
+#ifndef NDEBUG
+			&&	NULL!=src.index_tokens[0].src_filename
+#endif
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	src.empty<1>()
+			&&	1==src.size<2>() && is_naked_brace_pair(src));
+		return true;
+	return false;
+}
+
+static bool is_C99_named_specifier(const parse_tree& src,const char* const spec_name)
+{
+	if (	robust_token_is_string(src.index_tokens[0].token,spec_name)
+#ifndef NDEBUG
+			&&	NULL!=src.index_tokens[0].src_filename
+#endif
+			&&	NULL!=src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	src.empty<1>()
+			&&	src.empty<2>());
+		return true;
+	return false;
+}
+
+static bool is_C99_named_specifier_definition(const parse_tree& src,const char* const spec_name)
+{
+	if (	robust_token_is_string(src.index_tokens[0].token,spec_name)
+#ifndef NDEBUG
+			&&	NULL!=src.index_tokens[0].src_filename
+#endif
+			&&	NULL!=src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	src.empty<1>()
+			&&	1==src.size<2>() && is_naked_brace_pair(src));
+		return true;
+	return false;
+}
+#endif
+
+static bool C99_looks_like_identifier(const parse_tree& x)
+{
+	if (!x.is_atomic()) return false;
+	if (PARSE_TYPE & x.flags) return false;
+	if (C99_echo_reserved_keyword(x.index_tokens[0].token.first,x.index_tokens[0].token.second)) return false;
+	if (C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags) return true;
+	return false;
+}
+
+static bool CPP_looks_like_identifier(const parse_tree& x)
+{
+	if (!x.is_atomic()) return false;
+	if (PARSE_TYPE & x.flags) return false;
+	if (CPP_echo_reserved_keyword(x.index_tokens[0].token.first,x.index_tokens[0].token.second)) return false;
+	if (C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags) return true;
+	return false;
+}
+
+static void make_target_postfix_arg(parse_tree& src,size_t& offset,const size_t i,const size_t j)
+{
+	parse_tree* tmp = (0==offset ? _new_buffer_nonNULL_throws<parse_tree>(1) :  _new_buffer<parse_tree>(1));
+	if (NULL==tmp)
+		{	// need that slack space now
+		src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+		offset = 0;
+		tmp = _new_buffer_nonNULL_throws<parse_tree>(1);
+		}
+	*tmp = src.data<0>()[j];
+	src.c_array<0>()[i].fast_set_arg<2>(tmp);
+	src.c_array<0>()[j].clear();
+}
+
+void C99_notice_struct_union_enum(parse_tree& src)
+{
+	assert(!src.empty<0>());
+	size_t i = 0;
+	size_t offset = 0;
+	while(i+offset<src.size<0>())
+		{
+		const char* const tmp2 = robust_token_is_string<4>(src.data<0>()[i],"enum") ? "enum"
+							: robust_token_is_string<6>(src.data<0>()[i],"struct") ? "struct"
+							: robust_token_is_string<5>(src.data<0>()[i],"union") ? "union" : 0;
+		if (tmp2)
+			{
+			if (1>=src.size<0>()-(i+offset))
+				{	// unterminated declaration
+					//! \test zcc/decl.C99/Error_enum_truncate1.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(tmp2);
+				INC_INFORM(" specifier cut off by end of scope (");
+				INFORM(strcmp(tmp2,"enum") ? "C99 6.7.2.1p1)" : "C99 6.7.2.2p1)");
+				zcc_errors.inc_error();
+				// remove from parse
+				src.DestroyNAtAndRotateTo<0>(1,i,src.size<0>()-offset);
+				offset += 1;
+				continue;
+				};
+			if (is_naked_brace_pair(src.data<0>()[i+1]))
+				{	// anonymous: postfix arg {...}
+				make_target_postfix_arg(src,offset,i,i+1);
+				src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
+				offset += 1;
+				assert(is_C99_anonymous_specifier(src.data<0>()[i],tmp2));
+				if (!src.data<0>()[i].data<2>()->empty<0>())
+					{	// recurse into { ... }
+					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+					offset = 0;
+					C99_notice_struct_union_enum(*src.c_array<0>()[i].c_array<2>());
+					};
+				continue;
+				};
+			if (!C99_looks_like_identifier(src.data<0>()[i+1]))
+				{	//! \test zcc/decl.C99/Error_enum_truncate2.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(tmp2);
+				INC_INFORM(" neither specifier nor definition (");
+				INFORM(strcmp(tmp2,"enum") ? "C99 6.7.2.1p1)" : "C99 6.7.2.2p1)");
+				zcc_errors.inc_error();
+				// remove from parse
+				src.DestroyNAtAndRotateTo<0>(1,i,src.size<0>()-offset);
+				offset += 1;
+				continue;
+				};
+			src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+1]);
+			src.c_array<0>()[i].grab_index_token_location_from<1,0>(src.data<0>()[i+1]);
+			src.c_array<0>()[i+1].clear();
+			if (2<src.size<0>()-(i+offset) && is_naked_brace_pair(src.data<0>()[i+2]))
+				{
+				make_target_postfix_arg(src,offset,i,i+2);
+				src.DestroyNAtAndRotateTo<0>(2,i+1,src.size<0>()-offset);
+				offset += 2;
+				assert(is_C99_named_specifier_definition(src.data<0>()[i],tmp2));
+				if (!src.data<0>()[i].data<2>()->empty<0>())
+					{	// recurse into { ... }
+					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+					offset = 0;
+					C99_notice_struct_union_enum(*src.c_array<0>()[i].c_array<2>());
+					};
+				continue;
+				};
+			src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
+			offset += 1;
+			assert(is_C99_named_specifier(src.data<0>()[i],tmp2));
+			continue;
+			}
+		else if (   is_naked_parentheses_pair(src.data<0>()[i])
+				 || is_naked_brace_pair(src.data<0>()[i])
+				 || is_naked_bracket_pair(src.data<0>()[i]))
+			{
+			if (!src.data<0>()[i].empty<0>())
+				{	// recurse into (...)
+				if (0<offset)
+					{
+					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+					offset = 0;
+					};
+				C99_notice_struct_union_enum(src.c_array<0>()[i]);
+				}
+			}
+		++i;
+		};
+	if (0<offset) src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+}
+
+void CPP_notice_class_struct_union_enum(parse_tree& src)
+{
+	assert(!src.empty<0>());
+	size_t i = 0;
+	size_t offset = 0;
+	while(i+offset<src.size<0>())
+		{
+		const char* const tmp2 = robust_token_is_string<4>(src.data<0>()[i],"enum") ? "enum"
+							: robust_token_is_string<6>(src.data<0>()[i],"struct") ? "struct"
+							: robust_token_is_string<5>(src.data<0>()[i],"union") ? "union"
+							: robust_token_is_string<5>(src.data<0>()[i],"class") ? "class" : 0;
+		if (tmp2)
+			{
+			if (1>=src.size<0>()-(i+offset))
+				{	// unterminated declaration
+					//! \test zcc/decl.C99/Error_enum_truncate1.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(tmp2);
+				INC_INFORM(" specifier cut off by end of scope (");
+				INFORM(strcmp(tmp2,"enum") ? "C++98 9p1)" : "C++98 7.2p1)");
+				zcc_errors.inc_error();
+				// remove from parse
+				src.DestroyNAtAndRotateTo<0>(1,i,src.size<0>()-offset);
+				offset += 1;
+				continue;
+				};
+			if (is_naked_brace_pair(src.data<0>()[i+1]))
+				{	// anonymous: postfix arg {...}
+				make_target_postfix_arg(src,offset,i,i+1);
+				src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
+				offset += 1;
+				assert(is_C99_anonymous_specifier(src.data<0>()[i],tmp2));
+				if (!src.data<0>()[i].data<2>()->empty<0>())
+					{	// recurse into { ... }
+					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+					offset = 0;
+					CPP_notice_class_struct_union_enum(*src.c_array<0>()[i].c_array<2>());
+					};
+				continue;
+				};
+			if (!CPP_looks_like_identifier(src.data<0>()[i+1]))
+				{	//! \test zcc/decl.C99/Error_enum_truncate2.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM(tmp2);
+				INC_INFORM(" neither specifier nor definition (");
+				INFORM(strcmp(tmp2,"enum") ? "C++98 9p1)" : "C++98 7.2p1)");
+				zcc_errors.inc_error();
+				// remove from parse
+				src.DestroyNAtAndRotateTo<0>(1,i,src.size<0>()-offset);
+				offset += 1;
+				continue;
+				};
+			src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+1]);
+			src.c_array<0>()[i].grab_index_token_location_from<1,0>(src.data<0>()[i+1]);
+			src.c_array<0>()[i+1].clear();
+			if (2<src.size<0>()-(i+offset) && is_naked_brace_pair(src.data<0>()[i+2]))
+				{
+				make_target_postfix_arg(src,offset,i,i+1);
+				src.DestroyNAtAndRotateTo<0>(2,i+1,src.size<0>()-offset);
+				offset += 2;
+				assert(is_C99_named_specifier_definition(src.data<0>()[i],tmp2));
+				if (!src.data<0>()[i].data<2>()->empty<0>())
+					{	// recurse into { ... }
+					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+					offset = 0;
+					CPP_notice_class_struct_union_enum(*src.c_array<0>()[i].c_array<2>());
+					};
+				continue;
+				};
+			src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
+			offset += 1;
+			assert(is_C99_named_specifier(src.data<0>()[i],tmp2));
+			continue;
+			}
+		else if (   is_naked_parentheses_pair(src.data<0>()[i])
+				 || is_naked_brace_pair(src.data<0>()[i])
+				 || is_naked_bracket_pair(src.data<0>()[i]))
+			{
+			if (!src.data<0>()[i].empty<0>())
+				{	// recurse into (...)/{...}/[...]
+				if (0<offset)
+					{
+					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+					offset = 0;
+					};
+				CPP_notice_class_struct_union_enum(src.c_array<0>()[i]);
+				}
+			}
+		++i;
+		};
+	if (0<offset) src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+}
+
 bool convert_to(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& dest,const C_PPIntCore& src)
 {
 	assert(8==src.radix || 10==src.radix || 16==src.radix);
@@ -8915,6 +9180,8 @@ static void C99_ContextFreeParse(parse_tree& src,const type_system& types)
 	if (!_match_pairs(src)) return;
 	// handle core type specifiers
 	C99_notice_primary_type(src);
+	// struct/union/enum specifiers can occur in all sorts of strange places
+	C99_notice_struct_union_enum(src);
 }
 
 bool CPP_ok_for_toplevel_qualified_name(const parse_tree& x)
@@ -9051,7 +9318,10 @@ static void CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 	if (!_match_pairs(src)) return;
 	// handle core type specifiers
 	CPP_notice_primary_type(src);
+	// do context-free part of qualified-names
 	CPP_notice_scope_glue(src);
+	// class/struct/union/enum specifiers can occur in all sorts of strange places
+	CPP_notice_class_struct_union_enum(src);
 }
 
 //! \test if.C99/Pass_zero.hpp, if.C99/Pass_zero.h

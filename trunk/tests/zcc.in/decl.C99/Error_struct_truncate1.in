@@ -1,0 +1,6 @@
+SUFFIXES h hpp
+// incomplete struct tag
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+struct
+

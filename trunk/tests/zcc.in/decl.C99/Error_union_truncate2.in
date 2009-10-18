@@ -1,0 +1,6 @@
+SUFFIXES h hpp
+// incomplete union tag
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+union %
+
