@@ -121,6 +121,16 @@ union union_quartet
 	T4 fourth;
 };
 
+template<class T1, class T2, class T3, class T4, class T5>
+union union_quintet
+{
+	T1 first;
+	T2 second;
+	T3 third;
+	T4 fourth;
+	T5 fifth;
+};
+
 template<class T1,class T2,class T3,class T4,class T5,class T6,class T7>
 union union_heptuple
 {
@@ -157,6 +167,24 @@ ZAIMONI_POD_STRUCT(ZAIMONI_TEMPLATE_SPEC,ZAIMONI_CLASS_SPEC,_T1)
 
 #define ZAIMONI_TEMPLATE_SPEC template<typename _T1,typename _T2,typename _T3>
 #define ZAIMONI_CLASS_SPEC zaimoni::union_triple<_T1,_T2,_T3>
+ZAIMONI_POD_STRUCT(ZAIMONI_TEMPLATE_SPEC,ZAIMONI_CLASS_SPEC,_T1)
+#undef ZAIMONI_CLASS_SPEC
+#undef ZAIMONI_TEMPLATE_SPEC
+
+#define ZAIMONI_TEMPLATE_SPEC template<typename _T1,typename _T2,typename _T3,typename _T4>
+#define ZAIMONI_CLASS_SPEC zaimoni::union_quartet<_T1,_T2,_T3,_T4>
+ZAIMONI_POD_STRUCT(ZAIMONI_TEMPLATE_SPEC,ZAIMONI_CLASS_SPEC,_T1)
+#undef ZAIMONI_CLASS_SPEC
+#undef ZAIMONI_TEMPLATE_SPEC
+
+#define ZAIMONI_TEMPLATE_SPEC template<typename _T1,typename _T2,typename _T3,typename _T4,typename _T5>
+#define ZAIMONI_CLASS_SPEC zaimoni::union_quintet<_T1,_T2,_T3,_T4,_T5>
+ZAIMONI_POD_STRUCT(ZAIMONI_TEMPLATE_SPEC,ZAIMONI_CLASS_SPEC,_T1)
+#undef ZAIMONI_CLASS_SPEC
+#undef ZAIMONI_TEMPLATE_SPEC
+
+#define ZAIMONI_TEMPLATE_SPEC template<typename _T1,typename _T2,typename _T3,typename _T4,typename _T5,typename _T6,typename _T7>
+#define ZAIMONI_CLASS_SPEC zaimoni::union_heptuple<_T1,_T2,_T3,_T4,_T5,_T6,_T7>
 ZAIMONI_POD_STRUCT(ZAIMONI_TEMPLATE_SPEC,ZAIMONI_CLASS_SPEC,_T1)
 #undef ZAIMONI_CLASS_SPEC
 #undef ZAIMONI_TEMPLATE_SPEC

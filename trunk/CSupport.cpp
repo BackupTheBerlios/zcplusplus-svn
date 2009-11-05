@@ -10043,8 +10043,21 @@ public:
 		// handle typedefs
 		if (check_for_typedef(base_type,x.index_tokens[0].token.first,types)) return true;
 		//! \todo handle other known types
-		// note: we have to handle typedefs of unions/structs, anonymous or otherwise ....
-		// worse, the typedef need not be *before* the union/struct declaration
+#if 0
+		// we must accept any specifier here: C99 6.7.2p1
+		if (   is_C99_anonymous_specifier(x,"enum")
+			|| is_C99_named_specifier(x,"enum")
+			|| is_C99_named_specifier_definition(x,"enum"))
+			return true;
+		if (   is_C99_anonymous_specifier(x,"struct")
+			|| is_C99_named_specifier(x,"struct")
+			|| is_C99_named_specifier_definition(x,"struct"))
+			return true;
+		if (   is_C99_anonymous_specifier(x,"union")
+			|| is_C99_named_specifier(x,"union")
+			|| is_C99_named_specifier_definition(x,"union"))
+			return true;
+#endif
 		return false;
 		};
 	bool analyze_flags_global(parse_tree& x, size_t i, size_t& decl_count)
@@ -10113,8 +10126,8 @@ public:
 //! \todo belongs elsewhere
 size_t count_disjoint_substring_instances(const char* const src,const char* const match)
 {
-	assert(NULL!=src && *src);
-	assert(NULL!=match && *match);
+	assert(src && *src);
+	assert(match && *match);
 	const size_t src_len = strlen(src);
 	const size_t match_len = strlen(match);
 	size_t n = 0;
@@ -10128,7 +10141,7 @@ size_t count_disjoint_substring_instances(const char* const src,const char* cons
 }
 
 //! \todo belongs elsewhere
-void report_disjoint_substring_instances(const char* const src,const char* const match,const char**& namespace_break_stack,const size_t namespace_break_stack_size)
+void report_disjoint_substring_instances(const char* const src,const char* const match,const char** const namespace_break_stack,const size_t namespace_break_stack_size)
 {
 	assert(NULL!=src && *src);
 	assert(NULL!=match && *match);
@@ -10153,12 +10166,26 @@ private:
 	uintmax_t flags;
 	type_spec base_type;
 	const type_system& types;
+	// these two might belong in a koenig_lookup object
 	const char* const active_namespace;
+	autovalarray_ptr_throws<char*> koenig_lookup;
 public:
-	CPP0X_decl_specifier_scanner(const type_system& _types,const char* const _active_namespace) : flags(0),types(_types),active_namespace(_active_namespace)
+	CPP0X_decl_specifier_scanner(const type_system& _types,const char* const _active_namespace) : flags(0),types(_types),active_namespace(_active_namespace),koenig_lookup((_active_namespace && *_active_namespace) ? count_disjoint_substring_instances(_active_namespace,"::") : 0)
 		{
 		clear(decl_count);
 		base_type.clear();
+		if (!koenig_lookup.empty())
+			{
+			size_t namespace_break_stack_size = koenig_lookup.size();
+			weakautovalarray_ptr_throws<const char*> namespace_break_stack(namespace_break_stack_size);
+			report_disjoint_substring_instances(active_namespace,"::",namespace_break_stack.c_array(),namespace_break_stack_size);
+			do	{
+				size_t offset = namespace_break_stack[--namespace_break_stack_size]-active_namespace;
+				koenig_lookup[namespace_break_stack_size] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(offset));
+				strncpy(koenig_lookup[namespace_break_stack_size],active_namespace,offset);
+				}
+			while(0<namespace_break_stack_size);
+			}
 		}
 	// trivial destructor, copy constructor, assignment fine
 	bool operator()(parse_tree& x,const size_t i)
@@ -10203,7 +10230,7 @@ public:
 				char* tmp2 = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(active_namespace_len+2+x.data<0>()[i].index_tokens[0].token.second));
 				strcpy(tmp2,active_namespace);
 				strcpy(tmp2+active_namespace_len,"::");
-				strncpy(tmp2+active_namespace_len+2,x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second);
+				strcpy(tmp2+active_namespace_len+2,x.data<0>()[i].index_tokens[0].token.first);
 				const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(tmp2);
 				if (NULL!=tmp)
 					{	//! \todo check for access-control if source is a class or struct
@@ -10211,29 +10238,24 @@ public:
 					value_copy(base_type,tmp->first);
 					return true;
 					};
-				size_t namespace_break_stack_size = count_disjoint_substring_instances(active_namespace,"::");
-				if (0<namespace_break_stack_size)
-					{	//! \todo this wastes a calloc/free, but odds are the code cost of special-casing is larger
-					const char** namespace_break_stack = _new_buffer_nonNULL_throws<const char*>(namespace_break_stack_size);
-					report_disjoint_substring_instances(active_namespace,"::",namespace_break_stack,namespace_break_stack_size);
+				if (!koenig_lookup.empty())
+					{
+					size_t i = koenig_lookup.size();
 					do	{
-						size_t offset = namespace_break_stack[--namespace_break_stack_size]-active_namespace;
-						strncpy(tmp2,active_namespace,offset);
+						--i;
+						size_t offset = strlen(koenig_lookup[i]);
+						strcpy(tmp2,koenig_lookup[i]);
 						strcpy(tmp2+offset,"::");
-						offset += 2;
-						strncpy(tmp2+offset,x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second);
-						tmp2[offset+x.data<0>()[i].index_tokens[0].token.second] = '\0';
+						strcpy(tmp2+offset+2,x.data<0>()[i].index_tokens[0].token.first);
 						const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(tmp2);
 						if (NULL!=tmp)
 							{	//! \todo check for access-control if source is a class or struct
-							free(namespace_break_stack);
 							free(tmp2);
 							value_copy(base_type,tmp->first);
 							return true;
 							};
 						}
-					while(0<namespace_break_stack_size);
-					free(namespace_break_stack);
+					while(0<i);
 					};
 				free(tmp2);
 				}
@@ -10242,6 +10264,25 @@ public:
 			}
 		}
 		//! \todo handle other known types
+#if 0
+		// we must accept any specifier here: C++0X 7.1.6.2p1
+		if (   is_C99_anonymous_specifier(x,"enum")
+			|| is_C99_named_specifier(x,"enum")
+			|| is_C99_named_specifier_definition(x,"enum"))
+			return true;
+		if (   is_C99_anonymous_specifier(x,"struct")
+			|| is_C99_named_specifier(x,"struct")
+			|| is_C99_named_specifier_definition(x,"struct"))
+			return true;
+		if (   is_C99_anonymous_specifier(x,"union")
+			|| is_C99_named_specifier(x,"union")
+			|| is_C99_named_specifier_definition(x,"union"))
+			return true;
+		if (   is_C99_anonymous_specifier(x,"class")
+			|| is_C99_named_specifier(x,"class")
+			|| is_C99_named_specifier_definition(x,"class"))
+			return true;
+#endif
 		return false;
 		};
 	bool analyze_flags_global(parse_tree& x, size_t i, size_t& decl_count)
