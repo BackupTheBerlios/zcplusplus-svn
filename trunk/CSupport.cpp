@@ -23,6 +23,7 @@
 #include "C_PPOctalInteger.hpp"
 #include "C_PPDecimalFloat.hpp"
 #include "C_PPHexFloat.hpp"
+#include "struct_type.hpp"
 #include "CheckReturn.hpp"
 
 using namespace zaimoni;
@@ -3845,7 +3846,7 @@ static bool is_C99_anonymous_specifier(const parse_tree& src,const char* const s
 			&&	NULL==src.index_tokens[1].token.first
 			&&	src.empty<0>()
 			&&	src.empty<1>()
-			&&	1==src.size<2>() && is_naked_brace_pair(src));
+			&&	1==src.size<2>() && is_naked_brace_pair(*src.data<2>()))
 		return true;
 	return false;
 }
@@ -3859,7 +3860,7 @@ static bool is_C99_named_specifier(const parse_tree& src,const char* const spec_
 			&&	NULL!=src.index_tokens[1].token.first
 			&&	src.empty<0>()
 			&&	src.empty<1>()
-			&&	src.empty<2>());
+			&&	src.empty<2>())
 		return true;
 	return false;
 }
@@ -3873,7 +3874,7 @@ static bool is_C99_named_specifier_definition(const parse_tree& src,const char* 
 			&&	NULL!=src.index_tokens[1].token.first
 			&&	src.empty<0>()
 			&&	src.empty<1>()
-			&&	1==src.size<2>() && is_naked_brace_pair(src));
+			&&	1==src.size<2>() && is_naked_brace_pair(*src.data<2>()))
 		return true;
 	return false;
 }
@@ -4064,7 +4065,7 @@ void CPP_notice_class_struct_union_enum(parse_tree& src)
 			src.c_array<0>()[i+1].clear();
 			if (2<src.size<0>()-(i+offset) && is_naked_brace_pair(src.data<0>()[i+2]))
 				{
-				make_target_postfix_arg(src,offset,i,i+1);
+				make_target_postfix_arg(src,offset,i,i+2);
 				src.DestroyNAtAndRotateTo<0>(2,i+1,src.size<0>()-offset);
 				offset += 2;
 				assert(is_C99_named_specifier_definition(src.data<0>()[i],tmp2));
@@ -10579,6 +10580,173 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 			C99_CPP_handle_static_assertion(src,types,*CLexer->pp_support,i," : control expression for static assertion must evaluate to a single integer constant (C1X 6.7.9p3)");
 			continue;
 			};
+		// XXX C allows mixing definitions and declaring variables at the same time, but this is a bit unusual
+		// check naked declarations first
+		if (is_C99_named_specifier(src.data<0>()[i],"union"))
+			{
+			type_system::type_index tmp = types.get_id_union(src.data<0>()[i].index_tokens[1].token.first);
+			src.c_array<0>()[i].type_code.set_type(tmp);
+			}
+		else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
+			{
+			type_system::type_index tmp = types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first);
+			src.c_array<0>()[i].type_code.set_type(tmp);
+			}
+		else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
+			{	// can only define once
+			const C_union_struct_def* const tmp = types.get_C_structdef(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+			if (tmp)
+				{	//! \test zcc/decl.C99/Error_union_multidef.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("'union ");
+				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
+				INFORM("' already defined (C99 6.7.2.3p1)");
+				zcc_errors.inc_error();
+				// now it's gone
+				// remove trailing semicolon if present
+				src.DeleteNSlotsAt<0>((1<src.size<0>()-i && robust_token_is_char<';'>(src.data<0>()[i+1])) ? 2 : 1,i);
+				continue;
+				}
+			}
+		else if (is_C99_named_specifier_definition(src.data<0>()[i],"struct"))
+			{	// can only define once
+			const C_union_struct_def* const tmp = types.get_C_structdef(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+			if (tmp)
+				{	//! \test zcc/decl.C99/Error_struct_multidef.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("'struct ");
+				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
+				INFORM("' already defined (C99 6.7.2.3p1)");
+				zcc_errors.inc_error();
+				// now it's gone
+				// remove trailing semicolon if present
+				src.DeleteNSlotsAt<0>((1<src.size<0>()-i && robust_token_is_char<';'>(src.data<0>()[i+1])) ? 2 : 1,i);
+				continue;
+				}
+			}
+
+		if (	1<src.size<0>()-i
+			&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
+			{	// is_C99_named_specifier(src.data<0>()[i],"enum") will cause an error later, in variable parsing
+			if (is_C99_anonymous_specifier(src.data<0>()[i],"union"))
+				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
+					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+					//! \test zcc/decl.C99/Warn_inaccessible_union.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(WARN_STR);
+				INFORM("unreferenceable anonymous union declaration");
+				if (bool_options[boolopt::warnings_are_errors])
+					zcc_errors.inc_error();
+				// remove from parse
+				src.DeleteNSlotsAt<0>(2,i);
+				continue;
+				}
+			else if (is_C99_anonymous_specifier(src.data<0>()[i],"struct"))
+				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
+					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+					//! \test zcc/decl.C99/Warn_inaccessible_struct.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(WARN_STR);
+				INFORM("unreferenceable anonymous struct declaration");
+				if (bool_options[boolopt::warnings_are_errors])
+					zcc_errors.inc_error();
+				// remove from parse
+				src.DeleteNSlotsAt<0>(2,i);
+				continue;
+				}
+			else if (is_C99_named_specifier(src.data<0>()[i],"union"))
+				{	// forward-declare, fine
+				if (types.get_id_union(src.data<0>()[i].index_tokens[1].token.first))
+					{	// but if already (forward-)declared then this is a no-op
+						// think this is common enough to not warrant OAOO/DRY treatment
+					//! \bug needs test case
+					// remove from parse
+					src.DeleteNSlotsAt<0>(2,i);
+					continue;					
+					}
+				// forward-declare
+				//! \bug needs test case
+				union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].token.first);
+				types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,tmp);
+				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_structdecl(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)));
+				i += 2;
+				continue;
+				}
+			else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
+				{	// forward-declare, fine
+				if (types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first))
+					{	// but if already (forward-)declared then this is a no-op
+						// think this is common enough to not warrant OAOO/DRY treatment
+					//! \bug needs test case
+					// remove from parse
+					src.DeleteNSlotsAt<0>(2,i);
+					continue;					
+					}
+				// forward-declare
+				//! \bug needs test case
+				union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].token.first);
+				types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,tmp);
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_structdecl(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)));
+				i += 2;
+				continue;
+				}
+			else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
+				{	// definitions...fine
+				type_system::type_index tmp = types.get_id_union(src.data<0>()[i].index_tokens[1].token.first);
+				C_union_struct_def* tmp2 = NULL;
+				if (tmp)
+					{	// promoting forward-declare to definition
+						//! \bug needs test case
+					const union_struct_decl* tmp3 = types.get_structdecl(tmp);
+					assert(tmp3);
+					tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+					//! \todo record field structure, etc.
+					types.upgrade_decl_to_def(tmp,tmp2);
+					assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+					assert(types.get_C_structdef(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)));
+					}
+				else{	// definition
+						//! \test zcc/decl.C99/Pass_union_def.h
+					tmp2 = new C_union_struct_def(union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+					//! \todo record field structure, etc.
+					types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,tmp2);
+					assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+					assert(types.get_C_structdef(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)));
+					}
+				i += 2;
+				continue;
+				}
+			else if (is_C99_named_specifier_definition(src.data<0>()[i],"struct"))
+				{	// definitions...fine
+				type_system::type_index tmp = types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first);
+				C_union_struct_def* tmp2 = NULL;
+				if (tmp)
+					{	// promoting forward-declare to definition
+						//! \bug needs test case
+					const union_struct_decl* tmp3 = types.get_structdecl(tmp);
+					assert(tmp3);
+					tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+					//! \todo record field structure, etc.
+					types.upgrade_decl_to_def(tmp,tmp2);
+					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+					assert(types.get_C_structdef(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)));
+					}
+				else{	// definition
+						//! \test zcc/decl.C99/Pass_struct_def.h
+					tmp2 = new C_union_struct_def(union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+					//! \todo record field structure, etc.
+					types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,tmp2);
+					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+					assert(types.get_C_structdef(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)));
+					}
+				i += 2;
+				continue;
+				};
+			};
 		// general declaration scanner 
 		// we intercept typedefs as part of general variable declaration detection (weird storage qualifier)
 		// intercept declarations as follows
@@ -10820,6 +10988,256 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			C99_CPP_handle_static_assertion(src,types,*CPlusPlusLexer->pp_support,i," : control expression for static assertion must be a constant convertible to bool (C++0X 7p4)");
 			continue;
 			};
+		// XXX C++ allows mixing definitions and declaring variables at the same time, but this is a bit unusual
+		// check naked declarations first; handle namespaces later
+		if (NULL==active_namespace)
+			{
+			if (is_C99_named_specifier(src.data<0>()[i],"union"))
+				{
+				type_system::type_index tmp = types.get_id_union(src.data<0>()[i].index_tokens[1].token.first);
+				src.c_array<0>()[i].type_code.set_type(tmp);
+				}
+			else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
+				{
+				type_system::type_index tmp = types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first);
+				src.c_array<0>()[i].type_code.set_type(tmp);
+				}
+			else if (is_C99_named_specifier(src.data<0>()[i],"class"))
+				{
+				type_system::type_index tmp = types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first);
+				src.c_array<0>()[i].type_code.set_type(tmp);
+				}
+			else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
+				{	// can only define once
+				const C_union_struct_def* const tmp = types.get_C_structdef(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+				if (tmp)
+					{	//! \test zcc/decl.C99/Error_union_multidef.hpp
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("'union ");
+					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
+					INFORM("' already defined (C++0X 9.1p1)");
+					zcc_errors.inc_error();
+					// now it's gone
+					// remove trailing semicolon if present
+					src.DeleteNSlotsAt<0>((1<src.size<0>()-i && robust_token_is_char<';'>(src.data<0>()[i+1])) ? 2 : 1,i);
+					continue;
+					}
+				}
+			else if (is_C99_named_specifier_definition(src.data<0>()[i],"struct"))
+				{	// can only define once
+				const C_union_struct_def* const tmp = types.get_C_structdef(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+				if (tmp)
+					{	//! \test zcc/decl.C99/Error_struct_multidef.hpp
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("'struct ");
+					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
+					INFORM("' already defined (C++0X 9.1p1)");
+					zcc_errors.inc_error();
+					// now it's gone
+					// remove trailing semicolon if present
+					src.DeleteNSlotsAt<0>((1<src.size<0>()-i && robust_token_is_char<';'>(src.data<0>()[i+1])) ? 2 : 1,i);
+					continue;
+					}
+				}
+			else if (is_C99_named_specifier_definition(src.data<0>()[i],"class"))
+				{	// can only define once
+				const C_union_struct_def* const tmp = types.get_C_structdef(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+				if (tmp)
+					{	//! \test zcc/decl.C99/Error_class_multidef.hpp
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("'class ");
+					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
+					INFORM("' already defined (C++0X 9.1p1)");
+					zcc_errors.inc_error();
+					// now it's gone
+					// remove trailing semicolon if present
+					src.DeleteNSlotsAt<0>((1<src.size<0>()-i && robust_token_is_char<';'>(src.data<0>()[i+1])) ? 2 : 1,i);
+					continue;
+					}
+				}
+
+			if (	1<src.size<0>()-i
+				&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
+				{	// is_C99_named_specifier(src.data<0>()[i],"enum") will cause an error later, in variable parsing
+				if (is_C99_anonymous_specifier(src.data<0>()[i],"union"))
+					{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
+						//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+						//! \test zcc/decl.C99/Warn_inaccessible_union.hpp
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(WARN_STR);
+					INFORM("unreferenceable anonymous union declaration");
+					if (bool_options[boolopt::warnings_are_errors])
+						zcc_errors.inc_error();
+					// remove from parse
+					src.DeleteNSlotsAt<0>(2,i);
+					continue;
+					}
+				else if (is_C99_anonymous_specifier(src.data<0>()[i],"struct"))
+					{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
+						//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+						//! \test zcc/decl.C99/Warn_inaccessible_struct.hpp
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(WARN_STR);
+					INFORM("unreferenceable anonymous struct declaration");
+					if (bool_options[boolopt::warnings_are_errors])
+						zcc_errors.inc_error();
+					// remove from parse
+					src.DeleteNSlotsAt<0>(2,i);
+					continue;
+					}
+				else if (is_C99_anonymous_specifier(src.data<0>()[i],"class"))
+					{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
+						//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+						//! \test zcc/decl.C99/Warn_inaccessible_class.hpp
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(WARN_STR);
+					INFORM("unreferenceable anonymous class declaration");
+					if (bool_options[boolopt::warnings_are_errors])
+						zcc_errors.inc_error();
+					// remove from parse
+					src.DeleteNSlotsAt<0>(2,i);
+					continue;
+					}
+				else if (is_C99_named_specifier(src.data<0>()[i],"union"))
+					{	// forward-declare, fine
+					if (types.get_id_union(src.data<0>()[i].index_tokens[1].token.first))
+						{	// but if already (forward-)declared then this is a no-op
+							// think this is common enough to not warrant OAOO/DRY treatment
+						//! \bug needs test case
+						// remove from parse
+						src.DeleteNSlotsAt<0>(2,i);
+						continue;					
+						}
+					// forward-declare
+					//! \bug needs test case
+					union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].token.first);
+					types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,tmp);
+					assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+					assert(types.get_structdecl(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)));
+					i += 2;
+					continue;
+					}
+				else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
+					{	// forward-declare, fine
+					if (types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first))
+						{	// but if already (forward-)declared then this is a no-op
+							// think this is common enough to not warrant OAOO/DRY treatment
+						//! \bug needs test case
+						// remove from parse
+						src.DeleteNSlotsAt<0>(2,i);
+						continue;					
+						}
+					// forward-declare
+					//! \bug needs test case
+					union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].token.first);
+					types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,tmp);
+					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+					assert(types.get_structdecl(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)));
+					i += 2;
+					continue;
+					}
+				else if (is_C99_named_specifier(src.data<0>()[i],"class"))
+					{	// forward-declare, fine
+					if (types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first))
+						{	// but if already (forward-)declared then this is a no-op
+							// think this is common enough to not warrant OAOO/DRY treatment
+						//! \bug needs test case
+						// remove from parse
+						src.DeleteNSlotsAt<0>(2,i);
+						continue;					
+						}
+					// forward-declare
+					//! \bug needs test case
+					union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_class,src.data<0>()[i].index_tokens[1].token.first);
+					types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,tmp);
+					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+					assert(types.get_structdecl(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)));
+					i += 2;
+					continue;
+					}
+				else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
+					{	// definitions...fine
+					type_system::type_index tmp = types.get_id_union(src.data<0>()[i].index_tokens[1].token.first);
+					C_union_struct_def* tmp2 = NULL;
+					if (tmp)
+						{	// promoting forward-declare to definition
+							//! \bug needs test case
+						const union_struct_decl* tmp3 = types.get_structdecl(tmp);
+						assert(tmp3);
+						tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+						//! \todo record field structure, etc.
+						types.upgrade_decl_to_def(tmp,tmp2);
+						assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+						assert(types.get_C_structdef(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)));
+						}
+					else{	// definition
+							//! \test zcc/decl.C99/Pass_union_def.hpp
+						tmp2 = new C_union_struct_def(union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+						//! \todo record field structure, etc.
+						types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,tmp2);
+						assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+						assert(types.get_C_structdef(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)));
+						}
+					i += 2;
+					continue;
+					}
+				else if (is_C99_named_specifier_definition(src.data<0>()[i],"struct"))
+					{	// definitions...fine
+					type_system::type_index tmp = types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first);
+					C_union_struct_def* tmp2 = NULL;
+					if (tmp)
+						{	// promoting forward-declare to definition
+							//! \bug needs test case
+						const union_struct_decl* tmp3 = types.get_structdecl(tmp);
+						assert(tmp3);
+						tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+						//! \todo record field structure, etc.
+						types.upgrade_decl_to_def(tmp,tmp2);
+						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+						assert(types.get_C_structdef(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)));
+						}
+					else{	// definition
+							//! \test zcc/decl.C99/Pass_struct_def.hpp
+						tmp2 = new C_union_struct_def(union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+						//! \todo record field structure, etc.
+						types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,tmp2);
+						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+						assert(types.get_C_structdef(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)));
+						}
+					i += 2;
+					continue;
+					}
+				else if (is_C99_named_specifier_definition(src.data<0>()[i],"class"))
+					{	// definitions...fine
+					type_system::type_index tmp = types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first);
+					C_union_struct_def* tmp2 = NULL;
+					if (tmp)
+						{	// promoting forward-declare to definition
+							//! \bug needs test case
+						const union_struct_decl* tmp3 = types.get_structdecl(tmp);
+						assert(tmp3);
+						tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+						//! \todo record field structure, etc.
+						types.upgrade_decl_to_def(tmp,tmp2);
+						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+						assert(types.get_C_structdef(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)));
+						}
+					else{	// definition
+							//! \test zcc/decl.C99/Pass_class_def.hpp
+						tmp2 = new C_union_struct_def(union_struct_decl::decl_class,src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+						//! \todo record field structure, etc.
+						types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,tmp2);
+						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+						assert(types.get_C_structdef(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)));
+						}
+					i += 2;
+					continue;
+					};
+				};
+			}
 		// namespace scanner
 		// need some scheme to handle unnamed namespaces (probably alphabetical counter after something illegal so unmatchable)
 		// C++0X has inline namespaces; ignore these for now (well, maybe not: consuming the inline will prevent problems)

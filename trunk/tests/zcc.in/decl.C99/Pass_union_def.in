@@ -1,0 +1,8 @@
+SUFFIXES h hpp
+// using singly defined union
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+union good_test {
+	int x_factor;
+};
+

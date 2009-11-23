@@ -1,0 +1,8 @@
+SUFFIXES h hpp
+// inaccessible union
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+union {
+	int x_factor;
+};
+
