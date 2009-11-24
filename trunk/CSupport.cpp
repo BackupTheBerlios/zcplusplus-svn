@@ -23,6 +23,7 @@
 #include "C_PPOctalInteger.hpp"
 #include "C_PPDecimalFloat.hpp"
 #include "C_PPHexFloat.hpp"
+#include "enum_type.hpp"
 #include "struct_type.hpp"
 #include "CheckReturn.hpp"
 
@@ -10626,6 +10627,49 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				continue;
 				}
 			}
+		// enum was difficult to interpret in C++, so parked here while waiting on comp.std.c++
+		else if (is_C99_named_specifier(src.data<0>()[i],"enum"))
+			{	// C99 6.7.2.3: allowed only after name is defined
+			type_system::type_index tmp = types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
+			src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	// C: enums are int (although we'd like to extend this a bit)
+			if (!tmp && !(src.c_array<0>()[i].flags & parse_tree::INVALID))
+				{	//! \test zcc\decl.C99\Error_enum_undef.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("'enum ");
+				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
+				INFORM("' must refer to completely defined enum (C99 6.7.2.3p2)");
+				zcc_errors.inc_error();
+				src.c_array<0>()[i].flags |= parse_tree::INVALID;
+				}
+			}
+		else if (is_C99_named_specifier_definition(src.data<0>()[i],"enum"))
+			{	// can only define once
+			if (types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first))
+				{	//! \test zcc\decl.C99\Error_enum_multidef.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("'enum ");
+				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
+				INFORM("' already defined (C99 6.7.2.3p1)");
+				zcc_errors.inc_error();
+				// now it's gone
+				src.DeleteNSlotsAt<0>(1,i);
+				continue;
+				};
+			// enum-specifier doesn't have a specific declaration mode
+			//! \test zcc\decl.C99\Pass_enum_def.h
+			enum_def* tmp = new enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+			//! \todo record enum values
+			types.register_enum_def(src.data<0>()[i].index_tokens[1].token.first,tmp);
+			}
+		else if (is_C99_anonymous_specifier(src.data<0>()[i],"enum"))
+			{	// enum-specifier doesn't have a specific declaration mode
+				//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
+			enum_def* tmp = new enum_def("<unknown>",src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
+			//! \todo record enum values
+			types.register_enum_def("<unknown>",tmp);
+			}
 
 		if (	1<src.size<0>()-i
 			&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
@@ -10661,13 +10705,13 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				if (types.get_id_union(src.data<0>()[i].index_tokens[1].token.first))
 					{	// but if already (forward-)declared then this is a no-op
 						// think this is common enough to not warrant OAOO/DRY treatment
-					//! \bug needs test case
+					//! \test zcc/decl.C99/Pass_union_forward_def.h
 					// remove from parse
 					src.DeleteNSlotsAt<0>(2,i);
 					continue;					
 					}
 				// forward-declare
-				//! \bug needs test case
+				//! \test zcc/decl.C99/Pass_union_forward_def.h
 				union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].token.first);
 				types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,tmp);
 				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
@@ -10680,13 +10724,13 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				if (types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first))
 					{	// but if already (forward-)declared then this is a no-op
 						// think this is common enough to not warrant OAOO/DRY treatment
-					//! \bug needs test case
+					//! \test zcc/decl.C99/Pass_struct_forward_def.h
 					// remove from parse
 					src.DeleteNSlotsAt<0>(2,i);
 					continue;					
 					}
 				// forward-declare
-				//! \bug needs test case
+				//! \test zcc/decl.C99/Pass_struct_forward_def.h
 				union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].token.first);
 				types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,tmp);
 				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
@@ -10700,7 +10744,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				C_union_struct_def* tmp2 = NULL;
 				if (tmp)
 					{	// promoting forward-declare to definition
-						//! \bug needs test case
+						//! \test zcc/decl.C99/Pass_union_forward_def.h
 					const union_struct_decl* tmp3 = types.get_structdecl(tmp);
 					assert(tmp3);
 					tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
@@ -10726,7 +10770,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				C_union_struct_def* tmp2 = NULL;
 				if (tmp)
 					{	// promoting forward-declare to definition
-						//! \bug needs test case
+						//! \test zcc/decl.C99/Pass_struct_forward_def.h
 					const union_struct_decl* tmp3 = types.get_structdecl(tmp);
 					assert(tmp3);
 					tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
@@ -11016,7 +11060,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					INC_INFORM(ERR_STR);
 					INC_INFORM("'union ");
 					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
-					INFORM("' already defined (C++0X 9.1p1)");
+					INFORM("' already defined (C++98 3.2p1)");
 					zcc_errors.inc_error();
 					// now it's gone
 					// remove trailing semicolon if present
@@ -11033,7 +11077,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					INC_INFORM(ERR_STR);
 					INC_INFORM("'struct ");
 					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
-					INFORM("' already defined (C++0X 9.1p1)");
+					INFORM("' already defined (C++98 3.2p1)");
 					zcc_errors.inc_error();
 					// now it's gone
 					// remove trailing semicolon if present
@@ -11050,13 +11094,59 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					INC_INFORM(ERR_STR);
 					INC_INFORM("'class ");
 					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
-					INFORM("' already defined (C++0X 9.1p1)");
+					INFORM("' already defined (C++98 3.2p1)");
 					zcc_errors.inc_error();
 					// now it's gone
 					// remove trailing semicolon if present
 					src.DeleteNSlotsAt<0>((1<src.size<0>()-i && robust_token_is_char<';'>(src.data<0>()[i+1])) ? 2 : 1,i);
 					continue;
 					}
+				}
+			// enum was difficult to interpret in C++, so parked here while waiting on comp.std.c++
+			//! \todo actually, we can try forward-declare both scoped enums and enum-based enums (C++0X 7.2p3, these have enough size information); but other parts of the standard get in the way
+			else if (is_C99_named_specifier(src.data<0>()[i],"enum"))
+				{
+				type_system::type_index tmp = types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
+				src.c_array<0>()[i].type_code.set_type(tmp);	// C++: enums are own type
+				if (!tmp && !(src.c_array<0>()[i].flags & parse_tree::INVALID))
+					{	// this belongs elsewhere
+						//! \test zcc\decl.C99\Error_enum_undef.hpp
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("'enum ");
+					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
+					INFORM("' must refer to completely defined enum (C++98/C++0X 3.1p2, C++98 7.1.5.3p2-4/C++0X 7.1.6.3p2)");
+					zcc_errors.inc_error();
+					src.c_array<0>()[i].flags |= parse_tree::INVALID;
+					}
+				//! \todo we should reject plain enum test; anyway (no-variable definition, not a forward-declare exemption)
+				}
+			else if (is_C99_named_specifier_definition(src.data<0>()[i],"enum"))
+				{	// can only define once
+				if (types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first))
+					{	//! \test zcc\decl.C99\Error_enum_multidef.hpp
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("'enum ");
+					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
+					INFORM("' already defined (C++98 3.2p1)");
+					zcc_errors.inc_error();
+					// now it's gone
+					src.DeleteNSlotsAt<0>(1,i);
+					continue;
+					};
+				//! \test zcc\decl.C99\Pass_enum_def.hpp
+				// enum-specifier doesn't have a specific declaration mode
+				enum_def* tmp = new enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+				//! \todo record enum values
+				types.register_enum_def(src.data<0>()[i].index_tokens[1].token.first,tmp);
+				}
+			else if (is_C99_anonymous_specifier(src.data<0>()[i],"enum"))
+				{	// enum-specifier doesn't have a specific declaration mode
+					//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
+				enum_def* tmp = new enum_def("<unknown>",src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
+				//! \todo record enum values
+				types.register_enum_def("<unknown>",tmp);
 				}
 
 			if (	1<src.size<0>()-i
@@ -11106,13 +11196,13 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					if (types.get_id_union(src.data<0>()[i].index_tokens[1].token.first))
 						{	// but if already (forward-)declared then this is a no-op
 							// think this is common enough to not warrant OAOO/DRY treatment
-						//! \bug needs test case
+						//! \test zcc/decl.C99/Pass_union_forward_def.hpp
 						// remove from parse
 						src.DeleteNSlotsAt<0>(2,i);
 						continue;					
 						}
 					// forward-declare
-					//! \bug needs test case
+					//! \test zcc/decl.C99/Pass_union_forward_def.hpp
 					union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].token.first);
 					types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,tmp);
 					assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
@@ -11125,13 +11215,13 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					if (types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first))
 						{	// but if already (forward-)declared then this is a no-op
 							// think this is common enough to not warrant OAOO/DRY treatment
-						//! \bug needs test case
+						//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
 						// remove from parse
 						src.DeleteNSlotsAt<0>(2,i);
 						continue;					
 						}
 					// forward-declare
-					//! \bug needs test case
+					//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
 					union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].token.first);
 					types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,tmp);
 					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
@@ -11164,7 +11254,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					C_union_struct_def* tmp2 = NULL;
 					if (tmp)
 						{	// promoting forward-declare to definition
-							//! \bug needs test case
+							//! \test zcc/decl.C99/Pass_union_forward_def.hpp
 						const union_struct_decl* tmp3 = types.get_structdecl(tmp);
 						assert(tmp3);
 						tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
@@ -11190,7 +11280,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					C_union_struct_def* tmp2 = NULL;
 					if (tmp)
 						{	// promoting forward-declare to definition
-							//! \bug needs test case
+							//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
 						const union_struct_decl* tmp3 = types.get_structdecl(tmp);
 						assert(tmp3);
 						tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
