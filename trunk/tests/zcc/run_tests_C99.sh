@@ -24,6 +24,7 @@ function run_tests {
 	echo Checking ISO acceptance requirements
 	echo ====
 	for F in Pass*.h; do let ++ACCEPT_TEST; echo $CPP $F; if $CPP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in decl.C99/Pass*.h; do let ++ACCEPT_TEST; echo $CPP $F; if $CPP $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 
 	echo -E $BAD_PASS of $REJECT_TEST rejection tests accepted
 	if test -n "$BAD_PASS_NAME"; then echo -E $BAD_PASS_NAME; fi

@@ -19,6 +19,8 @@
 @echo ====
 @for %%f in (Pass*.h) do @echo %CPP% %%f & @%CPP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (decl.C99\Pass*.h) do @echo %CPP% %%f & @%CPP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (decl.C99\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 
 @echo %BAD_PASS% of %REJECT_TEST% rejection tests accepted
 @if not "%BAD_PASS_NAME%"=="LastAccepted:" @echo %BAD_PASS_NAME%

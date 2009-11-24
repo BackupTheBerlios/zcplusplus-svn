@@ -9,5 +9,6 @@ ERROR CPP decl.C99/Error*
 
 ECHO Checking ISO acceptance requirements
 PASS CPP Pass*
+PASS CPP decl.C99/Pass*
 
 EPILOG
