@@ -51,41 +51,35 @@ struct parse_tree
 
 	void MoveInto(parse_tree& dest);
 
+#ifdef ZAIMONI_FORCE_ISO
+#define	ZCC_PARSETREE_CARRAY(I) args[I].first
+#define	ZCC_PARSETREE_END(I) (args[I].first ? args[I].first+args[I].second : NULL)
+#define ZCC_PARSETREE_BACK(I) (*(args[I].first+args[I].second-1))
+#else
+#define	ZCC_PARSETREE_CARRAY(I) args[I]
+#define	ZCC_PARSETREE_END(I) (args[I] ? args[I]+zaimoni::ArraySize(args[I]) : NULL)
+#define ZCC_PARSETREE_BACK(I) (*(args[I]+zaimoni::ArraySize(args[I])-1))
+#endif
+
 	parse_tree* c_array(size_t arg_idx)
 		{
 		assert(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return args[arg_idx].first;
-#else
-		return args[arg_idx];
-#endif
+		return ZCC_PARSETREE_CARRAY(arg_idx);
 		};
 	template<size_t arg_idx> parse_tree* c_array()
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return args[arg_idx].first;
-#else
-		return args[arg_idx];
-#endif
+		return ZCC_PARSETREE_CARRAY(arg_idx);
 		}
 	const parse_tree* data(size_t arg_idx) const
 		{
 		assert(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return args[arg_idx].first;
-#else
-		return args[arg_idx];
-#endif
+		return ZCC_PARSETREE_CARRAY(arg_idx);
 		}
 	template<size_t arg_idx> const parse_tree* data() const
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return args[arg_idx].first;
-#else
-		return args[arg_idx];
-#endif
+		return ZCC_PARSETREE_CARRAY(arg_idx);
 		}
 	size_t size(size_t arg_idx) const
 		{
@@ -108,92 +102,100 @@ struct parse_tree
 	parse_tree* begin(size_t arg_idx)
 		{
 		assert(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return args[arg_idx].first;
-#else
-		return args[arg_idx];
-#endif
+		return ZCC_PARSETREE_CARRAY(arg_idx);
 		};
 	template<size_t arg_idx> parse_tree* begin()
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return args[arg_idx].first;
-#else
-		return args[arg_idx];
-#endif
+		return ZCC_PARSETREE_CARRAY(arg_idx);
 		}
 	const parse_tree* begin(size_t arg_idx) const
 		{
 		assert(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return args[arg_idx].first;
-#else
-		return args[arg_idx];
-#endif
+		return ZCC_PARSETREE_CARRAY(arg_idx);
 		}
 	template<size_t arg_idx> const parse_tree* begin() const
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return args[arg_idx].first;
-#else
-		return args[arg_idx];
-#endif
+		return ZCC_PARSETREE_CARRAY(arg_idx);
 		}
 	parse_tree* end(size_t arg_idx)
 		{
 		assert(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return (NULL==args[arg_idx].first) ? NULL : args[arg_idx].first+args[arg_idx].second;
-#else
-		return (NULL==args[arg_idx]) ? NULL : args[arg_idx]+zaimoni::ArraySize(args[arg_idx]);
-#endif
+		return ZCC_PARSETREE_END(arg_idx);
 		};
 	template<size_t arg_idx> parse_tree* end()
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return (NULL==args[arg_idx].first) ? NULL : args[arg_idx].first+args[arg_idx].second;
-#else
-		return (NULL==args[arg_idx]) ? NULL : args[arg_idx]+zaimoni::ArraySize(args[arg_idx]);
-#endif
+		return ZCC_PARSETREE_END(arg_idx);
 		}
 	const parse_tree* end(size_t arg_idx) const
 		{
 		assert(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return (NULL==args[arg_idx].first) ? NULL : args[arg_idx].first+args[arg_idx].second;
-#else
-		return (NULL==args[arg_idx]) ? NULL : args[arg_idx]+zaimoni::ArraySize(args[arg_idx]);
-#endif
+		return ZCC_PARSETREE_END(arg_idx);
 		}
 	template<size_t arg_idx> const parse_tree* end() const
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return (NULL==args[arg_idx].first) ? NULL : args[arg_idx].first+args[arg_idx].second;
-#else
-		return (NULL==args[arg_idx]) ? NULL : args[arg_idx]+zaimoni::ArraySize(args[arg_idx]);
-#endif
+		return ZCC_PARSETREE_END(arg_idx);
+		}
+	parse_tree& front(size_t arg_idx)
+		{
+		assert(STATIC_SIZE(args)>arg_idx);
+		assert(ZCC_PARSETREE_CARRAY(arg_idx));
+		return *ZCC_PARSETREE_CARRAY(arg_idx);
+		};
+	template<size_t arg_idx> parse_tree& front()
+		{
+		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
+		assert(ZCC_PARSETREE_CARRAY(arg_idx));
+		return *ZCC_PARSETREE_CARRAY(arg_idx);
+		}
+	const parse_tree& front(size_t arg_idx) const
+		{
+		assert(STATIC_SIZE(args)>arg_idx);
+		assert(ZCC_PARSETREE_CARRAY(arg_idx));
+		return *ZCC_PARSETREE_CARRAY(arg_idx);
+		}
+	template<size_t arg_idx> const parse_tree& front() const
+		{
+		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
+		assert(ZCC_PARSETREE_CARRAY(arg_idx));
+		return *ZCC_PARSETREE_CARRAY(arg_idx);
+		}
+	parse_tree& back(size_t arg_idx)
+		{
+		assert(STATIC_SIZE(args)>arg_idx);
+		assert(ZCC_PARSETREE_CARRAY(arg_idx));
+		return ZCC_PARSETREE_BACK(arg_idx);
+		};
+	template<size_t arg_idx> parse_tree& back()
+		{
+		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
+		assert(ZCC_PARSETREE_CARRAY(arg_idx));
+		return ZCC_PARSETREE_BACK(arg_idx);
+		}
+	const parse_tree& back(size_t arg_idx) const
+		{
+		assert(STATIC_SIZE(args)>arg_idx);
+		assert(ZCC_PARSETREE_CARRAY(arg_idx));
+		return ZCC_PARSETREE_BACK(arg_idx);
+		}
+	template<size_t arg_idx> const parse_tree& back() const
+		{
+		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
+		assert(ZCC_PARSETREE_CARRAY(arg_idx));
+		return ZCC_PARSETREE_BACK(arg_idx);
 		}
 	bool empty(size_t arg_idx) const
 		{
 		assert(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return NULL==args[arg_idx].first;
-#else
-		return NULL==args[arg_idx];
-#endif
+		return !ZCC_PARSETREE_CARRAY(arg_idx);
 		}
-	template<size_t arg_idx> size_t empty() const
+	template<size_t arg_idx> bool empty() const
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-		return NULL==args[arg_idx].first;
-#else
-		return NULL==args[arg_idx];
-#endif
+		return !ZCC_PARSETREE_CARRAY(arg_idx);
 		}
 	template<size_t i> bool own_index_token() const
 		{
@@ -223,13 +225,11 @@ struct parse_tree
 		assert(size<arg_idx>()-i>=n);
 		assert(0<n);
 		size_t idx = n;
-#ifdef ZAIMONI_FORCE_ISO
-		do	args[arg_idx].first[i+ --idx].destroy();
+		do	ZCC_PARSETREE_CARRAY(arg_idx)[i+ --idx].destroy();
 		while(0<idx);
+#ifdef ZAIMONI_FORCE_ISO
 		zaimoni::_delete_n_slots_at(args[arg_idx].first,args[arg_idx].second,n,i);
 #else
-		do	args[arg_idx][i+ --idx].destroy();
-		while(0<idx);
 		zaimoni::_delete_n_slots_at(args[arg_idx],n,i);
 #endif
 		}
@@ -237,11 +237,10 @@ struct parse_tree
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
 		assert(size<arg_idx>()>i);
+		ZCC_PARSETREE_CARRAY(arg_idx)[i].destroy();
 #ifdef ZAIMONI_FORCE_ISO
-		args[arg_idx].first[i].destroy();
 		zaimoni::_delete_idx(args[arg_idx].first,args[arg_idx].second,i);
 #else
-		args[arg_idx][i].destroy();
 		zaimoni::_delete_idx(args[arg_idx],i);
 #endif
 		}
@@ -276,15 +275,16 @@ struct parse_tree
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>dest_idx);
 		assert(NULL!=src);
+		assert(NULL==ZCC_PARSETREE_CARRAY(dest_idx));
+		ZCC_PARSETREE_CARRAY(dest_idx) = src;
 #ifdef ZAIMONI_FORCE_ISO
-		assert(NULL==args[dest_idx].first);
-		args[dest_idx].first = src;
 		args[dest_idx].second = 1;
-#else
-		assert(NULL==args[dest_idx]);
-		args[dest_idx] = src;
 #endif
 		}
+
+#undef ZCC_PARSETREE_CARRAY
+#undef ZCC_PARSETREE_END
+#undef ZCC_PARSETREE_BACK
 
 	static bool collapse_matched_pair(parse_tree& src, const zaimoni::POD_pair<size_t,size_t>& target);
 	template<size_t dest_idx,size_t src_idx> void grab_index_token_location_from(const parse_tree& tmp)
