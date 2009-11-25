@@ -39,7 +39,9 @@ static const POD_triple<const char*, size_t, const char*> option_map_bool[]
 		{ "--int-traps",	boolopt::int_traps, 	"signed int has a trap representation (-0 for sign-magnitude and one's complement, -(2^CHAR_BIT) for two's complement\n"},
 		{ "-fsigned-char",	boolopt::char_is_signed, 	"char acts like signed char\n"},		// GCC compatibility
 		{ "-funsigned-char",	boolopt::char_is_unsigned, 	"char acts like unsigned char (default)\n"},	// GCC compatibility
-		{ "--int-neg-div-rounds-away-from-zero",	boolopt::int_neg_div_rounds_away_from_zero, 	"make -3/-2==-2 contrary to C99 recommendation\n"}
+		{ "--int-neg-div-rounds-away-from-zero",	boolopt::int_neg_div_rounds_away_from_zero, 	"make -3/-2==-2 contrary to C99 recommendation\n"},
+		{ "-Wc-c++-compat",	boolopt::warn_crosslang_compatibility,	"Warn when something legal in C/C++ would be an error in C++/C for C/C++\n"},
+		{ "-Wbackport",	boolopt::warn_backport,	"Warn when something legal would be an error under an older standard\n"}
 	};
 
 const bool bool_options_default[MAX_OPT_BOOL]
@@ -52,7 +54,9 @@ const bool bool_options_default[MAX_OPT_BOOL]
 			default_option(boolean_option(6)),
 			default_option(boolean_option(7)),
 			default_option(boolean_option(8)),
-			default_option(boolean_option(9))
+			default_option(boolean_option(9)),
+			default_option(boolean_option(10)),
+			default_option(boolean_option(11))
 		};
 
 // exposed in errors.hpp
@@ -65,7 +69,10 @@ bool bool_options[MAX_OPT_BOOL]
 			default_option(boolean_option(5)),
 			default_option(boolean_option(6)),
 			default_option(boolean_option(7)),
-			default_option(boolean_option(8))
+			default_option(boolean_option(8)),
+			default_option(boolean_option(9)),
+			default_option(boolean_option(10)),
+			default_option(boolean_option(11))
 		};
 
 typedef bool string_opt_handler(const char* const);

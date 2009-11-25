@@ -50,7 +50,9 @@ const bool bool_options_default[MAX_OPT_BOOL]
 			default_option(boolean_option(6)),
 			default_option(boolean_option(7)),
 			default_option(boolean_option(8)),
-			default_option(boolean_option(9))
+			default_option(boolean_option(9)),
+			default_option(boolean_option(10)),
+			default_option(boolean_option(11))
 		};
 
 // exposed in errors.hpp
@@ -63,7 +65,10 @@ bool bool_options[MAX_OPT_BOOL]
 			default_option(boolean_option(5)),
 			default_option(boolean_option(6)),
 			default_option(boolean_option(7)),
-			default_option(boolean_option(8))
+			default_option(boolean_option(8)),
+			default_option(boolean_option(9)),
+			default_option(boolean_option(10)),
+			default_option(boolean_option(11))
 		};
 
 typedef bool string_opt_handler(const char* const);

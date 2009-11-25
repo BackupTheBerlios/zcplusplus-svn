@@ -50,14 +50,22 @@ enum boolean_options {
 #define boolean_option_8 char_is_unsigned
 #define boolean_option_char_is_unsigned 8
 #define DEFAULT_char_is_unsigned false
-	int_neg_div_rounds_away_from_zero
+	int_neg_div_rounds_away_from_zero,
 #define boolean_option_9 int_neg_div_rounds_away_from_zero
 #define boolean_option_int_neg_div_rounds_away_from_zero 9
 #define DEFAULT_int_neg_div_rounds_away_from_zero false
+	warn_crosslang_compatibility,
+#define boolean_option_10 warn_crosslang_compatibility
+#define boolean_option_warn_crosslang_compatibility 10
+#define DEFAULT_warn_crosslang_compatibility false
+	warn_backport
+#define boolean_option_11 warn_backport
+#define boolean_option_warn_backport 11
+#define DEFAULT_warn_backport false
 };
 
 #define boolean_option(A) boolean_option_##A
-#define MAX_OPT_BOOL (boolopt::int_neg_div_rounds_away_from_zero+1)
+#define MAX_OPT_BOOL (boolopt::warn_backport+1)
 
 }
 
