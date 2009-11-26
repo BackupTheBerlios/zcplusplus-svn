@@ -5,6 +5,8 @@ DESC (C)2009 Kenneth Boyd, license: MIT.txt
 PROLOG
 VAR CPP ../../zcc
 VAR CPP_ISO ../../zcc --pedantic
+VAR CPP_BACKPORT ../../zcc -Wbackport
+VAR CPP_COMPAT ../../zcc -Wc-c++-compat
 
 ECHO Checking ISO error requirements
 ERROR CPP_ISO decl.C99/Error*
@@ -12,6 +14,8 @@ ERROR CPP_ISO namespace.CPP/Error*
 ERROR CPP_ISO staticassert.C1X/Error*
 
 ECHO Checking ZCC warnings on ISO-accepted code
+WARN CPP_BACKPORT backport/Warn*
+WARN CPP_COMPAT compat/Warn*
 WARN CPP_ISO decl.C99/Warn*
 WARN CPP_ISO namespace.CPP/Warn*
 

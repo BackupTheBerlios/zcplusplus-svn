@@ -1,0 +1,8 @@
+// decl.C99\Pass_enum_trailing_comma.hpp
+// trailing comma would fail in C89/C++98
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+enum weird_test {
+	x_factor = 1,
+}
+

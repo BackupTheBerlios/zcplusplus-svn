@@ -11,6 +11,8 @@
 @set ACCEPT_TEST=0
 @set CPP=..\..\zcc
 @set CPP_ISO=..\..\zcc --pedantic
+@set CPP_BACKPORT=..\..\zcc -Wbackport
+@set CPP_COMPAT=..\..\zcc -Wc-c++-compat
 
 @echo Checking ISO error requirements
 @echo ====
@@ -27,6 +29,15 @@
 
 @echo Checking ZCC warnings on ISO-accepted code
 @echo ====
+@for %%f in (backport\Warn*.h) do @echo %CPP_BACKPORT% -Werror %%f & @%CPP_BACKPORT% -Werror %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (backport\Warn*.h) do @echo %CPP_BACKPORT% %%f & @%CPP_BACKPORT% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (backport\Warn*.h) do @(set /a ACCEPT_TEST=ACCEPT_TEST+1 & set /a REJECT_TEST=REJECT_TEST+1)
+@for %%f in (backport\Warn*.hpp) do @echo %CPP_BACKPORT% -Werror %%f & @%CPP_BACKPORT% -Werror %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (backport\Warn*.hpp) do @echo %CPP_BACKPORT% %%f & @%CPP_BACKPORT% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (backport\Warn*.hpp) do @(set /a ACCEPT_TEST=ACCEPT_TEST+1 & set /a REJECT_TEST=REJECT_TEST+1)
+@for %%f in (compat\Warn*.hpp) do @echo %CPP_COMPAT% -Werror %%f & @%CPP_COMPAT% -Werror %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (compat\Warn*.hpp) do @echo %CPP_COMPAT% %%f & @%CPP_COMPAT% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (compat\Warn*.hpp) do @(set /a ACCEPT_TEST=ACCEPT_TEST+1 & set /a REJECT_TEST=REJECT_TEST+1)
 @for %%f in (decl.C99\Warn*.h) do @echo %CPP_ISO% -Werror %%f & @%CPP_ISO% -Werror %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (decl.C99\Warn*.h) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (decl.C99\Warn*.h) do @(set /a ACCEPT_TEST=ACCEPT_TEST+1 & set /a REJECT_TEST=REJECT_TEST+1)

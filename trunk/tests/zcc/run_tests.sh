@@ -18,6 +18,8 @@ function run_tests {
 	local ACCEPT_TEST=0
 	local CPP=../../zcc
 	local CPP_ISO="../../zcc --pedantic"
+	local CPP_BACKPORT="../../zcc -Wbackport"
+	local CPP_COMPAT="../../zcc -Wc-c++-compat"
 
 	echo Checking ISO error requirements
 	echo ====
@@ -29,6 +31,12 @@ function run_tests {
 
 	echo Checking ZCC warnings on ISO-accepted code
 	echo ====
+	for F in backport/Warn*.h; do let ++REJECT_TEST; echo $CPP_BACKPORT -Werror $F; if $CPP_BACKPORT -Werror $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
+	for F in backport/Warn*.h; do let ++ACCEPT_TEST; echo $CPP_BACKPORT $F; if $CPP_BACKPORT $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in backport/Warn*.hpp; do let ++REJECT_TEST; echo $CPP_BACKPORT -Werror $F; if $CPP_BACKPORT -Werror $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
+	for F in backport/Warn*.hpp; do let ++ACCEPT_TEST; echo $CPP_BACKPORT $F; if $CPP_BACKPORT $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
+	for F in compat/Warn*.hpp; do let ++REJECT_TEST; echo $CPP_COMPAT -Werror $F; if $CPP_COMPAT -Werror $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
+	for F in compat/Warn*.hpp; do let ++ACCEPT_TEST; echo $CPP_COMPAT $F; if $CPP_COMPAT $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 	for F in decl.C99/Warn*.h; do let ++REJECT_TEST; echo $CPP_ISO -Werror $F; if $CPP_ISO -Werror $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;
 	for F in decl.C99/Warn*.h; do let ++ACCEPT_TEST; echo $CPP_ISO $F; if $CPP_ISO $F; then :; else code_screen $? $F; let ++FAILED; BAD_FAIL_NAME="$BAD_FAIL_NAME $F"; fi; done;
 	for F in decl.C99/Warn*.hpp; do let ++REJECT_TEST; echo $CPP_ISO -Werror $F; if $CPP_ISO -Werror $F; then let ++BAD_PASS; BAD_PASS_NAME="$BAD_PASS_NAME $F"; else code_screen $? $F; fi; done;

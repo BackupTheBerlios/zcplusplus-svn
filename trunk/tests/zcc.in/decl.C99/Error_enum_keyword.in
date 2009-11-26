@@ -1,0 +1,8 @@
+SUFFIXES h hpp
+// keyword as enumerator fails
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+enum bad_test {
+	return = 1
+}
+

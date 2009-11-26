@@ -10549,6 +10549,118 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,type_system& types,P
 	src.DeleteNSlotsAt<0>(j-i+1,i);
 }
 
+static bool record_enum_values(parse_tree& src, type_system& types, const char* const enum_name, const char* const active_namespace,bool allow_empty,func_traits<const char* (*)(const char*, size_t)>::function_ref_type echo_reserved_keyword)
+{
+	assert(!enum_name || *enum_name);
+	assert(!active_namespace || *active_namespace);
+	assert(is_naked_brace_pair(src));
+	// enumeration idea:
+	// * identifer [= ...] ,
+	// terminal , is optional (and in fact should trigger a warning for -Wbackport)
+	// empty collection of enumerators is fine for C++, rejected by C (should be error in C and -Wc-c++-compat for C++)
+	// values would be unsigned_fixed_int<VM_MAX_BIT_PLATFORM>
+	if (src.empty<0>())
+		{
+		if (!allow_empty)
+			{	//! \test zcc/decl.C99/Error_enum_empty.h
+			message_header(src.index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INFORM("enumeration has no enumerators (C99 6.7.2.2p1)");
+			zcc_errors.inc_error();
+			return false;
+			}
+		else if (bool_options[boolopt::warn_crosslang_compatibility])
+			{	//! \test zcc/compat/Warn_enum_empty.hpp
+			message_header(src.index_tokens[0]);
+			INC_INFORM(WARN_STR);
+			INFORM("enumeration with no enumerators is an error in C90/C99/C1X");
+			if (bool_options[boolopt::warnings_are_errors])
+				{
+				zcc_errors.inc_error();
+				return false;
+				}
+			}
+		//! \test zcc/decl.C99/Pass_enum_empty.hpp
+		return true;
+		};
+	// determine if format generally there
+	// stage 1: top-level comma check
+	// * terminal comma is optional, zap it and warn if -Wbackport
+	// * one more enumerator possible than surviving commas; use this to construct buffers
+	size_t i = 0;
+	while(src.size<0>()>i)
+		{	// require identifier that is neither keyword nor a primitive type
+			// C++ will have problems with enum/struct/class/union names, verify status of both of these (could be -Wc-c++-compat issue if legal in C)
+			// if identifier, verify next is = or ,
+			// if next is =, locate comma afterwards (do not do expression parsing yet)
+			//! \todo: enforce One Definition Rule for C++ vs types; determine how much of the effect is in C as well
+		if (   !src.data<0>()[i].is_atomic()
+			||  C_TESTFLAG_IDENTIFIER!=src.data<0>()[i].index_tokens[0].flags
+			|| (PARSE_TYPE & src.data<0>()[i].flags)
+			|| echo_reserved_keyword(src.data<0>()[i].index_tokens[0].token.first,src.data<0>()[i].index_tokens[0].token.second))
+			{	//! \test zcc/decl.C99/Error_enum_brace.h, zcc/decl.C99/Error_enum_brace.hpp
+				//! \test zcc/decl.C99/Error_enum_symbol.h, zcc/decl.C99/Error_enum_symbol.hpp
+				//! \test zcc/decl.C99/Error_enum_type.h, zcc/decl.C99/Error_enum_type.hpp
+				//! \test zcc/decl.C99/Error_enum_keyword.h, zcc/decl.C99/Error_enum_keyword.hpp
+			message_header(0==i ? src.index_tokens[0] : src.data<0>()[i-i].index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INFORM("non-keyword identifier expected as enumerator (C99 6.4.4.3p1/C++0X 7.2p1)");
+			zcc_errors.inc_error();
+			return false;
+			}
+		if (1>=src.size<0>()-i) break;	// fine, would default-update
+		if (robust_token_is_char<','>(src.data<0>()[i+1]))
+			{	// would default-update
+			i += 2;
+			continue;
+			};
+		if (!robust_token_is_char<'='>(src.data<0>()[i+1]))
+			{	//! \test zcc/decl.C99/Error_enum_no_init.h, zcc/decl.C99/Error_enum_no_init.hpp
+			message_header(src.data<0>()[i].index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INFORM("enumerator neither explicitly initialized nor default-initialized (C99 6.4.4.3p1/C++0X 7.2p1)");
+			zcc_errors.inc_error();
+			return false;
+			};
+		i += 2;
+		if (src.size<0>()<=i || robust_token_is_char<','>(src.data<0>()[i]))
+			{	//! \test zcc/decl.C99/Error_enum_init_truncated.h, zcc/decl.C99/Error_enum_init_truncated.hpp
+			message_header(src.data<0>()[i].index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INFORM("enumerator initializer cut off by , (C99 6.4.4.3p1/C++0X 7.2p1)");
+			zcc_errors.inc_error();
+			return false;
+			};
+		while(++i < src.size<0>())
+			{
+			if (robust_token_is_char<','>(src.data<0>()[i]))
+				{
+				++i;
+				break;
+				}
+			};
+		}
+	if (robust_token_is_char<','>(src.back<0>()))
+		{	// warn for -Wbackport
+			//! \test zcc/decl.C99/Pass_enum_trailing_comma.h, zcc/decl.C99/Pass_enum_trailing_comma.hpp
+			//! \test zcc/backport/Warn_enum_trailing_comma.h, zcc/backport/Warn_enum_trailing_comma.hpp
+		if (bool_options[boolopt::warn_backport])
+			{
+			message_header(src.back<0>().index_tokens[0]);
+			INC_INFORM(WARN_STR);
+			INFORM("trailing , in enumeration definition would be an error in C90/C++98");
+			if (bool_options[boolopt::warnings_are_errors])
+				{
+				zcc_errors.inc_error();
+				return false;
+				}
+			}
+		src.DeleteIdx<0>(src.size<0>()-1); // clean up anyway
+		}
+	//! \todo actually record enumerator matchings
+	return true;
+}
+
 // will need: "function-type vector"
 // return: 1 typespec record (for now, other languages may have more demanding requirements)
 // incoming: n typespec records, flag for trailing ...
@@ -10660,15 +10772,24 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 			// enum-specifier doesn't have a specific declaration mode
 			//! \test zcc\decl.C99\Pass_enum_def.h
 			enum_def* tmp = new enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
-			//! \todo record enum values
 			types.register_enum_def(src.data<0>()[i].index_tokens[1].token.first,tmp);
+			assert(types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first));
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,false,C99_echo_reserved_keyword))
+				{
+				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
+				return;
+				}
 			}
 		else if (is_C99_anonymous_specifier(src.data<0>()[i],"enum"))
 			{	// enum-specifier doesn't have a specific declaration mode
 				//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
 			enum_def* tmp = new enum_def("<unknown>",src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-			//! \todo record enum values
 			types.register_enum_def("<unknown>",tmp);
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,NULL,NULL,false,C99_echo_reserved_keyword))
+				{
+				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
+				return;
+				}
 			}
 
 		if (	1<src.size<0>()-i
@@ -11138,15 +11259,23 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				//! \test zcc\decl.C99\Pass_enum_def.hpp
 				// enum-specifier doesn't have a specific declaration mode
 				enum_def* tmp = new enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
-				//! \todo record enum values
 				types.register_enum_def(src.data<0>()[i].index_tokens[1].token.first,tmp);
+				if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,true,CPP_echo_reserved_keyword))
+					{
+					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
+					return;
+					}
 				}
 			else if (is_C99_anonymous_specifier(src.data<0>()[i],"enum"))
 				{	// enum-specifier doesn't have a specific declaration mode
 					//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
 				enum_def* tmp = new enum_def("<unknown>",src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-				//! \todo record enum values
 				types.register_enum_def("<unknown>",tmp);
+				if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,true,CPP_echo_reserved_keyword))
+					{
+					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
+					return;
+					}
 				}
 
 			if (	1<src.size<0>()-i
