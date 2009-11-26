@@ -24,6 +24,7 @@
 #include "Zaimoni.STL/LexParse/Token.hpp"
 #include "Zaimoni.STL/LexParse/LangConf.hpp"
 #include "Zaimoni.STL/search.hpp"
+#include "Zaimoni.STL/OS/mutex.hpp"
 #include "Zaimoni.STL/Pure.C/format_util.h"
 
 #include "DebugCSupport.h"

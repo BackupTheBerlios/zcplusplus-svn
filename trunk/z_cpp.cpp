@@ -19,13 +19,7 @@
 
 error_counter<size_t> zcc_errors(100,"FATAL: too many preprocessing errors");
 
-#ifndef NDEBUG
-bool debug_tracer = false;
-#endif
-
 using namespace zaimoni;
-
-zaimoni::OS::mutex errno_mutex;
 
 static const POD_triple<const char*, size_t, const char*> option_map_bool[]
 =	{	{ "--test",		boolopt::test, 					"final internal state to stderr\n"},
@@ -40,37 +34,6 @@ static const POD_triple<const char*, size_t, const char*> option_map_bool[]
 		{ "--int-neg-div-rounds-away-from-zero",	boolopt::int_neg_div_rounds_away_from_zero, 	"make -3/-2==-2 contrary to C99 recommendation\n"}
 	};
 
-const bool bool_options_default[MAX_OPT_BOOL]
-	= 	{	default_option(boolean_option(0)),
-			default_option(boolean_option(1)),
-			default_option(boolean_option(2)),
-			default_option(boolean_option(3)),
-			default_option(boolean_option(4)),
-			default_option(boolean_option(5)),
-			default_option(boolean_option(6)),
-			default_option(boolean_option(7)),
-			default_option(boolean_option(8)),
-			default_option(boolean_option(9)),
-			default_option(boolean_option(10)),
-			default_option(boolean_option(11))
-		};
-
-// exposed in errors.hpp
-bool bool_options[MAX_OPT_BOOL]
-	= 	{	default_option(boolean_option(0)),
-			default_option(boolean_option(1)),
-			default_option(boolean_option(2)),
-			default_option(boolean_option(3)),
-			default_option(boolean_option(4)),
-			default_option(boolean_option(5)),
-			default_option(boolean_option(6)),
-			default_option(boolean_option(7)),
-			default_option(boolean_option(8)),
-			default_option(boolean_option(9)),
-			default_option(boolean_option(10)),
-			default_option(boolean_option(11))
-		};
-
 typedef bool string_opt_handler(const char* const);
 
 static const POD_triple<const char*, size_t, const char*> option_map_string[]
@@ -78,53 +41,9 @@ static const POD_triple<const char*, size_t, const char*> option_map_string[]
 			{ "--system-include",	stringopt::system_include, "unpreprocessed #include<...> to stdout\n"}
 		};
 
-// exposed in errors.hpp
-const char* string_options[MAX_OPT_STRING]
-	= 	{	default_option(string_option(0)),
-			default_option(string_option(1))
-		};
-
-
 static const POD_triple<const char*, size_t, const char*> option_map_int[]
 =	{	{ "-fmax-errors",		intopt::error_ub, 					"how many errors are too many (default 100)\n"}	// GFortran compatibility
 	};
-
-// exposed in errors.hpp
-int int_options[MAX_OPT_INT]
-	= {default_option(int_option(0))};
-
-static int recognize_bool_opt(const char* const x)
-{
-	if (zaimoni::is_empty_string(x)) return -1;
-	size_t j = STATIC_SIZE(option_map_bool);
-	do if (!strcmp(option_map_bool[--j].first,x)) return j;
-	while(0<j);
-	return -1;
-}
-
-static int recognize_string_opt(const char* const x)
-{
-	if (zaimoni::is_empty_string(x)) return -1;
-	size_t j = STATIC_SIZE(option_map_string);
-	do	{
-		--j;
-		if (!strncmp(option_map_string[j].first,x,strlen(option_map_string[j].first))) return j;
-		}
-	while(0<j);
-	return -1;
-}
-
-static int recognize_int_opt(const char* const x)
-{
-	if (zaimoni::is_empty_string(x)) return -1;
-	size_t j = STATIC_SIZE(option_map_int);
-	do	{
-		--j;
-		if (!strncmp(option_map_int[j].first,x,strlen(option_map_int[j].first))) return j;
-		}
-	while(0<j);
-	return -1;
-}
 
 /*! 
  * If the given string is recognized as a language, set stringopt::lang.
@@ -136,7 +55,7 @@ static int recognize_int_opt(const char* const x)
  * 
  * \return true iff language was accepted
  */
-bool interpret_stringopt_lang(const char* x)
+static bool interpret_stringopt_lang(const char* x)
 {
 	const char* test = echo_valid_lang(x);
 	if (NULL==test) return false;
@@ -216,7 +135,7 @@ static bool process_options(const size_t argc, char* argv[])
 	size_t i = 0;
 	while(argc > ++i)
 		{
-		int index = recognize_bool_opt(argv[i]);
+		int index = recognize_bool_option(argv[i],option_map_bool,STATIC_SIZE(option_map_bool));
 		if (0<=index)
 			{	// handle directly
 			assert(STATIC_SIZE(option_map_bool)>(size_t)index);
@@ -226,7 +145,7 @@ static bool process_options(const size_t argc, char* argv[])
 			last_arg_used_in_option = i;
 			continue;
 			}
-		index = recognize_string_opt(argv[i]);
+		index = recognize_parameter_option(argv[i],option_map_string,STATIC_SIZE(option_map_string));
 		if (0<=index)
 			{	// several flavors of string options; use language override as an example
 				// -x C++
@@ -250,7 +169,7 @@ static bool process_options(const size_t argc, char* argv[])
 			INFORM(option_map_string[index].first);
 			continue;
 			}
-		index = recognize_int_opt(argv[i]);
+		index = recognize_parameter_option(argv[i],option_map_int,STATIC_SIZE(option_map_int));
 		if (0<=index)
 			{
 			assert(STATIC_SIZE(option_map_int)>(size_t)index);

@@ -4,7 +4,15 @@
 #ifndef ERRORS_HPP
 #define ERRORS_HPP 1
 
-#include "Zaimoni.STL/OS/mutex.hpp"
+#include <stddef.h>
+//#include "Zaimoni.STL/OS/mutex.hpp"
+namespace zaimoni {
+namespace OS {
+	class mutex;
+}
+
+template<class T1, class T2, class T3> struct POD_triple;
+}
 
 #define default_option2(A) DEFAULT_##A
 #define default_option(A) default_option2(A)
@@ -104,6 +112,8 @@ enum int_options {
 
 }
 
+// declare globals of interest
+extern const bool bool_options_default[MAX_OPT_BOOL];
 extern bool bool_options[MAX_OPT_BOOL];
 extern const char* string_options[MAX_OPT_STRING];
 extern int int_options[MAX_OPT_INT];
@@ -113,5 +123,8 @@ extern zaimoni::OS::mutex errno_mutex;
 #ifndef NDEBUG
 extern bool debug_tracer;
 #endif
+
+int recognize_bool_option(const char* const x,const zaimoni::POD_triple<const char*, size_t, const char*>* option_map,size_t j);
+int recognize_parameter_option(const char* const x,const zaimoni::POD_triple<const char*, size_t, const char*>* option_map,size_t j);
 
 #endif
