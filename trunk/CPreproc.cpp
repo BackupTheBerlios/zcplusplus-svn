@@ -520,11 +520,8 @@ static errr find_directive(const char* const Text, const LangConf& lang)
 
 static void message_header(const Token<char>& src)
 {
-	assert(NULL!=src.src_filename);
-	INC_INFORM(src.src_filename);
-	INC_INFORM(':');
-	INC_INFORM(src.logical_line.first);
-	INC_INFORM(": ");
+	assert(src.src_filename && *src.src_filename);
+	message_header(src.src_filename,src.logical_line.first);
 }
 
 static void message_header2(const Token<char>& src,size_t where)

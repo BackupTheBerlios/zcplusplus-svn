@@ -127,4 +127,6 @@ extern bool debug_tracer;
 int recognize_bool_option(const char* const x,const zaimoni::POD_triple<const char*, size_t, const char*>* option_map,size_t j);
 int recognize_parameter_option(const char* const x,const zaimoni::POD_triple<const char*, size_t, const char*>* option_map,size_t j);
 
+void message_header(const char* const filename, size_t line_number);
+
 #endif

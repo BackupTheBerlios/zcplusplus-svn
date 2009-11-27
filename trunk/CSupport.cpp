@@ -1062,11 +1062,8 @@ const char* const system_headers[]
 /* XXX this may belong with weak_token XXX */
 static void message_header(const weak_token& src)
 {
-	assert(NULL!=src.src_filename);
-	INC_INFORM(src.src_filename);
-	INC_INFORM(':');
-	INC_INFORM(src.logical_line.first);
-	INC_INFORM(": ");
+	assert(src.src_filename && *src.src_filename);
+	message_header(src.src_filename,src.logical_line.first);
 }
 
 // balanced character count
@@ -10742,22 +10739,26 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		// enum was difficult to interpret in C++, so parked here while waiting on comp.std.c++
 		else if (is_C99_named_specifier(src.data<0>()[i],"enum"))
 			{	// C99 6.7.2.3: allowed only after name is defined
-			type_system::type_index tmp = types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	// C: enums are int (although we'd like to extend this a bit)
-			if (!tmp && !(src.c_array<0>()[i].flags & parse_tree::INVALID))
-				{	//! \test zcc\decl.C99\Error_enum_undef.h
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM("'enum ");
-				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
-				INFORM("' must refer to completely defined enum (C99 6.7.2.3p2)");
-				zcc_errors.inc_error();
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
+			if (!(src.c_array<0>()[i].flags & parse_tree::INVALID))
+				{
+				type_system::type_index tmp = types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
+				src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	// C: enums are int (although we'd like to extend this a bit)
+				if (!tmp)
+					{	//! \test zcc\decl.C99\Error_enum_undef.h
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("'enum ");
+					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
+					INFORM("' must refer to completely defined enum (C99 6.7.2.3p2)");
+					zcc_errors.inc_error();
+					src.c_array<0>()[i].flags |= parse_tree::INVALID;
+					}
 				}
 			}
 		else if (is_C99_named_specifier_definition(src.data<0>()[i],"enum"))
 			{	// can only define once
-			if (types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first))
+			type_system::type_index tmp = types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
+			if (tmp)
 				{	//! \test zcc\decl.C99\Error_enum_multidef.h
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
@@ -10771,8 +10772,8 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				};
 			// enum-specifier doesn't have a specific declaration mode
 			//! \test zcc\decl.C99\Pass_enum_def.h
-			enum_def* tmp = new enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
-			types.register_enum_def(src.data<0>()[i].index_tokens[1].token.first,tmp);
+			enum_def* tmp2 = new enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+			types.register_enum_def(src.data<0>()[i].index_tokens[1].token.first,tmp2);
 			assert(types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first));
 			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,false,C99_echo_reserved_keyword))
 				{
@@ -11227,24 +11228,28 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			//! \todo actually, we can try forward-declare both scoped enums and enum-based enums (C++0X 7.2p3, these have enough size information); but other parts of the standard get in the way
 			else if (is_C99_named_specifier(src.data<0>()[i],"enum"))
 				{
-				type_system::type_index tmp = types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
-				src.c_array<0>()[i].type_code.set_type(tmp);	// C++: enums are own type
-				if (!tmp && !(src.c_array<0>()[i].flags & parse_tree::INVALID))
-					{	// this belongs elsewhere
-						//! \test zcc\decl.C99\Error_enum_undef.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM("'enum ");
-					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
-					INFORM("' must refer to completely defined enum (C++98/C++0X 3.1p2, C++98 7.1.5.3p2-4/C++0X 7.1.6.3p2)");
-					zcc_errors.inc_error();
-					src.c_array<0>()[i].flags |= parse_tree::INVALID;
+				if (!(src.c_array<0>()[i].flags & parse_tree::INVALID))
+					{
+					type_system::type_index tmp = types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
+					src.c_array<0>()[i].type_code.set_type(tmp);	// C++: enums are own type
+					if (!tmp)
+						{	// this belongs elsewhere
+							//! \test zcc\decl.C99\Error_enum_undef.hpp
+						message_header(src.data<0>()[i].index_tokens[0]);
+						INC_INFORM(ERR_STR);
+						INC_INFORM("'enum ");
+						INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
+						INFORM("' must refer to completely defined enum (C++98/C++0X 3.1p2, C++98 7.1.5.3p2-4/C++0X 7.1.6.3p2)");
+						zcc_errors.inc_error();
+						src.c_array<0>()[i].flags |= parse_tree::INVALID;
+						}
 					}
 				//! \todo we should reject plain enum test; anyway (no-variable definition, not a forward-declare exemption)
 				}
 			else if (is_C99_named_specifier_definition(src.data<0>()[i],"enum"))
 				{	// can only define once
-				if (types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first))
+				type_system::type_index tmp = types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
+				if (tmp)
 					{	//! \test zcc\decl.C99\Error_enum_multidef.hpp
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -11258,8 +11263,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					};
 				//! \test zcc\decl.C99\Pass_enum_def.hpp
 				// enum-specifier doesn't have a specific declaration mode
-				enum_def* tmp = new enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
-				types.register_enum_def(src.data<0>()[i].index_tokens[1].token.first,tmp);
+				enum_def* tmp2 = new enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+				types.register_enum_def(src.data<0>()[i].index_tokens[1].token.first,tmp2);
 				if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,true,CPP_echo_reserved_keyword))
 					{
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
