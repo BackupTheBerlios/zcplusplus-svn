@@ -45,6 +45,9 @@ public:
 	~C_union_struct_def();
 	const C_union_struct_def& operator=(const C_union_struct_def& src);
 
+	const char* filename() const {return _src_filename;};
+	zaimoni::POD_pair<size_t,size_t> loc() const {return _logical_line;};
+
 #ifndef NDEBUG
 	bool syntax_ok() const;
 #endif

@@ -1066,6 +1066,20 @@ static void message_header(const weak_token& src)
 	message_header(src.src_filename,src.logical_line.first);
 }
 
+/* XXX this may belong with enum_type XXX */
+static void message_header(const enum_def& src)
+{
+	assert(src.filename() && *src.filename());
+	message_header(src.filename(),src.loc().first);
+}
+
+/* XXX this may belong with C_union_struct_def XXX */
+static void message_header(const C_union_struct_def& src)
+{
+	assert(src.filename() && *src.filename());
+	message_header(src.filename(),src.loc().first);
+}
+
 // balanced character count
 static POD_pair<size_t,size_t>
 _balanced_character_count(const weak_token* tokenlist,size_t tokenlist_len,const char l_match,const char r_match)
@@ -10712,6 +10726,8 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				INC_INFORM("'union ");
 				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 				INFORM("' already defined (C99 6.7.2.3p1)");
+				message_header(*tmp);
+				INFORM("prior definition here");
 				zcc_errors.inc_error();
 				// now it's gone
 				// remove trailing semicolon if present
@@ -10729,6 +10745,8 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				INC_INFORM("'struct ");
 				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 				INFORM("' already defined (C99 6.7.2.3p1)");
+				message_header(*tmp);
+				INFORM("prior definition here");
 				zcc_errors.inc_error();
 				// now it's gone
 				// remove trailing semicolon if present
@@ -10765,6 +10783,10 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				INC_INFORM("'enum ");
 				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 				INFORM("' already defined (C99 6.7.2.3p1)");
+				const enum_def* const tmp2 = types.get_enum_def(tmp);
+				assert(tmp2);
+				message_header(*tmp2);
+				INFORM("prior definition here");
 				zcc_errors.inc_error();
 				// now it's gone
 				src.DeleteNSlotsAt<0>(1,i);
@@ -11183,6 +11205,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					INC_INFORM("'union ");
 					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 					INFORM("' already defined (C++98 3.2p1)");
+					message_header(*tmp);
+					INFORM("prior definition here");
 					zcc_errors.inc_error();
 					// now it's gone
 					// remove trailing semicolon if present
@@ -11200,6 +11224,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					INC_INFORM("'struct ");
 					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 					INFORM("' already defined (C++98 3.2p1)");
+					message_header(*tmp);
+					INFORM("prior definition here");
 					zcc_errors.inc_error();
 					// now it's gone
 					// remove trailing semicolon if present
@@ -11217,6 +11243,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					INC_INFORM("'class ");
 					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 					INFORM("' already defined (C++98 3.2p1)");
+					message_header(*tmp);
+					INFORM("prior definition here");
 					zcc_errors.inc_error();
 					// now it's gone
 					// remove trailing semicolon if present
@@ -11256,6 +11284,10 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					INC_INFORM("'enum ");
 					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 					INFORM("' already defined (C++98 3.2p1)");
+					const enum_def* const tmp2 = types.get_enum_def(tmp);
+					assert(tmp2);
+					message_header(*tmp2);
+					INFORM("prior definition here");
 					zcc_errors.inc_error();
 					// now it's gone
 					src.DeleteNSlotsAt<0>(1,i);

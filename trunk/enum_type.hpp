@@ -21,7 +21,10 @@ public:
 	// default ok for: copy constructor, destructor
 	const enum_def& operator=(const enum_def& src);	// ACID/strong guarantee
 
+	// accessors are to make editing difficult
 	const char* tag() const {return _tag;};
+	const char* filename() const {return _src_filename;};
+	zaimoni::POD_pair<size_t,size_t> loc() const {return _logical_line;};
 #ifndef NDEBUG
 	bool syntax_ok() const;
 #endif
