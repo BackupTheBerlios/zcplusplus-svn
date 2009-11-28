@@ -219,6 +219,7 @@ static const POD_pair<const char*,size_t> C99_CPP0x_locked_macros_default[]
 		DICT_STRUCT("__TIMESTAMP__"),			// lock down our extension macros
 		DICT_STRUCT("__COUNTER__"),				// lock down our extension macros
 		DICT_STRUCT("__INCLUDE_LEVEL__"),		// lock down our extension macros
+		DICT_STRUCT("__has_include"),			// lock down our extension macros
 		DICT_STRUCT("__ZCC__"),					// lock down our identity
 		DICT_STRUCT("__ZCC_MINOR__"),			// lock down our identity
 		DICT_STRUCT("__ZCC_PATCHLEVEL__")		// lock down our identity
@@ -830,6 +831,38 @@ static void C99_reject_keyword_macros(autovalarray_ptr<Token<char>* >& TokenList
 			}
 		}
 	while(0<j);
+}
+
+/*! 
+ * returns code for hardcoded system header not in the file system
+ * 
+ * \param look_for header name
+ * \param lang_code language code from preprocessor object
+ * 
+ * \return unsigned int
+ */
+static unsigned int
+detect_hardcoded_system_header(const char* const look_for,size_t lang_code)
+{
+	// C,C++: limits.h is hardcoded
+	// C++: climits is hardcoded
+	if (	(!strcmp(look_for,"limits.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
+		||	(!strcmp(look_for,"climits") && Lang::CPlusPlus==lang_code))
+		return 1;
+
+	// C,C++: stddef.h is hardcoded
+	// C++: cstddef is hardcoded
+	if (	(!strcmp(look_for,"stddef.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
+		||	(!strcmp(look_for,"cstddef") && Lang::CPlusPlus==lang_code))
+		return 2;
+
+	// C,C++: stdint.h is hardcoded
+	// C++: cstdint is hardcoded
+	if (	(!strcmp(look_for,"stdint.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
+		||	(!strcmp(look_for,"cstdint") && Lang::CPlusPlus==lang_code))
+		return 3;
+
+	return 0;
 }
 
 void
@@ -1921,7 +1954,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 			char buf[FILENAME_MAX];
 			const char* main_index_name = NULL;
 			// note: local_include needs to know where to start...
-			bool found_file = local_include && find_local_include(look_for, buf, ((NULL==TokenList[include_where]->parent_dir) ? "." : TokenList[include_where]->parent_dir));
+			bool found_file = local_include && find_local_include(look_for, buf, (TokenList[include_where]->parent_dir ? TokenList[include_where]->parent_dir : "."));
 			bool hardcoded_header = false;
 			if (found_file)
 				{	// filepath known; local includes use the calculated path for information
@@ -1974,38 +2007,35 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 				if (Lang::C==lang_code && 0<lang.pp_support->LengthOfSystemHeader(look_for))
 					C99_reject_keyword_macros(TokenList,include_where,look_for,lang,macros_object,macros_object_expansion,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion,macros_function_expansion_pre_eval);
 
-				// C,C++: limits.h is hardcoded
-				// C++: climits is hardcoded
-				if (	(!strcmp(look_for,"limits.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
-					||	(!strcmp(look_for,"climits") && Lang::CPlusPlus==lang_code))
-					{	// header is limits.h
-					hardcoded_header = true;
-					C99_reject_keyword_macros(TokenList,include_where,look_for,lang,macros_object,macros_object_expansion,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion,macros_function_expansion_pre_eval);
-					if (0>binary_find("__LIMITS_H__",sizeof("__LIMITS_H__")-1,macros_object))	
-						create_limits_header(IncludeTokenList,look_for);	// not included yet
-					};
-
-				// C,C++: stddef.h is hardcoded
-				// C++: cstddef is hardcoded
-				if (	(!strcmp(look_for,"stddef.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
-					||	(!strcmp(look_for,"cstddef") && Lang::CPlusPlus==lang_code))
-					{	// header is stddef.h
-					hardcoded_header = true;
-					C99_reject_keyword_macros(TokenList,include_where,look_for,lang,macros_object,macros_object_expansion,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion,macros_function_expansion_pre_eval);
-					if (0>binary_find("__STDDEF_H__",sizeof("__STDDEF_H__")-1,macros_object))	
-						create_stddef_header(IncludeTokenList,look_for);	// not included yet
-					};
-
-				// C,C++: stdint.h is hardcoded
-				// C++: cstdint is hardcoded
-				if (	(!strcmp(look_for,"stdint.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
-					||	(!strcmp(look_for,"cstdint") && Lang::CPlusPlus==lang_code))
-					{	// header is stdint.h
+				const unsigned int hardcoded_header_idx = detect_hardcoded_system_header(look_for,lang_code);
+				switch(hardcoded_header_idx)
+				{
+#ifndef NDEBUG
+				default: FATAL("hardcoded_header_idx out of range");
+#endif
+				case 3:	{	// stdint.h/cstdint
 					hardcoded_header = true;
 					C99_reject_keyword_macros(TokenList,include_where,look_for,lang,macros_object,macros_object_expansion,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion,macros_function_expansion_pre_eval);
 					if (0>binary_find("__STDINT_H__",sizeof("__STDINT_H__")-1,macros_object))	
 						create_stdint_header(IncludeTokenList,look_for);	// not included yet
-					};
+					break;
+					}
+				case 2:	{	// stddef.h/cstddef
+					hardcoded_header = true;
+					C99_reject_keyword_macros(TokenList,include_where,look_for,lang,macros_object,macros_object_expansion,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion,macros_function_expansion_pre_eval);
+					if (0>binary_find("__STDDEF_H__",sizeof("__STDDEF_H__")-1,macros_object))	
+						create_stddef_header(IncludeTokenList,look_for);	// not included yet
+					break;
+					}
+				case 1:	{	// limits.h/climits
+					hardcoded_header = true;
+					C99_reject_keyword_macros(TokenList,include_where,look_for,lang,macros_object,macros_object_expansion,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion,macros_function_expansion_pre_eval);
+					if (0>binary_find("__LIMITS_H__",sizeof("__LIMITS_H__")-1,macros_object))	
+						create_limits_header(IncludeTokenList,look_for);	// not included yet
+					break;
+					}
+				case 0:;
+				}
 
 				found_file = !hardcoded_header && find_system_include(look_for, buf);
 				if (found_file)
@@ -2483,6 +2513,8 @@ CPreprocessor::context_free_defined(const char* const x, size_t x_len) const
 	assert(NULL!=x);
 	assert(0<x_len);
 	if (0<=linear_find(x, x_len, macro_identifier_default, macro_identifier_default_count)) return 1;
+	// report "magic macros" as defined if the master preprocessor does
+	if (sizeof("__has_include")-1==x_len && !strncmp(x,"__has_include",x_len)) return 1;	// CLang says predefined
 	if (hard_locked_macro(x,x_len)) return -1;
 	return 0;
 }
@@ -2839,6 +2871,38 @@ static bool if_elif_control_is_zero(const Token<char>& x, const POD_triple<size_
 	return true;
 }
 
+/*! 
+ * 
+ * 
+ * \param x overall directive
+ * \param pretokenized token index for overall directive
+ * \param src
+ * \param i start token
+ * \param delta last token offset included in range to be substituted
+ * 
+ * \return bool true if and only if directive obviously completely substituted
+ */
+bool
+CPreprocessor::replace_char_into_directive(Token<char>& x,const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized,const char src,const size_t i,const size_t delta)
+{
+	if (0==i && delta+1==pretokenized.size())
+		{
+		x.replace_once(std::nothrow,pretokenized[0].first,x.size()-pretokenized[0].first,src);
+		return true;
+		};
+
+	size_t buffer_used = 0;
+	char Buffer[4] = "";
+	if (0<pretokenized[i].first && require_padding(x.data()[pretokenized[i].first-1],src))
+		Buffer[buffer_used++] = ' ';
+	Buffer[buffer_used++] = src;
+	if (x.size()>pretokenized[i+delta].first+pretokenized[i+delta].second && require_padding(src,x.data()[pretokenized[i+delta].first+pretokenized[i+delta].second]))
+		Buffer[buffer_used++] = ' ';
+
+	x.replace_once(std::nothrow,pretokenized[i].first,(pretokenized[i+delta].first-pretokenized[i].first)+pretokenized[i+delta].second,Buffer);
+	return false;
+}
+
 /*
  * we use goto in CPreprocessor::if_elif_syntax_ok contrary to readable style guidelines
  *	RetryStringMerge: restart the string-merge stage (should happen only if running short on memory
@@ -2895,21 +2959,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 				if (0==know_it_now)
 					know_it_now = (macro_is_defined(x.data()+pretokenized[i+1].first, pretokenized[i+1].second, macros_object, macros_function)) ? 1 : -1;
 				const char subst_dest = (0<know_it_now) ? '1' : '0';
-				if (0==i && 2==pretokenized.size())
-					{
-					x.replace_once(std::nothrow,pretokenized[0].first,x.size()-pretokenized[0].first,subst_dest);
-					return true;
-					};
-
-				size_t buffer_used = 0;
-				char Buffer[4] = "";
-				if (0<pretokenized[i].first && require_padding(x.data()[pretokenized[i].first-1],subst_dest))
-					Buffer[buffer_used++] = ' ';
-				Buffer[buffer_used++] = subst_dest;
-				if (x.size()>pretokenized[i+1].first+pretokenized[i+1].second && require_padding(subst_dest,x.data()[pretokenized[i+1].first+pretokenized[i+1].second]))
-					Buffer[buffer_used++] = ' ';
-
-				x.replace_once(std::nothrow,pretokenized[i].first,(pretokenized[i+1].first-pretokenized[i].first)+pretokenized[i+1].second,Buffer);
+				if (replace_char_into_directive(x,pretokenized,subst_dest,i,1)) return true;
 				lang.line_lex(x.data()+critical_offset,x.size()-critical_offset,pretokenized);
 				STL_translate_first(critical_offset,pretokenized);	// coordinate fixup
 				continue;
@@ -2935,21 +2985,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 						know_it_now = (macro_is_defined(x.data()+pretokenized[i+2].first, pretokenized[i+2].second, macros_object, macros_function)) ? 1 : -1;
 
 					const char subst_dest = (0<know_it_now) ? '1' : '0';
-					if (0==i && 4==pretokenized.size())
-						{
-						x.replace_once(std::nothrow,pretokenized[0].first,x.size()-pretokenized[0].first,subst_dest);
-						return true;
-						};
-
-					size_t buffer_used = 0;
-					char Buffer[4] = "";
-					if (0<pretokenized[i].first && require_padding(x.data()[pretokenized[i].first-1],subst_dest))
-						Buffer[buffer_used++] = ' ';
-					Buffer[buffer_used++] = subst_dest;
-					if (x.size()>pretokenized[i+3].first+pretokenized[i+3].second && require_padding(subst_dest,x.data()[pretokenized[i+3].first+pretokenized[i+3].second]))
-						Buffer[buffer_used++] = ' ';
-
-					x.replace_once(std::nothrow,pretokenized[i].first,(pretokenized[i+3].first-pretokenized[i].first)+pretokenized[i+3].second,Buffer);
+					if (replace_char_into_directive(x,pretokenized,subst_dest,i,3)) return true;
 					lang.line_lex(x.data()+critical_offset,x.size()-critical_offset,pretokenized);
 					STL_translate_first(critical_offset,pretokenized);	// coordinate fixup
 					continue;
@@ -2972,6 +3008,99 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 			zcc_errors.inc_error();
 			bad_control = true;
 			continue;
+			}
+	while(pretokenized.size() > ++i);
+
+	// if any identifiers survive, we have to do macro preprocessing to get further
+	if (bad_control) return false;	// but if we discard the block anyway it doesn't matter
+
+	// analyze the __has_include() extension operator (from CLang)
+	i = 0;
+	do	if ((sizeof("__has_include")-1)==pretokenized[i].second && !strncmp(x.data()+pretokenized[i].first,"__has_include",(sizeof("__has_include")-1)))
+			{
+			// if no space for extension, let default flush-to-zero happen silently
+			if (4>pretokenized.size()-i) break;
+			if (!token_is_char<'('>(x.data(),pretokenized[i+1]))
+				// do not trigger __has_include extension
+				continue;
+			// we want: __has_include("...") or __has_include(<...>)
+			if (   C_TESTFLAG_STRING_LITERAL==pretokenized[i+2].third
+				&& '"'==x.data()[pretokenized[i+2].first]
+				&& token_is_char<')'>(x.data(),pretokenized[i+3]))
+				{	// __has_include("...")
+					//! \todo need test cases
+				if (0==pretokenized[i+2].second-2)
+					{	// empty, automatic failure
+					if (replace_char_into_directive(x,pretokenized,'0',i,3)) return true;
+					lang.line_lex(x.data()+critical_offset,x.size()-critical_offset,pretokenized);
+					STL_translate_first(critical_offset,pretokenized);	// coordinate fixup
+					continue;
+					}
+
+				char buf[FILENAME_MAX];
+				char* const look_for = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[i+2].second-2));
+				strncpy(look_for,x.data()+pretokenized[i+2].first+1,pretokenized[i+2].second-2);
+				if (strchr(look_for,'"'))
+					{
+					message_header(x);
+					INFORM("__has_include(\"...\") contains \"; preprocessing per standards rather than invoking extension __has_include");
+					free(look_for);
+					i += 2;
+					continue;
+					};
+				const char subst_dest = (detect_hardcoded_system_header(look_for,lang_code) || find_local_include(look_for, buf, (x.parent_dir ? x.parent_dir : ".")) || find_system_include(look_for, buf)) ? '1' : '0';
+				free(look_for);
+				if (replace_char_into_directive(x,pretokenized,subst_dest,i,3)) return true;
+				lang.line_lex(x.data()+critical_offset,x.size()-critical_offset,pretokenized);
+				STL_translate_first(critical_offset,pretokenized);	// coordinate fixup
+				continue;
+				}
+			//! \todo: optimization check: does testing for < and > by leading/trailing character reduce code size
+			else if (token_is_char<'<'>(x.data(),pretokenized[i+2]))
+				{
+				size_t j = i+2;
+				while(pretokenized.size()-1 > ++j)
+					if (token_is_char<'>'>(x.data(),pretokenized[j]))
+						{	//! \todo need test cases
+						if (!token_is_char<')'>(x.data(),pretokenized[j+1])) break;
+						// __has_include(<...>)
+						if (0==pretokenized[j].first-pretokenized[i+2].first+pretokenized[j].second-2)
+							{	// empty, automatic failure
+							if (replace_char_into_directive(x,pretokenized,'0',i,j+1-i)) return true;
+							lang.line_lex(x.data()+critical_offset,x.size()-critical_offset,pretokenized);
+							STL_translate_first(critical_offset,pretokenized);	// coordinate fixup
+							continue;
+							}
+						char buf[FILENAME_MAX];
+						char* const look_for = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[j].first-pretokenized[i+2].first+pretokenized[j].second-2));
+						strncpy(look_for,x.data()+pretokenized[i+2].first+1,pretokenized[j].first-pretokenized[i+2].first+pretokenized[j].second-2);
+						if (strchr(look_for,'<'))
+							{
+							message_header(x);
+							INFORM("__has_include(<...>) contains <; preprocessing per standards rather than invoking extension __has_include");
+							free(look_for);
+							i += 2;
+							continue;
+							};
+						if (strchr(look_for,'>'))
+							{
+							message_header(x);
+							INFORM("__has_include(<...>) contains >; preprocessing per standards rather than invoking extension __has_include");
+							free(look_for);
+							i += 2;
+							continue;
+							};
+						const char subst_dest = (detect_hardcoded_system_header(look_for,lang_code) || find_system_include(look_for, buf)) ? '1' : '0';
+						free(look_for);
+						if (replace_char_into_directive(x,pretokenized,subst_dest,i,j+1-i)) return true;
+						lang.line_lex(x.data()+critical_offset,x.size()-critical_offset,pretokenized);
+						STL_translate_first(critical_offset,pretokenized);	// coordinate fixup
+						continue;
+						}
+				++i;
+				continue;
+				}
+			// not recognized as __has_include directive, preprocess per standards
 			}
 	while(pretokenized.size() > ++i);
 

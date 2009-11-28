@@ -90,6 +90,7 @@ private:
 	void normalize_macro_expansion(zaimoni::Token<char>& x, const zaimoni::Token<char>& src, size_t critical_offset, size_t first_token_len);
 	void intradirective_preprocess(zaimoni::Token<char>& x, size_t critical_offset, const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion, const zaimoni::autovalarray_ptr<char*>& macros_function, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_arglist, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion,zaimoni::autovalarray_ptr<char*>* const used_macro_stack = NULL);
 	void intradirective_flush_identifiers_to_zero(zaimoni::Token<char>& x, size_t critical_offset) const;
+	bool replace_char_into_directive(zaimoni::Token<char>& x,const zaimoni::autovalarray_ptr<zaimoni::POD_triple<size_t,size_t,zaimoni::lex_flags> >& pretokenized,const char subst_dest,const size_t i,const size_t delta);
 
 	// macro locking
 	bool hard_locked_macro(const char* const x,const size_t identifier_len) const;

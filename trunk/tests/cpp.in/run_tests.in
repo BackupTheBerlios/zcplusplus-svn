@@ -33,6 +33,8 @@ PASS CPP_ISO if.C99/Pass*
 ECHO Checking ZCC implementation-defined errors and features
 ERROR CPP default/Error*
 ERROR CPP default/keywords/Error*
+ERROR CPP default/has_include/Error*
+PASS CPP default/has_include/Pass*
 PASS CPP default/Pass*
 PASS CPP_SIGNMAG_NOTRAP default/signmag.core/Pass*
 PASS CPP_SIGNMAG_NOTRAP default/signmag.notrap/Pass*

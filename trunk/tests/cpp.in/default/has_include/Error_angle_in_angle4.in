@@ -1,0 +1,6 @@
+SUFFIXES h hpp
+// invalid __has_include variant
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+VALID_EXPRESSION __has_include(<>>)
+

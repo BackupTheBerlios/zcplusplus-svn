@@ -87,6 +87,14 @@
 @for %%f in (default\keywords\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
 @for %%f in (default\keywords\Error*.hpp) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
 @for %%f in (default\keywords\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (default\has_include\Error*.h) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (default\has_include\Error*.h) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (default\has_include\Error*.hpp) do @echo %CPP% %%f & @%CPP% %%f && (set /a BAD_PASS=BAD_PASS+1 & set BAD_PASS_NAME=%BAD_PASS_NAME% %%f)
+@for %%f in (default\has_include\Error*.hpp) do @set /a REJECT_TEST=REJECT_TEST+1
+@for %%f in (default\has_include\Pass*.h) do @echo %CPP% %%f & @%CPP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\has_include\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\has_include\Pass*.hpp) do @echo %CPP% %%f & @%CPP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\has_include\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 @for %%f in (default\Pass*.h) do @echo %CPP% %%f & @%CPP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (default\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 @for %%f in (default\Pass*.hpp) do @echo %CPP% %%f & @%CPP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)

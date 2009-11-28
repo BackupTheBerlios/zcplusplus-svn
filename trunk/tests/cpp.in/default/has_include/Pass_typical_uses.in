@@ -1,0 +1,16 @@
+SUFFIXES h hpp
+// exercise valid __has_include variant
+// (C)2009 Kenneth Boyd, license: MIT.txt
+
+// these should behave like CLang
+FALSE_EXPRESSION __has_include("")
+FALSE_EXPRESSION __has_include(<>)
+FALSE_EXPRESSION __has_include("bad_include")
+FALSE_EXPRESSION __has_include(<bad_include>)
+TRUE_EXPRESSION __has_include("stddef.h")
+TRUE_EXPRESSION __has_include(<stddef.h>)
+TRUE_EXPRESSION __has_include("stdbool.h")
+TRUE_EXPRESSION __has_include(<stdbool.h>)
+
+// this should be processed like C99
+FALSE_EXPRESSION __has_include
