@@ -130,6 +130,23 @@ const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_typede
 	return NULL;
 }
 
+char* type_system::_namespace_concatenate(const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len)
+{
+	char* const actual_name = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(active_namespace_len+2+name_len));
+	strncpy(actual_name,active_namespace,active_namespace_len);
+	strncpy(actual_name+active_namespace_len,namespace_separator,namespace_separator_len);
+	strncpy(actual_name+active_namespace_len+namespace_separator_len,name,name_len);
+	return actual_name;
+}
+
+void type_system::_namespace_concatenate(char* buf, const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len)
+{
+	strncpy(buf,active_namespace,active_namespace_len);
+	strncpy(buf+active_namespace_len,namespace_separator,namespace_separator_len);
+	strncpy(buf+active_namespace_len+namespace_separator_len,name,name_len);
+	ZAIMONI_NULL_TERMINATE(buf[active_namespace_len+namespace_separator_len+name_len]);
+}
+
 type_system::type_index type_system::register_functype(const char* const alias, function_type*& src)
 {
 	assert(alias && *alias);

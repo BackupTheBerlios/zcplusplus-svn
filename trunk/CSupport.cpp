@@ -10239,11 +10239,7 @@ public:
 			// Don't use the check_for_typedef function in this block (conflicts with dynamic RAM loading minimization)
 			if (NULL!=active_namespace)
 				{
-				const size_t active_namespace_len = strlen(active_namespace);
-				char* tmp2 = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(active_namespace_len+2+x.data<0>()[i].index_tokens[0].token.second));
-				strcpy(tmp2,active_namespace);
-				strcpy(tmp2+active_namespace_len,"::");
-				strcpy(tmp2+active_namespace_len+2,x.data<0>()[i].index_tokens[0].token.first);
+				char* tmp2 = type_system::namespace_concatenate(x.data<0>()[i].index_tokens[0].token.first,active_namespace,"::");
 				const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(tmp2);
 				if (NULL!=tmp)
 					{	//! \todo check for access-control if source is a class or struct
@@ -10256,10 +10252,7 @@ public:
 					size_t i = koenig_lookup.size();
 					do	{
 						--i;
-						size_t offset = strlen(koenig_lookup[i]);
-						strcpy(tmp2,koenig_lookup[i]);
-						strcpy(tmp2+offset,"::");
-						strcpy(tmp2+offset+2,x.data<0>()[i].index_tokens[0].token.first);
+						type_system::namespace_concatenate(tmp2,x.data<0>()[i].index_tokens[0].token.first,koenig_lookup[i],"::");
 						const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(tmp2);
 						if (NULL!=tmp)
 							{	//! \todo check for access-control if source is a class or struct
@@ -11599,10 +11592,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				}
 			else{	// nested
 					//! \todo expand namespace aliases
-				char* const new_active_namespace = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(strlen(active_namespace)+2+src.c_array<0>()[i].c_array<2>()[0].index_tokens[0].token.second));
-				strcpy(new_active_namespace,active_namespace);
-				strcat(new_active_namespace,"::");
-				strncat(new_active_namespace,src.c_array<0>()[i].c_array<2>()[0].index_tokens[0].token.first,src.c_array<0>()[i].c_array<2>()[0].index_tokens[0].token.second);
+				char* const new_active_namespace = type_system::namespace_concatenate(src.c_array<0>()[i].c_array<2>()[0].index_tokens[0].token.first,active_namespace,"::");
 				CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[1],types,new_active_namespace);
 				free(new_active_namespace);
 				}
@@ -11730,10 +11720,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 						// deal with namespaces
 						if (NULL!=active_namespace)
 							{
-							char* const actual_name = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(strlen(active_namespace)+2+strlen(fullname)));
-							strcpy(actual_name,active_namespace);
-							strcat(actual_name,"::");
-							strcat(actual_name,fullname);
+							char* const actual_name = type_system::namespace_concatenate(fullname,active_namespace,"::");
 							fullname = register_string(actual_name);	//! \todo would like to use "consume string" to avoid frivolous memory allocation
 							free(actual_name);
 							}

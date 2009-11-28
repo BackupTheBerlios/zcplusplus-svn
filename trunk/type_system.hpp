@@ -90,6 +90,27 @@ public:
 		return _name(id);
 		}
 
+	// can throw std::bad_alloc; returned string is owned by the caller (use free to deallocate)
+	// defer seven other variants for now (YAGNI) but catch them all at once if one is pragmatic
+	static char* namespace_concatenate(const char* const name, const char* const active_namespace,const char* namespace_separator)
+		{
+		assert(name && *name);
+		assert(active_namespace && *active_namespace);
+		assert(namespace_separator && *namespace_separator);
+		return _namespace_concatenate(name,strlen(name),active_namespace,strlen(active_namespace),namespace_separator,strlen(namespace_separator));
+		}
+
+	// defer seven other variants for now (YAGNI) but catch them all at once if one is pragmatic
+	static void namespace_concatenate(char* buf, const char* const name, const char* const active_namespace,const char* namespace_separator)
+		{
+		assert(buf);
+		assert(name && *name);
+		assert(active_namespace && *active_namespace);
+		assert(namespace_separator && *namespace_separator);
+		_namespace_concatenate(buf,name,strlen(name),active_namespace,strlen(active_namespace),namespace_separator,strlen(namespace_separator));
+		}
+
+
 	void set_typedef(const char* const alias, const char* filename, const size_t lineno, type_spec& src);	// invalidates src
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* get_typedef(const char* const alias) const;
 
@@ -108,5 +129,8 @@ private:
 	type_index _get_id_enum(const char* const x,size_t x_len) const;
 	type_index _get_id_struct_class(const char* const x,size_t x_len) const;
 	const char* _name(type_index id) const;
+	// can throw std::bad_alloc; returned string is owned by the caller (use free to deallocate)
+	static char* _namespace_concatenate(const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len);
+	static void _namespace_concatenate(char* buf, const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len);
 };
 #endif
