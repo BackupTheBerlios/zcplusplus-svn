@@ -9,6 +9,7 @@
 #include "Zaimoni.STL/LexParse/LangConf.hpp"
 #include "Zaimoni.STL/search.hpp"
 #include "AtomicString.h"
+#include "str_aux.h"
 #include "Trigraph.hpp"
 #include "Flat_UNI.hpp"
 #include "errors.hpp"
@@ -10135,42 +10136,6 @@ public:
 	uintmax_t get_flags() const {return flags;};
 	void value_copy_type(type_spec& dest) const {value_copy(dest,base_type);};
 };
-
-//! \todo belongs elsewhere
-size_t count_disjoint_substring_instances(const char* const src,const char* const match)
-{
-	assert(src && *src);
-	assert(match && *match);
-	const size_t src_len = strlen(src);
-	const size_t match_len = strlen(match);
-	size_t n = 0;
-	const char* test = strstr(src,match);
-	while(NULL!=test)
-		{
-		++n;
-		test = (2*match_len<=src_len-(test-src)) ? strstr(test+match_len,match) : NULL;
-		};
-	return n;
-}
-
-//! \todo belongs elsewhere
-void report_disjoint_substring_instances(const char* const src,const char* const match,const char** const namespace_break_stack,const size_t namespace_break_stack_size)
-{
-	assert(NULL!=src && *src);
-	assert(NULL!=match && *match);
-	assert(NULL!=namespace_break_stack);
-	const size_t src_len = strlen(src);
-	const size_t match_len = strlen(match);
-	size_t n = 0;
-	const char* test = strstr(src,match);
-	while(NULL!=test)
-		{
-		assert(namespace_break_stack_size>n);
-		namespace_break_stack[n++] = test;
-		test = (2*match_len<=src_len-(test-src)) ? strstr(test+match_len,match) : NULL;
-		};
-	assert(0<n);
-}
 
 class CPP0X_decl_specifier_scanner
 {
