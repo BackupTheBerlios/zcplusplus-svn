@@ -4,6 +4,8 @@
 #include "type_system.hpp"
 #include "struct_type.hpp"
 #include "Zaimoni.STL/search.hpp"
+#include "AtomicString.h"
+#include "str_aux.h"
 
 // macros to help out dynamic registration
 #define DYNAMIC_FUNCTYPE 1
@@ -97,8 +99,6 @@ void type_system::set_typedef(const char* const alias, const char* filename, con
 {
 	assert(alias && *alias);
 	assert(filename && *filename);
-	//! \todo: strip off trailing inline namespaces
-	// <unknown> is the hack for anonymous namespaces taken from GCC, it's always inline
 	errr tmp = binary_find(alias,strlen(alias),typedef_registry.data(),typedef_registry.size());
 	assert(0>tmp);		// error to call with conflicting prior definition
 	if (0<=tmp) return;	// conflicting prior definition
@@ -120,6 +120,64 @@ const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_typede
 	return NULL;
 }
 
+const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::_get_typedef_CPP(const char* const alias) const
+{
+	errr tmp = binary_find(alias,strlen(alias),typedef_registry.data(),typedef_registry.size());
+	if (0<=tmp) return &typedef_registry[tmp].second;
+	// hmm...not an exact match
+	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> tmp2 = dealias_inline_namespace_index(alias);
+	if (0<=tmp2.first)
+		{	// it was remapped
+		while(tmp2.first<tmp2.second)
+			{
+			tmp = binary_find(inline_namespace_alias_map.data()[tmp2.first].second,strlen(inline_namespace_alias_map.data()[tmp2.first].second),typedef_registry.data(),typedef_registry.size());
+			if (0<=tmp) return &typedef_registry[tmp].second;
+			}
+		tmp = binary_find(inline_namespace_alias_map.data()[tmp2.first].second,strlen(inline_namespace_alias_map.data()[tmp2.first].second),typedef_registry.data(),typedef_registry.size());
+		if (0<=tmp) return &typedef_registry[tmp].second;
+		}
+	return NULL;
+}
+
+const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_typedef_CPP(const char* alias,const char* active_namespace) const
+{
+	assert(alias && *alias);
+
+	if (!strncmp(alias,"::",2))
+		{	// fully-qualified typedef name
+			// cheat: pretend not fully qualified but no surrounding namespace
+		alias += 2;
+		active_namespace = NULL;
+		};
+	if (active_namespace && *active_namespace)
+		{
+		// ok..march up to global
+		char* tmp_alias = namespace_concatenate(alias,active_namespace,"::");
+		if (is_string_registered(tmp_alias))
+			{	// registered, so could be indexed
+			const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp2 = _get_typedef_CPP(tmp_alias);
+			if (tmp2) return (free(tmp_alias),tmp2);
+			}
+
+		const size_t extra_namespaces = count_disjoint_substring_instances(active_namespace,"::");
+		if (extra_namespaces)
+			{
+			zaimoni::weakautovalarray_ptr_throws<const char*> intra_namespace(extra_namespaces);
+			report_disjoint_substring_instances(active_namespace,"::",intra_namespace.c_array(),extra_namespaces);
+			size_t i = extra_namespaces;
+			do	{
+				--i;
+				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[i]-active_namespace,"::");
+				const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp2 = _get_typedef_CPP(tmp_alias);
+				if (tmp2) return (free(tmp_alias),tmp2);
+				}
+			while(0<i);
+			}
+		free(tmp_alias);
+		}
+	return _get_typedef_CPP(alias);
+}
+
 char* type_system::_namespace_concatenate(const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len)
 {
 	char* const actual_name = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(active_namespace_len+2+name_len));
@@ -135,6 +193,41 @@ void type_system::_namespace_concatenate(char* buf, const char* const name, size
 	strncpy(buf+active_namespace_len,namespace_separator,namespace_separator_len);
 	strncpy(buf+active_namespace_len+namespace_separator_len,name,name_len);
 	ZAIMONI_NULL_TERMINATE(buf[active_namespace_len+namespace_separator_len+name_len]);
+}
+
+zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> type_system::dealias_inline_namespace_index(const char* const alias) const
+{
+	assert(alias && *alias);
+	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> tmp = {-1,-1};
+	size_t strict_ub = inline_namespace_alias_map.size();
+	size_t lb = 0;
+	// binary search
+	// is inline_namespace_alias_map.data() a code size optimization target?
+	while(strict_ub>lb)
+		{
+		const size_t midpoint = lb+(strict_ub-lb)/2;
+		switch(strcmp(inline_namespace_alias_map.data()[midpoint].first,alias))
+		{
+#ifndef NDEBUG
+		default: FATAL("strcmp out of range -1,0,1");
+#endif
+		case 0: {
+			tmp.first = midpoint;
+			tmp.second = midpoint;
+			while(lb<(size_t)tmp.first && !strcmp(inline_namespace_alias_map.data()[tmp.first-1].first,alias)) --tmp.first;
+			while(strict_ub-1>(size_t)tmp.second && !strcmp(inline_namespace_alias_map.data()[tmp.second+1].first,alias)) ++tmp.second;
+			return tmp;
+			}
+		case 1: {
+			strict_ub = midpoint;
+			break;
+			}
+		case -1:{
+			lb = midpoint+1;
+			}
+		}
+		}
+	return tmp;
 }
 
 type_system::type_index type_system::register_functype(const char* const alias, function_type*& src)

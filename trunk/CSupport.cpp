@@ -9989,9 +9989,21 @@ void INFORM_separated_list(const char* const* x,size_t x_len, const char* const 
 }
 
 //! \todo should this be a type_system member?
-bool check_for_typedef(type_spec& dest,const char* const src,const type_system& types)
+static bool check_for_typedef(type_spec& dest,const char* const src,const type_system& types)
 {
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(src);
+	if (NULL!=tmp)
+		{	//! \todo C++: check for access control if source ends up being a class or struct
+		value_copy(dest,tmp->first);
+		return true;
+		}
+	return false;
+}
+
+//! \todo should this be a type_system member?
+static bool check_for_typedef(type_spec& dest,const char* const src,const char* const active_namespace,const type_system& types)
+{
+	const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef_CPP(src,active_namespace);
 	if (NULL!=tmp)
 		{	//! \todo C++: check for access control if source ends up being a class or struct
 		value_copy(dest,tmp->first);
@@ -10146,24 +10158,11 @@ private:
 	const type_system& types;
 	// these two might belong in a koenig_lookup object
 	const char* const active_namespace;
-	autovalarray_ptr_throws<char*> koenig_lookup;
 public:
-	CPP0X_decl_specifier_scanner(const type_system& _types,const char* const _active_namespace) : flags(0),types(_types),active_namespace(_active_namespace),koenig_lookup((_active_namespace && *_active_namespace) ? count_disjoint_substring_instances(_active_namespace,"::") : 0)
+	CPP0X_decl_specifier_scanner(const type_system& _types,const char* const _active_namespace) : flags(0),types(_types),active_namespace(_active_namespace)
 		{
 		clear(decl_count);
 		base_type.clear();
-		if (!koenig_lookup.empty())
-			{
-			size_t namespace_break_stack_size = koenig_lookup.size();
-			weakautovalarray_ptr_throws<const char*> namespace_break_stack(namespace_break_stack_size);
-			report_disjoint_substring_instances(active_namespace,"::",namespace_break_stack.c_array(),namespace_break_stack_size);
-			do	{
-				size_t offset = namespace_break_stack[--namespace_break_stack_size]-active_namespace;
-				koenig_lookup[namespace_break_stack_size] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(offset));
-				strncpy(koenig_lookup[namespace_break_stack_size],active_namespace,offset);
-				}
-			while(0<namespace_break_stack_size);
-			}
 		}
 	// trivial destructor, copy constructor, assignment fine
 	bool operator()(parse_tree& x,const size_t i)
@@ -10191,47 +10190,8 @@ public:
 			&& !(PARSE_TYPE & x.data<0>()[i].flags)
 			&& !CPP_echo_reserved_keyword(x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second)
 			&& (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags))
-			{
-			if (!strncmp(x.data<0>()[i].index_tokens[0].token.first,"::",2))
-				{	// fully-qualified
-				assert(2<x.data<0>()[i].index_tokens[0].token.second);
-				return check_for_typedef(base_type,x.data<0>()[i].index_tokens[0].token.first+2,types);
-				};
-			// ahem...Koenig lookup
-			// work backwards until we find something
-			// if the result ends up being from a struct/class, access control will cut in
-			// in any case, the types object is responsible for handling aliases and using directives
-			// Don't use the check_for_typedef function in this block (conflicts with dynamic RAM loading minimization)
-			if (NULL!=active_namespace)
-				{
-				char* tmp2 = type_system::namespace_concatenate(x.data<0>()[i].index_tokens[0].token.first,active_namespace,"::");
-				const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(tmp2);
-				if (NULL!=tmp)
-					{	//! \todo check for access-control if source is a class or struct
-					free(tmp2);
-					value_copy(base_type,tmp->first);
-					return true;
-					};
-				if (!koenig_lookup.empty())
-					{
-					size_t i = koenig_lookup.size();
-					do	{
-						--i;
-						type_system::namespace_concatenate(tmp2,x.data<0>()[i].index_tokens[0].token.first,koenig_lookup[i],"::");
-						const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(tmp2);
-						if (NULL!=tmp)
-							{	//! \todo check for access-control if source is a class or struct
-							free(tmp2);
-							value_copy(base_type,tmp->first);
-							return true;
-							};
-						}
-					while(0<i);
-					};
-				free(tmp2);
-				}
-			// last case: just try it as-is
-			return check_for_typedef(base_type,x.data<0>()[i].index_tokens[0].token.first,types);
+			{	// shove Koenig lookup into type_system
+			return check_for_typedef(base_type,x.data<0>()[i].index_tokens[0].token.first,active_namespace,types);
 			}
 		}
 		//! \todo handle other known types
