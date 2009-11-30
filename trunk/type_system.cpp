@@ -12,16 +12,6 @@
 #define DYNAMIC_ENUMDEF 4
 
 type_system::type_index
-type_system::_get_id(const char* const x,size_t x_len) const
-{
-	errr tmp = linear_find_lencached(x,x_len,core_types,core_types_size);
-	if (0<=tmp) return tmp+1;
-	tmp = linear_find_lencached(x,x_len,dynamic_types);
-	if (0<=tmp) return tmp+1+core_types_size;
-	return 0;
-}
-
-type_system::type_index
 type_system::_get_id_union(const char* const x,size_t x_len) const
 {
 	errr tmp = linear_find_lencached(x,x_len,dynamic_types);
@@ -154,9 +144,6 @@ type_system::type_index type_system::register_functype(const char* const alias, 
 	dynamic_type_format tmp = {alias,strlen(alias),{{NULL},DYNAMIC_FUNCTYPE}};
 	tmp.third.first.first = src;
 
-	type_index result = get_id(alias);
-	if (result) return result;
-
 	const size_t dynamic_types_size = dynamic_types.size();
 	const size_t dynamic_types_max_size = dynamic_types.max_size();
 	if (	dynamic_types_max_size<1+core_types_size
@@ -173,9 +160,6 @@ type_system::type_index type_system::register_structdecl(const char* const alias
 	assert(src);
 	dynamic_type_format tmp = {alias,strlen(alias),{{NULL},DYNAMIC_STRUCTDECL}};
 	tmp.third.first.second = src;
-
-	type_index result = get_id(alias);
-	if (result) return result;
 
 	const size_t dynamic_types_size = dynamic_types.size();
 	const size_t dynamic_types_max_size = dynamic_types.max_size();
@@ -194,9 +178,6 @@ type_system::type_index type_system::register_C_structdef(const char* const alia
 	dynamic_type_format tmp = {alias,strlen(alias),{{NULL},DYNAMIC_C_STRUCTDEF}};
 	tmp.third.first.third = src;
 
-	type_index result = get_id(alias);
-	if (result) return result;
-
 	const size_t dynamic_types_size = dynamic_types.size();
 	const size_t dynamic_types_max_size = dynamic_types.max_size();
 	if (	dynamic_types_max_size<2+core_types_size
@@ -213,9 +194,6 @@ type_system::type_index type_system::register_enum_def(const char* const alias, 
 	assert(src);
 	dynamic_type_format tmp = {alias,strlen(alias),{{NULL},DYNAMIC_ENUMDEF}};
 	tmp.third.first.fourth = src;
-
-	type_index result = get_id(alias);
-	if (result) return result;
 
 	const size_t dynamic_types_size = dynamic_types.size();
 	const size_t dynamic_types_max_size = dynamic_types.max_size();
