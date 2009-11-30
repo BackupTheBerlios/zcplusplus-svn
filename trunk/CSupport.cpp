@@ -11651,6 +11651,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 							}
 
 						// verify that there is no prior definition
+						// we're fine redeclaring at a different level, so do not use full C++ typedef lookup
 						const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(fullname);
 						if (NULL!=tmp)
 							{
@@ -11684,7 +11685,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 							// do not re-register if there is a prior definition
 							}
 						else	// register this with types object
-							types.set_typedef(fullname,src.data<0>()[initdecl_identifier_idx].index_tokens[0].src_filename,src.data<0>()[initdecl_identifier_idx].index_tokens[0].logical_line.first,bootstrap);
+							types.set_typedef_CPP(src.c_array<0>()[initdecl_identifier_idx].index_tokens[0].token.first,active_namespace,src.data<0>()[initdecl_identifier_idx].index_tokens[0].src_filename,src.data<0>()[initdecl_identifier_idx].index_tokens[0].logical_line.first,bootstrap);
 						}
 #if 0
 					else{	// something else
