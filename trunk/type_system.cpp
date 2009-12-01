@@ -111,17 +111,16 @@ void type_system::set_typedef(const char* const alias, const char* filename, con
 	src.clear();
 }
 
-void type_system::set_typedef_CPP(const char* const name, const char* const active_namespace, const char* filename, const size_t lineno, type_spec& src)
+void type_system::set_typedef_CPP(const char* name, const char* const active_namespace, const char* filename, const size_t lineno, type_spec& src)
 {
 	assert(name && *name);
 	assert(filename && *filename);
 
-	// if no active namespace, treat as C
-	if (!active_namespace || !*active_namespace)
-		return set_typedef(name,filename,lineno,src);
+	// use active namespace if present
+	if (active_namespace && *active_namespace)
+		name = construct_canonical_name_and_aliasing_CPP(name,strlen(name),active_namespace,strlen(active_namespace));
 
-	const char* const alias = construct_canonical_name_and_aliasing_CPP(name,strlen(name),active_namespace,strlen(active_namespace));
-	return set_typedef(alias,filename,lineno,src);
+	return set_typedef(name,filename,lineno,src);
 }
 
 const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_typedef(const char* const alias) const
@@ -410,6 +409,18 @@ type_system::type_index type_system::register_functype(const char* const alias, 
 	return dynamic_types_size+2+core_types_size;
 }
 
+type_system::type_index type_system::register_functype_CPP(const char* name, const char* const active_namespace, function_type*& src)
+{
+	assert(name && *name);
+	assert(src);
+
+	// use active namespace if present
+	if (active_namespace && *active_namespace)
+		name = construct_canonical_name_and_aliasing_CPP(name,strlen(name),active_namespace,strlen(active_namespace));
+
+	return register_functype(name,src);
+}
+
 type_system::type_index type_system::register_structdecl(const char* const alias, union_struct_decl*& src)
 {
 	assert(alias && *alias);
@@ -425,6 +436,18 @@ type_system::type_index type_system::register_structdecl(const char* const alias
 	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp)) throw std::bad_alloc();
 	src = NULL;
 	return dynamic_types_size+2+core_types_size;
+}
+
+type_system::type_index type_system::register_structdecl_CPP(const char* name, const char* const active_namespace, union_struct_decl*& src)
+{
+	assert(name && *name);
+	assert(src);
+
+	// use active namespace if present
+	if (active_namespace && *active_namespace)
+		name = construct_canonical_name_and_aliasing_CPP(name,strlen(name),active_namespace,strlen(active_namespace));
+
+	return register_structdecl(name,src);
 }
 
 type_system::type_index type_system::register_C_structdef(const char* const alias, C_union_struct_def*& src)
@@ -444,6 +467,18 @@ type_system::type_index type_system::register_C_structdef(const char* const alia
 	return dynamic_types_size+2+core_types_size;
 }
 
+type_system::type_index type_system::register_C_structdef_CPP(const char* name, const char* const active_namespace, C_union_struct_def*& src)
+{
+	assert(name && *name);
+	assert(src);
+
+	// use active namespace if present
+	if (active_namespace && *active_namespace)
+		name = construct_canonical_name_and_aliasing_CPP(name,strlen(name),active_namespace,strlen(active_namespace));
+
+	return register_C_structdef(name,src);
+}
+
 type_system::type_index type_system::register_enum_def(const char* const alias, enum_def*& src)
 {
 	assert(alias && *alias);
@@ -459,6 +494,18 @@ type_system::type_index type_system::register_enum_def(const char* const alias, 
 	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp)) throw std::bad_alloc();
 	src = NULL;
 	return dynamic_types_size+2+core_types_size;
+}
+
+type_system::type_index type_system::register_enum_def_CPP(const char* name, const char* const active_namespace, enum_def*& src)
+{
+	assert(name && *name);
+	assert(src);
+
+	// use active namespace if present
+	if (active_namespace && *active_namespace)
+		name = construct_canonical_name_and_aliasing_CPP(name,strlen(name),active_namespace,strlen(active_namespace));
+
+	return register_enum_def(name,src);
 }
 
 const function_type* type_system::get_functype(type_system::type_index i)
