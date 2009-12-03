@@ -38,41 +38,20 @@ public:
 		core_types_size((assert(0<_core_types_size),_core_types_size)),
 		int_priority_size((assert(0<_int_priority_size),_int_priority_size)) {};
 
-	type_index get_id_union(const char* x,size_t x_len) const
-		{
-		assert(x && *x);
-		assert(0<x_len);
-		assert(x_len<=strlen(x));
-		return _get_id_union(x,x_len);
-		}
 	type_index get_id_union(const char* x) const
 		{
 		assert(x && *x);
-		return _get_id_union(x,strlen(x));
-		}
-	type_index get_id_struct_class(const char* x,size_t x_len) const
-		{
-		assert(x && *x);
-		assert(0<x_len);
-		assert(x_len<=strlen(x));
-		return _get_id_struct_class(x,x_len);
+		return _get_id_union(x);
 		}
 	type_index get_id_struct_class(const char* x) const
 		{
 		assert(x && *x);
-		return _get_id_struct_class(x,strlen(x));
-		}
-	type_index get_id_enum(const char* x,size_t x_len) const
-		{
-		assert(x && *x);
-		assert(0<x_len);
-		assert(x_len<=strlen(x));
-		return _get_id_enum(x,x_len);
+		return _get_id_struct_class(x);
 		}
 	type_index get_id_enum(const char* x) const
 		{
 		assert(x && *x);
-		return _get_id_enum(x,strlen(x));
+		return _get_id_enum(x);
 		}
 	const char* name(type_index id) const
 		{
@@ -129,9 +108,9 @@ public:
 	const enum_def* get_enum_def(type_index i);
 	void upgrade_decl_to_def(type_index i,C_union_struct_def*& src);
 private:
-	type_index _get_id_union(const char* const x,size_t x_len) const;
-	type_index _get_id_enum(const char* const x,size_t x_len) const;
-	type_index _get_id_struct_class(const char* const x,size_t x_len) const;
+	type_index _get_id_union(const char* const x) const;
+	type_index _get_id_enum(const char* const x) const;
+	type_index _get_id_struct_class(const char* const x) const;
 	const char* _name(type_index id) const;
 	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> dealias_inline_namespace_index(const char* alias) const;
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* _get_typedef_CPP(const char* alias) const;

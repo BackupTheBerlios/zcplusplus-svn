@@ -14,9 +14,9 @@
 #define DYNAMIC_C_STRUCTDEF 3
 #define DYNAMIC_ENUMDEF 4
 
-type_system::type_index
-type_system::_get_id_union(const char* const x,size_t x_len) const
+type_system::type_index type_system::_get_id_union(const char* const x) const
 {
+	const size_t x_len = strlen(x);
 	errr tmp = linear_find_lencached(x,x_len,dynamic_types);
 	while(0<=tmp)
 		{
@@ -42,8 +42,9 @@ type_system::_get_id_union(const char* const x,size_t x_len) const
 }
 
 type_system::type_index
-type_system::_get_id_struct_class(const char* const x,size_t x_len) const
+type_system::_get_id_struct_class(const char* const x) const
 {
+	const size_t x_len = strlen(x);
 	errr tmp = linear_find_lencached(x,x_len,dynamic_types);
 	while(0<=tmp)
 		{
@@ -68,9 +69,9 @@ type_system::_get_id_struct_class(const char* const x,size_t x_len) const
 	return 0;
 }
 
-type_system::type_index
-type_system::_get_id_enum(const char* const x,size_t x_len) const
+type_system::type_index type_system::_get_id_enum(const char* const x) const
 {
+	const size_t x_len = strlen(x);
 	errr tmp = linear_find_lencached(x,x_len,dynamic_types);
 	while(0<=tmp)
 		{
