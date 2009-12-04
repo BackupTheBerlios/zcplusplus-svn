@@ -43,16 +43,19 @@ public:
 		assert(x && *x);
 		return _get_id_union(x);
 		}
+	type_index get_id_union_CPP(const char* alias,const char* active_namespace) const;
 	type_index get_id_struct_class(const char* x) const
 		{
 		assert(x && *x);
 		return _get_id_struct_class(x);
 		}
+	type_index get_id_struct_class_CPP(const char* alias,const char* active_namespace) const;
 	type_index get_id_enum(const char* x) const
 		{
 		assert(x && *x);
 		return _get_id_enum(x);
 		}
+	type_index get_id_enum_CPP(const char* alias,const char* active_namespace) const;
 	const char* name(type_index id) const
 		{
 		assert(core_types_size+dynamic_types.size()>=id);
@@ -108,9 +111,13 @@ public:
 	const enum_def* get_enum_def(type_index i);
 	void upgrade_decl_to_def(type_index i,C_union_struct_def*& src);
 private:
-	type_index _get_id_union(const char* const x) const;
-	type_index _get_id_enum(const char* const x) const;
-	type_index _get_id_struct_class(const char* const x) const;
+	type_index _get_id_union(const char* x) const;
+	type_index _get_id_union_CPP(const char* x) const;
+	type_index _get_id_enum(const char* x) const;
+	type_index _get_id_enum_CPP(const char* x) const;
+	type_index _get_id_struct_class(const char* x) const;
+	type_index _get_id_struct_class_CPP(const char* x) const;
+
 	const char* _name(type_index id) const;
 	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> dealias_inline_namespace_index(const char* alias) const;
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* _get_typedef_CPP(const char* alias) const;

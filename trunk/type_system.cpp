@@ -42,6 +42,66 @@ type_system::type_index type_system::_get_id_union(const char* const x) const
 }
 
 type_system::type_index
+type_system::_get_id_union_CPP(const char* const x) const
+{
+	errr tmp = _get_id_union(x);
+	if (0<tmp) return tmp;
+
+	// hmm...not an exact match
+	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> tmp2 = dealias_inline_namespace_index(x);
+	if (0>tmp2.first) return 0;
+
+	// it was remapped
+	while(tmp2.first<tmp2.second)
+		{
+		tmp = _get_id_union(inline_namespace_alias_map.data()[tmp2.first].second);
+		if (0<tmp) return tmp;
+		++tmp2.first;
+		}
+	return _get_id_union(inline_namespace_alias_map.data()[tmp2.first].second);
+}
+
+type_system::type_index
+type_system::get_id_union_CPP(const char* alias,const char* active_namespace) const
+{
+	assert(alias && *alias);
+
+	if (!strncmp(alias,"::",2))
+		{	// fully-qualified
+		// pretend not fully qualified, but no surrounding namespace
+		alias += 2;
+		active_namespace = NULL;
+		};
+	if (active_namespace && *active_namespace)
+		{
+		// ok..march up to global
+		char* tmp_alias = namespace_concatenate(alias,active_namespace,"::");
+		if (is_string_registered(tmp_alias))
+			{	// registered, so could be indexed
+			const type_index tmp2 = _get_id_union_CPP(tmp_alias);
+			if (tmp2) return (free(tmp_alias),tmp2);
+			}
+
+		const size_t extra_namespaces = count_disjoint_substring_instances(active_namespace,"::");
+		if (extra_namespaces)
+			{
+			zaimoni::weakautovalarray_ptr_throws<const char*> intra_namespace(extra_namespaces);
+			report_disjoint_substring_instances(active_namespace,"::",intra_namespace.c_array(),extra_namespaces);
+			size_t i = extra_namespaces;
+			do	{
+				--i;
+				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[i]-active_namespace,"::");
+				const type_index tmp2 = _get_id_union_CPP(tmp_alias);
+				if (tmp2) return (free(tmp_alias),tmp2);
+				}
+			while(0<i);
+			}
+		free(tmp_alias);
+		}
+	return _get_id_union_CPP(alias);
+}
+
+type_system::type_index
 type_system::_get_id_struct_class(const char* const x) const
 {
 	const size_t x_len = strlen(x);
@@ -69,6 +129,66 @@ type_system::_get_id_struct_class(const char* const x) const
 	return 0;
 }
 
+type_system::type_index
+type_system::_get_id_struct_class_CPP(const char* const x) const
+{
+	errr tmp = _get_id_struct_class(x);
+	if (0<tmp) return tmp;
+
+	// hmm...not an exact match
+	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> tmp2 = dealias_inline_namespace_index(x);
+	if (0>tmp2.first) return 0;
+
+	// it was remapped
+	while(tmp2.first<tmp2.second)
+		{
+		tmp = _get_id_struct_class(inline_namespace_alias_map.data()[tmp2.first].second);
+		if (0<tmp) return tmp;
+		++tmp2.first;
+		}
+	return _get_id_struct_class(inline_namespace_alias_map.data()[tmp2.first].second);
+}
+
+type_system::type_index
+type_system::get_id_struct_class_CPP(const char* alias,const char* active_namespace) const
+{
+	assert(alias && *alias);
+
+	if (!strncmp(alias,"::",2))
+		{	// fully-qualified
+		// pretend not fully qualified, but no surrounding namespace
+		alias += 2;
+		active_namespace = NULL;
+		};
+	if (active_namespace && *active_namespace)
+		{
+		// ok..march up to global
+		char* tmp_alias = namespace_concatenate(alias,active_namespace,"::");
+		if (is_string_registered(tmp_alias))
+			{	// registered, so could be indexed
+			const type_index tmp2 = _get_id_struct_class_CPP(tmp_alias);
+			if (tmp2) return (free(tmp_alias),tmp2);
+			}
+
+		const size_t extra_namespaces = count_disjoint_substring_instances(active_namespace,"::");
+		if (extra_namespaces)
+			{
+			zaimoni::weakautovalarray_ptr_throws<const char*> intra_namespace(extra_namespaces);
+			report_disjoint_substring_instances(active_namespace,"::",intra_namespace.c_array(),extra_namespaces);
+			size_t i = extra_namespaces;
+			do	{
+				--i;
+				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[i]-active_namespace,"::");
+				const type_index tmp2 = _get_id_struct_class_CPP(tmp_alias);
+				if (tmp2) return (free(tmp_alias),tmp2);
+				}
+			while(0<i);
+			}
+		free(tmp_alias);
+		}
+	return _get_id_struct_class_CPP(alias);
+}
+
 type_system::type_index type_system::_get_id_enum(const char* const x) const
 {
 	const size_t x_len = strlen(x);
@@ -85,6 +205,66 @@ type_system::type_index type_system::_get_id_enum(const char* const x) const
 		tmp += 1+tmp2;
 		}
 	return 0;
+}
+
+type_system::type_index
+type_system::_get_id_enum_CPP(const char* const x) const
+{
+	errr tmp = _get_id_enum(x);
+	if (0<tmp) return tmp;
+
+	// hmm...not an exact match
+	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> tmp2 = dealias_inline_namespace_index(x);
+	if (0>tmp2.first) return 0;
+
+	// it was remapped
+	while(tmp2.first<tmp2.second)
+		{
+		tmp = _get_id_enum(inline_namespace_alias_map.data()[tmp2.first].second);
+		if (0<tmp) return tmp;
+		++tmp2.first;
+		}
+	return _get_id_enum(inline_namespace_alias_map.data()[tmp2.first].second);
+}
+
+type_system::type_index
+type_system::get_id_enum_CPP(const char* alias,const char* active_namespace) const
+{
+	assert(alias && *alias);
+
+	if (!strncmp(alias,"::",2))
+		{	// fully-qualified
+		// pretend not fully qualified, but no surrounding namespace
+		alias += 2;
+		active_namespace = NULL;
+		};
+	if (active_namespace && *active_namespace)
+		{
+		// ok..march up to global
+		char* tmp_alias = namespace_concatenate(alias,active_namespace,"::");
+		if (is_string_registered(tmp_alias))
+			{	// registered, so could be indexed
+			const type_index tmp2 = _get_id_enum_CPP(tmp_alias);
+			if (tmp2) return (free(tmp_alias),tmp2);
+			}
+
+		const size_t extra_namespaces = count_disjoint_substring_instances(active_namespace,"::");
+		if (extra_namespaces)
+			{
+			zaimoni::weakautovalarray_ptr_throws<const char*> intra_namespace(extra_namespaces);
+			report_disjoint_substring_instances(active_namespace,"::",intra_namespace.c_array(),extra_namespaces);
+			size_t i = extra_namespaces;
+			do	{
+				--i;
+				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[i]-active_namespace,"::");
+				const type_index tmp2 = _get_id_enum_CPP(tmp_alias);
+				if (tmp2) return (free(tmp_alias),tmp2);
+				}
+			while(0<i);
+			}
+		free(tmp_alias);
+		}
+	return _get_id_enum_CPP(alias);
 }
 
 const char* type_system::_name(size_t id) const
