@@ -587,7 +587,7 @@ type_system::type_index type_system::register_functype(const char* const alias, 
 		FATAL("Host implementation limit exceeded: cannot record function type used in program");
 	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp)) throw std::bad_alloc();
 	src = NULL;
-	return dynamic_types_size+2+core_types_size;
+	return dynamic_types_size+1+core_types_size;
 }
 
 type_system::type_index type_system::register_functype_CPP(const char* name, const char* const active_namespace, function_type*& src)
@@ -616,7 +616,7 @@ type_system::type_index type_system::register_structdecl(const char* const alias
 		FATAL("Host implementation limit exceeded: cannot record union/struct type used in program");
 	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp)) throw std::bad_alloc();
 	src = NULL;
-	return dynamic_types_size+2+core_types_size;
+	return dynamic_types_size+1+core_types_size;
 }
 
 type_system::type_index type_system::register_structdecl_CPP(const char* name, const char* const active_namespace, union_struct_decl*& src)
@@ -645,7 +645,7 @@ type_system::type_index type_system::register_C_structdef(const char* const alia
 		FATAL("Host implementation limit exceeded: cannot record union/struct type used in program");
 	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp)) throw std::bad_alloc();
 	src = NULL;
-	return dynamic_types_size+2+core_types_size;
+	return dynamic_types_size+1+core_types_size;
 }
 
 type_system::type_index type_system::register_C_structdef_CPP(const char* name, const char* const active_namespace, C_union_struct_def*& src)
@@ -674,7 +674,7 @@ type_system::type_index type_system::register_enum_def(const char* const alias, 
 		FATAL("Host implementation limit exceeded: cannot record enum type used in program");
 	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp)) throw std::bad_alloc();
 	src = NULL;
-	return dynamic_types_size+2+core_types_size;
+	return dynamic_types_size+1+core_types_size;
 }
 
 type_system::type_index type_system::register_enum_def_CPP(const char* name, const char* const active_namespace, enum_def*& src)
