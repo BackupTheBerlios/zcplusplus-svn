@@ -10693,7 +10693,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 			}
 		else if (is_C99_named_specifier_definition(src.data<0>()[i],"enum"))
 			{	// can only define once
-			type_system::type_index tmp = types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
+			const type_system::type_index tmp = types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
 			if (tmp)
 				{	//! \test zcc\decl.C99\Error_enum_multidef.h
 				message_header(src.data<0>()[i].index_tokens[0]);
@@ -10712,9 +10712,8 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				};
 			// enum-specifier doesn't have a specific declaration mode
 			//! \test zcc\decl.C99\Pass_enum_def.h
-			enum_def* tmp2 = new enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
-			types.register_enum_def(src.data<0>()[i].index_tokens[1].token.first,tmp2);
-			assert(types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first));
+			const type_system::type_index tmp2 = types.register_enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+			assert(types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
 			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,false,C99_echo_reserved_keyword))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
@@ -10724,8 +10723,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		else if (is_C99_anonymous_specifier(src.data<0>()[i],"enum"))
 			{	// enum-specifier doesn't have a specific declaration mode
 				//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
-			enum_def* tmp = new enum_def("<unknown>",src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-			types.register_enum_def("<unknown>",tmp);
+			types.register_enum_def("<unknown>",src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
 			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,NULL,NULL,false,C99_echo_reserved_keyword))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
@@ -10774,8 +10772,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					}
 				// forward-declare
 				//! \test zcc/decl.C99/Pass_union_forward_def.h
-				union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].token.first);
-				type_system::type_index tmp2 = types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,tmp);
+				const type_system::type_index tmp2 = types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_union);
 				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
 				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
 				assert(types.get_structdecl(tmp2));
@@ -10795,8 +10792,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					}
 				// forward-declare
 				//! \test zcc/decl.C99/Pass_struct_forward_def.h
-				union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].token.first);
-				type_system::type_index tmp2 = types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,tmp);
+				const type_system::type_index tmp2 = types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_struct);
 				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
 				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
 				assert(types.get_structdecl(tmp2));
@@ -10821,9 +10817,8 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					}
 				else{	// definition
 						//! \test zcc/decl.C99/Pass_union_def.h
-					tmp2 = new C_union_struct_def(union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 					//! \todo record field structure, etc.
-					const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,tmp2);
+					const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename,union_struct_decl::decl_union);
 					assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
 					assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp3);
 					assert(types.get_C_structdef(tmp3));
@@ -10849,9 +10844,8 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					}
 				else{	// definition
 						//! \test zcc/decl.C99/Pass_struct_def.h
-					tmp2 = new C_union_struct_def(union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 					//! \todo record field structure, etc.
-					const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,tmp2);
+					const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename,union_struct_decl::decl_struct);
 					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
 					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp3);
 					assert(types.get_C_structdef(tmp3));
@@ -11104,6 +11098,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			};
 		// XXX C++ allows mixing definitions and declaring variables at the same time, but this is a bit unusual
 		// check naked declarations first; handle namespaces later
+		//! \bug indentation fixup needed (stage 3)
 //		if (NULL==active_namespace)
 //			{
 			if (is_C99_named_specifier(src.data<0>()[i],"union"))
@@ -11237,9 +11232,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				free(namespace_name);
 				//! \test zcc\decl.C99\Pass_enum_def.hpp
 				// enum-specifier doesn't have a specific declaration mode
-				//! \todo fix up the fully-qualified name in the enum_def
-				enum_def* tmp2 = new enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
-				types.register_enum_def_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,tmp2);
+				const type_system::type_index tmp2 = types.register_enum_def_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+				assert(types.get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
 				if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,true,CPP_echo_reserved_keyword))
 					{
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
@@ -11249,9 +11243,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			else if (is_C99_anonymous_specifier(src.data<0>()[i],"enum"))
 				{	// enum-specifier doesn't have a specific declaration mode
 					//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
-				//! \todo fix up the fully-qualified name in the enum_def
-				enum_def* tmp = new enum_def("<unknown>",src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-				types.register_enum_def_CPP("<unknown>",active_namespace,tmp);
+				types.register_enum_def_CPP("<unknown>",active_namespace,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
 				if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,true,CPP_echo_reserved_keyword))
 					{
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
@@ -11318,8 +11310,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					// forward-declare
 					//! \test zcc/decl.C99/Pass_union_forward_def.hpp
 					//! \todo fix up fully-qualified name
-					union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].token.first);
-					const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,tmp);
+					const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union);
 					assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
 					assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
 					assert(types.get_structdecl(tmp2));
@@ -11344,8 +11335,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					// forward-declare
 					//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
 					//! \todo fix up fully-qualified name
-					union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].token.first);
-					const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,tmp);
+					const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_struct);
 					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
 					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
 					assert(types.get_structdecl(tmp2));
@@ -11370,8 +11360,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					// forward-declare
 					//! \test zcc/decl.C99/Pass_class_forward_def.hpp
 					//! \todo fix up fully-qualified name
-					union_struct_decl* tmp = new union_struct_decl(union_struct_decl::decl_class,src.data<0>()[i].index_tokens[1].token.first);
-					const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,tmp);
+					const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class);
 					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
 					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
 					assert(types.get_structdecl(tmp2));
@@ -11399,10 +11388,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 						}
 					else{	// definition
 							//! \test zcc/decl.C99/Pass_union_def.hpp
-						tmp2 = new C_union_struct_def(union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 						//! \todo record field structure, etc.
-						//! \todo fix up fully-qualified name
-						const type_system::type_index tmp3 = types.register_C_structdef_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,tmp2);
+						const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename,union_struct_decl::decl_union);
 						assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
 						assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp3);
 						assert(types.get_C_structdef(tmp3));
@@ -11431,10 +11418,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 						}
 					else{	// definition
 							//! \test zcc/decl.C99/Pass_struct_def.hpp
-						tmp2 = new C_union_struct_def(union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 						//! \todo record field structure, etc.
-						//! \todo fix up fully-qualified name
-						const type_system::type_index tmp3 = types.register_C_structdef_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,tmp2);
+						const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename,union_struct_decl::decl_struct);
 						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
 						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp3);
 						assert(types.get_C_structdef(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)));
@@ -11463,10 +11448,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 						}
 					else{	// definition
 							//! \test zcc/decl.C99/Pass_class_def.hpp
-						tmp2 = new C_union_struct_def(union_struct_decl::decl_class,src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 						//! \todo record field structure, etc.
-						//! \todo fix up fully-qualified name
-						const type_system::type_index tmp3 = types.register_C_structdef_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,tmp2);
+						const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename,union_struct_decl::decl_class);
 						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
 						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp3);
 						assert(types.get_C_structdef(tmp3));

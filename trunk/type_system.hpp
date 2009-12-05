@@ -99,12 +99,13 @@ public:
 
 	type_index register_functype(const char* const alias, function_type*& src);
 	type_index register_functype_CPP(const char* name, const char* active_namespace, function_type*& src);
-	type_index register_structdecl(const char* const alias, union_struct_decl*& src);
-	type_index register_structdecl_CPP(const char* name, const char* active_namespace, union_struct_decl*& src);
-	type_index register_C_structdef(const char* const alias, C_union_struct_def*& src);
-	type_index register_C_structdef_CPP(const char* name, const char* active_namespace, C_union_struct_def*& src);
-	type_index register_enum_def(const char* const alias, enum_def*& src);
-	type_index register_enum_def_CPP(const char* name, const char* active_namespace, enum_def*& src);
+//	keyword actually should be type union_struct_decl::keywords, but that increases coupling unacceptably
+	type_index register_structdecl(const char* alias, int keyword);
+	type_index register_structdecl_CPP(const char* name, const char* active_namespace, int keyword);
+	type_index register_C_structdef(const char* alias, zaimoni::POD_pair<size_t,size_t> logical_line, const char* src_filename, int keyword);
+	type_index register_C_structdef_CPP(const char* name, const char* active_namespace, zaimoni::POD_pair<size_t,size_t> logical_line, const char* src_filename, int keyword);
+	type_index register_enum_def(const char* alias, zaimoni::POD_pair<size_t,size_t> logical_line, const char* src_filename);
+	type_index register_enum_def_CPP(const char* name, const char* active_namespace, zaimoni::POD_pair<size_t,size_t> logical_line, const char* src_filename);
 	const function_type* get_functype(type_index i);
 	const union_struct_decl* get_structdecl(type_index i);
 	const C_union_struct_def* get_C_structdef(type_index i);

@@ -2,6 +2,7 @@
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
 #include "type_system.hpp"
+#include "enum_type.hpp"
 #include "struct_type.hpp"
 #include "Zaimoni.STL/search.hpp"
 #include "Zaimoni.STL/Pure.C/auto_int.h"
@@ -602,70 +603,72 @@ type_system::type_index type_system::register_functype_CPP(const char* name, con
 	return register_functype(name,src);
 }
 
-type_system::type_index type_system::register_structdecl(const char* const alias, union_struct_decl*& src)
+type_system::type_index type_system::register_structdecl(const char* const alias, int keyword)
 {
 	assert(alias && *alias);
-	assert(src);
+	const size_t dynamic_types_size = dynamic_types.size();
+	const size_t dynamic_types_max_size = dynamic_types.max_size();
+	if (	dynamic_types_max_size<2+core_types_size
+		|| 	dynamic_types_max_size-(2+core_types_size)<dynamic_types_size)
+		FATAL("Host implementation limit exceeded: cannot record union/struct type used in program");
+
 	dynamic_type_format tmp = {alias,strlen(alias),{{NULL},DYNAMIC_STRUCTDECL}};
-	tmp.third.first.second = src;
+	tmp.third.first.second = new union_struct_decl((union_struct_decl::keywords)keyword,alias);
 
-	const size_t dynamic_types_size = dynamic_types.size();
-	const size_t dynamic_types_max_size = dynamic_types.max_size();
-	if (	dynamic_types_max_size<2+core_types_size
-		|| 	dynamic_types_max_size-(2+core_types_size)<dynamic_types_size)
-		FATAL("Host implementation limit exceeded: cannot record union/struct type used in program");
-	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp)) throw std::bad_alloc();
-	src = NULL;
+	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp))
+		{
+		delete tmp.third.first.second;
+		throw std::bad_alloc();
+		}
 	return dynamic_types_size+1+core_types_size;
 }
 
-type_system::type_index type_system::register_structdecl_CPP(const char* name, const char* const active_namespace, union_struct_decl*& src)
+type_system::type_index type_system::register_structdecl_CPP(const char* name, const char* const active_namespace, int keyword)
 {
 	assert(name && *name);
-	assert(src);
 
 	// use active namespace if present
 	if (active_namespace && *active_namespace)
 		name = construct_canonical_name_and_aliasing_CPP(name,strlen(name),active_namespace,strlen(active_namespace));
 
-	return register_structdecl(name,src);
+	return register_structdecl(name,keyword);
 }
 
-type_system::type_index type_system::register_C_structdef(const char* const alias, C_union_struct_def*& src)
+type_system::type_index type_system::register_C_structdef(const char* const alias, zaimoni::POD_pair<size_t,size_t> logical_line, const char* const src_filename, int keyword)
 {
 	assert(alias && *alias);
-	assert(src);
+	assert(src_filename && *src_filename);
+	const size_t dynamic_types_size = dynamic_types.size();
+	const size_t dynamic_types_max_size = dynamic_types.max_size();
+	if (	dynamic_types_max_size<2+core_types_size
+		|| 	dynamic_types_max_size-(2+core_types_size)<dynamic_types_size)
+		FATAL("Host implementation limit exceeded: cannot record union/struct type used in program");
+
 	dynamic_type_format tmp = {alias,strlen(alias),{{NULL},DYNAMIC_C_STRUCTDEF}};
-	tmp.third.first.third = src;
+	tmp.third.first.third = new C_union_struct_def((union_struct_decl::keywords)keyword,alias,logical_line,src_filename);
 
-	const size_t dynamic_types_size = dynamic_types.size();
-	const size_t dynamic_types_max_size = dynamic_types.max_size();
-	if (	dynamic_types_max_size<2+core_types_size
-		|| 	dynamic_types_max_size-(2+core_types_size)<dynamic_types_size)
-		FATAL("Host implementation limit exceeded: cannot record union/struct type used in program");
 	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp)) throw std::bad_alloc();
-	src = NULL;
 	return dynamic_types_size+1+core_types_size;
 }
 
-type_system::type_index type_system::register_C_structdef_CPP(const char* name, const char* const active_namespace, C_union_struct_def*& src)
+type_system::type_index type_system::register_C_structdef_CPP(const char* name, const char* const active_namespace, zaimoni::POD_pair<size_t,size_t> logical_line, const char* const src_filename, int keyword)
 {
 	assert(name && *name);
-	assert(src);
+	assert(src_filename && *src_filename);
 
 	// use active namespace if present
 	if (active_namespace && *active_namespace)
 		name = construct_canonical_name_and_aliasing_CPP(name,strlen(name),active_namespace,strlen(active_namespace));
 
-	return register_C_structdef(name,src);
+	return register_C_structdef(name,logical_line,src_filename,keyword);
 }
 
-type_system::type_index type_system::register_enum_def(const char* const alias, enum_def*& src)
+type_system::type_index type_system::register_enum_def(const char* const alias, zaimoni::POD_pair<size_t,size_t> logical_line, const char* const src_filename)
 {
 	assert(alias && *alias);
-	assert(src);
+	assert(src_filename && *src_filename);
 	dynamic_type_format tmp = {alias,strlen(alias),{{NULL},DYNAMIC_ENUMDEF}};
-	tmp.third.first.fourth = src;
+	tmp.third.first.fourth = new enum_def(alias,logical_line,src_filename);
 
 	const size_t dynamic_types_size = dynamic_types.size();
 	const size_t dynamic_types_max_size = dynamic_types.max_size();
@@ -673,20 +676,19 @@ type_system::type_index type_system::register_enum_def(const char* const alias, 
 		|| 	dynamic_types_max_size-(2+core_types_size)<dynamic_types_size)
 		FATAL("Host implementation limit exceeded: cannot record enum type used in program");
 	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp)) throw std::bad_alloc();
-	src = NULL;
 	return dynamic_types_size+1+core_types_size;
 }
 
-type_system::type_index type_system::register_enum_def_CPP(const char* name, const char* const active_namespace, enum_def*& src)
+type_system::type_index type_system::register_enum_def_CPP(const char* name, const char* const active_namespace, zaimoni::POD_pair<size_t,size_t> logical_line, const char* const src_filename)
 {
 	assert(name && *name);
-	assert(src);
+	assert(src_filename && *src_filename);
 
 	// use active namespace if present
 	if (active_namespace && *active_namespace)
 		name = construct_canonical_name_and_aliasing_CPP(name,strlen(name),active_namespace,strlen(active_namespace));
 
-	return register_enum_def(name,src);
+	return register_enum_def(name,logical_line,src_filename);
 }
 
 const function_type* type_system::get_functype(type_system::type_index i)
