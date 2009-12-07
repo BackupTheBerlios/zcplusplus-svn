@@ -90,7 +90,7 @@ void parse_tree::clear()
 #ifdef ZAIMONI_FORCE_ISO
 static void _destroy(zaimoni::POD_pair<parse_tree*,size_t>& target)
 {
-	if (NULL!=target)
+	if (NULL!=target.first)
 		{
 		size_t i = target.second;
 		do	target.first[--i].destroy();
@@ -130,25 +130,25 @@ void parse_tree::core_flag_update()
 	size_t i = size<0>();
 	bool is_constant = true;
 	bool is_invalid = false;
-	flags &= parse_tree::RESERVED_MASK;	// just in case
+	flags &= RESERVED_MASK;	// just in case
 	while(0<i)
 		{
-		if (!(parse_tree::CONSTANT_EXPRESSION & data<0>()[--i].flags)) is_constant = false;
-		if (parse_tree::INVALID & data<0>()[i].flags) is_invalid = true;
+		if (!(CONSTANT_EXPRESSION & data<0>()[--i].flags)) is_constant = false;
+		if (INVALID & data<0>()[i].flags) is_invalid = true;
 		};
 	i = size<1>();
 	while(0<i)
 		{
-		if (!(parse_tree::CONSTANT_EXPRESSION & data<1>()[--i].flags)) is_constant = false;
-		if (parse_tree::INVALID & data<1>()[i].flags) is_invalid = true;
+		if (!(CONSTANT_EXPRESSION & data<1>()[--i].flags)) is_constant = false;
+		if (INVALID & data<1>()[i].flags) is_invalid = true;
 		};
 	i = size<2>();
 	while(0<i)
 		{
-		if (!(parse_tree::CONSTANT_EXPRESSION & data<2>()[--i].flags)) is_constant = false;
-		if (parse_tree::INVALID & data<2>()[i].flags) is_invalid = true;
+		if (!(CONSTANT_EXPRESSION & data<2>()[--i].flags)) is_constant = false;
+		if (INVALID & data<2>()[i].flags) is_invalid = true;
 		};
-	flags |= parse_tree::CONSTANT_EXPRESSION*is_constant+parse_tree::INVALID*is_invalid;
+	flags |= CONSTANT_EXPRESSION*is_constant+INVALID*is_invalid;
 }
 
 bool
@@ -276,65 +276,65 @@ void INC_INFORM(const parse_tree& src)
 #define USER_MASK (ULONG_MAX-((1U<<parse_tree::PREDEFINED_STRICT_UB)-1))
 	const lex_flags my_rank = src.flags & USER_MASK;
 	bool need_parens = (1==src.size<1>()) ? my_rank>(src.data<1>()->flags & USER_MASK) : false;
-	bool need_space = false;
+	bool sp = false;	// "need space here"
 	if (need_parens) INC_INFORM('(');
 	size_t i = 0;
 	while(src.size<1>()>i)
 		{
-		if (need_space) INC_INFORM(' ');
-		need_space = !(src.data<1>()[i].flags & parse_tree::GOOD_LINE_BREAK);
+		if (sp) INC_INFORM(' ');
+		sp = !(src.data<1>()[i].flags & parse_tree::GOOD_LINE_BREAK);
 		INC_INFORM(src.data<1>()[i++]);
 		}
 	if (need_parens)
 		{
 		INC_INFORM(')');
-		need_space = false;
+		sp = false;
 		};
 	// first index token
 	if (NULL!=src.index_tokens[0].token.first)
 		{
-		if (need_space) INC_INFORM(' ');
+		if (sp) INC_INFORM(' ');
 		INC_INFORM(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
-		need_space = true;
+		sp = true;
 		}
 	// infix data
 	need_parens = (1==src.size<0>()) ? my_rank>(src.data<0>()->flags & USER_MASK) : false;
 	if (need_parens)
 		{
 		INC_INFORM('(');
-		need_space = false;
+		sp = false;
 		}
 	i = 0;
 	while(src.size<0>()>i)
 		{
-		if (need_space) INC_INFORM(' ');
-		need_space = !(src.data<0>()[i].flags & parse_tree::GOOD_LINE_BREAK);
+		if (sp) INC_INFORM(' ');
+		sp = !(src.data<0>()[i].flags & parse_tree::GOOD_LINE_BREAK);
 		INC_INFORM(src.data<0>()[i++]);
 		}
 	if (need_parens)
 		{
 		INC_INFORM(')');
-		need_space = false;
+		sp = false;
 		};
 	// second index token
 	if (NULL!=src.index_tokens[1].token.first)
 		{
-		if (need_space) INC_INFORM(' ');
+		if (sp) INC_INFORM(' ');
 		INC_INFORM(src.index_tokens[1].token.first,src.index_tokens[1].token.second);
-		need_space = true;
+		sp = true;
 		}
 	// postfix data
 	need_parens = (1==src.size<2>()) ? my_rank>(src.data<2>()->flags & USER_MASK) : false;
 	if (need_parens)
 		{
 		INC_INFORM('(');
-		need_space = false;
+		sp = false;
 		}
 	i = 0;
 	while(src.size<2>()>i)
 		{
-		if (need_space) INC_INFORM(' ');
-		need_space = !(src.data<2>()[i].flags & parse_tree::GOOD_LINE_BREAK);
+		if (sp) INC_INFORM(' ');
+		sp = !(src.data<2>()[i].flags & parse_tree::GOOD_LINE_BREAK);
 		INC_INFORM(src.data<2>()[i++]);
 		}
 	if (need_parens) INC_INFORM(')');
