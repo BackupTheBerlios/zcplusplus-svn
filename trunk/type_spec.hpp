@@ -28,7 +28,7 @@ struct type_spec
 	size_t pointer_power;		// use wrappers for altering this (affects valid memory representations) [implement]
 	size_t static_array_size;	// C-ish, but mitigates bloating the type manager; use wrappers for altering this [implement]
 
-	zaimoni::union_pair<unsigned char*,unsigned char[sizeof(unsigned char*)]> qualifier_vector;
+	zaimoni::union_pair<unsigned char*,unsigned char[sizeof(unsigned char*)]> q_vector;	// q(ualifier)_vector
 	uintmax_t* extent_vector;
 
 	enum typetrait_list {
@@ -44,8 +44,8 @@ struct type_spec
 	void set_static_array_size(size_t _size);
 	void set_pointer_power(size_t _size);	// ACID, throws std::bad_alloc on failure
 	bool dereference();
-	unsigned char& qualifier(size_t i) {return sizeof(unsigned char*)>pointer_power_after_array_decay() ? qualifier_vector.second[i] : qualifier_vector.first[i];};
-	template<size_t i> unsigned char& qualifier() {return sizeof(unsigned char*)>pointer_power_after_array_decay() ? qualifier_vector.second[i] : qualifier_vector.first[i];}
+	unsigned char& qualifier(size_t i) {return sizeof(unsigned char*)>pointer_power_after_array_decay() ? q_vector.second[i] : q_vector.first[i];};
+	template<size_t i> unsigned char& qualifier() {return sizeof(unsigned char*)>pointer_power_after_array_decay() ? q_vector.second[i] : q_vector.first[i];}
 
 	void clear();	// XXX should be constructor; good way to leak memory in other contexts
 	void destroy();	// XXX should be destructor
