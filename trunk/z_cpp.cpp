@@ -65,22 +65,25 @@ static bool interpret_stringopt_lang(const char* x)
 
 void guess_lang_from_filename(const char* const x)
 {
-	if (zaimoni::is_empty_string(x)) return;
+	if (!x || !*x) return;
 	if (NULL!=string_options[stringopt::lang]) return;
 	const size_t name_len = strlen(x);
 	if (2<=name_len && '.'==x[name_len-2])
 		{
-		if ('c'==x[name_len-1] || 'h'==x[name_len-1] || 'C'==x[name_len-1] || 'H'==x[name_len-1])
+		if (	'c'==x[name_len-1]
+			||  'h'==x[name_len-1]
+			||  'C'==x[name_len-1]
+			||  'H'==x[name_len-1])
 			interpret_stringopt_lang("C");
 		return;
 		}
 	if (4<=name_len && '.'==x[name_len-4])
 		{
 		if (	!stricmp(x+(name_len-3),"hpp")
-			||	!stricmp(x+(name_len-3),"hxx")
+			||  !stricmp(x+(name_len-3),"hxx")
 			||  !stricmp(x+(name_len-3),"h++")
-			||	!stricmp(x+(name_len-3),"cpp")
-			||	!stricmp(x+(name_len-3),"cxx")
+			||  !stricmp(x+(name_len-3),"cpp")
+			||  !stricmp(x+(name_len-3),"cxx")
 			||  !stricmp(x+(name_len-3),"c++"))
 			interpret_stringopt_lang("C++");
 		return;
@@ -115,19 +118,6 @@ static bool interpret_intopt_error_ub(const char* x)
 
 static string_opt_handler* option_handler_int[MAX_OPT_STRING]
 	=	{default_handler(int_option(0))};
-
-#if 0
-// include path goo
-char** local_paths = NULL;
-char** system_paths = NULL;
-
-// note: stdlib.h; microsoft _fullpath, POSIX realpath
-// _fullpath(buf,relpath,sizeof(buf))
-// realpath(buf,relpath)
-
-const char* const * const default_local_paths = NULL;
-const char* const * const default_system_paths = NULL;
-#endif
 
 static bool process_options(const size_t argc, char* argv[])
 {
@@ -241,21 +231,7 @@ int main(int argc, char* argv[])
 	bootstrap_filesystem(argv[0]);
 	const bool last_arg_used_in_option = process_options(argc,argv);
 	if (!last_arg_used_in_option) guess_lang_from_filename(argv[argc-1]);
-
-	// platform-specific goo
-	// for now, go with Intel
-	// this should be overridable by command-line options
-	// deal with the int-format options
-	{	// handle integer representation trait options
-	const unsigned int int_opt_count = bool_options[boolopt::int_sign_magnitude]+bool_options[boolopt::int_ones_complement]+bool_options[boolopt::int_twos_complement];
-	if (2<=int_opt_count) FATAL("error: the integer format options are mutually exclusive");
-	if (0==int_opt_count) bool_options[boolopt::int_twos_complement] = true;	// go with intel for now
-	}
-	{	// handle char as signed/unsigned char
-	const unsigned int char_opt_count = bool_options[boolopt::char_is_signed]+bool_options[boolopt::char_is_unsigned];
-	if (2<=char_opt_count) FATAL("error: the character format options are mutually exclusive");
-	if (0==char_opt_count) bool_options[boolopt::char_is_unsigned] = true;	// unsigned makes our life easier
-	}
+	enforce_mutually_exclusive_exhaustive_options();
 
 	// error count enforcement
 	zcc_errors.set_error_ub(int_options[intopt::error_ub]);

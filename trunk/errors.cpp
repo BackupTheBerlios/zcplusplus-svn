@@ -80,3 +80,21 @@ void message_header(const char* const filename, size_t line_number)
 	INC_INFORM(": ");
 }
 
+void enforce_mutually_exclusive_exhaustive_options(void)
+{
+	// platform-specific goo
+	// for now, go with Intel
+	// this should be overridable by command-line options
+	// deal with the int-format options
+	{	// handle integer representation trait options
+	const unsigned int int_opt_count = bool_options[boolopt::int_sign_magnitude]+bool_options[boolopt::int_ones_complement]+bool_options[boolopt::int_twos_complement];
+	if (2<=int_opt_count) FATAL("error: the integer format options are mutually exclusive");
+	if (0==int_opt_count) bool_options[boolopt::int_twos_complement] = true;	// go with intel for now
+	}
+	{	// handle char as signed/unsigned char
+	const unsigned int char_opt_count = bool_options[boolopt::char_is_signed]+bool_options[boolopt::char_is_unsigned];
+	if (2<=char_opt_count) FATAL("error: the character format options are mutually exclusive");
+	if (0==char_opt_count) bool_options[boolopt::char_is_unsigned] = true;	// unsigned makes our life easier
+	}
+}
+
