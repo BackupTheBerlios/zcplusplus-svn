@@ -39,8 +39,6 @@ C_union_struct_def::~C_union_struct_def()
 
 const C_union_struct_def& C_union_struct_def::operator=(const C_union_struct_def& src)
 {
-	zaimoni::autovalarray_ptr_throws<type_spec> data_field_spec;
-	
 	const size_t src_field_count = src.data_field_spec.size();
 	const size_t now_field_count = data_field_spec.size();
 	if (0==src_field_count)
