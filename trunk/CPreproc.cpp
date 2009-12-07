@@ -272,16 +272,16 @@ CPreprocessor::CPreprocessor(const virtual_machine::CPUInfo& _target_machine, co
 {
 	switch(lang_code)
 	{
-	case Lang::C:			{
-							macro_identifier_default = C99_macro_identifier_default;
-							macro_identifier_default_count = STATIC_SIZE(C99_macro_identifier_default);
-							break;
-							};
-	case Lang::CPlusPlus:	{
-							macro_identifier_default = CPP0x_macro_identifier_default;
-							macro_identifier_default_count = STATIC_SIZE(CPP0x_macro_identifier_default);
-							break;
-							};
+	case Lang::C: {
+			macro_identifier_default = C99_macro_identifier_default;
+			macro_identifier_default_count = STATIC_SIZE(C99_macro_identifier_default);
+			break;
+		};
+	case Lang::CPlusPlus: {
+			macro_identifier_default = CPP0x_macro_identifier_default;
+			macro_identifier_default_count = STATIC_SIZE(CPP0x_macro_identifier_default);
+			break;
+		};
 	default: FATAL("Invalid language code");
 	}
 	init_fixed_system_include_search();
@@ -844,24 +844,17 @@ static void C99_reject_keyword_macros(autovalarray_ptr<Token<char>* >& TokenList
 static unsigned int
 detect_hardcoded_system_header(const char* const look_for,size_t lang_code)
 {
-	// C,C++: limits.h is hardcoded
-	// C++: climits is hardcoded
-	if (	(!strcmp(look_for,"limits.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
-		||	(!strcmp(look_for,"climits") && Lang::CPlusPlus==lang_code))
-		return 1;
-
-	// C,C++: stddef.h is hardcoded
-	// C++: cstddef is hardcoded
-	if (	(!strcmp(look_for,"stddef.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
-		||	(!strcmp(look_for,"cstddef") && Lang::CPlusPlus==lang_code))
-		return 2;
-
-	// C,C++: stdint.h is hardcoded
-	// C++: cstdint is hardcoded
-	if (	(!strcmp(look_for,"stdint.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
-		||	(!strcmp(look_for,"cstdint") && Lang::CPlusPlus==lang_code))
-		return 3;
-
+	switch(lang_code)
+	{
+	case Lang::CPlusPlus:	// C++ hard-coded system headers
+		if (!strcmp(look_for,"climits")) return 1;
+		if (!strcmp(look_for,"cstddef")) return 2;
+		if (!strcmp(look_for,"cstdint")) return 3;
+	case Lang::C:	// C, C++ hard-coded system headers
+		if (!strcmp(look_for,"limits.h")) return 1;
+		if (!strcmp(look_for,"stddef.h")) return 2;
+		if (!strcmp(look_for,"stdint.h")) return 3;
+	}
 	return 0;
 }
 
@@ -2129,32 +2122,22 @@ CPreprocessor::raw_system_include(const char* const look_for, autovalarray_ptr<T
 	char buf[FILENAME_MAX];
 	// raw system include has minimal macro context, so don't worry about legality check
 
-	// C,C++: limits.h is hardcoded
-	// C++: climits is hardcoded
-	if (	(!strcmp(look_for,"limits.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
-		||	(!strcmp(look_for,"climits") && Lang::CPlusPlus==lang_code))
-		{	// header is limits.h
+	switch(detect_hardcoded_system_header(look_for,lang_code))
+	{
+#ifndef NDEBUG
+	default: FATAL("detect_hardcoded_system_header() return value out of 0..3 range");
+#endif
+	case 1:	// header is limits.h/climits
 		create_limits_header(IncludeTokenList,look_for);	// not included yet
 		return true;
-		};
-
-	// C,C++: stddef.h is hardcoded
-	// C++: cstddef is hardcoded
-	if (	(!strcmp(look_for,"stddef.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
-		||	(!strcmp(look_for,"cstddef") && Lang::CPlusPlus==lang_code))
-		{	// header is stddef.h
+	case 2:	// header is stddef.h/cstddef
 		create_stddef_header(IncludeTokenList,look_for);	// not included yet
 		return true;
-		};
-
-	// C,C++: stddef.h is hardcoded
-	// C++: cstddef is hardcoded
-	if (	(!strcmp(look_for,"stdint.h") && (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
-		||	(!strcmp(look_for,"cstdint") && Lang::CPlusPlus==lang_code))
-		{	// header is stddef.h
+	case 3:	// header is stdint.h/cstdint
 		create_stdint_header(IncludeTokenList,look_for);	// not included yet
 		return true;
-		};
+	case 0:;
+	}
 
 	if (find_system_include(look_for, buf))
 		return load_raw_sourcefile(IncludeTokenList,buf);
@@ -2645,17 +2628,14 @@ static POD_pair<size_t,size_t> balanced_character_count(const char* const x, con
 static void _construct_matched_pairs(const Token<char>& x, const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized, autovalarray_ptr<POD_pair<size_t,size_t> >& pair_stack,const char l_match,const char r_match)
 {
 	POD_pair<size_t,size_t> depth = balanced_character_count(x.data(),pretokenized,l_match,r_match);	// pre-scan
-	size_t err_count = 0;
+	DEBUG_STATEMENT(size_t err_count = 0;)
 	if (0<depth.first && 0<depth.second)
 		{
 		// reality-check: balanced parentheses
-		autovalarray_ptr<size_t> lparen_fixedstack(depth.first);
-		autovalarray_ptr<POD_pair<size_t,size_t> > parenpair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
+		autovalarray_ptr_throws<size_t> lparen_fixedstack(depth.first);
+		autovalarray_ptr_throws<POD_pair<size_t,size_t> > parenpair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 		size_t balanced_paren = 0;
 		size_t i = 0;
-
-		if (lparen_fixedstack.empty()) throw std::bad_alloc();
-		if (parenpair_fixedstack.empty()) throw std::bad_alloc();
 
 		depth.first = 0;
 		depth.second = 0;
@@ -2666,7 +2646,7 @@ static void _construct_matched_pairs(const Token<char>& x, const autovalarray_pt
 					if (0<depth.second)
 						{
 						depth.second = 0;
-						++err_count;
+						DEBUG_STATEMENT(++err_count;)
 						}
 					lparen_fixedstack[depth.first++] = i;
 					}
@@ -2682,7 +2662,7 @@ static void _construct_matched_pairs(const Token<char>& x, const autovalarray_pt
 					};
 				}
 		while(pretokenized.size() > ++i);
-		if (0==depth.first && 0==depth.second && 0==err_count)
+		if (0==depth.first && 0==depth.second DEBUG_STATEMENT(&& 0==err_count))
 			{
 			assert(parenpair_fixedstack.size()==balanced_paren);
 			parenpair_fixedstack.MoveInto(pair_stack);
@@ -2690,8 +2670,8 @@ static void _construct_matched_pairs(const Token<char>& x, const autovalarray_pt
 		};
 
 	assert(0==depth.first || 0==depth.second);
-	if (0<depth.second) ++err_count;
-	if (0<depth.first) ++err_count;
+	DEBUG_STATEMENT(if (0<depth.second) ++err_count;)
+	DEBUG_STATEMENT(if (0<depth.first) ++err_count;)
 	assert(0==err_count);
 }
 
@@ -2705,17 +2685,14 @@ template<>
 void construct_matched_pairs<'[',']'>(const Token<char>& x, const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized, autovalarray_ptr<POD_pair<size_t,size_t> >& pair_stack)
 {
 	POD_pair<size_t,size_t> depth = balanced_character_count(x.data(),pretokenized,'[',']');	// pre-scan
-	size_t err_count = 0;
+	DEBUG_STATEMENT(size_t err_count = 0;)
 	if (0<depth.first && 0<depth.second)
 		{
 		// reality-check: balanced parentheses
-		autovalarray_ptr<size_t> lparen_fixedstack(depth.first);
-		autovalarray_ptr<POD_pair<size_t,size_t> > parenpair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
+		autovalarray_ptr_throws<size_t> lparen_fixedstack(depth.first);
+		autovalarray_ptr_throws<POD_pair<size_t,size_t> > parenpair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 		size_t balanced_paren = 0;
 		size_t i = 0;
-
-		if (lparen_fixedstack.empty()) throw std::bad_alloc();
-		if (parenpair_fixedstack.empty()) throw std::bad_alloc();
 
 		depth.first = 0;
 		depth.second = 0;
@@ -2724,7 +2701,7 @@ void construct_matched_pairs<'[',']'>(const Token<char>& x, const autovalarray_p
 				if (0<depth.second)
 					{
 					depth.second = 0;
-					++err_count;
+					DEBUG_STATEMENT(++err_count;)
 					}
 				lparen_fixedstack[depth.first++] = i;
 				}
@@ -2739,7 +2716,7 @@ void construct_matched_pairs<'[',']'>(const Token<char>& x, const autovalarray_p
 					++depth.second;
 				}
 		while(pretokenized.size() > ++i);
-		if (0==depth.first && 0==depth.second && 0==err_count)
+		if (0==depth.first && 0==depth.second DEBUG_STATEMENT(&& 0==err_count))
 			{
 			assert(parenpair_fixedstack.size()==balanced_paren);
 			parenpair_fixedstack.MoveInto(pair_stack);
@@ -2747,8 +2724,8 @@ void construct_matched_pairs<'[',']'>(const Token<char>& x, const autovalarray_p
 		};
 
 	assert(0==depth.first || 0==depth.second);
-	if (0<depth.second) ++err_count;
-	if (0<depth.first) ++err_count;
+	DEBUG_STATEMENT(if (0<depth.second) ++err_count;)
+	DEBUG_STATEMENT(if (0<depth.first) ++err_count;)
 	assert(0==err_count);
 }
 
@@ -3467,9 +3444,8 @@ CPreprocessor::instantiate_function_macro_arguments(autovalarray_ptr<Token<char>
 	size_t var_origin = 0;
 	size_t offset = 1;
 	size_t count_args = 0;
-	assert(!arglist.empty());
-	assert('('==arglist.front());
 	assert(2<=arglist.size());
+	assert('('==arglist.front());
 	assert(')'==arglist.back());
 	if (2==arglist.size())
 		{
@@ -3529,7 +3505,7 @@ bool
 CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offset, size_t token_len, const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<Token<char>*>& macros_object_expansion, const autovalarray_ptr<char*>& macros_function, const autovalarray_ptr<Token<char>*>& macros_function_arglist, const autovalarray_ptr<Token<char>*>& macros_function_expansion, autovalarray_ptr<char*>* const used_macro_stack)
 {
 	assert(x.size()>critical_offset);
-	assert(x.size()>=critical_offset+token_len);
+	assert(x.size()-critical_offset>=token_len);
 	assert(macros_object.size()==macros_object_expansion.size());
 	assert(macros_function.size()==macros_function_expansion.size());
 	const errr object_macro_index = binary_find(x.data()+critical_offset,token_len,macros_object);
@@ -4068,7 +4044,6 @@ CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,
 bool
 CPreprocessor::C99_VA_ARGS_flinch(const Token<char>& x, const size_t critical_offset) const
 {	//! \todo option to bypass this
-	assert(!x.empty());
 	assert(x.size()>critical_offset);
 	if (SIZE_MAX!=lang.lex_find(x.data()+critical_offset,x.size()-critical_offset,"__VA_ARGS__",sizeof("__VA_ARGS__")-1))
 		{
