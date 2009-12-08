@@ -260,10 +260,10 @@ static bool C_ExtendedSource(unsigned char x)
 size_t LengthOfCIdentifier(const char* const x)
 {	//! \todo should handle universal character names
 	assert(NULL!=x);
-	if (!IsAlphabeticChar(*x) && '_'!=*x) return 0;
-	size_t Length = 1;
-	while(IsCIdentifierChar(x[Length])) Length++;
-	return Length;
+	const char* x2 = x;
+	if (IsAlphabeticChar(*x2) || '_'==*x2)
+		while(IsCIdentifierChar(*++x2));
+	return x2-x;
 }
 
 #if 0
@@ -306,7 +306,7 @@ size_t LengthOfCCharLiteral(const char* const x)
 	size_t Length = 0;
 	if ('\''==*x)
 		Length = 1;
-	else if (0==strncmp(x,"L'",2))
+	else if ('L'==x[0] && '\''==x[1])
 		Length = 2;
 	if (0==Length) return 0;
 
@@ -329,24 +329,22 @@ size_t LengthOfCStringLiteral(const char* const x)
 	size_t Length = 0;
 	if ('"'==*x)
 		Length = 1;
-	else if (0==strncmp(x,"L\"",2))
+	else if ('L'==x[0] && '"'==x[1])
 		Length = 2;
-	if (0<Length)
+	if (0==Length) return 0;
+
+	const char* base = x+Length;
+	const char* find_end = strpbrk(base,"\\\"\n");
+	while(NULL!=find_end)
 		{
-		const char* base = x+Length;
-		const char* find_end = strpbrk(base,"\\\"\n");
-		while(NULL!=find_end)
-			{
-			Length = find_end-x+1;
-			if ('"'==find_end[0]) return Length;
-			if ('\n'==find_end[0]) return Length-1;
-			if ('\0'==find_end[1]) return Length;
-			base = find_end+2;
-			find_end = ('\0'==base[0]) ? NULL : strpbrk(base,"\\\"\n");
-			};
-		return strlen(x);
-		}
-	return 0;
+		Length = find_end-x+1;
+		if ('"'==find_end[0]) return Length;
+		if ('\n'==find_end[0]) return Length-1;
+		if ('\0'==find_end[1]) return Length;
+		base = find_end+2;
+		find_end = ('\0'==base[0]) ? NULL : strpbrk(base,"\\\"\n");
+		};
+	return strlen(x);
 }
 
 #if 0
@@ -1217,10 +1215,8 @@ static void _construct_matched_pairs(const weak_token* tokenlist,size_t tokenlis
 	if (0<depth.first && 0<depth.second)
 		{
 		// reality-check: balanced parentheses
-		autovalarray_ptr<size_t> fixedstack(depth.first);
-		if (fixedstack.empty()) throw std::bad_alloc();
-		autovalarray_ptr<POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
-		if (pair_fixedstack.empty()) throw std::bad_alloc();
+		autovalarray_ptr_throws<size_t> fixedstack(depth.first);
+		autovalarray_ptr_throws<POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 
 		depth.first = 0;
 		depth.second = 0;
@@ -1289,10 +1285,8 @@ void construct_matched_pairs<'[',']'>(const weak_token* tokenlist,size_t tokenli
 	if (0<depth.first && 0<depth.second)
 		{
 		// reality-check: balanced parentheses
-		autovalarray_ptr<size_t> fixedstack(depth.first);
-		autovalarray_ptr<POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
-		if (fixedstack.empty()) throw std::bad_alloc();
-		if (pair_fixedstack.empty()) throw std::bad_alloc();
+		autovalarray_ptr_throws<size_t> fixedstack(depth.first);
+		autovalarray_ptr_throws<POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 
 		depth.first = 0;
 		depth.second = 0;
@@ -1351,10 +1345,8 @@ void construct_matched_pairs<'{','}'>(const weak_token* tokenlist,size_t tokenli
 	if (0<depth.first && 0<depth.second)
 		{
 		// reality-check: balanced parentheses
-		autovalarray_ptr<size_t> fixedstack(depth.first);
-		autovalarray_ptr<POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
-		if (fixedstack.empty()) throw std::bad_alloc();
-		if (pair_fixedstack.empty()) throw std::bad_alloc();
+		autovalarray_ptr_throws<size_t> fixedstack(depth.first);
+		autovalarray_ptr_throws<POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 
 		depth.first = 0;
 		depth.second = 0;
@@ -2580,8 +2572,7 @@ static uintmax_t _eval_character(const char* src, size_t src_len)
 		tmp_escape = strchr(c99_symbolic_escapes,src[1]);
 		if (tmp_escape) return (unsigned char)(c99_symbolic_escaped_escapes[tmp_escape-c99_symbolic_escapes]);
 
-		tmp_escape = strchr(C99_COPY_ESCAPES,src[1]);
-		assert(NULL!=tmp_escape);
+		assert(strchr(C99_COPY_ESCAPES,src[1]));
 		return (unsigned char)(src[1]);
 		}
 	assert((strchr("uUx",src[1])));
@@ -3231,13 +3222,7 @@ static size_t _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 			case 2:	// signed long long
 				{
 				const bool signed_long_long_int = i<src.size<0>()-3 && robust_token_is_string<3>(src.c_array<0>()[i+3].index_tokens[0].token,"int");
-				if (signed_long_long_int)
-					{	// signed long long int
-					x.grab_index_token_from_str_literal<0>("signed long long int",0);	//! \bug should use something informative; identifier not fine
-					}
-				else{	// signed long long
-					x.grab_index_token_from_str_literal<0>("signed long long",0);	//! \bug should use something informative; identifier not fine
-					};
+				x.grab_index_token_from_str_literal<0>(signed_long_long_int ? "signed long long int" : "signed long long",0);	//! \todo should use something informative; identifier not fine
 				x.type_code.set_type(C_TYPE::LLONG);
 				x.flags |= PARSE_PRIMARY_TYPE;
 				return 2+signed_long_long_int;
@@ -3298,13 +3283,7 @@ static size_t _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 			case 2:	// unsigned long long
 				{
 				const bool unsigned_long_long_int = i<src.size<0>()-3 && robust_token_is_string<3>(src.c_array<0>()[i+3].index_tokens[0].token,"int");
-				if (unsigned_long_long_int)
-					{	// unsigned long long int
-					x.grab_index_token_from_str_literal<0>("unsigned long long int",0);	//! \bug should use something informative; identifier not fine
-					}
-				else{	// unsigned long long
-					x.grab_index_token_from_str_literal<0>("unsigned long long",0);	//! \bug should use something informative; identifier not fine
-					};
+				x.grab_index_token_from_str_literal<0>(unsigned_long_long_int ? "unsigned long long int" : "unsigned long long",0);	//! \todo should use something informative; identifier not fine
 				x.type_code.set_type(C_TYPE::ULLONG);
 				x.flags |= PARSE_PRIMARY_TYPE;
 				return 2+unsigned_long_long_int;
@@ -3376,14 +3355,17 @@ static void C99_notice_primary_type(parse_tree& src)
 	size_t offset = 0;
 	while(i+offset<src.size<0>())
 		{
-		C99_notice_primary_type(src.c_array<0>()[i]);
-		const size_t truncate_by = (!(PARSE_PRIMARY_TYPE & src.data<0>()[i].flags) && NULL!=src.data<0>()[i].index_tokens[0].token.first) 
+		{
+		parse_tree& tmp_ref = src.c_array<0>()[i];
+		C99_notice_primary_type(tmp_ref);
+		const size_t truncate_by = (!(PARSE_PRIMARY_TYPE & tmp_ref.flags) && NULL!=tmp_ref.index_tokens[0].token.first) 
 								 ? _C99_CPP_notice_multitoken_primary_type(src,i) : 0;
 		if (0<truncate_by)
 			{
 			src.DestroyNAtAndRotateTo<0>(truncate_by,i+1,src.size<0>()-offset);
 			offset += truncate_by;
 			}
+		}
 		// disallow consecutive primary types
 		if (0<i && (PARSE_TYPE & src.c_array<0>()[i].flags) && (PARSE_TYPE & src.c_array<0>()[i-1].flags))
 			simple_error(src.c_array<0>()[i]," immediately after another type");
@@ -3420,14 +3402,17 @@ static void CPP_notice_primary_type(parse_tree& src)
 	size_t offset = 0;
 	while(i+offset<src.size<0>())
 		{
-		CPP_notice_primary_type(src.c_array<0>()[i]);
-		const size_t truncate_by = (!(PARSE_PRIMARY_TYPE & src.data<0>()[i].flags) && NULL!=src.data<0>()[i].index_tokens[0].token.first) 
+		{
+		parse_tree& tmp_ref = src.c_array<0>()[i];
+		CPP_notice_primary_type(tmp_ref);
+		const size_t truncate_by = (!(PARSE_PRIMARY_TYPE & tmp_ref.flags) && NULL!=tmp_ref.index_tokens[0].token.first) 
 								 ? _C99_CPP_notice_multitoken_primary_type(src,i) : 0;
 		if (0<truncate_by)
 			{
 			src.DestroyNAtAndRotateTo<0>(truncate_by,i+1,src.size<0>()-offset);
 			offset += truncate_by;
 			}
+		}
 		// disallow consecutive types
 		if (0<i && (PARSE_TYPE & src.c_array<0>()[i].flags) && (PARSE_TYPE & src.c_array<0>()[i-1].flags))
 			simple_error(src.c_array<0>()[i]," immediately after another primary type");
@@ -3849,7 +3834,6 @@ static bool is_C99_conditional_operator_expression(const parse_tree& src)
 			&&	1==src.size<2>() && (PARSE_EXPRESSION & src.data<2>()->flags);
 }
 
-#ifndef NDEBUG
 static bool is_C99_anonymous_specifier(const parse_tree& src,const char* const spec_name)
 {
 	if (	robust_token_is_string(src.index_tokens[0].token,spec_name)
@@ -3891,15 +3875,13 @@ static bool is_C99_named_specifier_definition(const parse_tree& src,const char* 
 		return true;
 	return false;
 }
-#endif
 
 static bool C99_looks_like_identifier(const parse_tree& x)
 {
 	if (!x.is_atomic()) return false;
 	if (PARSE_TYPE & x.flags) return false;
 	if (C99_echo_reserved_keyword(x.index_tokens[0].token.first,x.index_tokens[0].token.second)) return false;
-	if (C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags) return true;
-	return false;
+	return C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags;
 }
 
 static bool CPP_looks_like_identifier(const parse_tree& x)
@@ -3907,8 +3889,7 @@ static bool CPP_looks_like_identifier(const parse_tree& x)
 	if (!x.is_atomic()) return false;
 	if (PARSE_TYPE & x.flags) return false;
 	if (CPP_echo_reserved_keyword(x.index_tokens[0].token.first,x.index_tokens[0].token.second)) return false;
-	if (C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags) return true;
-	return false;
+	return C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags;
 }
 
 static void make_target_postfix_arg(parse_tree& src,size_t& offset,const size_t i,const size_t j)
@@ -4560,13 +4541,9 @@ static bool _match_pairs(parse_tree& src)
 	assert(depth_brackets.first==depth_brackets.second);
 	assert(depth_braces.first==depth_braces.second);
 	if (0==depth_parens.first && 0==depth_brackets.first && 0==depth_braces.first) return true;
-	autovalarray_ptr<size_t> paren_stack(depth_parens.first);
-	autovalarray_ptr<size_t> bracket_stack(depth_brackets.first);
-	autovalarray_ptr<size_t> brace_stack(depth_braces.first);
-
-	if (0<depth_parens.first && paren_stack.empty()) throw std::bad_alloc();
-	if (0<depth_brackets.first && bracket_stack.empty()) throw std::bad_alloc();
-	if (0<depth_braces.first && brace_stack.empty()) throw std::bad_alloc();
+	autovalarray_ptr_throws<size_t> paren_stack(depth_parens.first);
+	autovalarray_ptr_throws<size_t> bracket_stack(depth_brackets.first);
+	autovalarray_ptr_throws<size_t> brace_stack(depth_braces.first);
 
 	const size_t starting_errors = zcc_errors.err_count();
 	size_t paren_idx = 0;
@@ -4687,7 +4664,11 @@ static zaimoni::Loki::CheckReturnDisallow<NULL,parse_tree*>::value_type repurpos
 #endif
 		src.c_array<0>()->destroy();
 		parse_tree* const tmp2 = src.c_array<0>();
+#ifdef ZAIMONI_FORCE_ISO
+		src.args[0].first = tmp;
+#else
 		src.args[0] = tmp;
+#endif
 		return tmp2;
 		};
 	return _new_buffer_nonNULL_throws<parse_tree>(1);
@@ -4705,7 +4686,11 @@ static void cancel_inner_parentheses(parse_tree& src)
 #endif
 		src.c_array<0>()->destroy();
 		free(src.c_array<0>());
+#ifdef ZAIMONI_FORCE_ISO
+		src.args[0].first = tmp;
+#else
 		src.args[0] = tmp;
+#endif
 		}
 }
 
@@ -7731,8 +7716,8 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 			assert(old.bitcount>=rhs.bitcount);
 			const bool lhs_converted = intlike_literal_to_VM(lhs_int,*src.data<1>());
 			const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
-			if (lhs_converted) target_machine->C_promote_integer(lhs_int,lhs,old);
-			if (rhs_converted) target_machine->C_promote_integer(rhs_int,rhs,old);
+			const bool lhs_negative = lhs_converted && target_machine->C_promote_integer(lhs_int,lhs,old);
+			const bool rhs_negative = rhs_converted && target_machine->C_promote_integer(rhs_int,rhs,old);
 			if (lhs_converted && rhs_converted)
 				{
 				force_decimal_literal(src,(lhs_int==rhs_int)==is_equal_op ? "1" : "0",types);
@@ -10191,7 +10176,14 @@ public:
 			&& !CPP_echo_reserved_keyword(x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second)
 			&& (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags))
 			{	// shove Koenig lookup into type_system
+#if 0
+			if (check_for_typedef(base_type,x.data<0>()[i].index_tokens[0].token.first+2,active_namespace,types)) return true;
+			if (check_for_enum(base_type,x.data<0>()[i].index_tokens[0].token.first+2,active_namespace,types)) return true;
+			if (check_for_class_struct_union(base_type,x.data<0>()[i].index_tokens[0].token.first+2,active_namespace,types)) return true;
+			return false;
+#else
 			return check_for_typedef(base_type,x.data<0>()[i].index_tokens[0].token.first,active_namespace,types);
+#endif
 			}
 		}
 		//! \todo handle other known types
@@ -10345,6 +10337,33 @@ static size_t span_to_semicolon(const parse_tree* const first,const parse_tree* 
 	while(iter!=last && !robust_token_is_char<';'>(*iter)) ++iter;
 	return iter-first;
 }
+
+#if 0
+static bool is_identifier_list(const parse_tree& src,func_traits<const char* (*)(const char* x,size_t x_len)>::function_ref_type EchoReservedKeyword)
+{
+	assert(!src.empty());
+	size_t j = src.size<0>();
+	if (!(j%2)) return false;
+	const parse_tree* const x = src.data<0>();
+	assert(x);
+	do	{
+		if (!x[--j].is_atomic()) return false;
+		if (0==j%2)
+			{	// identifier needed
+			if (   C_TESTFLAG_IDENTIFIER!=x[j].index_tokens[0].flags	// must be identifier
+				|| (PARSE_TYPE & x[j].flags) 	// internal representation could land some types here, especially primary types
+				|| EchoReservedKeyword(x[j].index_tokens[0].token.first,x[j].index_tokens[0].token.second))	// keywords are only lexically identifiers, they'll cause problems
+				return false;
+			}
+		else{	// comma needed
+			if (!token_is_char<','>(x[j].index_tokens[0].token))
+				return false;
+			}
+		}
+	while(0<j);
+	return true;
+}
+#endif
 
 static void C99_CPP_handle_static_assertion(parse_tree& src,type_system& types,PP_auxfunc& langinfo,const size_t i,const char* const err)
 {
@@ -10587,6 +10606,74 @@ static bool record_enum_values(parse_tree& src, type_system& types, const char* 
 		src.DeleteIdx<0>(src.size<0>()-1); // clean up anyway
 		}
 	//! \todo actually record enumerator matchings
+#if 0
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> latest_value(0);
+	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> prior_value;
+	i = 0;
+	while(src.size<0>()>i)
+		{	// require identifier that is neither keyword nor a primitive type
+			// C++ will have problems with enum/struct/class/union names, verify status of both of these (could be -Wc-c++-compat issue if legal in C)
+			// if identifier, verify next is = or ,
+			// if next is =, locate comma afterwards (do not do expression parsing yet)
+			//! \todo: enforce One Definition Rule for C++ vs types; determine how much of the effect is in C as well
+		assert(src.data<0>()[i].is_atomic());
+		assert(C_TESTFLAG_IDENTIFIER==src.data<0>()[i].index_tokens[0].flags);
+		assert(!(PARSE_TYPE & src.data<0>()[i].flags));
+		assert(!echo_reserved_keyword(src.data<0>()[i].index_tokens[0].token.first,src.data<0>()[i].index_tokens[0].token.second));
+		char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[0].token.first,active_namespace,"::") : NULL;
+		const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[0].token.first;
+
+		if (types.enumerator_already_defined(fullname,prior_value))
+			{	// --do-what-i-mean could recover if the prior definition were identical
+				// C: note on C99/C1X 6.7.2.2p3 indicates autofail no matter where it was defined
+				// C++: One Definition Rule wipes out
+			free(namespace_name);
+			return false;
+			};
+		// next proposed function call is a bit handwavish right now...
+		// C++0X 3.3.1p4: enumerator gets to hide class names and enum names, nothing else [in particular dies against typedefs and functions]
+		if (types.enum_already_defined(active_namespace,src.data<0>()[i].index_tokens[0].token.first))
+			{	// -Wbackport warn in C++, fail in C
+			};
+		if (types.union_class_struct_already_declared(active_namespace,src.data<0>()[i].index_tokens[0].token.first))
+			{	// -Wbackport warn in C++, fail in C
+			};
+		if (types.function_already_declared(active_namespace,src.data<0>()[i].index_tokens[0].token.first))
+			{	// C++: One Definition Rule
+			};
+		if (types.typedef_already_defined(active_namespace,src.data<0>()[i].index_tokens[0].token.first))
+			{	// C++: One Definition Rule
+			};
+		if (1>=src.size<0>()-i)
+			{	// default-update
+			types.register_enum(enum_name,active_namespace,src.data<0>()[i].index_tokens[0].token.first,latest_value);
+			break;
+			}
+		// complete conversion
+		if (robust_token_is_char<','>(src.data<0>()[i+1]))
+			{	// would default-update
+			types.register_enum(enum_name,active_namespace,src.data<0>()[i].index_tokens[0].token.first,latest_value);
+			i += 2;
+			continue;
+			};
+		assert(robust_token_is_char<'='>(src.data<0>()[i+1]));
+		i += 2;
+		assert(src.size<0>()>i && !robust_token_is_char<','>(src.data<0>()[i]));
+		size_t origin = i;
+		while(++i < src.size<0>())
+			{
+			if (robust_token_is_char<','>(src.data<0>()[i]))
+				{
+				++i;
+				break;
+				}
+			};
+		// probably have this already....
+		if (!eval_expression(src,origin,i,latest_value))
+			return false;
+		types.register_enum(enum_name,active_namespace,src.data<0>()[i].index_tokens[0].token.first,latest_value);
+		}
+#endif
 	return true;
 }
 
@@ -10723,7 +10810,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		else if (is_C99_anonymous_specifier(src.data<0>()[i],"enum"))
 			{	// enum-specifier doesn't have a specific declaration mode
 				//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
-			types.register_enum_def("<unknown>",src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
+			const type_system::type_index tmp = types.register_enum_def("<unknown>",src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
 			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,NULL,NULL,false,C99_echo_reserved_keyword))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
@@ -11012,6 +11099,72 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					return;
 					};
 				//! \todo function declarations can be self-terminating
+#if 0
+				if (   initdecl_identifier_idx==i+decl_count+decl_offset-1
+					&& is_naked_parentheses_pair(src.data<0>()[i+decl_count+decl_offset]))
+					{	// function declaration or function definition intended
+					if (src.size<0>()-(i+decl_count+decl_offset)<=1)
+						{	// unterminated declaration
+							//! \bug needs test case
+						if (src.size<0>()>i) message_header(src.data<0>()[i].index_tokens[0]);
+						INC_INFORM(ERR_STR);
+						INFORM("declaration cut off by end of scope (C99 6.7p1)");
+						zcc_errors.inc_error();
+						// remove from parse
+						if (src.size<0>()>i)
+							src.DeleteNSlotsAt<0>(decl_count+decl_offset,i);
+						return;
+						};
+					// build function type here
+					size_t j = src.data<0>()[i+decl_count+decl_offset].size<0>();
+					const bool is_varadic = !j || (src.data<0>()[i+decl_count+decl_offset].back<0>().is_atomic()
+												&& token_is_string<3>(src.data<0>()[i+decl_count+decl_offset].back<0>(),"..."));
+					const bool is_zeroary = 1==j && src.data<0>()[i+decl_count+decl_offset].back<0>().is_atomic() && token_is_string<4>(src.data<0>()[i+decl_count+decl_offset].back<0>(),"void");
+					const bool have_identifier_list = is_identifier_list(src.data<0>()[i+decl_count+decl_offset]);
+					size_t comma_count = 0;
+					{
+					while(0<j) comma_count += robust_token_is_char<','>(src.data<0>()[i+decl_count+decl_offset].data<0>()[--j].index_tokens[0].token);
+					}
+					zaimoni::autovalarray_ptr_throws<size_t> comma_positions(comma_count);
+					if (0<comma_count)
+						{
+						size_t offset = comma_count;
+						j = src.data<0>()[i+decl_count+decl_offset].size<0>();
+						while(0<j)
+							if (robust_token_is_char<','>(src.data<0>()[i+decl_count+decl_offset].data<0>()[--j].index_tokens[0].token))
+								comma_positions[--offset] = j;
+						assert(0==offset);
+						assert(0<comma_positions.front());
+						assert(2<=src.data<0>()[i+decl_count+decl_offset].size<0>()-comma_positions.back());
+						}
+					// identifier-lists are disallowed outside of full definitions
+
+					function_type want_this_type(is_zeroary ? 0 : is_varadic ? comma_count : comma_count+1,is_varadic);
+					{
+					type_spec tmp;
+					tmp.clear();
+					declFind.value_copy_type(tmp);
+					//! \bug need to reject function types and arrays as return type
+					want_this_type.movein_result_type(tmp);
+					}
+					// other parameter types; note that the parameter names have to be isolated for later
+					j = want_this_type.size();
+					zaimoni::weakautoarray_ptr_throws<size_t> names_temp(j+is_varadic);
+					if (is_varadic) names_temp.back() = "...";
+					while(0<j)
+						{
+						};
+
+					// function attributes would go here
+					if (robust_token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset+1]))
+						{	// function declaration; discard names_temp
+							// check that any prior declarations are consistent
+						};
+					if (is_naked_brace_pair(src.data<0>()[i+decl_count+decl_offset+1]))
+						{	// function definition; need names_temp; also must locate any prior declarations
+						};					
+					}
+#endif
 				// ;: done
 				if (robust_token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset]))
 					{
@@ -11243,7 +11396,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			else if (is_C99_anonymous_specifier(src.data<0>()[i],"enum"))
 				{	// enum-specifier doesn't have a specific declaration mode
 					//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
-				types.register_enum_def_CPP("<unknown>",active_namespace,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
+				const type_system::type_index tmp = types.register_enum_def_CPP("<unknown>",active_namespace,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
 				if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,true,CPP_echo_reserved_keyword))
 					{
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
