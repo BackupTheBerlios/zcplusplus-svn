@@ -186,7 +186,11 @@ public:
 	void TransferOutAndNULL(T*& Target) {_weak_flush(Target); Target = _ptr; this->NULLPtr();}
 	bool Resize(size_t n) {return _weak_resize(_ptr,n);};
 	void FastDeleteIdx(size_t n) {_weak_delete_idx(_ptr,n);};
+#ifndef ZAIMONI_FORCE_ISO
 	void DeleteIdx(size_t n) {_safe_weak_delete_idx(_ptr,n);};
+#else
+	void DeleteIdx(size_t n) {_safe_weak_delete_idx(_ptr,_size,n);};
+#endif
 	void DeleteNSlotsAt(size_t n, size_t Idx) {_weak_delete_n_slots_at(_ptr,n,Idx);};
 
 	// Perl grep

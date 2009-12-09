@@ -120,12 +120,21 @@ inline void _safe_delete_idx(T*& _ptr, size_t& _ptr_size, size_t Idx)
 }
 #endif
 
+#ifndef ZAIMONI_FORCE_ISO
 template<typename T>
 inline void _safe_weak_delete_idx(T*& __ptr, size_t Idx)
 {
 	if (NULL!=__ptr && Idx<ArraySize(__ptr))
 		_weak_delete_idx(__ptr,Idx);
 }
+#else
+template<typename T>
+inline void _safe_weak_delete_idx(T*& __ptr, size_t& _ptr_size, size_t Idx)
+{
+	if (NULL!=__ptr && Idx<_ptr_size)
+		_weak_delete_idx(__ptr,_ptr_size,Idx);
+}
+#endif
 
 // How to tell difference between T* (single) and T* (array) in resize/shrink?
 // we don't, assume single
@@ -681,21 +690,32 @@ bool _insert_n_slots_at(T**& _ptr, size_t& _ptr_size, size_t n, size_t Idx)
 }
 
 template<typename T>
-void
-_weak_delete_idx(T**& _ptr, size_t Idx)
+#ifndef ZAIMONI_FORCE_ISO
+void _weak_delete_idx(T**& _ptr, size_t Idx)
 {
 	assert(NULL!=_ptr);
 	const size_t _ptr_size = ArraySize(_ptr);
+#else
+void _weak_delete_idx(T**& _ptr, size_t& _ptr_size, size_t Idx)
+{
+	assert(NULL!=_ptr);
+#endif
 	assert(Idx<_ptr_size);
 	if (1==_ptr_size)
 		{
 		_weak_flush(_ptr);
 		_ptr = NULL;
+#ifdef ZAIMONI_FORCE_ISO
+		_ptr_size = 0;
+#endif
 		return;
 		}
 	if (2<=_ptr_size-Idx)
 		memmove(_ptr+Idx,_ptr+Idx+1,sizeof(T*)*(_ptr_size-Idx-1));
 	_ptr=REALLOC(_ptr,sizeof(T*)*(_ptr_size-1));
+#ifdef ZAIMONI_FORCE_ISO
+	--_ptr_size;
+#endif
 }
 
 template<typename T>

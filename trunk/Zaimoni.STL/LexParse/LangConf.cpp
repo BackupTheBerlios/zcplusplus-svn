@@ -53,7 +53,7 @@ _applyTokenizers(LangConf::Tokenizer** Tokenizers,lex_flags* TokenizerFlags,cons
 
 void LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 {
-#ifdef ZAIMONI_FORCE_ISO
+#ifndef ZAIMONI_FORCE_ISO
 	size_t BufferLength = _msize(Buffer);
 #else
 	size_t BufferLength = strlen(Buffer);
@@ -87,7 +87,7 @@ void LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 				}
 			if (strchr(Quotes,Buffer[SweepIdx]))
 				InQuotes = !InQuotes;
-			else if ((InQuotes || !EscapeOnlyWithinQuotes) && SweepIdx+1<ArraySize(Buffer))
+			else if ((InQuotes || !EscapeOnlyWithinQuotes) && SweepIdx+1<BufferLength)
 				{
 				if (	(   EscapeEscape==Buffer[SweepIdx]
 						 && Escape==Buffer[SweepIdx+1])
