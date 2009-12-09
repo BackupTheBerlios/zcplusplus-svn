@@ -6028,32 +6028,40 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 static void assemble_binary_infix_arguments(parse_tree& src, size_t& i, const lex_flags _flags)
 {
 	assert(1<=i && 2<=src.size<0>()-i);
-	parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-	*tmp = src.data<0>()[i-1];
-	parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-	*tmp2 = src.data<0>()[i+1];
-	src.c_array<0>()[i].fast_set_arg<1>(tmp);
-	src.c_array<0>()[i].fast_set_arg<2>(tmp2);
-	src.c_array<0>()[i].core_flag_update();
-	src.c_array<0>()[i].flags |= _flags;
-	src.c_array<0>()[i-1].clear();
-	src.c_array<0>()[i+1].clear();
+	{
+	parse_tree* tmp_c_array = src.c_array<0>()+(i-1);
+	parse_tree* const tmp = repurpose_inner_parentheses(tmp_c_array[0]);	// RAM conservation
+	*tmp = tmp_c_array[0];
+	parse_tree* const tmp2 = repurpose_inner_parentheses(tmp_c_array[2]);	// RAM conservation
+	*tmp2 = tmp_c_array[2];
+	tmp_c_array[1].fast_set_arg<1>(tmp);
+	tmp_c_array[1].fast_set_arg<2>(tmp2);
+	tmp_c_array[1].core_flag_update();
+	tmp_c_array[1].flags |= _flags;
+	tmp_c_array[0].clear();
+	tmp_c_array[2].clear();
+	}
 	src.DeleteIdx<0>(i+1);
 	src.DeleteIdx<0>(--i);
-	cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-	cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
+
+	parse_tree& tmp = src.c_array<0>()[i];
+	cancel_outermost_parentheses(tmp.c_array<1>()[0]);
+	cancel_outermost_parentheses(tmp.c_array<2>()[0]);
 }
 
 static void merge_binary_infix_argument(parse_tree& src, size_t& i, const lex_flags _flags)
 {
 	assert(1<=i);
-	parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-	*tmp = src.data<0>()[i-1];
+	{
+	parse_tree* tmp_c_array = src.c_array<0>()+(i-1);
+	parse_tree* const tmp = repurpose_inner_parentheses(tmp_c_array[0]);	// RAM conservation
+	*tmp = tmp_c_array[0];
 
-	src.c_array<0>()[i].fast_set_arg<1>(tmp);
-	src.c_array<0>()[i].core_flag_update();
-	src.c_array<0>()[i].flags |= _flags;
-	src.c_array<0>()[i-1].clear();
+	tmp_c_array[1].fast_set_arg<1>(tmp);
+	tmp_c_array[1].core_flag_update();
+	tmp_c_array[1].flags |= _flags;
+	tmp_c_array[0].clear();
+	}
 	src.DeleteIdx<0>(--i);
 	cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
 }
@@ -6112,15 +6120,19 @@ static bool terse_locate_mult_expression(parse_tree& src, size_t& i)
 	if (mult_subtype)
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]);
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
-		if (	(PARSE_MULT_EXPRESSION & src.data<0>()[i-1].flags)
-			&&	(PARSE_PM_EXPRESSION & src.data<0>()[i+1].flags))
+		parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
+		inspect_potential_paren_primary_expression(tmp_c_array[0]);
+		inspect_potential_paren_primary_expression(tmp_c_array[2]);
+		if (	(PARSE_MULT_EXPRESSION & tmp_c_array[0].flags)
+			&&	(PARSE_PM_EXPRESSION & tmp_c_array[2].flags))
 			{
-			assemble_binary_infix_arguments(src,i,PARSE_STRICT_MULT_EXPRESSION);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_MULT_EXPRESSION);	// tmp_c_array goes invalid here
 			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
-			src.c_array<0>()[i].subtype = mult_subtype;
-			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
+			{
+			parse_tree& tmp = src.c_array<0>()[i];
+			tmp.subtype = mult_subtype;
+			tmp.type_code.set_type(0);	// handle type inference later
+			}
 			assert(is_C99_mult_operator_expression(src.data<0>()[i]));
 			return true;
 			}
