@@ -5654,6 +5654,9 @@ static bool terse_locate_CPP_bitwise_complement(parse_tree& src, size_t& i, cons
 	return false;
 }
 
+// This is called from the eval_ family of functions.  Use a return value
+// rather than throw std::bad_alloc because as we're hoping eval will 
+// eventually recover enough memory for this to complete.
 static bool construct_twos_complement_int_min(parse_tree& dest, const type_system& types, const virtual_machine::std_int_enum machine_type, const parse_tree& src_loc)
 {
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp_int(target_machine->signed_max(machine_type));
@@ -5727,9 +5730,9 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool ha
 		if (	virtual_machine::twos_complement==target_machine->C_signed_int_representation()
 			&& 	0==(old_type.base_type_index-C_TYPE::INT)%2
 			&& 	!bool_options[boolopt::int_traps]
-			&&	res_int>target_machine->signed_max(machine_type)
-			&&	construct_twos_complement_int_min(src,types,machine_type,src))
+			&&	res_int>target_machine->signed_max(machine_type))
 			{	// trap representation; need to get it into -INT_MAX-1 form
+			if (!construct_twos_complement_int_min(src,types,machine_type,src)) return false;
 			src.type_code = old_type;
 			return true;
 			}
@@ -7919,9 +7922,9 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 			if (	virtual_machine::twos_complement==target_machine->C_signed_int_representation()
 				&& 	old.is_signed
 				&& 	!bool_options[boolopt::int_traps]
-				&&	res_int>target_machine->signed_max(old.machine_type)
-				&&	construct_twos_complement_int_min(src,types,old.machine_type,src))
+				&&	res_int>target_machine->signed_max(old.machine_type))
 				{	// trap representation; need to get it into -INT_MAX-1 form
+				if (!construct_twos_complement_int_min(src,types,old.machine_type,src)) return false;
 				src.type_code = old_type;
 				return true;
 				}
@@ -8087,9 +8090,9 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 		if (	virtual_machine::twos_complement==target_machine->C_signed_int_representation()
 			&& 	old.is_signed
 			&& 	!bool_options[boolopt::int_traps]
-			&&	res_int>target_machine->signed_max(old.machine_type)
-			&&	construct_twos_complement_int_min(src,types,old.machine_type,src))
+			&&	res_int>target_machine->signed_max(old.machine_type))
 			{	// trap representation; need to get it into -INT_MAX-1 form
+			if (!construct_twos_complement_int_min(src,types,old.machine_type,src)) return false;
 			src.type_code = old_type;
 			return true;
 			}
