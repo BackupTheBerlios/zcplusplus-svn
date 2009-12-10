@@ -5154,6 +5154,7 @@ static void assemble_unary_postfix_arguments(parse_tree& src, size_t& i, const s
 
 // can't do much syntax-checking or immediate-evaluation here because of binary +/-
 // unary +/- syntax checking out out of place as it's needed by all of the unary operators
+// return code is true for success, false for memory failure
 static bool VM_to_token(const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,const size_t base_type_index,POD_pair<char*,lex_flags>& dest)
 {
 	const char* const suffix = literal_suffix(base_type_index);
@@ -5171,6 +5172,7 @@ static bool VM_to_token(const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,c
 	return true;
 }
 
+// return code is true for success, false for memory failure
 static bool VM_to_literal(parse_tree& dest, const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,const parse_tree& src,const type_system& types)
 {
 	POD_pair<char*,lex_flags> new_token;
@@ -6029,7 +6031,7 @@ static void assemble_binary_infix_arguments(parse_tree& src, size_t& i, const le
 {
 	assert(1<=i && 2<=src.size<0>()-i);
 	{
-	parse_tree* tmp_c_array = src.c_array<0>()+(i-1);
+	parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
 	parse_tree* const tmp = repurpose_inner_parentheses(tmp_c_array[0]);	// RAM conservation
 	*tmp = tmp_c_array[0];
 	parse_tree* const tmp2 = repurpose_inner_parentheses(tmp_c_array[2]);	// RAM conservation
@@ -6053,7 +6055,7 @@ static void merge_binary_infix_argument(parse_tree& src, size_t& i, const lex_fl
 {
 	assert(1<=i);
 	{
-	parse_tree* tmp_c_array = src.c_array<0>()+(i-1);
+	parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
 	parse_tree* const tmp = repurpose_inner_parentheses(tmp_c_array[0]);	// RAM conservation
 	*tmp = tmp_c_array[0];
 
@@ -6635,6 +6637,7 @@ static void locate_CPP_mult_expression(parse_tree& src, size_t& i, const type_sy
 		CPP_mult_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
+// Law of Demeter conversion is object-size neutral [Dec. 9 2009], so don't do it
 static bool C_string_literal_equal_content(const parse_tree& lhs, const parse_tree& rhs,bool& is_equal)
 {
 	if (C_TESTFLAG_STRING_LITERAL==lhs.index_tokens[0].flags && C_TESTFLAG_STRING_LITERAL==rhs.index_tokens[0].flags)
@@ -6730,15 +6733,17 @@ static bool terse_locate_add_expression(parse_tree& src, size_t& i)
 	if (add_subtype)
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]);
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
-		if (	(PARSE_ADD_EXPRESSION & src.data<0>()[i-1].flags)
-			&&	(PARSE_MULT_EXPRESSION & src.data<0>()[i+1].flags))
+		parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
+		inspect_potential_paren_primary_expression(tmp_c_array[0]);
+		inspect_potential_paren_primary_expression(tmp_c_array[2]);
+		if (	(PARSE_ADD_EXPRESSION & tmp_c_array[0].flags)
+			&&	(PARSE_MULT_EXPRESSION & tmp_c_array[2].flags))
 			{
-			assemble_binary_infix_arguments(src,i,PARSE_STRICT_ADD_EXPRESSION);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_ADD_EXPRESSION);	// tmp_c_array goes invalid here
 			assert(is_C99_add_operator_expression(src.data<0>()[i]));
-			src.c_array<0>()[i].subtype = add_subtype;
-			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
+			parse_tree& tmp = src.c_array<0>()[i];
+			tmp.subtype = add_subtype;
+			tmp.type_code.set_type(0);	// handle type inference later
 			assert(is_C99_add_operator_expression(src.data<0>()[i]));
 			return true;
 			}
@@ -6747,6 +6752,7 @@ static bool terse_locate_add_expression(parse_tree& src, size_t& i)
 }
 
 // this one hides a slight inefficiency: negative literals take 2 dynamic memory allocations, positive literals take one
+// return code is true for success, false for memory failure
 static bool VM_to_signed_literal(parse_tree& x,const bool is_negative, const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,const parse_tree& src,const type_system& types)
 {
 	if (is_negative)
@@ -7288,15 +7294,17 @@ static bool terse_locate_shift_expression(parse_tree& src, size_t& i)
 	if (shift_subtype)
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]);
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
-		if (	(PARSE_SHIFT_EXPRESSION & src.data<0>()[i-1].flags)
-			&&	(PARSE_ADD_EXPRESSION & src.data<0>()[i+1].flags))
+		parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
+		inspect_potential_paren_primary_expression(tmp_c_array[0]);
+		inspect_potential_paren_primary_expression(tmp_c_array[2]);
+		if (	(PARSE_SHIFT_EXPRESSION & tmp_c_array[0].flags)
+			&&	(PARSE_ADD_EXPRESSION & tmp_c_array[2].flags))
 			{
-			assemble_binary_infix_arguments(src,i,PARSE_STRICT_SHIFT_EXPRESSION);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_SHIFT_EXPRESSION);	// tmp_c_array goes invalid here
 			assert(is_C99_shift_expression(src.data<0>()[i]));
-			src.c_array<0>()[i].subtype = shift_subtype;
-			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
+			parse_tree& tmp = src.c_array<0>()[i];
+			tmp.subtype = shift_subtype;
+			tmp.type_code.set_type(0);	// handle type inference later
 			assert(is_C99_shift_expression(src.data<0>()[i]));
 			return true;
 			}
@@ -7457,15 +7465,17 @@ static bool terse_locate_relation_expression(parse_tree& src, size_t& i)
 	if (rel_subtype)
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]);
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
-		if (	(PARSE_SHIFT_EXPRESSION & src.data<0>()[i-1].flags)
-			&&	(PARSE_ADD_EXPRESSION & src.data<0>()[i+1].flags))
+		parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
+		inspect_potential_paren_primary_expression(tmp_c_array[0]);
+		inspect_potential_paren_primary_expression(tmp_c_array[2]);
+		if (	(PARSE_SHIFT_EXPRESSION & tmp_c_array[0].flags)
+			&&	(PARSE_ADD_EXPRESSION & tmp_c_array[2].flags))
 			{
-			assemble_binary_infix_arguments(src,i,PARSE_STRICT_RELATIONAL_EXPRESSION);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_RELATIONAL_EXPRESSION);	// tmp_c_array goes invalid here
 			assert(is_C99_relation_expression(src.data<0>()[i]));
-			src.c_array<0>()[i].subtype = rel_subtype;
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);
+			parse_tree& tmp = src.c_array<0>()[i];
+			tmp.subtype = rel_subtype;
+			tmp.type_code.set_type(C_TYPE::BOOL);
 			assert(is_C99_relation_expression(src.data<0>()[i]));
 			return true;
 			}
@@ -7613,15 +7623,17 @@ static bool terse_locate_C99_equality_expression(parse_tree& src, size_t& i)
 	if (eq_subtype)
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]);
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
-		if (	(PARSE_EQUALITY_EXPRESSION & src.data<0>()[i-1].flags)
-			&&	(PARSE_RELATIONAL_EXPRESSION & src.data<0>()[i+1].flags))
+		parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
+		inspect_potential_paren_primary_expression(tmp_c_array[0]);
+		inspect_potential_paren_primary_expression(tmp_c_array[2]);
+		if (	(PARSE_EQUALITY_EXPRESSION & tmp_c_array[0].flags)
+			&&	(PARSE_RELATIONAL_EXPRESSION & tmp_c_array[2].flags))
 			{
-			assemble_binary_infix_arguments(src,i,PARSE_STRICT_EQUALITY_EXPRESSION);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_EQUALITY_EXPRESSION);	// tmp_c_array becomes invalid here
 			assert(is_C99_equality_expression(src.data<0>()[i]));
-			src.c_array<0>()[i].subtype = eq_subtype;
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);
+			parse_tree& tmp = src.c_array<0>()[i];
+			tmp.subtype = eq_subtype;
+			tmp.type_code.set_type(C_TYPE::BOOL);
 			assert(is_C99_equality_expression(src.data<0>()[i]));
 			return true;
 			}
@@ -7642,15 +7654,17 @@ static bool terse_locate_CPP_equality_expression(parse_tree& src, size_t& i)
 	if (eq_subtype)
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]);
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
-		if (	(PARSE_EQUALITY_EXPRESSION & src.data<0>()[i-1].flags)
-			&&	(PARSE_RELATIONAL_EXPRESSION & src.data<0>()[i+1].flags))
+		parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
+		inspect_potential_paren_primary_expression(tmp_c_array[0]);
+		inspect_potential_paren_primary_expression(tmp_c_array[2]);
+		if (	(PARSE_EQUALITY_EXPRESSION & tmp_c_array[0].flags)
+			&&	(PARSE_RELATIONAL_EXPRESSION & tmp_c_array[2].flags))
 			{
-			assemble_binary_infix_arguments(src,i,PARSE_STRICT_EQUALITY_EXPRESSION);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_EQUALITY_EXPRESSION);	// tmp_c_array becomes invalid here
 			assert(is_CPP_equality_expression(src.data<0>()[i]));
-			src.c_array<0>()[i].subtype = eq_subtype;
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);
+			parse_tree& tmp = src.c_array<0>()[i];
+			tmp.subtype = eq_subtype;
+			tmp.type_code.set_type(C_TYPE::BOOL);
 			assert(is_CPP_equality_expression(src.data<0>()[i]));
 			return true;
 			}
@@ -7731,10 +7745,13 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 			assert(old.bitcount>=rhs.bitcount);
 			const bool lhs_converted = intlike_literal_to_VM(lhs_int,*src.data<1>());
 			const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>());
-			const bool lhs_negative = lhs_converted && target_machine->C_promote_integer(lhs_int,lhs,old);
-			const bool rhs_negative = rhs_converted && target_machine->C_promote_integer(rhs_int,rhs,old);
+			// general case here in case we try to do with converted/not converted mixed cases
+//			if (lhs_converted) target_machine->C_promote_integer(lhs_int,lhs,old);
+//			if (rhs_converted) target_machine->C_promote_integer(rhs_int,rhs,old);
 			if (lhs_converted && rhs_converted)
 				{
+				target_machine->C_promote_integer(lhs_int,lhs,old);
+				target_machine->C_promote_integer(rhs_int,rhs,old);
 				force_decimal_literal(src,(lhs_int==rhs_int)==is_equal_op ? "1" : "0",types);
 				return true;
 				};
@@ -7839,15 +7856,16 @@ static bool terse_locate_C99_bitwise_AND(parse_tree& src, size_t& i)
 	assert(src.data<0>()[i].is_atomic());
 
 	//! \todo deal with unary & parses
-	if (token_is_char<'&'>(src.data<0>()[i].index_tokens[0].token))
+	parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
+	if (token_is_char<'&'>(tmp_c_array[1].index_tokens[0].token))
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]);
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
-		if (	(PARSE_BITAND_EXPRESSION & src.data<0>()[i-1].flags)
-			&&	(PARSE_EQUALITY_EXPRESSION & src.data<0>()[i+1].flags))
+		inspect_potential_paren_primary_expression(tmp_c_array[0]);
+		inspect_potential_paren_primary_expression(tmp_c_array[2]);
+		if (	(PARSE_BITAND_EXPRESSION & tmp_c_array[0].flags)
+			&&	(PARSE_EQUALITY_EXPRESSION & tmp_c_array[2].flags))
 			{
-			assemble_binary_infix_arguments(src,i,PARSE_STRICT_BITAND_EXPRESSION);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_BITAND_EXPRESSION);	// tmp_c_array becomes invalid here
 			assert(is_C99_bitwise_AND_expression(src.data<0>()[i]));
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_bitwise_AND_expression(src.data<0>()[i]));
@@ -8013,15 +8031,16 @@ static bool terse_locate_C99_bitwise_XOR(parse_tree& src, size_t& i)
 	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
 	assert(src.data<0>()[i].is_atomic());
 
-	if (token_is_char<'^'>(src.data<0>()[i].index_tokens[0].token))
+	parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
+	if (token_is_char<'^'>(tmp_c_array[1].index_tokens[0].token))
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]);
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
-		if (	(PARSE_BITXOR_EXPRESSION & src.data<0>()[i-1].flags)
-			&&	(PARSE_BITAND_EXPRESSION & src.data<0>()[i+1].flags))
+		inspect_potential_paren_primary_expression(tmp_c_array[0]);
+		inspect_potential_paren_primary_expression(tmp_c_array[2]);
+		if (	(PARSE_BITXOR_EXPRESSION & tmp_c_array[0].flags)
+			&&	(PARSE_BITAND_EXPRESSION & tmp_c_array[2].flags))
 			{
-			assemble_binary_infix_arguments(src,i,PARSE_STRICT_BITXOR_EXPRESSION);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_BITXOR_EXPRESSION);	// tmp_c_array becomes invalid here
 			assert(is_C99_bitwise_XOR_expression(src.data<0>()[i]));
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_bitwise_XOR_expression(src.data<0>()[i]));
@@ -8180,15 +8199,16 @@ static bool terse_locate_C99_bitwise_OR(parse_tree& src, size_t& i)
 	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
 	assert(src.data<0>()[i].is_atomic());
 
-	if (token_is_char<'|'>(src.data<0>()[i].index_tokens[0].token))
+	parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
+	if (token_is_char<'|'>(tmp_c_array[1].index_tokens[0].token))
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]);
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
-		if (	(PARSE_BITOR_EXPRESSION & src.data<0>()[i-1].flags)
-			&&	(PARSE_BITXOR_EXPRESSION & src.data<0>()[i+1].flags))
+		inspect_potential_paren_primary_expression(tmp_c_array[0]);
+		inspect_potential_paren_primary_expression(tmp_c_array[2]);
+		if (	(PARSE_BITOR_EXPRESSION & tmp_c_array[0].flags)
+			&&	(PARSE_BITXOR_EXPRESSION & tmp_c_array[2].flags))
 			{
-			assemble_binary_infix_arguments(src,i,PARSE_STRICT_BITOR_EXPRESSION);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_BITOR_EXPRESSION);	// tmp_c_array becomes invalid here
 			assert(is_C99_bitwise_OR_expression(src.data<0>()[i]));
 			src.c_array<0>()[i].type_code.set_type(0);	// handle type inference later
 			assert(is_C99_bitwise_OR_expression(src.data<0>()[i]));
@@ -8323,7 +8343,8 @@ static void locate_C99_bitwise_OR(parse_tree& src, size_t& i, const type_system&
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_C99_bitwise_OR(src,i)) C_bitwise_OR_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_C99_bitwise_OR(src,i))
+		C_bitwise_OR_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 /*
@@ -8370,15 +8391,16 @@ static bool terse_locate_C99_logical_AND(parse_tree& src, size_t& i)
 	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
 	assert(src.data<0>()[i].is_atomic());
 
-	if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"&&"))
+	parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
+	if (token_is_string<2>(tmp_c_array[1].index_tokens[0].token,"&&"))
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]);
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
-		if (	(PARSE_LOGICAND_EXPRESSION & src.data<0>()[i-1].flags)
-			&&	(PARSE_BITOR_EXPRESSION & src.data<0>()[i+1].flags))
+		inspect_potential_paren_primary_expression(tmp_c_array[0]);
+		inspect_potential_paren_primary_expression(tmp_c_array[2]);
+		if (	(PARSE_LOGICAND_EXPRESSION & tmp_c_array[0].flags)
+			&&	(PARSE_BITOR_EXPRESSION & tmp_c_array[2].flags))
 			{
-			assemble_binary_infix_arguments(src,i,PARSE_STRICT_LOGICAND_EXPRESSION);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_LOGICAND_EXPRESSION);	// tmp_c_array becomes invalid here
 			assert(is_C99_logical_AND_expression(src.data<0>()[i]));
 			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);	// technically wrong, but range is correct
 			assert(is_C99_logical_AND_expression(src.data<0>()[i]));
@@ -8484,7 +8506,8 @@ static void locate_C99_logical_AND(parse_tree& src, size_t& i, const type_system
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_C99_logical_AND(src,i)) C_logical_AND_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_C99_logical_AND(src,i))
+		C_logical_AND_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 /*
@@ -8512,15 +8535,16 @@ static bool terse_locate_C99_logical_OR(parse_tree& src, size_t& i)
 	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
 	assert(src.data<0>()[i].is_atomic());
 
-	if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"||"))
+	parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
+	if (token_is_string<2>(tmp_c_array[1].index_tokens[0].token,"||"))
 		{
 		if (1>i || 2>src.size<0>()-i) return false;
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]);
-		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
-		if (	(PARSE_LOGICOR_EXPRESSION & src.data<0>()[i-1].flags)
-			&&	(PARSE_LOGICAND_EXPRESSION & src.data<0>()[i+1].flags))
+		inspect_potential_paren_primary_expression(tmp_c_array[0]);
+		inspect_potential_paren_primary_expression(tmp_c_array[2]);
+		if (	(PARSE_LOGICOR_EXPRESSION & tmp_c_array[0].flags)
+			&&	(PARSE_LOGICAND_EXPRESSION & tmp_c_array[2].flags))
 			{
-			assemble_binary_infix_arguments(src,i,PARSE_STRICT_LOGICOR_EXPRESSION);
+			assemble_binary_infix_arguments(src,i,PARSE_STRICT_LOGICOR_EXPRESSION);	// tmp_c_array becomes invalid here
 			assert(is_C99_logical_OR_expression(src.data<0>()[i]));
 			src.c_array<0>()[i].type_code.set_type(C_TYPE::BOOL);	// technically wrong, but range is correct
 			assert(is_C99_logical_OR_expression(src.data<0>()[i]));
@@ -8657,39 +8681,41 @@ static bool terse_locate_conditional_op(parse_tree& src, size_t& i)
 		{
 		// ? as first might be space deficiency (check uniqueness of construction)
 		if (1>i || 3>src.size<0>()-i) return false;
-		if (	src.data<0>()[i+2].is_atomic()
-			&&	token_is_char<':'>(src.data<0>()[i+2].index_tokens[0].token))
+		parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
+		if (	tmp_c_array[3].is_atomic()
+			&&	token_is_char<':'>(tmp_c_array[3].index_tokens[0].token))
 			{
-			inspect_potential_paren_primary_expression(src.c_array<0>()[i-1]);
-			inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
-			inspect_potential_paren_primary_expression(src.c_array<0>()[i+3]);
+			inspect_potential_paren_primary_expression(tmp_c_array[0]);
+			inspect_potential_paren_primary_expression(tmp_c_array[2]);
+			inspect_potential_paren_primary_expression(tmp_c_array[4]);
 			if (	(PARSE_LOGICOR_EXPRESSION & src.data<0>()[i-1].flags)
 				&&	(PARSE_EXPRESSION & src.data<0>()[i+1].flags)
 				&&	(PARSE_CONDITIONAL_EXPRESSION & src.data<0>()[i+3].flags))
 				{
-				parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i-1]);	// RAM conservation
-				*tmp = src.data<0>()[i-1];
-				parse_tree* const tmp2 = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-				*tmp2 = src.data<0>()[i+1];
-				parse_tree* const tmp3 = repurpose_inner_parentheses(src.c_array<0>()[i+3]);	// RAM conservation
-				*tmp3 = src.data<0>()[i+3];
-				src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+2]);
-				src.c_array<0>()[i].grab_index_token_location_from<1,0>(src.c_array<0>()[i+2]);
-				src.c_array<0>()[i].fast_set_arg<0>(tmp2);
-				src.c_array<0>()[i].fast_set_arg<1>(tmp);
-				src.c_array<0>()[i].fast_set_arg<2>(tmp3);
-				src.c_array<0>()[i].core_flag_update();
-				src.c_array<0>()[i].flags |= PARSE_STRICT_CONDITIONAL_EXPRESSION;
-				src.c_array<0>()[i-1].clear();
-				src.c_array<0>()[i+1].clear();
-				src.c_array<0>()[i+2].clear();
-				src.c_array<0>()[i+3].clear();
-				src.DeleteNSlotsAt<0>(3,i+1);
+				parse_tree* const tmp = repurpose_inner_parentheses(tmp_c_array[0]);	// RAM conservation
+				*tmp = tmp_c_array[0];
+				parse_tree* const tmp2 = repurpose_inner_parentheses(tmp_c_array[2]);	// RAM conservation
+				*tmp2 = tmp_c_array[2];
+				parse_tree* const tmp3 = repurpose_inner_parentheses(tmp_c_array[4]);	// RAM conservation
+				*tmp3 = tmp_c_array[4];
+				tmp_c_array[1].grab_index_token_from<1,0>(tmp_c_array[3]);
+				tmp_c_array[1].grab_index_token_location_from<1,0>(tmp_c_array[3]);
+				tmp_c_array[1].fast_set_arg<0>(tmp2);
+				tmp_c_array[1].fast_set_arg<1>(tmp);
+				tmp_c_array[1].fast_set_arg<2>(tmp3);
+				tmp_c_array[1].core_flag_update();
+				tmp_c_array[1].flags |= PARSE_STRICT_CONDITIONAL_EXPRESSION;
+				tmp_c_array[0].clear();
+				tmp_c_array[2].clear();
+				tmp_c_array[3].clear();
+				tmp_c_array[4].clear();
+				src.DeleteNSlotsAt<0>(3,i+1);	// tmp_c_array becomes invalid here
 				src.DeleteIdx<0>(--i);
 				assert(is_C99_conditional_operator_expression_strict(src.data<0>()[i]));
-				cancel_outermost_parentheses(src.c_array<0>()[i].c_array<0>()[0]);
-				cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
-				cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
+				parse_tree& tmp4 = src.c_array<0>()[i];
+				cancel_outermost_parentheses(tmp4.front<0>());
+				cancel_outermost_parentheses(tmp4.front<1>());
+				cancel_outermost_parentheses(tmp4.front<2>());
 				assert(is_C99_conditional_operator_expression(src.data<0>()[i]));
 				return true;
 				}
@@ -8920,46 +8946,6 @@ static void locate_CPP_conditional_op(parse_tree& src, size_t& i, const type_sys
 
 	if (terse_locate_conditional_op(src,i)) CPP_conditional_op_easy_syntax_check(src.c_array<0>()[i],types);
 }
-
-#if 0
-static bool terse_locate_x(parse_tree& src, size_t& i)
-{
-	assert(!src.empty<0>());
-	assert(i<src.size<0>());
-	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
-	assert(src.data<0>()[i].is_atomic());
-}
-
-static void C_x_easy_syntax_check(parse_tree& src,const type_system& types)
-{
-}
-
-static void CPP_x_easy_syntax_check(parse_tree& src,const type_system& types)
-{
-}
-
-static void locate_C99_x(parse_tree& src, size_t& i, const type_system& types)
-{
-	assert(!src.empty<0>());
-	assert(i<src.size<0>());
-	if (   (PARSE_OBVIOUS & src.data<0>()[i].flags)
-		|| !src.data<0>()[i].is_atomic())
-		return;
-
-	if (terse_locate_x(src,i)) C_x_easy_syntax_check(src.c_array<0>()[i],types);
-}
-
-static void locate_CPP_x(parse_tree& src, size_t& i, const type_system& types)
-{
-	assert(!src.empty<0>());
-	assert(i<src.size<0>());
-	if (   (PARSE_OBVIOUS & src.data<0>()[i].flags)
-		|| !src.data<0>()[i].is_atomic())
-		return;
-
-	if (terse_locate_x(src,i)) CPP_x_easy_syntax_check(src.c_array<0>()[i],types);
-}
-#endif
 
 template<class T>
 static void parse_forward(parse_tree& src,const type_system& types, T parse_handler)
@@ -9208,7 +9194,7 @@ bool CPP_ok_for_toplevel_qualified_name(const parse_tree& x)
 	return false;
 }
 
-void CPP_notice_scope_glue(parse_tree& src)
+static void CPP_notice_scope_glue(parse_tree& src)
 {
 	assert(!src.empty<0>());
 	size_t i = 0;
@@ -9301,23 +9287,24 @@ void CPP_notice_scope_glue(parse_tree& src)
 	i = 0;
 	while(i<src.size<0>())
 		{
-		if (is_naked_parentheses_pair(src.data<0>()[i]))
+		parse_tree& tmp = src.c_array<0>()[i];
+		if (is_naked_parentheses_pair(tmp))
 			{
-			if (!src.data<0>()[i].empty<0>())
+			if (!tmp.empty<0>())
 				// recurse into (...)
-				CPP_notice_scope_glue(src.c_array<0>()[i]);
+				CPP_notice_scope_glue(tmp);
 			}
-		else if (is_naked_brace_pair(src.data<0>()[i]))
+		else if (is_naked_brace_pair(tmp))
 			{
-			if (!src.data<0>()[i].empty<0>())
+			if (!tmp.empty<0>())
 				// recurse into {...}
-				CPP_notice_scope_glue(src.c_array<0>()[i]);
+				CPP_notice_scope_glue(tmp);
 			}
-		else if (is_naked_bracket_pair(src.data<0>()[i]))
+		else if (is_naked_bracket_pair(tmp))
 			{
-			if (!src.data<0>()[i].empty<0>())
+			if (!tmp.empty<0>())
 				// recurse into [...]
-				CPP_notice_scope_glue(src.c_array<0>()[i]);
+				CPP_notice_scope_glue(tmp);
 			}
 		++i;
 		};
@@ -11114,72 +11101,6 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					return;
 					};
 				//! \todo function declarations can be self-terminating
-#if 0
-				if (   initdecl_identifier_idx==i+decl_count+decl_offset-1
-					&& is_naked_parentheses_pair(src.data<0>()[i+decl_count+decl_offset]))
-					{	// function declaration or function definition intended
-					if (src.size<0>()-(i+decl_count+decl_offset)<=1)
-						{	// unterminated declaration
-							//! \bug needs test case
-						if (src.size<0>()>i) message_header(src.data<0>()[i].index_tokens[0]);
-						INC_INFORM(ERR_STR);
-						INFORM("declaration cut off by end of scope (C99 6.7p1)");
-						zcc_errors.inc_error();
-						// remove from parse
-						if (src.size<0>()>i)
-							src.DeleteNSlotsAt<0>(decl_count+decl_offset,i);
-						return;
-						};
-					// build function type here
-					size_t j = src.data<0>()[i+decl_count+decl_offset].size<0>();
-					const bool is_varadic = !j || (src.data<0>()[i+decl_count+decl_offset].back<0>().is_atomic()
-												&& token_is_string<3>(src.data<0>()[i+decl_count+decl_offset].back<0>(),"..."));
-					const bool is_zeroary = 1==j && src.data<0>()[i+decl_count+decl_offset].back<0>().is_atomic() && token_is_string<4>(src.data<0>()[i+decl_count+decl_offset].back<0>(),"void");
-					const bool have_identifier_list = is_identifier_list(src.data<0>()[i+decl_count+decl_offset]);
-					size_t comma_count = 0;
-					{
-					while(0<j) comma_count += robust_token_is_char<','>(src.data<0>()[i+decl_count+decl_offset].data<0>()[--j].index_tokens[0].token);
-					}
-					zaimoni::autovalarray_ptr_throws<size_t> comma_positions(comma_count);
-					if (0<comma_count)
-						{
-						size_t offset = comma_count;
-						j = src.data<0>()[i+decl_count+decl_offset].size<0>();
-						while(0<j)
-							if (robust_token_is_char<','>(src.data<0>()[i+decl_count+decl_offset].data<0>()[--j].index_tokens[0].token))
-								comma_positions[--offset] = j;
-						assert(0==offset);
-						assert(0<comma_positions.front());
-						assert(2<=src.data<0>()[i+decl_count+decl_offset].size<0>()-comma_positions.back());
-						}
-					// identifier-lists are disallowed outside of full definitions
-
-					function_type want_this_type(is_zeroary ? 0 : is_varadic ? comma_count : comma_count+1,is_varadic);
-					{
-					type_spec tmp;
-					tmp.clear();
-					declFind.value_copy_type(tmp);
-					//! \bug need to reject function types and arrays as return type
-					want_this_type.movein_result_type(tmp);
-					}
-					// other parameter types; note that the parameter names have to be isolated for later
-					j = want_this_type.size();
-					zaimoni::weakautoarray_ptr_throws<size_t> names_temp(j+is_varadic);
-					if (is_varadic) names_temp.back() = "...";
-					while(0<j)
-						{
-						};
-
-					// function attributes would go here
-					if (robust_token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset+1]))
-						{	// function declaration; discard names_temp
-							// check that any prior declarations are consistent
-						};
-					if (is_naked_brace_pair(src.data<0>()[i+decl_count+decl_offset+1]))
-						{	// function definition; need names_temp; also must locate any prior declarations
-						};					
-					}
-#endif
 				// ;: done
 				if (robust_token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset]))
 					{
@@ -11267,367 +11188,364 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		// XXX C++ allows mixing definitions and declaring variables at the same time, but this is a bit unusual
 		// check naked declarations first; handle namespaces later
 		//! \bug indentation fixup needed (stage 3)
-//		if (NULL==active_namespace)
-//			{
-			if (is_C99_named_specifier(src.data<0>()[i],"union"))
-				{
-				type_system::type_index tmp = types.get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
-				src.c_array<0>()[i].type_code.set_type(tmp);
-				}
-			else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
-				{
-				type_system::type_index tmp = types.get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
-				src.c_array<0>()[i].type_code.set_type(tmp);
-				}
-			else if (is_C99_named_specifier(src.data<0>()[i],"class"))
-				{
-				type_system::type_index tmp = types.get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
-				src.c_array<0>()[i].type_code.set_type(tmp);
-				}
-			else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
-				{	// can only define once
-				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-				const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-				const C_union_struct_def* const tmp = types.get_C_structdef(types.get_id_union(fullname));
-				if (tmp)
-					{	//! \test zcc/decl.C99/Error_union_multidef.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM("'union ");
-					INC_INFORM(fullname);
-					free(namespace_name);
-					INFORM("' already defined (C++98 3.2p1)");
-					message_header(*tmp);
-					INFORM("prior definition here");
-					zcc_errors.inc_error();
-					// now it's gone
-					// remove trailing semicolon if present
-					src.DeleteNSlotsAt<0>((1<src.size<0>()-i && robust_token_is_char<';'>(src.data<0>()[i+1])) ? 2 : 1,i);
-					continue;
-					}
+		if (is_C99_named_specifier(src.data<0>()[i],"union"))
+			{
+			type_system::type_index tmp = types.get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
+			src.c_array<0>()[i].type_code.set_type(tmp);
+			}
+		else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
+			{
+			type_system::type_index tmp = types.get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
+			src.c_array<0>()[i].type_code.set_type(tmp);
+			}
+		else if (is_C99_named_specifier(src.data<0>()[i],"class"))
+			{
+			type_system::type_index tmp = types.get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
+			src.c_array<0>()[i].type_code.set_type(tmp);
+			}
+		else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
+			{	// can only define once
+			char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
+			const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
+			const C_union_struct_def* const tmp = types.get_C_structdef(types.get_id_union(fullname));
+			if (tmp)
+				{	//! \test zcc/decl.C99/Error_union_multidef.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("'union ");
+				INC_INFORM(fullname);
 				free(namespace_name);
+				INFORM("' already defined (C++98 3.2p1)");
+				message_header(*tmp);
+				INFORM("prior definition here");
+				zcc_errors.inc_error();
+				// now it's gone
+				// remove trailing semicolon if present
+				src.DeleteNSlotsAt<0>((1<src.size<0>()-i && robust_token_is_char<';'>(src.data<0>()[i+1])) ? 2 : 1,i);
+				continue;
 				}
-			else if (is_C99_named_specifier_definition(src.data<0>()[i],"struct"))
-				{	// can only define once
-				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-				const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-				const C_union_struct_def* const tmp = types.get_C_structdef(types.get_id_struct_class(fullname));
-				if (tmp)
-					{	//! \test zcc/decl.C99/Error_struct_multidef.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM("'struct ");
-					INC_INFORM(fullname);
-					free(namespace_name);
-					INFORM("' already defined (C++98 3.2p1)");
-					message_header(*tmp);
-					INFORM("prior definition here");
-					zcc_errors.inc_error();
-					// now it's gone
-					// remove trailing semicolon if present
-					src.DeleteNSlotsAt<0>((1<src.size<0>()-i && robust_token_is_char<';'>(src.data<0>()[i+1])) ? 2 : 1,i);
-					continue;
-					}
+			free(namespace_name);
+			}
+		else if (is_C99_named_specifier_definition(src.data<0>()[i],"struct"))
+			{	// can only define once
+			char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
+			const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
+			const C_union_struct_def* const tmp = types.get_C_structdef(types.get_id_struct_class(fullname));
+			if (tmp)
+				{	//! \test zcc/decl.C99/Error_struct_multidef.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("'struct ");
+				INC_INFORM(fullname);
 				free(namespace_name);
+				INFORM("' already defined (C++98 3.2p1)");
+				message_header(*tmp);
+				INFORM("prior definition here");
+				zcc_errors.inc_error();
+				// now it's gone
+				// remove trailing semicolon if present
+				src.DeleteNSlotsAt<0>((1<src.size<0>()-i && robust_token_is_char<';'>(src.data<0>()[i+1])) ? 2 : 1,i);
+				continue;
 				}
-			else if (is_C99_named_specifier_definition(src.data<0>()[i],"class"))
-				{	// can only define once
-				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-				const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-				const C_union_struct_def* const tmp = types.get_C_structdef(types.get_id_struct_class(fullname));
-				if (tmp)
-					{	//! \test zcc/decl.C99/Error_class_multidef.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INC_INFORM("'class ");
-					INC_INFORM(fullname);
-					free(namespace_name);
-					INFORM("' already defined (C++98 3.2p1)");
-					message_header(*tmp);
-					INFORM("prior definition here");
-					zcc_errors.inc_error();
-					// now it's gone
-					// remove trailing semicolon if present
-					src.DeleteNSlotsAt<0>((1<src.size<0>()-i && robust_token_is_char<';'>(src.data<0>()[i+1])) ? 2 : 1,i);
-					continue;
-					}
+			free(namespace_name);
+			}
+		else if (is_C99_named_specifier_definition(src.data<0>()[i],"class"))
+			{	// can only define once
+			char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
+			const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
+			const C_union_struct_def* const tmp = types.get_C_structdef(types.get_id_struct_class(fullname));
+			if (tmp)
+				{	//! \test zcc/decl.C99/Error_class_multidef.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("'class ");
+				INC_INFORM(fullname);
 				free(namespace_name);
+				INFORM("' already defined (C++98 3.2p1)");
+				message_header(*tmp);
+				INFORM("prior definition here");
+				zcc_errors.inc_error();
+				// now it's gone
+				// remove trailing semicolon if present
+				src.DeleteNSlotsAt<0>((1<src.size<0>()-i && robust_token_is_char<';'>(src.data<0>()[i+1])) ? 2 : 1,i);
+				continue;
 				}
-			// enum was difficult to interpret in C++, so parked here while waiting on comp.std.c++
-			//! \todo actually, we can try forward-declare both scoped enums and enum-based enums (C++0X 7.2p3, these have enough size information); but other parts of the standard get in the way
-			else if (is_C99_named_specifier(src.data<0>()[i],"enum"))
+			free(namespace_name);
+			}
+		// enum was difficult to interpret in C++, so parked here while waiting on comp.std.c++
+		//! \todo actually, we can try forward-declare both scoped enums and enum-based enums (C++0X 7.2p3, these have enough size information); but other parts of the standard get in the way
+		else if (is_C99_named_specifier(src.data<0>()[i],"enum"))
+			{
+			if (!(src.c_array<0>()[i].flags & parse_tree::INVALID))
 				{
-				if (!(src.c_array<0>()[i].flags & parse_tree::INVALID))
-					{
-					type_system::type_index tmp = types.get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
-					src.c_array<0>()[i].type_code.set_type(tmp);	// C++: enums are own type
-					if (!tmp)
-						{	// this belongs elsewhere
-							//! \test zcc\decl.C99\Error_enum_undef.hpp
-						message_header(src.data<0>()[i].index_tokens[0]);
-						INC_INFORM(ERR_STR);
-						INC_INFORM("'enum ");
-						INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
-						INFORM("' must refer to completely defined enum (C++98/C++0X 3.1p2, C++98 7.1.5.3p2-4/C++0X 7.1.6.3p2)");
-						zcc_errors.inc_error();
-						src.c_array<0>()[i].flags |= parse_tree::INVALID;
-						}
-					}
-				//! \todo we should reject plain enum test; anyway (no-variable definition, not a forward-declare exemption)
-				}
-			else if (is_C99_named_specifier_definition(src.data<0>()[i],"enum"))
-				{	// can only define once
-				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-				const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-				type_system::type_index tmp = types.get_id_enum(fullname);
-				if (tmp)
-					{	//! \test zcc\decl.C99\Error_enum_multidef.hpp
+				type_system::type_index tmp = types.get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
+				src.c_array<0>()[i].type_code.set_type(tmp);	// C++: enums are own type
+				if (!tmp)
+					{	// this belongs elsewhere
+						//! \test zcc\decl.C99\Error_enum_undef.hpp
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("'enum ");
-					INC_INFORM(fullname);
-					free(namespace_name);
-					INFORM("' already defined (C++98 3.2p1)");
-					const enum_def* const tmp2 = types.get_enum_def(tmp);
-					assert(tmp2);
-					message_header(*tmp2);
-					INFORM("prior definition here");
+					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
+					INFORM("' must refer to completely defined enum (C++98/C++0X 3.1p2, C++98 7.1.5.3p2-4/C++0X 7.1.6.3p2)");
 					zcc_errors.inc_error();
-					// now it's gone
-					src.DeleteNSlotsAt<0>(1,i);
-					continue;
-					};
+					src.c_array<0>()[i].flags |= parse_tree::INVALID;
+					}
+				}
+			//! \todo we should reject plain enum test; anyway (no-variable definition, not a forward-declare exemption)
+			}
+		else if (is_C99_named_specifier_definition(src.data<0>()[i],"enum"))
+			{	// can only define once
+			char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
+			const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
+			type_system::type_index tmp = types.get_id_enum(fullname);
+			if (tmp)
+				{	//! \test zcc\decl.C99\Error_enum_multidef.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("'enum ");
+				INC_INFORM(fullname);
 				free(namespace_name);
-				//! \test zcc\decl.C99\Pass_enum_def.hpp
-				// enum-specifier doesn't have a specific declaration mode
-				const type_system::type_index tmp2 = types.register_enum_def_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
-				assert(types.get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
-				if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,true,CPP_echo_reserved_keyword))
-					{
-					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
-					return;
-					}
-				}
-			else if (is_C99_anonymous_specifier(src.data<0>()[i],"enum"))
-				{	// enum-specifier doesn't have a specific declaration mode
-					//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
-				const type_system::type_index tmp = types.register_enum_def_CPP("<unknown>",active_namespace,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-				if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,true,CPP_echo_reserved_keyword))
-					{
-					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
-					return;
-					}
-				}
-
-			if (	1<src.size<0>()-i
-				&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
-				{	// is_C99_named_specifier(src.data<0>()[i],"enum") will cause an error later, in variable parsing
-				if (is_C99_anonymous_specifier(src.data<0>()[i],"union"))
-					{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-						//! \todo do not warn for -Wno-OOAO/-Wno-DRY
-						//! \test zcc/decl.C99/Warn_inaccessible_union.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(WARN_STR);
-					INFORM("unreferenceable anonymous union declaration");
-					if (bool_options[boolopt::warnings_are_errors])
-						zcc_errors.inc_error();
-					// remove from parse
-					src.DeleteNSlotsAt<0>(2,i);
-					continue;
-					}
-				else if (is_C99_anonymous_specifier(src.data<0>()[i],"struct"))
-					{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-						//! \todo do not warn for -Wno-OOAO/-Wno-DRY
-						//! \test zcc/decl.C99/Warn_inaccessible_struct.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(WARN_STR);
-					INFORM("unreferenceable anonymous struct declaration");
-					if (bool_options[boolopt::warnings_are_errors])
-						zcc_errors.inc_error();
-					// remove from parse
-					src.DeleteNSlotsAt<0>(2,i);
-					continue;
-					}
-				else if (is_C99_anonymous_specifier(src.data<0>()[i],"class"))
-					{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-						//! \todo do not warn for -Wno-OOAO/-Wno-DRY
-						//! \test zcc/decl.C99/Warn_inaccessible_class.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(WARN_STR);
-					INFORM("unreferenceable anonymous class declaration");
-					if (bool_options[boolopt::warnings_are_errors])
-						zcc_errors.inc_error();
-					// remove from parse
-					src.DeleteNSlotsAt<0>(2,i);
-					continue;
-					}
-				else if (is_C99_named_specifier(src.data<0>()[i],"union"))
-					{	// forward-declare, fine
-					char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-					const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-					if (types.get_id_union(fullname))
-						{	// but if already (forward-)declared then this is a no-op
-							// think this is common enough to not warrant OAOO/DRY treatment
-						//! \test zcc/decl.C99/Pass_union_forward_def.hpp
-						// remove from parse
-						free(namespace_name);
-						src.DeleteNSlotsAt<0>(2,i);
-						continue;					
-						}
-					free(namespace_name);
-					// forward-declare
-					//! \test zcc/decl.C99/Pass_union_forward_def.hpp
-					//! \todo fix up fully-qualified name
-					const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union);
-					assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
-					assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-					assert(types.get_structdecl(tmp2));
-					src.c_array<0>()[i].type_code.set_type(tmp2);
-					i += 2;
-					continue;
-					}
-				else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
-					{	// forward-declare, fine
-					char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-					const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-					if (types.get_id_struct_class(fullname))
-						{	// but if already (forward-)declared then this is a no-op
-							// think this is common enough to not warrant OAOO/DRY treatment
-						//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
-						// remove from parse
-						free(namespace_name);
-						src.DeleteNSlotsAt<0>(2,i);
-						continue;					
-						}
-					free(namespace_name);
-					// forward-declare
-					//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
-					//! \todo fix up fully-qualified name
-					const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_struct);
-					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
-					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-					assert(types.get_structdecl(tmp2));
-					src.c_array<0>()[i].type_code.set_type(tmp2);
-					i += 2;
-					continue;
-					}
-				else if (is_C99_named_specifier(src.data<0>()[i],"class"))
-					{	// forward-declare, fine
-					char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-					const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-					if (types.get_id_struct_class(fullname))
-						{	// but if already (forward-)declared then this is a no-op
-							// think this is common enough to not warrant OAOO/DRY treatment
-						//! \test zcc/decl.C99/Pass_class_forward_def.hpp
-						// remove from parse
-						free(namespace_name);
-						src.DeleteNSlotsAt<0>(2,i);
-						continue;					
-						}
-					free(namespace_name);
-					// forward-declare
-					//! \test zcc/decl.C99/Pass_class_forward_def.hpp
-					//! \todo fix up fully-qualified name
-					const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class);
-					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
-					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-					assert(types.get_structdecl(tmp2));
-					src.c_array<0>()[i].type_code.set_type(tmp2);
-					i += 2;
-					continue;
-					}
-				else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
-					{	// definitions...fine
-					char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-					const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-					const type_system::type_index tmp = types.get_id_union(fullname);
-					free(namespace_name);
-					C_union_struct_def* tmp2 = NULL;
-					if (tmp)
-						{	// promoting forward-declare to definition
-							//! \test zcc/decl.C99/Pass_union_forward_def.hpp
-						const union_struct_decl* tmp3 = types.get_structdecl(tmp);
-						assert(tmp3);
-						tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
-						//! \todo record field structure, etc.
-						types.upgrade_decl_to_def(tmp,tmp2);
-						assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp);
-						assert(types.get_C_structdef(tmp));
-						}
-					else{	// definition
-							//! \test zcc/decl.C99/Pass_union_def.hpp
-						//! \todo record field structure, etc.
-						const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename,union_struct_decl::decl_union);
-						assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
-						assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp3);
-						assert(types.get_C_structdef(tmp3));
-						src.c_array<0>()[i].type_code.set_type(tmp3);
-						}
-					i += 2;
-					continue;
-					}
-				else if (is_C99_named_specifier_definition(src.data<0>()[i],"struct"))
-					{	// definitions...fine
-					char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-					const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-					const type_system::type_index tmp = types.get_id_struct_class(fullname);
-					free(namespace_name);
-					C_union_struct_def* tmp2 = NULL;
-					if (tmp)
-						{	// promoting forward-declare to definition
-							//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
-						const union_struct_decl* tmp3 = types.get_structdecl(tmp);
-						assert(tmp3);
-						tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
-						//! \todo record field structure, etc.
-						types.upgrade_decl_to_def(tmp,tmp2);
-						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp);
-						assert(types.get_C_structdef(tmp));
-						}
-					else{	// definition
-							//! \test zcc/decl.C99/Pass_struct_def.hpp
-						//! \todo record field structure, etc.
-						const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename,union_struct_decl::decl_struct);
-						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
-						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp3);
-						assert(types.get_C_structdef(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)));
-						src.c_array<0>()[i].type_code.set_type(tmp3);
-						}
-					i += 2;
-					continue;
-					}
-				else if (is_C99_named_specifier_definition(src.data<0>()[i],"class"))
-					{	// definitions...fine
-					char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-					const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-					const type_system::type_index tmp = types.get_id_struct_class(fullname);
-					free(namespace_name);
-					C_union_struct_def* tmp2 = NULL;
-					if (tmp)
-						{	// promoting forward-declare to definition
-							//! \test zcc/decl.C99/Pass_class_forward_def.hpp
-						const union_struct_decl* tmp3 = types.get_structdecl(tmp);
-						assert(tmp3);
-						tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
-						//! \todo record field structure, etc.
-						types.upgrade_decl_to_def(tmp,tmp2);
-						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp);
-						assert(types.get_C_structdef(tmp));
-						}
-					else{	// definition
-							//! \test zcc/decl.C99/Pass_class_def.hpp
-						//! \todo record field structure, etc.
-						const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename,union_struct_decl::decl_class);
-						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
-						assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp3);
-						assert(types.get_C_structdef(tmp3));
-						src.c_array<0>()[i].type_code.set_type(tmp3);
-						}
-					i += 2;
-					continue;
-					};
+				INFORM("' already defined (C++98 3.2p1)");
+				const enum_def* const tmp2 = types.get_enum_def(tmp);
+				assert(tmp2);
+				message_header(*tmp2);
+				INFORM("prior definition here");
+				zcc_errors.inc_error();
+				// now it's gone
+				src.DeleteNSlotsAt<0>(1,i);
+				continue;
 				};
-//			}
+			free(namespace_name);
+			//! \test zcc\decl.C99\Pass_enum_def.hpp
+			// enum-specifier doesn't have a specific declaration mode
+			const type_system::type_index tmp2 = types.register_enum_def_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+			assert(types.get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,true,CPP_echo_reserved_keyword))
+				{
+				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
+				return;
+				}
+			}
+		else if (is_C99_anonymous_specifier(src.data<0>()[i],"enum"))
+			{	// enum-specifier doesn't have a specific declaration mode
+				//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
+			const type_system::type_index tmp = types.register_enum_def_CPP("<unknown>",active_namespace,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,true,CPP_echo_reserved_keyword))
+				{
+				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
+				return;
+				}
+			}
+
+		if (	1<src.size<0>()-i
+			&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
+			{	// is_C99_named_specifier(src.data<0>()[i],"enum") will cause an error later, in variable parsing
+			if (is_C99_anonymous_specifier(src.data<0>()[i],"union"))
+				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
+					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+					//! \test zcc/decl.C99/Warn_inaccessible_union.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(WARN_STR);
+				INFORM("unreferenceable anonymous union declaration");
+				if (bool_options[boolopt::warnings_are_errors])
+					zcc_errors.inc_error();
+				// remove from parse
+				src.DeleteNSlotsAt<0>(2,i);
+				continue;
+				}
+			else if (is_C99_anonymous_specifier(src.data<0>()[i],"struct"))
+				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
+					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+					//! \test zcc/decl.C99/Warn_inaccessible_struct.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(WARN_STR);
+				INFORM("unreferenceable anonymous struct declaration");
+				if (bool_options[boolopt::warnings_are_errors])
+					zcc_errors.inc_error();
+				// remove from parse
+				src.DeleteNSlotsAt<0>(2,i);
+				continue;
+				}
+			else if (is_C99_anonymous_specifier(src.data<0>()[i],"class"))
+				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
+					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+					//! \test zcc/decl.C99/Warn_inaccessible_class.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(WARN_STR);
+				INFORM("unreferenceable anonymous class declaration");
+				if (bool_options[boolopt::warnings_are_errors])
+					zcc_errors.inc_error();
+				// remove from parse
+				src.DeleteNSlotsAt<0>(2,i);
+				continue;
+				}
+			else if (is_C99_named_specifier(src.data<0>()[i],"union"))
+				{	// forward-declare, fine
+				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
+				const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
+				if (types.get_id_union(fullname))
+					{	// but if already (forward-)declared then this is a no-op
+						// think this is common enough to not warrant OAOO/DRY treatment
+					//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+					// remove from parse
+					free(namespace_name);
+					src.DeleteNSlotsAt<0>(2,i);
+					continue;					
+					}
+				free(namespace_name);
+				// forward-declare
+				//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+				//! \todo fix up fully-qualified name
+				const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union);
+				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				i += 2;
+				continue;
+				}
+			else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
+				{	// forward-declare, fine
+				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
+				const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
+				if (types.get_id_struct_class(fullname))
+					{	// but if already (forward-)declared then this is a no-op
+						// think this is common enough to not warrant OAOO/DRY treatment
+					//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
+					// remove from parse
+					free(namespace_name);
+					src.DeleteNSlotsAt<0>(2,i);
+					continue;					
+					}
+				free(namespace_name);
+				// forward-declare
+				//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
+				//! \todo fix up fully-qualified name
+				const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_struct);
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				i += 2;
+				continue;
+				}
+			else if (is_C99_named_specifier(src.data<0>()[i],"class"))
+				{	// forward-declare, fine
+				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
+				const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
+				if (types.get_id_struct_class(fullname))
+					{	// but if already (forward-)declared then this is a no-op
+						// think this is common enough to not warrant OAOO/DRY treatment
+					//! \test zcc/decl.C99/Pass_class_forward_def.hpp
+					// remove from parse
+					free(namespace_name);
+					src.DeleteNSlotsAt<0>(2,i);
+					continue;					
+					}
+				free(namespace_name);
+				// forward-declare
+				//! \test zcc/decl.C99/Pass_class_forward_def.hpp
+				//! \todo fix up fully-qualified name
+				const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class);
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				i += 2;
+				continue;
+				}
+			else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
+				{	// definitions...fine
+				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
+				const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
+				const type_system::type_index tmp = types.get_id_union(fullname);
+				free(namespace_name);
+				C_union_struct_def* tmp2 = NULL;
+				if (tmp)
+					{	// promoting forward-declare to definition
+						//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+					const union_struct_decl* tmp3 = types.get_structdecl(tmp);
+					assert(tmp3);
+					tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+					//! \todo record field structure, etc.
+					types.upgrade_decl_to_def(tmp,tmp2);
+					assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp);
+					assert(types.get_C_structdef(tmp));
+					}
+				else{	// definition
+						//! \test zcc/decl.C99/Pass_union_def.hpp
+					//! \todo record field structure, etc.
+					const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename,union_struct_decl::decl_union);
+					assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+					assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp3);
+					assert(types.get_C_structdef(tmp3));
+					src.c_array<0>()[i].type_code.set_type(tmp3);
+					}
+				i += 2;
+				continue;
+				}
+			else if (is_C99_named_specifier_definition(src.data<0>()[i],"struct"))
+				{	// definitions...fine
+				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
+				const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
+				const type_system::type_index tmp = types.get_id_struct_class(fullname);
+				free(namespace_name);
+				C_union_struct_def* tmp2 = NULL;
+				if (tmp)
+					{	// promoting forward-declare to definition
+						//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
+					const union_struct_decl* tmp3 = types.get_structdecl(tmp);
+					assert(tmp3);
+					tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+					//! \todo record field structure, etc.
+					types.upgrade_decl_to_def(tmp,tmp2);
+					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp);
+					assert(types.get_C_structdef(tmp));
+					}
+				else{	// definition
+						//! \test zcc/decl.C99/Pass_struct_def.hpp
+					//! \todo record field structure, etc.
+					const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename,union_struct_decl::decl_struct);
+					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp3);
+					assert(types.get_C_structdef(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)));
+					src.c_array<0>()[i].type_code.set_type(tmp3);
+					}
+				i += 2;
+				continue;
+				}
+			else if (is_C99_named_specifier_definition(src.data<0>()[i],"class"))
+				{	// definitions...fine
+				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
+				const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
+				const type_system::type_index tmp = types.get_id_struct_class(fullname);
+				free(namespace_name);
+				C_union_struct_def* tmp2 = NULL;
+				if (tmp)
+					{	// promoting forward-declare to definition
+						//! \test zcc/decl.C99/Pass_class_forward_def.hpp
+					const union_struct_decl* tmp3 = types.get_structdecl(tmp);
+					assert(tmp3);
+					tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+					//! \todo record field structure, etc.
+					types.upgrade_decl_to_def(tmp,tmp2);
+					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp);
+					assert(types.get_C_structdef(tmp));
+					}
+				else{	// definition
+						//! \test zcc/decl.C99/Pass_class_def.hpp
+					//! \todo record field structure, etc.
+					const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename,union_struct_decl::decl_class);
+					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp3);
+					assert(types.get_C_structdef(tmp3));
+					src.c_array<0>()[i].type_code.set_type(tmp3);
+					}
+				i += 2;
+				continue;
+				};
+			};
 		// namespace scanner
 		// need some scheme to handle unnamed namespaces (probably alphabetical counter after something illegal so unmatchable)
 		// C++0X has inline namespaces; ignore these for now (well, maybe not: consuming the inline will prevent problems)
@@ -11933,9 +11851,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					INC_INFORM(ERR_STR);
 					INFORM("declaration disoriented by missing , (C++98 7p1)");
 					// find the next semicolon
-					size_t j = i+decl_count+decl_offset;
-					while(!robust_token_is_char<';'>(src.data<0>()[j]) && src.size<0>()> ++j);
-					src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
+					const size_t span = span_to_semicolon(src.begin<0>()+(i+decl_count+decl_offset),src.end<0>());
+					src.DeleteNSlotsAt<0>(span,i+decl_count+decl_offset);
 					continue;
 					}
 				++decl_offset;
