@@ -11,10 +11,10 @@ CFLAGS := -Os -Wall -Wextra -finline -Winline -Wdisabled-optimization --param ma
 LIBS := libz_format_util.a
 
 # GNU targets we know about
-all: $(LIBS) auto_int.h
+all: $(LIBS) auto_int.h comptest.h
 
 clean:
-	rm -f *.a *.o auto_int.h
+	rm -f *.a *.o auto_int.h comptest.h
 
 install: $(addprefix $(libdir)/, $(LIBS))
 
@@ -28,6 +28,12 @@ auto_int.h : int_probe.c
 	$(CC) -oint_probe.exe $(CFLAGS) -mconsole $(ARCH_FLAGS) int_probe.c
 	./int_probe.exe > auto_int.h
 	rm int_probe.exe
+
+comptest.h : comptest.in compile.test/exists_MS_io_h.c
+	cp comptest.in comptest.h
+	-$(CC) -oexists_MS_io_h.exe $(CFLAGS) -mconsole $(ARCH_FLAGS) compile.test/exists_MS_io_h.c
+	-./exists_MS_io_h.exe >> comptest.h
+	-rm exists_MS_io_h.exe
 
 .c.o:
 	$(CC) -c $< $(CFLAGS) $(ARCH_FLAGS) -o $*.o

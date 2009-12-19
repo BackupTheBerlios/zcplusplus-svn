@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <fcntl.h>
 #include "../../Zaimoni.STL/Logging.h"
+#include "../../Zaimoni.STL/Pure.C/comptest.h"
 
 #define OUTPUT_DEFAULT 0
 #define OUTPUT_VERBOSE 1

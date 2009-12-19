@@ -92,11 +92,6 @@
 #	define z_realpath(TARGET,SRC) realpath(TARGET,SRC)
 #endif
 
-/* detection of Microsoftish io.h : provides _filelength and _fileno */
-#if defined(__MINGW32__)
-#define ZAIMONI_HAVE_MICROSOFT_IO_H 1
-#endif
-
 /* hooks for properties of the libraries */
 /* undefine this if C/C++ library sqrt() is inaccurate [use _root(x,2) in med_alg.hpp to replace] */
 #define ZAIMONI_ALLOW_SQRT 1

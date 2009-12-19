@@ -1,0 +1,6 @@
+/* comptest.h */
+/* compile test summary */
+/* (C)2009 Kenneth Boyd, license: MIT.txt */
+
+/* HAVE_MICROSOFT_IO_H: #include <io.h> works and allows compiling Microsoft-specific idioms */
+

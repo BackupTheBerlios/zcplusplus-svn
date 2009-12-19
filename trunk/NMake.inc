@@ -6,6 +6,12 @@ bindir = $(exec_prefix)\bin
 includedir = $(exec_prefix)\include
 libdir = $(exec_prefix)\lib
 
+host_prefix = c:\MSVC9.0\VC
+host_exec_prefix = $(host_prefix)
+host_bindir = $(host_exec_prefix)\bin
+host_includedir = $(host_exec_prefix)\include
+host_libdir = $(host_exec_prefix)\lib
+
 AR = lib
 
 EXEEXT = exe

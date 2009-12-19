@@ -7,7 +7,8 @@
 
 #include "Logging.h"
 #include "MetaRAM.hpp"
-#include <cstdio>
+#include <stdio.h>
+#include "Pure.C/comptest.h"
 
 #ifdef ZAIMONI_HAVE_MICROSOFT_IO_H
 #include <io.h>
