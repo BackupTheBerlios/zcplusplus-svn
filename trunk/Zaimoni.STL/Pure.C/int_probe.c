@@ -35,7 +35,7 @@ static void write_to_stdout(unsigned int i)
 	fflush(stdout);
 }
 
-int main(int argc, char* argv[])
+int main()
 {
 	unsigned int i;
 	int null_is_zero = 1;

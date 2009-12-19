@@ -9,6 +9,8 @@
 #include "MetaRAM.hpp"
 #ifndef ZAIMONI_FORCE_ISO
 #include "z_memory.h"
+#else
+#include <stdlib.h>
 #endif
 #include "Logging.h"
 
