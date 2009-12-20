@@ -2310,7 +2310,9 @@ CPreprocessor::tokenize_line(autovalarray_ptr<Token<char>* >& TokenList, size_t 
 	if (0==ub)
 		{
 		if (!TokenList[i]->flags) TokenList[i]->flags = pretokenized[ub].third;
-		assert(ZAIMONI_LEN_WITH_NULL(pretokenized[ub].second)==TokenList[i]->size());
+		// handle trailing whitespace
+		if (ZAIMONI_LEN_WITH_NULL(pretokenized[ub].second)<TokenList[i]->size())
+			TokenList[i]->lslice(pretokenized[ub].second);
 		complete_string_character_literal(*TokenList[i]);
 		}
 	else{
