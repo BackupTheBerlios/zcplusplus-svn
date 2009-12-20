@@ -1654,8 +1654,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 							TokenList[i+2]->ltrim(1);
 						if (2<TokenList[i+2]->size())
 							{	//! \test Pass_pragma_STDC.hpp
-							autovalarray_ptr<char> pragma_string(lang.UnescapeStringLength(TokenList[i+2]->data()+1,TokenList[i+2]->size()-2));
-							if (pragma_string.empty()) throw std::bad_alloc();
+							autovalarray_ptr_throws<char> pragma_string(lang.UnescapeStringLength(TokenList[i+2]->data()+1,TokenList[i+2]->size()-2));
 							lang.UnescapeString(pragma_string.c_array(),TokenList[i+2]->data()+1,TokenList[i+2]->size()-2);
 							interpret_pragma(pragma_string.data(),pragma_string.size(),locked_macros);
 							};
@@ -3663,8 +3662,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 static bool _concatenate_single(Token<char>& x,const POD_triple<size_t,size_t,lex_flags>* pretokenized, LangConf& lang)
 {
 	assert(NULL!=pretokenized);
-	autovalarray_ptr<char> new_token(pretokenized[0].second+pretokenized[2].second);
-	if (new_token.empty()) throw std::bad_alloc();
+	autovalarray_ptr_throws<char> new_token(pretokenized[0].second+pretokenized[2].second);
 	strncpy(new_token.c_array(),x.data()+pretokenized[0].first,pretokenized[0].second);
 	strncpy(new_token.c_array()+pretokenized[0].second,x.data()+pretokenized[2].first,pretokenized[2].second);
 	lex_flags scratch_flags;
@@ -4210,10 +4208,13 @@ CPreprocessor::use_line_directive_and_discard(autovalarray_ptr<Token<char>* >& T
 		const size_t escape_length = lang.UnescapeStringLength(TokenList[i]->data()+critical_offset+1,second_token_len-2);
 		if (escape_length<second_token_len-2)
 			{
-			autovalarray_ptr<char> tmp(escape_length);
-			if (tmp.empty() && 0<escape_length) throw std::bad_alloc();
-			if (0<escape_length) lang.UnescapeString(tmp.c_array(),TokenList[i]->data()+critical_offset+1,second_token_len-2);
-			new_FILE = register_string(tmp.empty() ? "" : tmp.data());
+			if (0==escape_length)
+				new_FILE = "";
+			else{
+				autovalarray_ptr_throws<char> tmp(escape_length);
+				lang.UnescapeString(tmp.c_array(),TokenList[i]->data()+critical_offset+1,second_token_len-2);
+				new_FILE = register_string(tmp.data());
+				}
 			}
 		else
 			new_FILE = register_substring(TokenList[i]->data()+critical_offset+1,second_token_len-2);
