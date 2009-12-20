@@ -19,38 +19,39 @@ namespace zaimoni {
 template<class T>
 inline typename boost::enable_if<boost::has_trivial_assign<T>, void>::type
 #ifndef ZAIMONI_FORCE_ISO
-ConvertBinaryModeToTextMode(T*& Buffer)
+ConvertBinaryModeToTextMode(T*& buf)
 #else
-ConvertBinaryModeToTextMode(T*& Buffer, size_t& BufferLen)
+ConvertBinaryModeToTextMode(T*& buf, size_t& buf_len)
 #endif
-{	//! \todo VERIFY
-	if (NULL!=Buffer)
+{
+	if (buf)
 		{
 #ifndef ZAIMONI_FORCE_ISO 
-		const size_t BufferLen = ArraySize(Buffer);
+		const size_t buf_len = ArraySize(buf);
 #else
-		assert(0<BufferLen);
+		assert(0<buf_len);
 #endif
 		size_t Displace = 0;
-		size_t ScanIdx = 0;
-		do	if ('\r'==Buffer[ScanIdx])
+		size_t i = 0;
+		do	if ('\r'==buf[i])
 				{	// oops.  We're either Windows ['\r\n'] or wrong-platform ['\r': UNIX on Mac, or Mac on Unix; '\n\r': Windows on UNIX]
-				const bool WindowsOnMac = (1<=ScanIdx && '\n'==Buffer[ScanIdx-1]);
-				const bool Windows = BufferLen>ScanIdx+1 && '\n'==Buffer[ScanIdx+1];
+				const bool WindowsOnMac = (1<=i && '\n'==buf[i-1]);
+				const bool Windows = buf_len>i+1 && '\n'==buf[i+1];
 				const bool WrongPlatform = !WindowsOnMac && !Windows;	// no problem if both
 				if (WrongPlatform)
-					Buffer[ScanIdx]='\n';
+					buf[i]='\n';
 				else{
-					if (BufferLen>(ScanIdx+1)) memmove(&Buffer[ScanIdx],&Buffer[ScanIdx+1],BufferLen-(ScanIdx+1));
+					if (buf_len>(i+1)) memmove(&buf[i],&buf[i+1],buf_len-(i+1));
 					++Displace;
+					--i;
 					}
 				}
-		while(BufferLen-Displace>++ScanIdx);
+		while(buf_len-Displace> ++i);
 		if (0<Displace)
 #ifndef ZAIMONI_FORCE_ISO
-			Buffer = zaimoni::REALLOC(Buffer,_msize(Buffer)-Displace);
+			buf = REALLOC(buf,_msize(buf)-Displace);
 #else
-			Buffer = zaimoni::REALLOC(Buffer,(BufferLen -= Displace));
+			buf = REALLOC(buf,(buf_len -= Displace));
 #endif
 		}
 }

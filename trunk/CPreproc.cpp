@@ -2310,12 +2310,12 @@ CPreprocessor::tokenize_line(autovalarray_ptr<Token<char>* >& TokenList, size_t 
 	if (0==ub)
 		{
 		if (!TokenList[i]->flags) TokenList[i]->flags = pretokenized[ub].third;
+		assert(ZAIMONI_LEN_WITH_NULL(pretokenized[ub].second)==TokenList[i]->size());
 		complete_string_character_literal(*TokenList[i]);
 		}
 	else{
 		size_t lb = 0;
-		autovalarray_ptr<Token<char>* > TokenListAlt(ub+1);
-		if (TokenListAlt.empty()) throw std::bad_alloc();
+		autovalarray_ptr_throws<Token<char>* > TokenListAlt(ub+1);
 		if (!TokenList.InsertNSlotsAt(ub,i+1)) throw std::bad_alloc();
 		{
 		const Token<char>& tmp = *TokenList[i];
