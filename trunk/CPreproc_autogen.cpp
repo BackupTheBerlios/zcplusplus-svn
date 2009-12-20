@@ -873,51 +873,65 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	size_t inject_C_index = STDINT_LEAST_FAST_INJECT_LINE;
 	size_t inject_CPP_index = STDINT_CPP_LEAST_FAST_INJECT_LINE;
 	// C++ typedef cleanup
+	{
+	size_t stack[9];
+	size_t stack_size = 0;
 	if (!target_is_twos_complement || suppress[virtual_machine::std_int_long_long-2])
 		{
-		TokenList.DeleteIdx(STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_LLONG_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_LLONG_OFFSET;
 		--inject_CPP_index;
 		}
 	if (!target_is_twos_complement || suppress[virtual_machine::std_int_long-2])
 		{
-		TokenList.DeleteIdx(STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_LONG_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_LONG_OFFSET;
 		--inject_CPP_index;
 		}
 	if (!target_is_twos_complement)
 		{
-		TokenList.DeleteIdx(STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_INT_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_INT_OFFSET;
 		--inject_CPP_index;
 		}
 	if (!target_is_twos_complement || suppress[virtual_machine::std_int_short-1])
 		{
-		TokenList.DeleteIdx(STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_SHRT_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_SHRT_OFFSET;
 		--inject_CPP_index;
 		}
 	if (!target_is_twos_complement || suppress[virtual_machine::std_int_char-1])
 		{
-		TokenList.DeleteIdx(STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_SCHAR_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_SCHAR_OFFSET;
 		--inject_CPP_index;
 		}
 	if (suppress[virtual_machine::std_int_long_long-2])
 		{
-		TokenList.DeleteIdx(STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET;
 		--inject_CPP_index;
 		}
 	if (suppress[virtual_machine::std_int_long-2])
 		{
-		TokenList.DeleteIdx(STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET;
 		--inject_CPP_index;
 		}
 	if (suppress[virtual_machine::std_int_short-1])
 		{
-		TokenList.DeleteIdx(STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET;
 		--inject_CPP_index;
 		}
 	if (suppress[virtual_machine::std_int_char-1])
 		{
-		TokenList.DeleteIdx(STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET;
 		--inject_CPP_index;
-		}
+		}	
+	if (0<stack_size) TokenList.DeleteNSlots(stack,stack_size);
+	}
 
 	// limits macros cleanup
 	char lock_buf[sizeof("#pragma ZCC lock INT_LEAST_MIN INT_LEAST_MAX UINT_LEAST_MAX INT_FAST_MIN INT_FAST_MAX UINT_FAST_MAX INT_C UINT_C")+8*2] = "#pragma ZCC lock ";	// should be dependent on base 10 logarithm of VM_MAX_BIT_PLATFORM: fix auto_int.h
@@ -1051,60 +1065,75 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		}
 
 	// C typedef cleanup
+	{
+	size_t stack[9];
+	size_t stack_size = 0;
+
 	if (!target_is_twos_complement || suppress[virtual_machine::std_int_long_long-2])
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LLONG_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LLONG_OFFSET;
 		--inject_CPP_index;
 		--inject_C_index;
 		}
 	if (!target_is_twos_complement || suppress[virtual_machine::std_int_long-2])
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LONG_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_EXACT_LINEORIGIN+STDINT_EXACT_LONG_OFFSET;
 		--inject_CPP_index;
 		--inject_C_index;
 		}
 	if (!target_is_twos_complement)
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_LINEORIGIN+STDINT_EXACT_INT_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_EXACT_LINEORIGIN+STDINT_EXACT_INT_OFFSET;
 		--inject_CPP_index;
 		--inject_C_index;
 		}
 	if (!target_is_twos_complement || suppress[virtual_machine::std_int_short-1])
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SHRT_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SHRT_OFFSET;
 		--inject_CPP_index;
 		--inject_C_index;
 		}
 	if (!target_is_twos_complement || suppress[virtual_machine::std_int_char-1])
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SCHAR_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_EXACT_LINEORIGIN+STDINT_EXACT_SCHAR_OFFSET;
 		--inject_CPP_index;
 		--inject_C_index;
 		}
 	if (suppress[virtual_machine::std_int_long_long-2])
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_EXACT_LINEORIGIN+STDINT_EXACT_ULLONG_OFFSET;
 		--inject_CPP_index;
 		--inject_C_index;
 		}
 	if (suppress[virtual_machine::std_int_long-2])
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_EXACT_LINEORIGIN+STDINT_EXACT_ULONG_OFFSET;
 		--inject_CPP_index;
 		--inject_C_index;
 		}
 	if (suppress[virtual_machine::std_int_short-1])
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_EXACT_LINEORIGIN+STDINT_EXACT_USHRT_OFFSET;
 		--inject_CPP_index;
 		--inject_C_index;
 		}
 	if (suppress[virtual_machine::std_int_char-1])
 		{
-		TokenList.DeleteIdx(STDINT_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET);
+		assert(STATIC_SIZE(stack)>stack_size);
+		stack[stack_size++] = STDINT_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET;
 		--inject_CPP_index;
 		--inject_C_index;
 		}
+	if (0<stack_size) TokenList.DeleteNSlots(stack,stack_size);	
+	}
 
 	// prepare to inject least/fast types and their adapter macros
 	// span...start with *8_t and go up to long long bits

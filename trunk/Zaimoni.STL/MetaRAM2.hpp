@@ -812,6 +812,90 @@ void _delete_n_slots_at(T**& _ptr, size_t& _ptr_size, size_t n, size_t Idx)
 }
 
 template<typename T>
+typename boost::enable_if<boost::type_traits::ice_and<boost::has_trivial_destructor<T>::value, boost::has_trivial_assign<T>::value >, void>::type
+#ifndef ZAIMONI_FORCE_ISO
+_delete_n_slots(T*& _ptr, size_t* _indexes, size_t n)
+{
+	assert(_ptr);
+	assert(_indexes);
+	const size_t _ptr_size = ArraySize(_ptr);
+#else
+_delete_n_slots(T*& _ptr, size_t& _ptr_size, size_t* _indexes, size_t n)
+{
+	assert(_ptr);
+	assert(_indexes);
+	assert(0<_ptr_size);
+#endif
+	if (0>=n) return;
+	assert(_indexes[0]<_ptr_size);
+	if (_ptr_size<=n)
+		{
+		_flush(_ptr);
+		_ptr = NULL;
+#ifdef ZAIMONI_FORCE_ISO
+		_ptr_size = 0;
+#endif
+		return;
+		}
+
+	size_t i = 0;
+	while(i<n)
+		{
+		assert(i+1>=n || _indexes[i]>_indexes[i+1]);
+		if (_indexes[i]+i<_ptr_size)
+			memmove(_ptr+_indexes[i],_ptr+_indexes[i]+1,sizeof(*_ptr)*(_ptr_size-(_indexes[i]+i)));
+		++i;
+		}
+
+	_ptr = REALLOC(_ptr,sizeof(*_ptr)*(_ptr_size-n));
+#ifdef ZAIMONI_FORCE_ISO
+	_ptr_size -= n;
+#endif
+}
+
+template<typename T>
+#ifndef ZAIMONI_FORCE_ISO
+void _delete_n_slots(T**& _ptr, size_t* _indexes, size_t n)
+{
+	assert(_ptr);
+	assert(_indexes);
+	const size_t _ptr_size = ArraySize(_ptr);
+#else
+void _delete_n_slots(T**& _ptr, size_t& _ptr_size, size_t* _indexes, size_t n)
+{
+	assert(_ptr);
+	assert(_indexes);
+	assert(0<_ptr_size);
+#endif
+	if (0>=n) return;
+	assert(_indexes[0]<_ptr_size);
+	if (_ptr_size<=n)
+		{
+		_flush(_ptr);
+		_ptr = NULL;
+#ifdef ZAIMONI_FORCE_ISO
+		_ptr_size = 0;
+#endif
+		return;
+		}
+
+	size_t i = 0;
+	while(i<n)
+		{
+		assert(i+1>=n || _indexes[i]>_indexes[i+1]);
+		_single_flush(_ptr[_indexes[i]]);
+		if (_indexes[i]+i<_ptr_size)
+			memmove(_ptr+_indexes[i],_ptr+_indexes[i]+1,sizeof(*_ptr)*(_ptr_size-(_indexes[i]+i)));
+		++i;
+		}
+
+	_ptr = REALLOC(_ptr,sizeof(*_ptr)*(_ptr_size-n));
+#ifdef ZAIMONI_FORCE_ISO
+	_ptr_size -= n;
+#endif
+}
+
+template<typename T>
 void
 _weak_delete_n_slots_at(T**& _ptr, size_t n, size_t Idx)
 {

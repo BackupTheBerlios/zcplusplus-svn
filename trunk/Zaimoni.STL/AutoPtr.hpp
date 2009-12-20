@@ -334,10 +334,12 @@ public:
 #ifndef ZAIMONI_FORCE_ISO
 	void DeleteIdx(size_t n) {_safe_delete_idx(_ptr,n);};
 	void DeleteNSlotsAt(size_t n, size_t Idx) {_delete_n_slots_at(_ptr,n,Idx);};
+	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(_ptr,indexes,n);};
 	template<typename U> bool InsertSlotAt(size_t Idx, U __default) {return _insert_slot_at(_ptr,Idx,__default);}
 #else
 	void DeleteIdx(size_t n) {_safe_delete_idx(_ptr,_size,n);};
 	void DeleteNSlotsAt(size_t n, size_t Idx) {_delete_n_slots_at(_ptr,_size,n,Idx);};
+	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(_ptr,_size,indexes,n);};
 	template<typename U> bool InsertSlotAt(size_t Idx, U __default) {return _insert_slot_at(_ptr,_size,Idx,__default);}
 #endif
 
