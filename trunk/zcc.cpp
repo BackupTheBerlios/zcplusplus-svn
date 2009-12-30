@@ -19,6 +19,8 @@
 #include "Zaimoni.STL/POD.hpp"
 #include "Zaimoni.STL/Pure.C/format_util.h"
 
+#include <stdio.h>
+
 error_counter<size_t> zcc_errors(100,"FATAL: too many errors");
 
 using namespace zaimoni;
