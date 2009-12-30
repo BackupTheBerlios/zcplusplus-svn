@@ -1,3 +1,24 @@
+Z.C++ 0.0.3 zcc
+usage: zcc [options] infile
+boolean options
+ --test: final internal state to stderr
+ -Werror: all warnings are now errors
+ --pedantic: try to be standard-compliant rather than pragmatic
+ --int-sign-magnitude: compile for a sign-magnitude integer machine
+ --int-ones-complement: compile for a one's complement integer machine
+ --int-twos-complement: compile for a two's complement integer machine (default)
+ --int-traps: signed int has a trap representation (-0 for sign-magnitude and one's complement, -(2^CHAR_BIT) for two's complement
+ -fsigned-char: char acts like signed char
+ -funsigned-char: char acts like unsigned char (default)
+ --int-neg-div-rounds-away-from-zero: make -3/-2==-2 contrary to C99 recommendation
+ -Wc-c++-compat: Warn when something legal in C/C++ would be an error in C++/C for C/C++
+ -Wbackport: Warn when something legal would be an error under an older standard
+override-default options
+ -x: language override
+ --system-include: unpreprocessed #include<...> to stdout
+ -fmax-errors: how many errors are too many (default 100)
+
+Z.C++ 0.0.3 z_cpp
 usage: z_cpp [options] infile
 boolean options
  --test: final internal state to stderr
@@ -14,3 +35,13 @@ override-default options
  -x: language override
  --system-include: unpreprocessed #include<...> to stdout
  -fmax-errors: how many errors are too many (default 100)
+
+Z.C++ cmp 0.1
+usage: cmp [options] file1 file2
+options
+ -: use this by itself for STDIN on either file1 or file2
+ -l: POSIX 2/3 verbose listing on stdout
+ -s: print nothing to stdout
+
+This cmp doesn't respond to the following environment variables:
+	LANG LC_ALL LC_TYPE LC_MESSAGES NLSPATH
