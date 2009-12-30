@@ -176,7 +176,6 @@ inline void INC_INFORM(unsigned char B) {return INC_INFORM((uintmax_t)(B));}
 #define DEBUG_STATEMENT(A)
 #define DEBUG_FAIL_OR_LEAVE(A,B) if (A) B
 
-#define FATAL(A) FATAL(A);
 #define VERIFY(A,B) if (A) FATAL(B)
 #define REPORT(A,B) if (A) INFORM(B)
 #define DEBUG_LOG(A)
