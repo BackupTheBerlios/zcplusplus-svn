@@ -302,7 +302,7 @@ protected:
 #else
 	explicit _meta_autoarray_ptr() : _ptr(NULL),_size(0) {};
 	explicit _meta_autoarray_ptr(T*& src,size_t src_size) : _ptr(src),_size(src_size) {src = NULL;};
-	explicit _meta_autoarray_ptr(size_t n) : _ptr(_new_buffer<T>(n ? _new_buffer_nonNULL_throws<T>(n) : NULL)),_size(n) {};
+	explicit _meta_autoarray_ptr(size_t n) : _ptr(n ? _new_buffer_nonNULL_throws<T>(n) : NULL),_size(n) {};
 	explicit _meta_autoarray_ptr(const std::nothrow_t& tracer, size_t n) : _ptr(_new_buffer<T>(n)),_size(n) {};
 	explicit _meta_autoarray_ptr(const _meta_autoarray_ptr& src) : _ptr(NULL),_size(0) {*this=src;};
 #endif

@@ -294,7 +294,11 @@ disallow_prior_definitions(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& To
 		char* tmp2 = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(sizeof("#ifdef ")-1+identifier_len));
 		strcpy(tmp2,"#ifdef ");
 		strcpy(tmp2+sizeof("#ifdef ")-1,*identifiers);
-		tmp[i] = new(std::nothrow) zaimoni::Token<char>(tmp2,NULL);
+#ifndef ZAIMONI_FORCE_ISO
+		tmp[i] = new zaimoni::Token<char>(tmp2,NULL);
+#else
+		tmp[i] = new zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#ifdef ")-1+identifier_len),NULL);
+#endif
 		if (NULL==tmp[i])
 			{
 			free(tmp2);
@@ -304,7 +308,11 @@ disallow_prior_definitions(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& To
 		tmp2 = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(sizeof("#undef ")-1+identifier_len));
 		strcpy(tmp2,"#undef ");
 		strcpy(tmp2+sizeof("#undef ")-1,*identifiers);
+#ifndef ZAIMONI_FORCE_ISO
 		tmp[i+2] = new zaimoni::Token<char>(tmp2,NULL);
+#else
+		tmp[i+2] = new zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#undef ")-1+identifier_len),NULL);
+#endif
 		if (NULL==tmp[i+2])
 			{
 			free(tmp2);
@@ -315,7 +323,11 @@ disallow_prior_definitions(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& To
 		strcpy(tmp2,"#error Undefined Behavior: reserved identifier '");
 		strcpy(tmp2+sizeof("#error Undefined Behavior: reserved identifier '")-1,*identifiers);
 		strcpy(tmp2+sizeof("#error Undefined Behavior: reserved identifier '")-1+identifier_len,"' defined as macro");
+#ifndef ZAIMONI_FORCE_ISO
 		tmp[i+1] = new zaimoni::Token<char>(tmp2,NULL);
+#else
+		tmp[i+1] = new zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#error Undefined Behavior: reserved identifier '")-1+identifier_len+sizeof("' defined as macro")-1),NULL);
+#endif
 		if (NULL==tmp[i+1])
 			{
 			free(tmp2);
@@ -354,7 +366,11 @@ lockdown_reserved_identifiers(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >&
 		++identifiers;
 		--identifiers_len;
 		};
+#ifndef ZAIMONI_FORCE_ISO
 	zaimoni::Token<char>* relay = new(std::nothrow) zaimoni::Token<char>(tmp,NULL);
+#else
+	zaimoni::Token<char>* relay = new(std::nothrow) zaimoni::Token<char>(tmp,ZAIMONI_LEN_WITH_NULL(target_len),NULL);
+#endif
 	if (NULL==relay)
 		{
 		free(tmp);

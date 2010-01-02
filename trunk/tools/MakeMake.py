@@ -155,8 +155,8 @@ def CoreCPPRules(LineList):
 #		LineList.append('\t '+ join(map(lambda x: '-I '+x,C_hard_nonsystem_includedirs),' ') +' -I- \\\n')
 #	if C_soft_nonsystem_includedirs:
 #		LineList.append('\t '+ join(map(lambda x: '-I '+x,C_soft_nonsystem_includedirs),' ') +' \\\n')
-#	if C_defines:
-#		LineList.append('\t '+ join(map(lambda x: '-D'+x,C_defines),' ') +' \\\n')
+	if C_defines:
+		LineList.append('\t '+ join(map(lambda x: '-D'+x,C_defines),' ') +' \\\n')
 	if C_assembly_preprocessing:
 		LineList.append('\t -o $*.s -S -xc++ -pipe $<\n')
 		LineList.append('\t'+C_assembly_preprocessing+'\n')
@@ -171,8 +171,8 @@ def CoreCRules(LineList):
 #		LineList.append('\t '+ join(map(lambda x: '-I '+x,C_hard_nonsystem_includedirs),' ') +' -I- \\\n')
 #	if C_soft_nonsystem_includedirs:
 #		LineList.append('\t '+ join(map(lambda x: '-I '+x,C_soft_nonsystem_includedirs),' ') +' \\\n')
-#	if C_defines:
-#		LineList.append('\t '+ join(map(lambda x: '-D'+x,C_defines),' ') +' \\\n')
+	if C_defines:
+		LineList.append('\t '+ join(map(lambda x: '-D'+x,C_defines),' ') +' \\\n')
 	if C_assembly_preprocessing:
 		LineList.append('\t -o $*.s -S -xc -pipe $<\n')
 		LineList.append('\t'+C_assembly_preprocessing+'\n')
