@@ -4664,11 +4664,7 @@ static zaimoni::Loki::CheckReturnDisallow<NULL,parse_tree*>::value_type repurpos
 #endif
 		src.c_array<0>()->destroy();
 		parse_tree* const tmp2 = src.c_array<0>();
-#ifdef ZAIMONI_FORCE_ISO
-		src.args[0].first = tmp;
-#else
 		src.args[0] = tmp;
-#endif
 		return tmp2;
 		};
 	return _new_buffer_nonNULL_throws<parse_tree>(1);
@@ -4686,11 +4682,7 @@ static void cancel_inner_parentheses(parse_tree& src)
 #endif
 		src.c_array<0>()->destroy();
 		free(src.c_array<0>());
-#ifdef ZAIMONI_FORCE_ISO
-		src.args[0].first = tmp;
-#else
 		src.args[0] = tmp;
-#endif
 		}
 }
 

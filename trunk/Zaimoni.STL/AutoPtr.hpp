@@ -170,7 +170,7 @@ public:
 	explicit _meta_weakautoarray_ptr(T*& src,size_t src_size) : _ptr(src),_size(src_size) {src = NULL;};
 	explicit _meta_weakautoarray_ptr(size_t n) : _ptr(n ? _new_buffer_nonNULL_throws<T>(n) : NULL),_size(n) {};
 	explicit _meta_weakautoarray_ptr(const std::nothrow_t& tracer, size_t n) : _ptr(_new_buffer<T>(n)),_size(n) {};
-	explicit _meta_weakautoarray_ptr(_meta_weakautoarray_ptr& src) : _ptr(NULL),_size(0) {*this=src;};
+	explicit _meta_weakautoarray_ptr(const _meta_weakautoarray_ptr& src) : _ptr(NULL),_size(0) {*this=src;};
 #endif
 	~_meta_weakautoarray_ptr() {_weak_flush(_ptr);};
 
@@ -184,7 +184,11 @@ public:
 	void MoveInto(_meta_weakautoarray_ptr<T>& dest) {dest.reset(_ptr);};
 
 	void TransferOutAndNULL(T*& Target) {_weak_flush(Target); Target = _ptr; this->NULLPtr();}
+#ifndef ZAIMONI_FORCE_ISO
 	bool Resize(size_t n) {return _weak_resize(_ptr,n);};
+#else
+	bool Resize(size_t n) {return _weak_resize(_ptr,_size,n);};
+#endif
 	void FastDeleteIdx(size_t n) {_weak_delete_idx(_ptr,n);};
 #ifndef ZAIMONI_FORCE_ISO
 	void DeleteIdx(size_t n) {_safe_weak_delete_idx(_ptr,n);};
@@ -278,7 +282,7 @@ public:
 #ifndef ZAIMONI_FORCE_ISO
 	const weakautovalarray_ptr_throws& operator=(T* src) {_meta_weakautoarray_ptr<T>::operator=(src); return *this;};
 #endif
-	const weakautovalarray_ptr_throws& operator=(weakautovalarray_ptr_throws& src) {_meta_weakautoarray_ptr<T>::operator=(src); return *this;};
+	const weakautovalarray_ptr_throws& operator=(const weakautovalarray_ptr_throws& src) {_meta_weakautoarray_ptr<T>::operator=(src); return *this;};
 
 	friend void zaimoni::swap(weakautovalarray_ptr_throws& lhs, weakautovalarray_ptr_throws& rhs) {lhs.swap(rhs);};
 };

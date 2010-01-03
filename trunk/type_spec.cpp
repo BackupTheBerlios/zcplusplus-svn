@@ -21,17 +21,25 @@ void type_spec::set_pointer_power(size_t _size)
 	if (_size==pointer_power) return;
 	assert(0<_size);
 	const bool shrinking = _size<pointer_power;
+	const size_t pointer_power_copy = pointer_power;
 	const size_t old_ptr_power = pointer_power_after_array_decay();
 	const size_t new_ptr_power = old_ptr_power+(_size-pointer_power);	// modulo arithmetic
 	unsigned char* tmp_first = (shrinking || sizeof(unsigned char*)>new_ptr_power) ? NULL : zaimoni::_new_buffer_nonNULL_throws<unsigned char>(new_ptr_power+1);
+#ifndef ZAIMONI_FORCE_ISO
 	if (!zaimoni::_resize(extent_vector,_size))
+#else
+	if (!zaimoni::_resize(extent_vector,pointer_power,_size))
+#endif
 		{
 		free(tmp_first);
 		throw std::bad_alloc();
 		};
+#ifndef ZAIMONI_FORCE_ISO
+	pointer_power = _size;
+#endif
 	if (!shrinking)
 		{
-		memset(extent_vector+pointer_power,0,sizeof(uintmax_t)*(_size-pointer_power));
+		memset(extent_vector+pointer_power_copy,0,sizeof(uintmax_t)*(_size-pointer_power_copy));
 		if (NULL!=tmp_first)
 			{
 			memcpy(tmp_first,sizeof(unsigned char*)>old_ptr_power ? q_vector.second : q_vector.first,old_ptr_power+1);
@@ -65,13 +73,19 @@ void type_spec::set_pointer_power(size_t _size)
 		}
 	else{
 		if (shrinking)
+#ifndef ZAIMONI_FORCE_ISO
 			ZAIMONI_PASSTHROUGH_ASSERT(zaimoni::_resize(q_vector.first,new_ptr_power+1));
+#else
+			{
+			size_t tmp_size = old_ptr_power+1;
+			ZAIMONI_PASSTHROUGH_ASSERT(zaimoni::_resize(q_vector.first,tmp_size,new_ptr_power+1));
+			}
+#endif
 		else{
 			free(q_vector.first);
 			q_vector.first = tmp_first;
 			}
 		}
-	pointer_power = _size;
 }
 
 // XXX properly operator= in C++, but type_spec has to be POD
