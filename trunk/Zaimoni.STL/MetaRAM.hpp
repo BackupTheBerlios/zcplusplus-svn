@@ -8,6 +8,7 @@
 
 #include <string.h>
 #include "flat_alg.h"
+#include <stdlib.h>
 
 /* ZAIMONI_PROTECT_NONANSI_NONNULL_CHECKING_DEALLOCATORS : code fragment suitable as a guard clause for non-ansi free/delete that can't handle NULL */
 /* good alternative if needed: */
@@ -288,6 +289,38 @@ inline void
 _weak_flush(T** _ptr)
 {
 	free(_ptr);
+}
+
+// _new_buffer/_new_buffer_nonNULL_throws and _flush [MetaRAM2.hpp] have to be synchronized for ISO C++
+// _new_buffer_nonNULL is in MetaRAM2.hpp, as it depends on Logging.h
+template<typename T>
+inline typename boost::disable_if<boost::type_traits::ice_and<boost::has_trivial_constructor<T>::value, boost::has_trivial_destructor<T>::value>, T*>::type
+_new_buffer(size_t Idx)
+{
+	return new(std::nothrow) T[Idx];
+}
+
+template<typename T>
+inline typename boost::enable_if<boost::type_traits::ice_and<boost::has_trivial_constructor<T>::value, boost::has_trivial_destructor<T>::value>, T*>::type
+_new_buffer(size_t Idx)
+{
+	return reinterpret_cast<T*>(calloc(Idx,sizeof(T)));
+}
+
+template<typename T>
+inline typename boost::disable_if<boost::type_traits::ice_and<boost::has_trivial_constructor<T>::value, boost::has_trivial_destructor<T>::value>, T*>::type
+_new_buffer_nonNULL_throws(size_t Idx)
+{
+	return new T[Idx];
+}
+
+template<typename T>
+inline typename boost::enable_if<boost::type_traits::ice_and<boost::has_trivial_constructor<T>::value, boost::has_trivial_destructor<T>::value>, T*>::type
+_new_buffer_nonNULL_throws(size_t Idx)
+{
+	T* tmp = reinterpret_cast<T*>(calloc(Idx,sizeof(T)));
+	if (NULL==tmp) throw std::bad_alloc();
+	return tmp;
 }
 
 }	// end namespace zaimoni
