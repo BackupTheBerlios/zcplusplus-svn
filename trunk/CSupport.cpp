@@ -1,6 +1,6 @@
 // CSupport.cpp
 // support for C/C++ parsing
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009, 2010 Kenneth Boyd, license: MIT.txt
 
 #include "CSupport.hpp"
 
@@ -4805,7 +4805,7 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
 			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<0>()[0]);
 			src.type_code.set_type(C_TYPE::NOT_VOID);
-			src.c_array<0>()[i].type_code.q_vector.second[0] |= type_spec::lvalue;
+			src.c_array<0>()[i].type_code.q_vector.front() |= type_spec::lvalue;
 			assert(is_array_deref(src.data<0>()[i]));
 			return true;
 			};

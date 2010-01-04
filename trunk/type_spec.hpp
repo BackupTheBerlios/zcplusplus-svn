@@ -1,15 +1,19 @@
 // type_spec.hpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009, 2010 Kenneth Boyd, license: MIT.txt
 
 #ifndef TYPE_SPEC_HPP
 #define TYPE_SPEC_HPP 1
 
 #include "Zaimoni.STL/POD.hpp"
+#include "uchar_blob.hpp"
 
 // KBB: this really should be a class rather than a struct; it would benefit from having a proper destructor.
 // Unfortunately, new/delete and realloc don't mix -- and this type can have multiple lists of tokens underneath it....
 
 struct type_spec;
+
+// ACID; throws std::bad_alloc on failure
+void value_copy(type_spec& dest, const type_spec& src);
 
 namespace boost {
 
@@ -28,7 +32,7 @@ struct type_spec
 	size_t pointer_power;		// use wrappers for altering this (affects valid memory representations) [implement]
 	size_t static_array_size;	// C-ish, but mitigates bloating the type manager; use wrappers for altering this [implement]
 
-	zaimoni::union_pair<unsigned char*,unsigned char[sizeof(unsigned char*)]> q_vector;	// q(ualifier)_vector
+	uchar_blob q_vector;	// q(ualifier)_vector
 	uintmax_t* extent_vector;
 
 	enum typetrait_list {
@@ -44,17 +48,16 @@ struct type_spec
 	void set_static_array_size(size_t _size);
 	void set_pointer_power(size_t _size);	// ACID, throws std::bad_alloc on failure
 	bool dereference();
-	unsigned char& qualifier(size_t i) {return sizeof(unsigned char*)>pointer_power_after_array_decay() ? q_vector.second[i] : q_vector.first[i];};
-	template<size_t i> unsigned char& qualifier() {return sizeof(unsigned char*)>pointer_power_after_array_decay() ? q_vector.second[i] : q_vector.first[i];}
+	unsigned char& qualifier(size_t i) {return q_vector.c_array()[i];};
+	template<size_t i> unsigned char& qualifier() {return q_vector.c_array()[i];}
 
 	void clear();	// XXX should be constructor; good way to leak memory in other contexts
 	void destroy();	// XXX should be destructor
 	void set_type(size_t _base_type_index);
 	bool operator==(const type_spec& rhs) const;
 	bool operator!=(const type_spec& rhs) const {return !(*this==rhs);};
-};
 
-// ACID; throws std::bad_alloc on failure
-void value_copy(type_spec& dest, const type_spec& src);
+	static void value_copy(type_spec& dest, const type_spec& src) {::value_copy(dest,src);};
+};
 
 #endif
