@@ -26,11 +26,20 @@ private:
 	zaimoni::union_pair<unsigned char[sizeof(unsigned char*)],unsigned char*> _x;
 public:
 	// STL glue
-	size_t size() const {return _size;};
 	const unsigned char* data() const {return sizeof(unsigned char*)>_size ? _x.first : _x.second;};
 	unsigned char* c_array() {return sizeof(unsigned char*)>_size ? _x.first : _x.second;};
-	unsigned char& front() {return sizeof(unsigned char*)>_size ? _x.first[0] : _x.second[0];};
-	const unsigned char front() const {return sizeof(unsigned char*)>_size ? _x.first[0] : _x.second[0];};
+	size_t size() const {return _size;};
+	bool empty() const {return 0==_size;};
+
+	unsigned char* begin() {return sizeof(unsigned char*)>_size ? _x.first : _x.second;};
+	const unsigned char* begin() const {return sizeof(unsigned char*)>_size ? _x.first : _x.second;};
+	unsigned char* end() {return (sizeof(unsigned char*)>_size ? _x.first : _x.second)+_size;};
+	const unsigned char* end() const {return (sizeof(unsigned char*)>_size ? _x.first : _x.second)+_size;};
+
+	unsigned char& front() {return *(sizeof(unsigned char*)>_size ? _x.first : _x.second);};
+	const unsigned char front() const {return *(sizeof(unsigned char*)>_size ? _x.first : _x.second);};
+	unsigned char& back() {return (sizeof(unsigned char*)>_size ? _x.first : _x.second)[_size-1];};
+	const unsigned char back() const {return (sizeof(unsigned char*)>_size ? _x.first : _x.second)[_size-1];};
 
 	void resize(size_t new_size);
 	void init(size_t new_size);
