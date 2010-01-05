@@ -39,7 +39,7 @@ struct _unsigned_fixed_charint
 	_unsigned_fixed_charint& operator/=(const _unsigned_fixed_charint& RHS);
 	_unsigned_fixed_charint& operator%=(const _unsigned_fixed_charint& RHS);
 
-	unsigned int int_log2() {return ::int_log2(_x,N);};
+	unsigned int int_log2() const {return ::int_log2(_x,N);};
 
 	void set(size_t n)
 		{
@@ -121,8 +121,8 @@ struct _unsigned_fixed_charint
 
 	const unsigned char* begin() const {return _x;};
 	unsigned char* begin() {return _x;};
-	const unsigned char* end() const {return _x+(N-1U);};
-	unsigned char* end() {return _x+(N-1U);};
+	const unsigned char* end() const {return _x+N;};
+	unsigned char* end() {return _x+N;};
 
 	unsigned char front() const {return _x[0];};
 	unsigned char& front() {return _x[0];};

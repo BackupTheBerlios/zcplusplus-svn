@@ -143,7 +143,7 @@ void _unsigned_diff(unsigned char* lhs, size_t lhs_len, uintmax_t rhs)
 	while(lhs_len > ++i && (rhs || carry));
 }
 
-unsigned int _int_log2(unsigned char* x, size_t x_len)
+unsigned int _int_log2(const unsigned char* const x, size_t x_len)
 {
 	while(0<x_len)
 		{
