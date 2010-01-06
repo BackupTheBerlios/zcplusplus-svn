@@ -5,6 +5,7 @@
 #define CPUINFO_HPP
 
 #include "unsigned_fixed_int.hpp"
+#include "unsigned_var_int.hpp"
 
 namespace virtual_machine {
 
@@ -67,6 +68,8 @@ class CPUInfo
 
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> unsigned_maxima[std_int_enum_max];
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> signed_maxima[std_int_enum_max];
+	unsigned_var_int unsigned_maxima_alt[std_int_enum_max];
+	unsigned_var_int signed_maxima_alt[std_int_enum_max];
 
 	const unsigned short char_bit;
 	const unsigned short sizeof_short;

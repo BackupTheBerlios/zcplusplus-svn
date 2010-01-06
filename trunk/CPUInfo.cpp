@@ -11,12 +11,28 @@ namespace virtual_machine {
 void CPUInfo::_init()
 {
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM+1> tmp;
+	unsigned_var_int tmp2;
 
 #define SET_MAXIMUM(A)	\
 	tmp.clear();	\
 	tmp.set((SUCCEED_OR_DIE(VM_MAX_BIT_PLATFORM>=C_char_bit()*C_sizeof_##A()),C_char_bit()*C_sizeof_##A()));	\
 	tmp -= 1;	\
-	unsigned_maxima[std_int_##A-1] = tmp	\
+	unsigned_maxima[std_int_##A-1] = tmp
+
+	SET_MAXIMUM(char);
+	SET_MAXIMUM(short);
+	SET_MAXIMUM(int);
+	SET_MAXIMUM(long);
+	SET_MAXIMUM(long_long);
+
+#undef SET_MAXIMUM
+#define SET_MAXIMUM(A)	\
+	tmp2.set_bitcount(VM_MAX_BIT_PLATFORM+1);	\
+	tmp2.clear();	\
+	tmp2.set((SUCCEED_OR_DIE(VM_MAX_BIT_PLATFORM>=C_char_bit()*C_sizeof_##A()),C_char_bit()*C_sizeof_##A()));	\
+	tmp2 -= 1;	\
+	tmp2.set_bitcount(VM_MAX_BIT_PLATFORM);	\
+	tmp2.MoveInto(unsigned_maxima_alt[std_int_##A-1])
 
 	SET_MAXIMUM(char);
 	SET_MAXIMUM(short);
@@ -28,6 +44,10 @@ void CPUInfo::_init()
 
 	size_t i = 0;
 	do	(signed_maxima[i] = unsigned_maxima[i]) >>= 1;
+	while(std_int_long_long> ++i);
+
+	i = 0;
+	do	(signed_maxima_alt[i] = unsigned_maxima_alt[i]) >>= 1;
 	while(std_int_long_long> ++i);
 }
 
