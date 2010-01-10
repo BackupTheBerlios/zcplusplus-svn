@@ -16,6 +16,7 @@ private:
 public:
 	unsigned_var_int() {_data.init(0);};
 	explicit unsigned_var_int(uintmax_t src);
+	unsigned_var_int(uintmax_t src,size_t bytecount);
 	unsigned_var_int(const unsigned_var_int& src);
 
 	unsigned_var_int& operator=(const unsigned_var_int& src);
@@ -84,6 +85,7 @@ public:
 		};
 
 	void resize(size_t n) {_data.resize(n);};
+	static size_t bytes_from_bits(size_t n) {return n/CHAR_BIT+(0<n%CHAR_BIT);};
 	void set_bitcount(size_t n) {_data.resize(n/CHAR_BIT+(0<n%CHAR_BIT));};
 	void mask_to(size_t bitcount) {assert(bitcount<=CHAR_BIT*_data.size());return ::mask_to(_data.c_array(),_data.size(),bitcount);};
 	uintmax_t to_uint() const {return ::to_uint(_data.data(),_data.size());};

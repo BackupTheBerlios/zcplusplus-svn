@@ -172,8 +172,7 @@ void CPUInfo::unsigned_additive_inverse(unsigned_var_int& src_int,std_int_enum m
 {
 	assert(machine_type);
 	assert(src_int<=unsigned_max(machine_type));
-	unsigned_var_int tmp(0);
-	tmp.resize(src_int.size());
+	unsigned_var_int tmp(0,src_int.size());
 	tmp -= src_int;
 	tmp.mask_to(C_bit(machine_type));
 	tmp.MoveInto(src_int);

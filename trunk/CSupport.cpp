@@ -2461,8 +2461,7 @@ static unsigned_var_int eval_hex_escape(const char* src, size_t src_len)
 #ifdef ZCC_LEGACY_FIXED_INT
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 #else
-	unsigned_var_int tmp;
-	tmp.set_bitcount(VM_MAX_BIT_PLATFORM);
+	unsigned_var_int tmp(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
 #endif
 #ifndef NDEBUG
 #ifdef ZCC_LEGACY_FIXED_INT
@@ -2991,8 +2990,7 @@ bool CCharLiteralIsFalse(const char* x,size_t x_len)
 #ifdef ZCC_LEGACY_FIXED_INT
 												unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 #else
-												unsigned_var_int tmp;
-												tmp.set_bitcount(VM_MAX_BIT_PLATFORM);
+												unsigned_var_int tmp(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
 #endif
 												if (VM_MAX_BIT_PLATFORM>target_machine->C_char_bit()) tmp.set(target_machine->C_char_bit());
 												tmp -= 1;
@@ -3002,8 +3000,7 @@ bool CCharLiteralIsFalse(const char* x,size_t x_len)
 #ifdef ZCC_LEGACY_FIXED_INT
 												unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
 #else
-												unsigned_var_int tmp;
-												tmp.set_bitcount(VM_MAX_BIT_PLATFORM);
+												unsigned_var_int tmp(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
 #endif
 												tmp.set(target_machine->C_char_bit()-1);
 												return tmp==result;
@@ -4139,10 +4136,8 @@ bool convert_to(unsigned_var_int& dest,const C_PPIntCore& src)
 	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM> alt_radix(src.radix);
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> strict_ub;
 #else
-	unsigned_var_int alt_radix(src.radix);
-	unsigned_var_int strict_ub;
-	strict_ub.set_bitcount(VM_MAX_BIT_PLATFORM);
-	alt_radix.set_bitcount(VM_MAX_BIT_PLATFORM);
+	const unsigned_var_int alt_radix(src.radix,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
+	unsigned_var_int strict_ub(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
 #endif
 	const char* target = src.ptr;
 	size_t target_len = src.digit_span;

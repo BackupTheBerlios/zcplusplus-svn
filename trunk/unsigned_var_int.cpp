@@ -27,6 +27,14 @@ unsigned_var_int::unsigned_var_int(uintmax_t src)
 	unsigned_copy(_data.c_array(),src,n);
 }
 
+unsigned_var_int::unsigned_var_int(uintmax_t src,size_t bytecount)
+{
+	const size_t n = bytes_to_represent(src);
+	_data.init(bytecount < n ? n : bytecount);
+	unsigned_copy(_data.c_array(),src,n);
+	if (bytecount<n) _data.resize(bytecount);
+}
+
 unsigned_var_int& unsigned_var_int::operator=(const unsigned_var_int& src)
 {
 	_data.resize(src._data.size());
@@ -53,9 +61,7 @@ void unsigned_var_int::MoveInto(unsigned_var_int& dest)
 unsigned_var_int& unsigned_var_int::operator+=(const unsigned_var_int& rhs)
 {
 	if (size()<=rhs.size())
-		{
 		unsigned_sum(c_array(),size(),rhs.data());
-		}
 	else{	// need to zero-extend rhs
 		unsigned_var_int tmp(rhs);
 		tmp._data.resize(size());
@@ -95,8 +101,7 @@ unsigned_var_int operator-(const unsigned_var_int& lhs,const unsigned_var_int& r
 
 unsigned_var_int& unsigned_var_int::operator*=(const unsigned_var_int& rhs)
 {
-	unsigned_var_int tmp(0);;
-	tmp.resize(size());
+	unsigned_var_int tmp(0,size());
 	unsigned_mult(tmp.c_array(),tmp.size(),data(),size(),rhs.data(),rhs.size());
 	return *this = tmp;
 }
@@ -151,16 +156,14 @@ void unsigned_var_int::div_op(const unsigned_var_int& divisor, unsigned_var_int&
 
 unsigned_var_int operator/(unsigned_var_int lhs,const unsigned_var_int& rhs)
 {
-	unsigned_var_int quotient(0);
-	quotient.resize(rhs.size());
+	unsigned_var_int quotient(0,rhs.size());
 	lhs.div_op(rhs,quotient);
 	return quotient;
 }
 
 unsigned_var_int& unsigned_var_int::operator/=(const unsigned_var_int& rhs)
 {
-	unsigned_var_int quotient(0);
-	quotient.resize(rhs.size());
+	unsigned_var_int quotient(0,rhs.size());
 	div_op(rhs,quotient);
 	quotient.MoveInto(*this);
 	return *this;
@@ -168,8 +171,7 @@ unsigned_var_int& unsigned_var_int::operator/=(const unsigned_var_int& rhs)
 
 unsigned_var_int& unsigned_var_int::operator%=(const unsigned_var_int& rhs)
 {
-	unsigned_var_int quotient(0);
-	quotient.resize(rhs.size());
+	unsigned_var_int quotient(0,rhs.size());
 	div_op(rhs,quotient);
 	return *this;
 }
@@ -192,10 +194,8 @@ signed int cmp(const unsigned_var_int& lhs, const unsigned_var_int& rhs)
 char* z_ucharint_toa(unsigned_var_int target,char* const buf,unsigned int radix)
 {
 	char* ret = buf;
-	unsigned_var_int radix_copy(radix);
-	radix_copy.resize(target.size());
-	unsigned_var_int power_up(1);
-	power_up.resize(target.size());
+	const unsigned_var_int radix_copy(radix,target.size());
+	unsigned_var_int power_up(1,target.size());
 	while(power_up<=target/radix_copy) power_up *= radix_copy;
 	do	{
 		unsigned char tmp = (unsigned char)((target/power_up).to_uint());
