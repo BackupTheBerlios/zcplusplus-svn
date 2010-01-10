@@ -1,5 +1,5 @@
 // CPreproc_autogen.cpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 // class CPreprocessor support for autogenerating headers for arbitrary machine targets.
 
 #include "CPreproc.hpp"
@@ -441,7 +441,11 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		if (1==target_machine.C_sizeof_int()) tmp[LIMITS_CHAR_MAX_LINE]->append('U');
 		}
 	// signed character limits
+#ifdef ZCC_LEGACY_FIXED_INT
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> s_max(target_machine.signed_max<virtual_machine::std_int_char>());
+#else
+	unsigned_var_int s_max(target_machine.signed_max<virtual_machine::std_int_char>());
+#endif
 	tmp[LIMITS_SCHAR_MAX_LINE]->append(z_ucharint_toa(s_max,buf+1,10)-1);
 	if (target_machine.char_is_signed_char()) tmp[LIMITS_CHAR_MAX_LINE]->append(buf);
 	const bool twos_complement_non_trapping = virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps];
@@ -711,7 +715,11 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	const bool target_is_twos_complement = virtual_machine::twos_complement==target_machine.C_signed_int_representation();
 	char signed_min_metabuf[virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+4)] = "";
 	char* signed_min_buf[virtual_machine::std_int_enum_max] = {signed_min_metabuf, signed_min_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
+#ifdef ZCC_LEGACY_FIXED_INT
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp_VM;
+#else
+	unsigned_var_int tmp_VM;
+#endif
 	if (target_is_twos_complement && !bool_options[boolopt::int_traps])
 		{
 		*signed_min_buf[0] = '-';
