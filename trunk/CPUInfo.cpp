@@ -22,11 +22,11 @@ void CPUInfo::_init()
 	unsigned_var_int tmp;
 
 #define SET_MAXIMUM(A)	\
-	tmp.set_bitcount(VM_MAX_BIT_PLATFORM+1);	\
+	tmp.set_bitcount(C_bit<std_int_long_long>()+1);	\
 	tmp.clear();	\
-	tmp.set((SUCCEED_OR_DIE(VM_MAX_BIT_PLATFORM>=C_char_bit()*C_sizeof_##A()),C_char_bit()*C_sizeof_##A()));	\
+	tmp.set((SUCCEED_OR_DIE(C_bit<std_int_long_long>()>=C_char_bit()*C_sizeof_##A()),C_char_bit()*C_sizeof_##A()));	\
 	tmp -= 1;	\
-	tmp.set_bitcount(VM_MAX_BIT_PLATFORM);	\
+	tmp.set_bitcount(C_bit<std_int_long_long>());	\
 	tmp.MoveInto(unsigned_maxima[std_int_##A-1])
 #endif
 
@@ -92,7 +92,7 @@ bool CPUInfo::trap_int(const unsigned_var_int& src_int,std_int_enum machine_type
 	const unsigned int bitcount = C_bit(machine_type);
 	const int target_bytecount = bitcount/CHAR_BIT;
 	const unsigned int target_bitcount = bitcount%CHAR_BIT;
-	assert(VM_MAX_BIT_PLATFORM>=bitcount && 1<=bitcount);
+	assert(C_bit<std_int_long_long>()>=bitcount && 1<=bitcount);
 
 	switch(C_signed_int_representation())
 	{

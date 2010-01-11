@@ -5232,7 +5232,12 @@ static bool VM_to_token(const unsigned_var_int& src_int,const size_t base_type_i
 #endif
 {
 	const char* const suffix = literal_suffix(base_type_index);
+#ifdef ZCC_LEGACY_FIXED_INT
 	char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
+#else
+	char* buf = _new_buffer<char>((VM_MAX_BIT_PLATFORM/3)+4);
+	if (!buf) return false;
+#endif
 	dest.second = literal_flags(base_type_index);
 	dest.second |= C_TESTFLAG_DECIMAL;
 	z_ucharint_toa(src_int,buf,10);
@@ -5241,8 +5246,19 @@ static bool VM_to_token(const unsigned_var_int& src_int,const size_t base_type_i
 	if (suffix) strcat(buf,suffix);
 
 	dest.first = _new_buffer<char>(ZAIMONI_LEN_WITH_NULL(strlen(buf)));
+#ifdef ZCC_LEGACY_FIXED_INT
 	if (!dest.first) return false;
+#else
+	if (!dest.first)
+		{
+		free(buf);
+		return false;
+		}
+#endif
 	strcpy(dest.first,buf);
+#ifndef ZCC_LEGACY_FIXED_INT
+	free(buf);
+#endif
 	return true;
 }
 

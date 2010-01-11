@@ -9,6 +9,13 @@
 #include "Zaimoni.STL/LexParse/Token.hpp"
 #include "Zaimoni.STL/pure.C/format_util.h"
 
+#ifndef ZCC_LEGACY_FIXED_INT
+// XXX adjust VM_MAX_BIT_PLATFORM to work inside of CPreprocessor XXX
+#undef VM_MAX_BIT_PLATFORM
+#define VM_MAX_BIT_PLATFORM target_machine.C_bit<virtual_machine::std_int_long_long>()
+#endif
+
+
 //! \bug Once And Only Once violation
 #define DICT_STRUCT(A) { (A), sizeof(A)-1 }
 
@@ -408,9 +415,15 @@ static void final_init_tokenlist(zaimoni::Token<char>* const * x, size_t x_len, 
 void
 CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const
 {
+	// 2 for: leading space, trailing null-termination
+	// (VM_MAX_BIT_PLATFORM/3) for: digits (using octal rather than decimal count because that's easy to do at compile-time)
+#ifdef ZCC_LEGACY_FIXED_INT
 	// currently, worst-case platform we support has a 64-bit two's-complenent long long
-	char buf[2+(VM_MAX_BIT_PLATFORM/3)] = " ";	// 2 for: leading space, trailing null-termination
-												// (VM_MAX_BIT_PLATFORM/3) for: digits (using octal rather than decimal count because that's easy to do at compile-time)
+	char buf[2+(VM_MAX_BIT_PLATFORM/3)] = " ";
+#else
+	zaimoni::autovalarray_ptr_throws<char> buf(2+(VM_MAX_BIT_PLATFORM/3));
+	buf[0] = ' ';
+#endif
 	assert(NULL!=header_name);
 	TokenList.clear();
 	TokenList.resize(STATIC_SIZE(limits_h_core));
@@ -653,6 +666,17 @@ static void memset_strcpy(char* dest,const char* src)
 	strcpy(dest,src);
 }
 
+template<size_t offset>
+static void memset_strcpy(char* dest,const char* src,size_t buf_size)
+{
+	assert(offset<buf_size);
+	assert(NULL!=dest);
+	assert(NULL!=src);
+	assert(buf_size-offset>strlen(src));
+	memset(dest += offset,0,buf_size-offset);
+	strcpy(dest,src);
+}
+
 /*! 
  * Improvises the C99 stdint.h header from target information.  Can throw std::bad_alloc.
  * This is not the most memory-efficient implementation possible.
@@ -665,9 +689,14 @@ void
 CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const
 {
 	assert(NULL!=header_name);
+	// 2 for: leading space, trailing null-termination
+	// (VM_MAX_BIT_PLATFORM/3) for: digits (using octal rather than decimal count because that's easy to do at compile-time)
+#ifdef ZCC_LEGACY_FIXED_INT
 	// currently, worst-case platform we support has a 64-bit two's-complenent long long
-	char buf[2+(VM_MAX_BIT_PLATFORM/3)] = " ";	// 2 for: leading space, trailing null-termination
-												// (VM_MAX_BIT_PLATFORM/3) for: digits (using octal rather than decimal count because that's easy to do at compile-time)
+	char buf[2+(VM_MAX_BIT_PLATFORM/3)] = " ";
+#else
+	zaimoni::autovalarray_ptr_throws<char> buf(2+(VM_MAX_BIT_PLATFORM/3));
+#endif
 	TokenList.clear();
 	TokenList.resize(STATIC_SIZE(stdint_h_core));
 	zaimoni::Token<char>** tmp = TokenList.c_array();
@@ -679,7 +708,11 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	while(0<i);
 
 	// set up some result strings
+#ifdef ZCC_LEGACY_FIXED_INT
 	char signed_max_metabuf[virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+4)] = "";
+#else
+	zaimoni::autovalarray_ptr_throws<char> signed_max_metabuf(virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+4));
+#endif
 	char* signed_max_buf[virtual_machine::std_int_enum_max] = {signed_max_metabuf, signed_max_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
 	*signed_max_buf[0] = ' ';
 	*signed_max_buf[1] = ' ';
@@ -694,7 +727,11 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	strcat(signed_max_buf[virtual_machine::std_int_long-1],"L");
 	strcat(signed_max_buf[virtual_machine::std_int_long_long-1],"LL");
 
+#ifdef ZCC_LEGACY_FIXED_INT
 	char unsigned_max_metabuf[virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+3)] = "";
+#else
+	zaimoni::autovalarray_ptr_throws<char> unsigned_max_metabuf(virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+3));
+#endif
 	char* unsigned_max_buf[virtual_machine::std_int_enum_max] = {unsigned_max_metabuf, unsigned_max_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
 	*unsigned_max_buf[0] = ' ';
 	*unsigned_max_buf[1] = ' ';
@@ -713,7 +750,11 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	strcat(unsigned_max_buf[virtual_machine::std_int_long_long-1],"ULL");
 
 	const bool target_is_twos_complement = virtual_machine::twos_complement==target_machine.C_signed_int_representation();
+#ifdef ZCC_LEGACY_FIXED_INT
 	char signed_min_metabuf[virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+4)] = "";
+#else
+	zaimoni::autovalarray_ptr_throws<char> signed_min_metabuf(virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+4));
+#endif
 	char* signed_min_buf[virtual_machine::std_int_enum_max] = {signed_min_metabuf, signed_min_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
 #ifdef ZCC_LEGACY_FIXED_INT
 	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp_VM;
@@ -746,8 +787,13 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		strcat(signed_min_buf[virtual_machine::std_int_long_long-1],"LL)");
 		}
 	else{
+#ifdef ZCC_LEGACY_FIXED_INT
 		BOOST_STATIC_ASSERT(sizeof(signed_min_metabuf)==sizeof(signed_max_metabuf));
 		memmove(signed_min_metabuf,signed_max_metabuf,sizeof(signed_max_metabuf));
+#else
+		assert(signed_min_metabuf.size()==signed_max_metabuf.size());
+		memmove(signed_min_metabuf,signed_max_metabuf,signed_max_metabuf.size());
+#endif
 		*signed_min_buf[0] = '-';
 		*signed_min_buf[1] = '-';
 		*signed_min_buf[2] = '-';
@@ -958,7 +1004,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	}
 
 	// limits macros cleanup
-	char lock_buf[sizeof("#pragma ZCC lock INT_LEAST_MIN INT_LEAST_MAX UINT_LEAST_MAX INT_FAST_MIN INT_FAST_MAX UINT_FAST_MAX INT_C UINT_C")+8*2] = "#pragma ZCC lock ";	// should be dependent on base 10 logarithm of VM_MAX_BIT_PLATFORM: fix auto_int.h
+	char lock_buf[sizeof("#pragma ZCC lock INT_LEAST_MIN INT_LEAST_MAX UINT_LEAST_MAX INT_FAST_MIN INT_FAST_MAX UINT_FAST_MAX INT_C UINT_C")+8*2] = "#pragma ZCC lock ";
 	if (suppress[virtual_machine::std_int_long_long-2])
 		{
 		TokenList.DeleteNSlotsAt(3,STDINT_EXACT_LLONG_LIMITS_LINEORIGIN);
@@ -1209,7 +1255,12 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		}
 	while(0<i);
 
-	char define_buf[sizeof("#define UINT_LEAST_MAX")+2+VM_MAX_BIT_PLATFORM/3+5] = "#define ";	// should be dependent on base 10 logarithm of VM_MAX_BIT_PLATFORM: fix auto_int.h
+#ifdef ZCC_LEGACY_FIXED_INT
+	char define_buf[sizeof("#define UINT_LEAST_MAX")+2+VM_MAX_BIT_PLATFORM/3+5] = "#define ";
+#else
+	zaimoni::autovalarray_ptr_throws<char> define_buf(sizeof("#define UINT_LEAST_MAX")+2+VM_MAX_BIT_PLATFORM/3+5);
+	strcpy(define_buf,"#define ");
+#endif
 	i = 13*bitspan_types;
 	TokenList.InsertNSlotsAt(i,inject_C_index);
 	tmp = TokenList.c_array()+inject_C_index;
@@ -1244,7 +1295,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		strcat(lock_buf,"_C");
 		tmp[i--] = new zaimoni::Token<char>(lock_buf,0,strlen(lock_buf),0);
 		// UINT_C
-		memset_strcpy<sizeof("#define ")-1,sizeof(define_buf)>(define_buf,"UINT");
+		memset_strcpy<sizeof("#define ")-1>(define_buf,"UINT",define_buf.size());
 		strcat(define_buf,buf+1);
 		strcat(define_buf,"_C(A) A");
 		const char* int_suffix = unsigned_suffix_from_machine(least_type,target_machine);
@@ -1255,7 +1306,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			};
 		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
 		// INT_C
-		memset_strcpy<sizeof("#define ")-1,sizeof(define_buf)>(define_buf,"INT");
+		memset_strcpy<sizeof("#define ")-1>(define_buf,"INT",define_buf.size());
 		strcat(define_buf,buf+1);
 		strcat(define_buf,"_C(A) A");
 		int_suffix = signed_suffix_from_machine(least_type);
@@ -1266,37 +1317,37 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			};
 		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
 		// UINT_FAST_MAX
-		memset_strcpy<sizeof("#define ")-1,sizeof(define_buf)>(define_buf,"UINT_FAST");
+		memset_strcpy<sizeof("#define ")-1>(define_buf,"UINT_FAST",define_buf.size());
 		strcat(define_buf,buf+1);
 		strcat(define_buf,"_MAX");
 		strcat(define_buf,unsigned_max_buf[fast_type-1]);
 		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
 		// INT_FAST_MAX
-		memset_strcpy<sizeof("#define ")-1,sizeof(define_buf)>(define_buf,"INT_FAST");
+		memset_strcpy<sizeof("#define ")-1>(define_buf,"INT_FAST",define_buf.size());
 		strcat(define_buf,buf+1);
 		strcat(define_buf,"_MAX");
 		strcat(define_buf,signed_max_buf[fast_type-1]);
 		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
 		// INT_FAST_MIN
-		memset_strcpy<sizeof("#define ")-1,sizeof(define_buf)>(define_buf,"INT_FAST");
+		memset_strcpy<sizeof("#define ")-1>(define_buf,"INT_FAST",define_buf.size());
 		strcat(define_buf,buf+1);
 		strcat(define_buf,"_MIN ");
 		strcat(define_buf,signed_min_buf[fast_type-1]);
 		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
 		// UINT_LEAST_MAX
-		memset_strcpy<sizeof("#define ")-1,sizeof(define_buf)>(define_buf,"UINT_LEAST");
+		memset_strcpy<sizeof("#define ")-1>(define_buf,"UINT_LEAST",define_buf.size());
 		strcat(define_buf,buf+1);
 		strcat(define_buf,"_MAX");
 		strcat(define_buf,unsigned_max_buf[least_type-1]);
 		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
 		// INT_LEAST_MAX
-		memset_strcpy<sizeof("#define ")-1,sizeof(define_buf)>(define_buf,"INT_LEAST");
+		memset_strcpy<sizeof("#define ")-1>(define_buf,"INT_LEAST",define_buf.size());
 		strcat(define_buf,buf+1);
 		strcat(define_buf,"_MAX");
 		strcat(define_buf,signed_max_buf[least_type-1]);
 		tmp[i--] = new zaimoni::Token<char>(define_buf,0,strlen(define_buf),0);
 		// INT_LEAST_MIN
-		memset_strcpy<sizeof("#define ")-1,sizeof(define_buf)>(define_buf,"INT_LEAST");
+		memset_strcpy<sizeof("#define ")-1>(define_buf,"INT_LEAST",define_buf.size());
 		strcat(define_buf,buf+1);
 		strcat(define_buf,"_MIN ");
 		strcat(define_buf,signed_min_buf[least_type-1]);
