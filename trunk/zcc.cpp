@@ -17,7 +17,6 @@
 #include "ZParser.hpp"
 
 #include "Zaimoni.STL/POD.hpp"
-#include "Zaimoni.STL/Pure.C/format_util.h"
 
 #include <stdio.h>
 
@@ -40,34 +39,19 @@ static const POD_triple<const char*, size_t, const char*> option_map_bool[]
 		{ "-Wbackport",	boolopt::warn_backport,	"Warn when something legal would be an error under an older standard\n"}
 	};
 
-typedef bool string_opt_handler(const char* const);
-
 static const POD_triple<const char*, size_t, const char*> option_map_string[]
 	=	{	{ "-x",	stringopt::lang, "language override\n"},		// GCC compatibility
 			{ "--system-include",	stringopt::system_include, "unpreprocessed #include<...> to stdout\n"}
 		};
 
 static const POD_triple<const char*, size_t, const char*> option_map_int[]
-=	{	{ "-fmax-errors",		intopt::error_ub, 					"how many errors are too many (default 100)\n"}	// GFortran compatibility
-	};
-
-/*! 
- * If the given string is recognized as a language, set stringopt::lang.
- * Otherwise, be ACID and don't update anything.
- *
- * \pre string is safe to pin for program duration
- *
- * \param x candidate language string
- * 
- * \return true iff language was accepted
- */
-static bool interpret_stringopt_lang(const char* x)
-{
-	const char* test = echo_valid_lang(x);
-	if (NULL==test) return false;
-	string_options[stringopt::lang] = test;
-	return true;
-}
+=	{	{ "-fmax-errors",		intopt::error_ub, 					"how many errors are too many (default 100)\n"},	// GFortran compatibility
+		{"--target-char-bit",	intopt::target_char_bit,	"target CHAR_BIT\n"},
+		{"--target-sizeof-short",	intopt::target_short_size,	"target sizeof(short), sizeof(unsigned short)\n"},
+		{"--target-sizeof-int",	intopt::target_int_size,	"target sizeof(int), sizeof(unsigned int)\n"},
+		{"--target-sizeof-long",	intopt::target_long_size,	"target sizeof(long), sizeof(unsigned long)\n"},
+		{"--target-sizeof-long-long",	intopt::target_long_long_size,	"target sizeof(long long), sizeof(unsigned long long)\n"}
+	}; 
 
 void guess_lang_from_filename(const char* const x)
 {
@@ -95,35 +79,6 @@ void guess_lang_from_filename(const char* const x)
 		return;
 		}
 }
-
-/*! 
- * just pass through the proposed header name with only minimal reality checking
- * 
- * \param x system header name to check
- * 
- * \return bool (always true)
- */
-bool interpret_stringopt_system_include(const char* x)
-{
-	string_options[stringopt::system_include] = x;
-	return true;
-}
-
-static string_opt_handler* option_handler_string[MAX_OPT_STRING]
-	=	{	default_handler(string_option(0)),
-			default_handler(string_option(1))
-		};
-
-static bool interpret_intopt_error_ub(const char* x)
-{
-	uintmax_t tmp = z_atoumax(x,10);
-	if (0>=tmp || INT_MAX<tmp) return false;
-	int_options[intopt::error_ub] = tmp;
-	return true;
-}
-
-static string_opt_handler* option_handler_int[MAX_OPT_STRING]
-	=	{default_handler(int_option(0))};
 
 static bool process_options(const size_t argc, char* argv[])
 {
@@ -243,32 +198,22 @@ int main(int argc, char* argv[])
 	// error count enforcement
 	zcc_errors.set_error_ub(int_options[intopt::error_ub]);
 
-	virtual_machine::CPUInfo target_machine(8,2,4,4,8,(bool_options[boolopt::int_twos_complement]) ? virtual_machine::twos_complement : (bool_options[boolopt::int_ones_complement]) ? virtual_machine::ones_complement : virtual_machine::sign_and_magnitude,bool_options[boolopt::char_is_signed],virtual_machine::std_int_int);
+	virtual_machine::CPUInfo target_machine(int_options[intopt::target_char_bit],
+											int_options[intopt::target_short_size],
+											int_options[intopt::target_int_size],
+											int_options[intopt::target_long_size],
+											int_options[intopt::target_long_long_size],
+											(bool_options[boolopt::int_twos_complement]) ? virtual_machine::twos_complement : (bool_options[boolopt::int_ones_complement]) ? virtual_machine::ones_complement : virtual_machine::sign_and_magnitude,
+											bool_options[boolopt::char_is_signed],
+											virtual_machine::std_int_int);
 
 	// check that we actually can preprocess for this machine
-	//! \todo remove these limitations at some point
-	if (CHAR_BIT<target_machine.C_char_bit())
-		{
-		INC_INFORM("error: target machine has larger CHAR_BIT than ours [");
-		INC_INFORM(target_machine.C_char_bit());
-		INC_INFORM(" vs ");
-		INC_INFORM((uintmax_t)(CHAR_BIT));
-		FATAL("]");
-		};
 	if (7>target_machine.C_char_bit())
 		{
 		INC_INFORM("error: target machine CHAR_BIT<7 cannot represent C source character set");
 		INC_INFORM(target_machine.C_char_bit());
 		INC_INFORM(" vs ");
 		INC_INFORM((uintmax_t)(CHAR_BIT));
-		FATAL("]");
-		};
-	if (C_UNICODE_MAX<target_machine.unsigned_max(target_machine.UNICODE_wchar_t()))
-		{
-		INC_INFORM("error: target machine has larger unsigned WCHAR_MAX than ours [");
-		INC_INFORM(target_machine.unsigned_max(target_machine.UNICODE_wchar_t()).to_uint());
-		INC_INFORM(" vs ");
-		INC_INFORM((uintmax_t)(C_UNICODE_MAX));
 		FATAL("]");
 		};
 

@@ -1,5 +1,5 @@
 // errors.hpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #ifndef ERRORS_HPP
 #define ERRORS_HPP 1
@@ -13,6 +13,8 @@ namespace OS {
 
 template<class T1, class T2, class T3> struct POD_triple;
 }
+
+typedef bool string_opt_handler(const char* const);
 
 #define default_option2(A) DEFAULT_##A
 #define default_option(A) default_option2(A)
@@ -99,16 +101,40 @@ enum string_options {
 
 namespace intopt {
 enum int_options {
-	error_ub = 0
+	error_ub = 0,
 #define int_option_0 error_ub
 #define int_option_error_ub 0
 #define DEFAULT_error_ub 100
 #define HANDLER_error_ub interpret_intopt_error_ub
-
+	target_char_bit,
+#define int_option_1 target_char_bit
+#define int_option_target_char_bit 1
+#define DEFAULT_target_char_bit 0
+#define HANDLER_target_char_bit interpret_intopt_target_char_bit
+	target_short_size,
+#define int_option_2 target_short_size
+#define int_option_target_short_size 2
+#define DEFAULT_target_short_size 0
+#define HANDLER_target_short_size interpret_intopt_target_short_size
+	target_int_size,
+#define int_option_3 target_int_size
+#define int_option_target_int_size 3
+#define DEFAULT_target_int_size 0
+#define HANDLER_target_int_size interpret_intopt_target_int_size
+	target_long_size,
+#define int_option_4 target_long_size
+#define int_option_target_long_size 4
+#define DEFAULT_target_long_size 0
+#define HANDLER_target_long_size interpret_intopt_target_long_size
+	target_long_long_size
+#define int_option_5 target_long_long_size
+#define int_option_target_long_long_size 5
+#define DEFAULT_target_long_long_size 0
+#define HANDLER_target_long_long_size interpret_intopt_target_long_long_size
 };
 
 #define int_option(A) int_option_##A
-#define MAX_OPT_INT (intopt::error_ub+1)
+#define MAX_OPT_INT (intopt::target_long_long_size+1)
 
 }
 
@@ -116,7 +142,9 @@ enum int_options {
 extern const bool bool_options_default[MAX_OPT_BOOL];
 extern bool bool_options[MAX_OPT_BOOL];
 extern const char* string_options[MAX_OPT_STRING];
+extern string_opt_handler* option_handler_string[MAX_OPT_STRING];
 extern int int_options[MAX_OPT_INT];
+extern string_opt_handler* option_handler_int[MAX_OPT_INT];
 
 extern zaimoni::OS::mutex errno_mutex;
 
@@ -126,6 +154,8 @@ extern bool debug_tracer;
 
 int recognize_bool_option(const char* const x,const zaimoni::POD_triple<const char*, size_t, const char*>* option_map,size_t j);
 int recognize_parameter_option(const char* const x,const zaimoni::POD_triple<const char*, size_t, const char*>* option_map,size_t j);
+
+bool interpret_stringopt_lang(const char* x);
 
 void message_header(const char* const filename, size_t line_number);
 void enforce_mutually_exclusive_exhaustive_options(void);
