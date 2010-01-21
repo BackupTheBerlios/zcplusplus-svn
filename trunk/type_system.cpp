@@ -317,21 +317,21 @@ const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_typede
 
 const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::_get_typedef_CPP(const char* const alias) const
 {
-	errr tmp = binary_find(alias,strlen(alias),typedef_registry.data(),typedef_registry.size());
-	if (0<=tmp) return &typedef_registry[tmp].second;
+	const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = get_typedef(alias);
+	if (tmp) return tmp;
+
 	// hmm...not an exact match
 	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> tmp2 = dealias_inline_namespace_index(alias);
-	if (0<=tmp2.first)
-		{	// it was remapped
-		while(tmp2.first<tmp2.second)
-			{
-			tmp = binary_find(inline_namespace_alias_map.data()[tmp2.first].second,strlen(inline_namespace_alias_map.data()[tmp2.first].second),typedef_registry.data(),typedef_registry.size());
-			if (0<=tmp) return &typedef_registry[tmp].second;
-			}
-		tmp = binary_find(inline_namespace_alias_map.data()[tmp2.first].second,strlen(inline_namespace_alias_map.data()[tmp2.first].second),typedef_registry.data(),typedef_registry.size());
-		if (0<=tmp) return &typedef_registry[tmp].second;
+	if (0>tmp2.first) return NULL;
+
+	// it was remapped
+	while(tmp2.first<tmp2.second)
+		{
+		tmp = get_typedef(inline_namespace_alias_map.data()[tmp2.first].second);
+		if (tmp) return tmp;
+		++tmp2.first;
 		}
-	return NULL;
+	return get_typedef(inline_namespace_alias_map.data()[tmp2.first].second);
 }
 
 const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_typedef_CPP(const char* alias,const char* active_namespace) const
@@ -373,8 +373,105 @@ const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_typede
 	return _get_typedef_CPP(alias);
 }
 
-char* type_system::_namespace_concatenate(const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len)
+void type_system::set_enumerator_def(const char* const alias, zaimoni::POD_pair<size_t,size_t> logical_line, const char* const src_filename,unsigned char representation,const uchar_blob& src,type_index type)
 {
+	assert(alias && *alias);
+	assert(src_filename && *src_filename);
+	errr tmp = binary_find(alias,strlen(alias),enumerator_registry.data(),enumerator_registry.size());
+	assert(0>tmp);		// error to call with conflicting prior definition
+	if (0<=tmp) return;	// conflicting prior definition
+#if UINTMAX_MAX==SIZE_MAX
+	if (-1==tmp) _fatal("implementation limit exceeded (enumerators registered at once)");
+#endif
+	enumerator_info tmp2 = {alias, { {type, representation, src}, {src_filename, logical_line} } };
+	if (!enumerator_registry.InsertSlotAt(BINARY_SEARCH_DECODE_INSERTION_POINT(tmp),tmp2)) throw std::bad_alloc();
+}
+
+void type_system::set_enumerator_def_CPP(const char* name, const char* const active_namespace, zaimoni::POD_pair<size_t,size_t> logical_line, const char* const src_filename,unsigned char representation,const uchar_blob& src,type_index type)
+{
+	assert(name && *name);
+	assert(src_filename && *src_filename);
+
+	// use active namespace if present
+	if (active_namespace && *active_namespace)
+		name = construct_canonical_name_and_aliasing_CPP(name,strlen(name),active_namespace,strlen(active_namespace));
+
+	set_enumerator_def(name,logical_line,src_filename,representation,src,type);
+}
+
+const type_system::enumerator_info* type_system::get_enumerator(const char* const alias) const
+{
+	assert(alias && *alias);
+	//! \todo: strip off trailing inline namespaces
+	// <unknown> is the hack for anonymous namespaces taken from GCC, it's always inline
+	errr tmp = binary_find(alias,strlen(alias),enumerator_registry.data(),enumerator_registry.size());
+	if (0<=tmp) return &enumerator_registry[tmp];
+	return NULL;
+}
+
+const type_system::enumerator_info* type_system::_get_enumerator_CPP(const char* const alias) const
+{
+	const enumerator_info* tmp = get_enumerator(alias);
+	if (tmp) return tmp;
+
+	// hmm...not an exact match
+	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> tmp2 = dealias_inline_namespace_index(alias);
+	if (0>tmp2.first) return NULL;
+
+	// it was remapped
+	while(tmp2.first<tmp2.second)
+		{
+		tmp = get_enumerator(inline_namespace_alias_map.data()[tmp2.first].second);
+		if (tmp) return tmp;
+		++tmp2.first;
+		}
+	return get_enumerator(inline_namespace_alias_map.data()[tmp2.first].second);
+}
+
+const type_system::enumerator_info* type_system::get_enumerator_CPP(const char* alias,const char* active_namespace) const
+{
+	assert(alias && *alias);
+
+	if (!strncmp(alias,"::",2))
+		{	// fully-qualified typedef name
+			// cheat: pretend not fully qualified but no surrounding namespace
+		alias += 2;
+		active_namespace = NULL;
+		};
+	if (active_namespace && *active_namespace)
+		{
+		// ok..march up to global
+		char* tmp_alias = namespace_concatenate(alias,active_namespace,"::");
+		if (is_string_registered(tmp_alias))
+			{	// registered, so could be indexed
+			const enumerator_info* tmp2 = _get_enumerator_CPP(tmp_alias);
+			if (tmp2) return (free(tmp_alias),tmp2);
+			}
+
+		const size_t extra_namespaces = count_disjoint_substring_instances(active_namespace,"::");
+		if (extra_namespaces)
+			{
+			zaimoni::weakautovalarray_ptr_throws<const char*> intra_namespace(extra_namespaces);
+			report_disjoint_substring_instances(active_namespace,"::",intra_namespace.c_array(),extra_namespaces);
+			size_t i = extra_namespaces;
+			do	{
+				--i;
+				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[i]-active_namespace,"::");
+				const enumerator_info* tmp2 = _get_enumerator_CPP(tmp_alias);
+				if (tmp2) return (free(tmp_alias),tmp2);
+				}
+			while(0<i);
+			}
+		free(tmp_alias);
+		}
+	return _get_enumerator_CPP(alias);
+}
+
+char* type_system::_namespace_concatenate(const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len)
+{	// remove comment after other seven wrapper variants implemented
+//	assert(active_namespace && *active_namespace && 0<active_namespace_len && active_namespace_len<=strlen(active_namespace));
+//	assert(name && *name && 0<name_len && name_len<=strlen(name));
+//	assert(namespace_separator && *namespace_separator && 0<namespace_separator_len && namespace_separator_len<=strlen(namespace_separator));
 	char* const actual_name = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(active_namespace_len+2+name_len));
 	strncpy(actual_name,active_namespace,active_namespace_len);
 	strncpy(actual_name+active_namespace_len,namespace_separator,namespace_separator_len);
@@ -383,7 +480,11 @@ char* type_system::_namespace_concatenate(const char* const name, size_t name_le
 }
 
 void type_system::_namespace_concatenate(char* buf, const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len)
-{
+{	// remove comment after other seven wrapper variants implemented
+//	assert(buf)
+//	assert(active_namespace && *active_namespace && 0<active_namespace_len && active_namespace_len<=strlen(active_namespace));
+//	assert(name && *name && 0<name_len && name_len<=strlen(name));
+//	assert(namespace_separator && *namespace_separator && 0<namespace_separator_len && namespace_separator_len<=strlen(namespace_separator));
 	strncpy(buf,active_namespace,active_namespace_len);
 	strncpy(buf+active_namespace_len,namespace_separator,namespace_separator_len);
 	strncpy(buf+active_namespace_len+namespace_separator_len,name,name_len);

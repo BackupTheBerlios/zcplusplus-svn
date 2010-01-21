@@ -10864,16 +10864,17 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,type_system& types,P
 	src.DeleteNSlotsAt<0>(j-i+1,i);
 }
 
-static bool record_enum_values(parse_tree& src, type_system& types, const char* const enum_name, const char* const active_namespace,bool allow_empty,func_traits<const char* (*)(const char*, size_t)>::function_ref_type echo_reserved_keyword)
+static bool record_enum_values(parse_tree& src, type_system& types, const type_system::type_index enum_type_index, const char* const active_namespace,bool allow_empty,func_traits<const char* (*)(const char*, size_t)>::function_ref_type echo_reserved_keyword)
 {
-	assert(!enum_name || *enum_name);
+	assert(enum_type_index);
 	assert(!active_namespace || *active_namespace);
 	assert(is_naked_brace_pair(src));
 	// enumeration idea:
 	// * identifer [= ...] ,
 	// terminal , is optional (and in fact should trigger a warning for -Wbackport)
 	// empty collection of enumerators is fine for C++, rejected by C (should be error in C and -Wc-c++-compat for C++)
-	// values would be unsigned_fixed_int<VM_MAX_BIT_PLATFORM>
+	// XXX use allow_empty to signal C vs. C++ language
+	// values would be unsigned_var_int
 	if (src.empty<0>())
 		{
 		if (!allow_empty)
@@ -10974,8 +10975,8 @@ static bool record_enum_values(parse_tree& src, type_system& types, const char* 
 		}
 	//! \todo actually record enumerator matchings
 #if 0
-	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> latest_value(0);
-	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> prior_value;
+	unsigned_var_int latest_value(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
+	unsigned_var_int prior_value(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
 	i = 0;
 	while(src.size<0>()>i)
 		{	// require identifier that is neither keyword nor a primitive type
@@ -10989,14 +10990,21 @@ static bool record_enum_values(parse_tree& src, type_system& types, const char* 
 		assert(!echo_reserved_keyword(src.data<0>()[i].index_tokens[0].token.first,src.data<0>()[i].index_tokens[0].token.second));
 		char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[0].token.first,active_namespace,"::") : NULL;
 		const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[0].token.first;
-
-		if (types.enumerator_already_defined(fullname,prior_value))
+		{
+		const type_system::enumerator_info* tmp = types.get_enumerator(fullname);
+		if (tmp)
 			{	// --do-what-i-mean could recover if the prior definition were identical
 				// C: note on C99/C1X 6.7.2.2p3 indicates autofail no matter where it was defined
 				// C++: One Definition Rule wipes out
+			message_header(src.data<0>()[i].index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INFORM("enumerator is already defined (C99 6.7.2.2p3/C++98 3.2)");
+			zcc_errors.inc_error();
 			free(namespace_name);
 			return false;
 			};
+		}
+#if 0
 		// next proposed function call is a bit handwavish right now...
 		// C++0X 3.3.1p4: enumerator gets to hide class names and enum names, nothing else [in particular dies against typedefs and functions]
 		if (types.enum_already_defined(active_namespace,src.data<0>()[i].index_tokens[0].token.first))
@@ -11011,15 +11019,32 @@ static bool record_enum_values(parse_tree& src, type_system& types, const char* 
 		if (types.typedef_already_defined(active_namespace,src.data<0>()[i].index_tokens[0].token.first))
 			{	// C++: One Definition Rule
 			};
+#endif
+		// The type and representation of an enumeration varies by language
+		// C: values are type int; actual representation can be decided after seeing all enumeration values.
+		// C++: if the underlying type is fixed, then the enumerator is of that type.  Othewise,
+		// each enumerator has the same type as its initializing expression, and the underlying type of
+		// the enumeration is large enough to represent all values.
+		// So, for the default-update cases
+		// C: type int, hard-error if going above INT_MAX
+		// C++: type per language specification,
+		// * hard-error if going above ULONG_MAX
+		// * invoke -Wc-c++-compat if not within INT_MIN..INT_MAX
 		if (1>=src.size<0>()-i)
 			{	// default-update
-			types.register_enum(enum_name,active_namespace,src.data<0>()[i].index_tokens[0].token.first,latest_value);
+			// if (active_namespace)
+			//		types.set_enumerator_def_CPP(src.data<0>()[i].index_tokens[0].token.first, active_namespace,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename,unsigned char representation,latest_value,enum_type_index)
+			// else
+			//		types.set_enumerator_def(src.data<0>()[i].index_tokens[0].token.first,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename,unsigned char representation,latest_value,enum_type_index);
 			break;
 			}
 		// complete conversion
+		// C: type int, hard-error if not within INT_MIN..INT_MAX
+		// C++: type per language specification
+		// * invoke -Wc-c++-compat if not within INT_MIN..INT_MAX
 		if (robust_token_is_char<','>(src.data<0>()[i+1]))
 			{	// would default-update
-			types.register_enum(enum_name,active_namespace,src.data<0>()[i].index_tokens[0].token.first,latest_value);
+			// ...
 			i += 2;
 			continue;
 			};
@@ -11038,8 +11063,9 @@ static bool record_enum_values(parse_tree& src, type_system& types, const char* 
 		// probably have this already....
 		if (!eval_expression(src,origin,i,latest_value))
 			return false;
-		types.register_enum(enum_name,active_namespace,src.data<0>()[i].index_tokens[0].token.first,latest_value);
+		// ...
 		}
+	// now ok to crunch underlying type/machine representation
 #endif
 	return true;
 }
@@ -11168,7 +11194,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 			//! \test zcc\decl.C99\Pass_enum_def.h
 			const type_system::type_index tmp2 = types.register_enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 			assert(types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,false,C99_echo_reserved_keyword))
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp2,NULL,false,C99_echo_reserved_keyword))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 				return;
@@ -11178,7 +11204,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 			{	// enum-specifier doesn't have a specific declaration mode
 				//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
 			const type_system::type_index tmp = types.register_enum_def("<unknown>",src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,NULL,NULL,false,C99_echo_reserved_keyword))
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp,NULL,false,C99_echo_reserved_keyword))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 				return;
@@ -11686,7 +11712,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			// enum-specifier doesn't have a specific declaration mode
 			const type_system::type_index tmp2 = types.register_enum_def_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 			assert(types.get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
-			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,true,CPP_echo_reserved_keyword))
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp2,NULL,true,CPP_echo_reserved_keyword))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 				return;
@@ -11696,7 +11722,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			{	// enum-specifier doesn't have a specific declaration mode
 				//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
 			const type_system::type_index tmp = types.register_enum_def_CPP("<unknown>",active_namespace,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,src.data<0>()[i].index_tokens[1].token.first,NULL,true,CPP_echo_reserved_keyword))
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp,NULL,true,CPP_echo_reserved_keyword))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 				return;

@@ -17,6 +17,9 @@ class type_system
 {
 public:
 	typedef size_t type_index;
+	// { {type, representation, value}, {filename, location }}
+	// uchar_blob is a POD backing store for unsigned_var_int here
+	typedef zaimoni::POD_pair<const char*,zaimoni::POD_pair<zaimoni::POD_triple<type_index,unsigned char,uchar_blob>, zaimoni::POD_pair<const char*,zaimoni::POD_pair<size_t,size_t> > > > enumerator_info;
 
 	const zaimoni::POD_pair<const char* const,size_t>* const core_types;
 	const type_index* const int_priority;
@@ -28,6 +31,7 @@ private:
 	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> > > typedef_registry;
 	zaimoni::weakautovalarray_ptr<const char*> inline_namespace_alias_targets;
 	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,const char*> > inline_namespace_alias_map;
+	zaimoni::autovalarray_ptr<enumerator_info> enumerator_registry;
 	// uncopyable
 	type_system(const type_system& src);
 	void operator=(const type_system& src);
@@ -97,6 +101,11 @@ public:
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* get_typedef(const char* const alias) const;
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* get_typedef_CPP(const char* alias,const char* active_namespace) const;
 
+	void set_enumerator_def(const char* alias, zaimoni::POD_pair<size_t,size_t> logical_line, const char* src_filename,unsigned char representation,const uchar_blob& src,type_index type);
+	void set_enumerator_def_CPP(const char* name, const char* active_namespace, zaimoni::POD_pair<size_t,size_t> logical_line, const char* src_filename,unsigned char representation,const uchar_blob& src,type_index type);
+	const enumerator_info* get_enumerator(const char* alias) const;
+	const enumerator_info* get_enumerator_CPP(const char* alias,const char* active_namespace) const;
+
 	type_index register_functype(const char* const alias, function_type*& src);
 	type_index register_functype_CPP(const char* name, const char* active_namespace, function_type*& src);
 //	keyword actually should be type union_struct_decl::keywords, but that increases coupling unacceptably
@@ -122,6 +131,7 @@ private:
 	const char* _name(type_index id) const;
 	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> dealias_inline_namespace_index(const char* alias) const;
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* _get_typedef_CPP(const char* alias) const;
+	const enumerator_info* _get_enumerator_CPP(const char* alias) const;
 
 	bool is_inline_namespace_CPP(const char* active_namespace, size_t active_namespace_len) const;
 	const char* canonical_name_is_inline_namespace_alias_target(const char* name, size_t name_len, const char* active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len) const;
