@@ -21,8 +21,10 @@ public:
 
 	unsigned_var_int& operator=(const unsigned_var_int& src);
 	unsigned_var_int& operator=(uintmax_t src);
-	unsigned_var_int& operator=(const uchar_blob& src) {value_copy(_data,src); return *this;};
+	unsigned_var_int& operator=(const uchar_blob& src) {uchar_blob::value_copy(_data,src); return *this;};
 	void MoveInto(unsigned_var_int& dest);
+	static void value_copy(uchar_blob& dest, const unsigned_var_int& src) {uchar_blob::value_copy(dest,src._data);};
+	static void value_copy(unsigned_var_int& dest, const unsigned_var_int& src) {uchar_blob::value_copy(dest._data,src._data);};
 
 	unsigned_var_int& operator~() {bitwise_compl(_data.c_array(),_data.size()); return *this;};
 	void auto_bitwise_complement() {bitwise_compl(_data.c_array(),_data.size());};
@@ -109,6 +111,9 @@ public:
 	unsigned char back() const {return _data.back();};
 	unsigned char& back() {return _data.back();};
 };
+
+inline void value_copy(uchar_blob& dest, const unsigned_var_int& src) {unsigned_var_int::value_copy(dest,src);}
+inline void value_copy(unsigned_var_int& dest, const unsigned_var_int& src) {unsigned_var_int::value_copy(dest,src);}
 
 // render as C string
 char* z_ucharint_toa(unsigned_var_int target,char* const buf,unsigned int radix);

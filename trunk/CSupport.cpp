@@ -10864,6 +10864,50 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,type_system& types,P
 	src.DeleteNSlotsAt<0>(j-i+1,i);
 }
 
+static bool default_enumerator_init_legal(const bool allow_empty, unsigned char& current_enumerator_type, const unsigned_var_int& prior_value, const weak_token& src)
+{
+	if (allow_empty)
+		{
+		if (prior_value==target_machine->signed_max<virtual_machine::std_int_int>())
+			{	// signed integer overflow
+				//! \bug need test case
+			message_header(src);
+			INC_INFORM(ERR_STR);
+			INFORM("default-initialization of enumerator requires signed int overflow: undefined behavior (C99 6.7.2.2p3)");
+			zcc_errors.inc_error();
+			return false;
+			}
+		}
+	else{	//! \todo research how to rewrite this without the goto
+cpp_enum_was_retyped:
+		const promote_aux test(current_enumerator_type);
+		if (test.is_signed)
+			{
+			if (prior_value==target_machine->signed_max(test.machine_type))
+				{
+				++current_enumerator_type;	// smallest type that can handle this
+				goto cpp_enum_was_retyped;
+				}
+			}
+		else{
+			if (prior_value==target_machine->unsigned_max(test.machine_type))
+				{
+				if (C_TYPE::INTEGERLIKE == ++current_enumerator_type)	// smallest type that can handle this
+					{	// unsigned long long overflow, fact it's defined doesn't save us
+					//! \bug need test case
+					message_header(src);
+					INC_INFORM(ERR_STR);
+					INFORM("default-initialization of enumerator requires uintmax_t overflow (C++0X 7.2p5)");
+					zcc_errors.inc_error();
+					return false;
+					}
+				goto cpp_enum_was_retyped;
+				}
+			}
+		}
+	return true;
+}
+
 static bool record_enum_values(parse_tree& src, type_system& types, const type_system::type_index enum_type_index, const char* const active_namespace,bool allow_empty,func_traits<const char* (*)(const char*, size_t)>::function_ref_type echo_reserved_keyword)
 {
 	assert(enum_type_index);
@@ -10974,9 +11018,9 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 		src.DeleteIdx<0>(src.size<0>()-1); // clean up anyway
 		}
 	//! \todo actually record enumerator matchings
-#if 0
 	unsigned_var_int latest_value(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
 	unsigned_var_int prior_value(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
+	unsigned char current_enumerator_type = C_TYPE::INT;
 	i = 0;
 	while(src.size<0>()>i)
 		{	// require identifier that is neither keyword nor a primitive type
@@ -10988,6 +11032,7 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 		assert(C_TESTFLAG_IDENTIFIER==src.data<0>()[i].index_tokens[0].flags);
 		assert(!(PARSE_TYPE & src.data<0>()[i].flags));
 		assert(!echo_reserved_keyword(src.data<0>()[i].index_tokens[0].token.first,src.data<0>()[i].index_tokens[0].token.second));
+		{
 		char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[0].token.first,active_namespace,"::") : NULL;
 		const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[0].token.first;
 		{
@@ -10996,6 +11041,7 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 			{	// --do-what-i-mean could recover if the prior definition were identical
 				// C: note on C99/C1X 6.7.2.2p3 indicates autofail no matter where it was defined
 				// C++: One Definition Rule wipes out
+				//! \bug need test case
 			message_header(src.data<0>()[i].index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INFORM("enumerator is already defined (C99 6.7.2.2p3/C++98 3.2)");
@@ -11003,6 +11049,8 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 			free(namespace_name);
 			return false;
 			};
+		}
+		free(namespace_name);
 		}
 #if 0
 		// next proposed function call is a bit handwavish right now...
@@ -11020,6 +11068,7 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 			{	// C++: One Definition Rule
 			};
 #endif
+
 		// The type and representation of an enumeration varies by language
 		// C: values are type int; actual representation can be decided after seeing all enumeration values.
 		// C++: if the underlying type is fixed, then the enumerator is of that type.  Othewise,
@@ -11030,12 +11079,37 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 		// C++: type per language specification,
 		// * hard-error if going above ULONG_MAX
 		// * invoke -Wc-c++-compat if not within INT_MIN..INT_MAX
+		// in any case, do not react if the default-init isn't used
+		value_copy(prior_value,latest_value);
+		bool value_is_nonnegative_or_twos_complement = true;
+		if (virtual_machine::twos_complement!=target_machine->C_signed_int_representation())
+			{
+			const promote_aux test(current_enumerator_type);
+			if (test.is_signed && latest_value.test(test.bitcount-1))
+				{
+				target_machine->signed_additive_inverse(latest_value,test.machine_type);
+				if (0<latest_value)
+					{
+					latest_value -= 1;
+					if (0<latest_value) target_machine->signed_additive_inverse(latest_value,test.machine_type);
+					value_is_nonnegative_or_twos_complement = false;
+					}
+				}
+			}
+		if (value_is_nonnegative_or_twos_complement) latest_value += 1;
+
 		if (1>=src.size<0>()-i)
 			{	// default-update
-			// if (active_namespace)
-			//		types.set_enumerator_def_CPP(src.data<0>()[i].index_tokens[0].token.first, active_namespace,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename,unsigned char representation,latest_value,enum_type_index)
-			// else
-			//		types.set_enumerator_def(src.data<0>()[i].index_tokens[0].token.first,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename,unsigned char representation,latest_value,enum_type_index);
+			// handle type errors
+			if (!default_enumerator_init_legal(allow_empty,current_enumerator_type,prior_value,src.data<0>()[i].index_tokens[0]))
+				return false;
+			uchar_blob latest_value_copy;
+			latest_value_copy.init(0);
+			value_copy(latest_value_copy,latest_value);
+			if (active_namespace)
+				types.set_enumerator_def_CPP(src.data<0>()[i].index_tokens[0].token.first, active_namespace,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename,current_enumerator_type,latest_value_copy,enum_type_index);
+			else
+				types.set_enumerator_def(src.data<0>()[i].index_tokens[0].token.first,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename,current_enumerator_type,latest_value_copy,enum_type_index);
 			break;
 			}
 		// complete conversion
@@ -11044,7 +11118,15 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 		// * invoke -Wc-c++-compat if not within INT_MIN..INT_MAX
 		if (robust_token_is_char<','>(src.data<0>()[i+1]))
 			{	// would default-update
-			// ...
+			if (!default_enumerator_init_legal(allow_empty,current_enumerator_type,prior_value,src.data<0>()[i].index_tokens[0]))
+				return false;
+			uchar_blob latest_value_copy;
+			latest_value_copy.init(0);
+			value_copy(latest_value_copy,latest_value);
+			if (active_namespace)
+				types.set_enumerator_def_CPP(src.data<0>()[i].index_tokens[0].token.first, active_namespace,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename,current_enumerator_type,latest_value_copy,enum_type_index);
+			else
+				types.set_enumerator_def(src.data<0>()[i].index_tokens[0].token.first,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename,current_enumerator_type,latest_value_copy,enum_type_index);
 			i += 2;
 			continue;
 			};
@@ -11060,13 +11142,14 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 				break;
 				}
 			};
+#if 0
 		// probably have this already....
 		if (!eval_expression(src,origin,i,latest_value))
 			return false;
+#endif
 		// ...
 		}
 	// now ok to crunch underlying type/machine representation
-#endif
 	return true;
 }
 
