@@ -10867,20 +10867,11 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,type_system& types,P
 static bool default_enumerator_init_legal(const bool allow_empty, unsigned char& current_enumerator_type, const unsigned_var_int& prior_value, const weak_token& src)
 {
 	if (allow_empty)
-		{
-		if (prior_value==target_machine->signed_max<virtual_machine::std_int_int>())
-			{	// signed integer overflow
-				//! \bug need test case
-			message_header(src);
-			INC_INFORM(ERR_STR);
-			INFORM("default-initialization of enumerator requires signed int overflow: undefined behavior (C99 6.7.2.2p3)");
-			zcc_errors.inc_error();
-			return false;
-			}
-		}
-	else{	//! \todo research how to rewrite this without the goto
+		{	// C++
+		//! \todo research how to rewrite this without the goto
 cpp_enum_was_retyped:
 		const promote_aux test(current_enumerator_type);
+		//! \bug need -Wc-c++-compat to go off here
 		if (test.is_signed)
 			{
 			if (prior_value==target_machine->signed_max(test.machine_type))
@@ -10894,7 +10885,7 @@ cpp_enum_was_retyped:
 				{
 				if (C_TYPE::INTEGERLIKE == ++current_enumerator_type)	// smallest type that can handle this
 					{	// unsigned long long overflow, fact it's defined doesn't save us
-					//! \bug need test case
+					//! \test decl.C99/Error_enum_overflow.hpp
 					message_header(src);
 					INC_INFORM(ERR_STR);
 					INFORM("default-initialization of enumerator requires uintmax_t overflow (C++0X 7.2p5)");
@@ -10905,10 +10896,21 @@ cpp_enum_was_retyped:
 				}
 			}
 		}
+	else{	// C
+		if (prior_value==target_machine->signed_max<virtual_machine::std_int_int>())
+			{	// signed integer overflow
+				//! \test decl.C99/Error_enum_overflow.h
+			message_header(src);
+			INC_INFORM(ERR_STR);
+			INFORM("default-initialization of enumerator requires signed int overflow (C99 6.7.2.2p3)");
+			zcc_errors.inc_error();
+			return false;
+			}
+		}
 	return true;
 }
 
-static bool record_enum_values(parse_tree& src, type_system& types, const type_system::type_index enum_type_index, const char* const active_namespace,bool allow_empty,func_traits<const char* (*)(const char*, size_t)>::function_ref_type echo_reserved_keyword)
+static bool record_enum_values(parse_tree& src, type_system& types, const type_system::type_index enum_type_index, const char* const active_namespace,bool allow_empty,func_traits<const char* (*)(const char*, size_t)>::function_ref_type echo_reserved_keyword, func_traits<bool (*)(unsigned_var_int&,const parse_tree&)>::function_ref_type intlike_literal_to_VM, func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type CondenseParseTree, func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree)
 {
 	assert(enum_type_index);
 	assert(!active_namespace || *active_namespace);
@@ -11021,6 +11023,8 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 	unsigned_var_int latest_value(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
 	unsigned_var_int prior_value(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
 	unsigned char current_enumerator_type = C_TYPE::INT;
+//	bool cpp_using_negative = false;
+//	bool cpp_using_above_LLONG_MAX = false;
 	i = 0;
 	while(src.size<0>()>i)
 		{	// require identifier that is neither keyword nor a primitive type
@@ -11132,22 +11136,78 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 			};
 		assert(robust_token_is_char<'='>(src.data<0>()[i+1]));
 		i += 2;
+		const size_t origin = i;
 		assert(src.size<0>()>i && !robust_token_is_char<','>(src.data<0>()[i]));
-		size_t origin = i;
+		bool comma_overextended = false;
 		while(++i < src.size<0>())
 			{
 			if (robust_token_is_char<','>(src.data<0>()[i]))
 				{
 				++i;
+				comma_overextended = true;
 				break;
 				}
 			};
-#if 0
-		// probably have this already....
-		if (!eval_expression(src,origin,i,latest_value))
+		{	// see if it's a compile-time constant
+		parse_tree_class tmp(src,origin,i-comma_overextended,0);
+		if (tmp.is_raw_list() && !CondenseParseTree(tmp,types)) return false;
+		if (!EvalParseTree(tmp,types)) return false;
+		if (!intlike_literal_to_VM(latest_value,tmp))
+			{	//! \bug need test case
+			message_header(src.data<0>()[origin-2].index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INFORM("enumerator can only be explicitly initialized by a compile-time constant (C99 6.7.2.2p3/C++98 7.2p1)");
+			zcc_errors.inc_error();
 			return false;
+			}
+		// range checks
+		if (allow_empty)
+			{	// C++
+			current_enumerator_type = tmp.type_code.base_type_index;
+			}
+		else{	// C
+			const promote_aux test(tmp.type_code.base_type_index);
+			const promote_aux dest_type(C_TYPE::INT);
+			const bool is_negative = test.is_signed && latest_value.test(test.bitcount-1);
+			if (is_negative)
+				target_machine->signed_additive_inverse(latest_value,test.machine_type);
+			bool out_of_range = latest_value>target_machine->signed_max<virtual_machine::std_int_int>();
+			if (out_of_range && is_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation())
+				{	// handle two's complement INT_MIN
+				latest_value -= 1;
+				if (latest_value<=target_machine->signed_max<virtual_machine::std_int_int>()) 
+					out_of_range = false;
+				latest_value += 1;
+				}
+			if (out_of_range)
+				{	//! \test decl.C99/Error_enum_overflow2.h
+					//! \bug need -Wc-c++-compat to go off here
+				message_header(src.data<0>()[origin-2].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("initializer of enumerator not representable as signed int (C99 6.7.2.2p3)");
+				zcc_errors.inc_error();
+				return false;
+				}
+			if (is_negative)
+				target_machine->signed_additive_inverse(latest_value,dest_type.machine_type);
+			tmp.type_code.base_type_index = C_TYPE::INT;
+			}
+#if 0
+		if (origin+1<i-comma_overextended)
+			{	// net token reduction, do source code optimization?
+			}
 #endif
-		// ...
+		}
+
+		{	// actually register the enumerator
+		uchar_blob latest_value_copy;
+		latest_value_copy.init(0);
+		value_copy(latest_value_copy,latest_value);
+		if (active_namespace)
+			types.set_enumerator_def_CPP(src.data<0>()[origin-2].index_tokens[0].token.first, active_namespace,src.data<0>()[origin-2].index_tokens[0].logical_line,src.data<0>()[origin-2].index_tokens[0].src_filename,current_enumerator_type,latest_value_copy,enum_type_index);
+		else
+			types.set_enumerator_def(src.data<0>()[origin-2].index_tokens[0].token.first,src.data<0>()[origin-2].index_tokens[0].logical_line,src.data<0>()[origin-2].index_tokens[0].src_filename,current_enumerator_type,latest_value_copy,enum_type_index);
+		}
 		}
 	// now ok to crunch underlying type/machine representation
 	return true;
@@ -11277,7 +11337,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 			//! \test zcc\decl.C99\Pass_enum_def.h
 			const type_system::type_index tmp2 = types.register_enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 			assert(types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp2,NULL,false,C99_echo_reserved_keyword))
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp2,NULL,false,C99_echo_reserved_keyword,C99_intlike_literal_to_VM,C99_CondenseParseTree,C99_EvalParseTree))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 				return;
@@ -11287,7 +11347,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 			{	// enum-specifier doesn't have a specific declaration mode
 				//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
 			const type_system::type_index tmp = types.register_enum_def("<unknown>",src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp,NULL,false,C99_echo_reserved_keyword))
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp,NULL,false,C99_echo_reserved_keyword,C99_intlike_literal_to_VM,C99_CondenseParseTree,C99_EvalParseTree))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 				return;
@@ -11795,7 +11855,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			// enum-specifier doesn't have a specific declaration mode
 			const type_system::type_index tmp2 = types.register_enum_def_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 			assert(types.get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
-			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp2,NULL,true,CPP_echo_reserved_keyword))
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp2,NULL,true,CPP_echo_reserved_keyword,CPP_intlike_literal_to_VM,CPP_CondenseParseTree,CPP_EvalParseTree))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 				return;
@@ -11805,7 +11865,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			{	// enum-specifier doesn't have a specific declaration mode
 				//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
 			const type_system::type_index tmp = types.register_enum_def_CPP("<unknown>",active_namespace,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp,NULL,true,CPP_echo_reserved_keyword))
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp,NULL,true,CPP_echo_reserved_keyword,CPP_intlike_literal_to_VM,CPP_CondenseParseTree,CPP_EvalParseTree))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 				return;

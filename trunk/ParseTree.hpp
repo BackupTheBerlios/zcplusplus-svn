@@ -207,6 +207,11 @@ struct parse_tree
 		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>i);
 		(flags &= ~((zaimoni::lex_flags)(1)<<i)) |= ((zaimoni::lex_flags)(have_it)<<i);
 		}
+	bool resize(size_t arg_idx,size_t n)
+		{
+		assert(STATIC_SIZE(args)>arg_idx);
+		return _resize(arg_idx,n);
+		}
 	template<size_t arg_idx> bool resize(size_t n)
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
@@ -376,6 +381,8 @@ public:
 		this->clear();
 		value_copy(*this,src);
 		};
+	// slicing copy constructor
+	parse_tree_class(const parse_tree& src,size_t begin,size_t end,size_t dest_idx);
 	~parse_tree_class() {this->destroy();};
 	const parse_tree_class& operator=(const parse_tree_class& src)
 		{

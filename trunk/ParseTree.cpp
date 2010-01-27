@@ -342,3 +342,29 @@ void INC_INFORM(const parse_tree& src)
 #undef USER_MASK
 }
 
+// slicing copy constructor
+parse_tree_class::parse_tree_class(const parse_tree& src,size_t begin,size_t end,size_t dest_idx)
+{
+	assert(STATIC_SIZE(args)>dest_idx);
+	assert(begin<src.size(dest_idx));
+	assert(end<=src.size(dest_idx));
+	this->clear();
+	if (begin<end)
+		{
+		if (begin+1==end)
+			{
+			value_copy(*this,src.data(dest_idx)[begin]);
+			}
+		else{
+			size_t i = end-begin;
+			if (!resize(dest_idx,end-begin)) throw std::bad_alloc();
+			do	{
+				--i;
+				value_copy(c_array(dest_idx)[i],src.data(dest_idx)[i+begin]);
+				}
+			while(0<i);
+			}
+		}
+}
+
+
