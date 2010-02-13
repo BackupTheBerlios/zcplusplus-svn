@@ -50,19 +50,10 @@ EXTERN_C const char* register_substring(const char* const x,const unsigned long 
 		int test = strncmp(x,string_cache[midpoint],x_len);
 		if (0==test && x_len<strlen(string_cache[midpoint])) test = -1;
 		if (0==test) return string_cache[midpoint];
-		if (midpoint==LB)
-			{
-			if (0<test)
-				++LB;
-			else
-				--StrictUB;
-			}
-		else{
-			if (0<test)
-				LB = midpoint+1;
-			else
-				StrictUB = midpoint-1;
-			};
+		if (0<test)
+			LB = midpoint+1;
+		else
+			StrictUB = midpoint;
 		};
 	char** Tmp = (char**)(realloc(string_cache,sizeof(char*)*(string_cache_size+1)));
 	if (NULL==Tmp) _fatal(RAM_FAIL);
@@ -88,19 +79,10 @@ EXTERN_C const char* is_substring_registered(const char* const x,const unsigned 
 		int test = strncmp(x,string_cache[midpoint],x_len);
 		if (0==test && x_len<strlen(string_cache[midpoint])) test = -1;
 		if (0==test) return string_cache[midpoint];
-		if (midpoint==LB)
-			{
-			if (0<test)
-				++LB;
-			else
-				--StrictUB;
-			}
-		else{
-			if (0<test)
-				LB = midpoint+1;
-			else
-				StrictUB = midpoint-1;
-			};
+		if (0<test)
+			LB = midpoint+1;
+		else
+			StrictUB = midpoint;
 		};
 	return NULL;
 }
@@ -115,19 +97,10 @@ EXTERN_C const char* register_string(const char* const x)
 		const size_t midpoint = LB + (StrictUB-LB)/2;
 		const int test = strcmp(x,string_cache[midpoint]);
 		if (0==test) return string_cache[midpoint];
-		if (midpoint==LB)
-			{
-			if (0<test)
-				++LB;
-			else
-				--StrictUB;
-			}
-		else{
-			if (0<test)
-				LB = midpoint+1;
-			else
-				StrictUB = midpoint-1;
-			};
+		if (0<test)
+			LB = midpoint+1;
+		else
+			StrictUB = midpoint;
 		};
 	char** Tmp = reinterpret_cast<char**>(realloc(string_cache,sizeof(char*)*(string_cache_size+1)));
 	if (NULL==Tmp) _fatal(RAM_FAIL);
@@ -152,19 +125,10 @@ EXTERN_C const char* is_string_registered(const char* const x)
 		const size_t midpoint = LB + (StrictUB-LB)/2;
 		const int test = strcmp(x,string_cache[midpoint]);
 		if (0==test) return string_cache[midpoint];
-		if (midpoint==LB)
-			{
-			if (0<test)
-				++LB;
-			else
-				--StrictUB;
-			}
-		else{
-			if (0<test)
-				LB = midpoint+1;
-			else
-				StrictUB = midpoint-1;
-			};
+		if (0<test)
+			LB = midpoint+1;
+		else
+			StrictUB = midpoint;
 		};
 	return NULL;
 }
