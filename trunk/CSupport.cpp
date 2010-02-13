@@ -126,7 +126,7 @@ C99
 2 The usual mathematical formulas for complex multiply, divide, and absolute value are
 problematic because of their treatment of infinities and because of undue overflow and
 underflow. The CX_LIMITED_RANGE pragma can be used to inform the
-implementation that (where the state is ÅeÅeonÅfÅf) the usual mathematical formulas are
+implementation that (where the state is defined) the usual mathematical formulas are
 acceptable.165) The pragma can occur either outside external declarations or preceding all
 explicit declarations and statements inside a compound statement. When outside external
 declarations, the pragma takes effect from its occurrence until another
@@ -134,9 +134,9 @@ CX_LIMITED_RANGE pragma is encountered, or until the end of the translation unit
 When inside a compound statement, the pragma takes effect from its occurrence until
 another CX_LIMITED_RANGE pragma is encountered (including within a nested
 165) The purpose of the pragma is to allow the implementation to use the formulas:
-(x + iy) Å~ (u + iv) = (xu . yv) + i(yu + xv)
+(x + iy) * (u + iv) = (xu . yv) + i(yu + xv)
 (x + iy) / (u + iv) = [(xu + yv) + i(yu . xv)]/(u2 + v2)
-| x + iy | = Å„. .... x2 + y2
+| x + iy | = *. .... x2 + y2
 where the programmer can determine they are safe.
 
 The FENV_ACCESS pragma provides a means to inform the implementation when a
@@ -11045,7 +11045,7 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 			{	// --do-what-i-mean could recover if the prior definition were identical
 				// C: note on C99/C1X 6.7.2.2p3 indicates autofail no matter where it was defined
 				// C++: One Definition Rule wipes out
-				//! \bug need test case
+				//! \test decl.C99/Error_enum_multidef.h, decl.C99/Error_enum_multidef.hpp 
 			message_header(src.data<0>()[i].index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INFORM("enumerator is already defined (C99 6.7.2.2p3/C++98 3.2)");
@@ -11061,17 +11061,65 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 		// C++0X 3.3.1p4: enumerator gets to hide class names and enum names, nothing else [in particular dies against typedefs and functions]
 		if (types.enum_already_defined(active_namespace,src.data<0>()[i].index_tokens[0].token.first))
 			{	// -Wbackport warn in C++, fail in C
+			if (allow_empty)
+				{	// C++0X
+				if (bool_options[boolopt::warn_crosslang_compatibility] || bool_options[boolopt::warn_backport])
+					{
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(WARN_STR);
+					INFORM("enum with same name as enumerator is already defined (C99 6.7.2.2p3/C++98 3.2/C++0X 3.2)");
+					if (bool_options[boolopt::warnings_are_errors])
+						zcc_errors.inc_error();
+					}
+			else{	// C
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("enum with same name as enumerator is already defined (C99 6.7.2.2p3)");
+				zcc_errors.inc_error();
+				return false;
+				}	
 			};
 		if (types.union_class_struct_already_declared(active_namespace,src.data<0>()[i].index_tokens[0].token.first))
 			{	// -Wbackport warn in C++, fail in C
+			if (allow_empty)
+				{	// C++0X
+				if (bool_options[boolopt::warn_crosslang_compatibility] || bool_options[boolopt::warn_backport])
+					{
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(WARN_STR);
+					INFORM("union, struct, or class with same name as enumerator is already defined (C99 6.7.2.2p3/C++98 3.2/C++0X 3.2)");
+					if (bool_options[boolopt::warnings_are_errors])
+						zcc_errors.inc_error();
+					}
+				}
+			else{	// C
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("union or struct with same name as enumerator is already defined (C99 6.7.2.2p3)");
+				zcc_errors.inc_error();
+				return false;
+				}	
 			};
 		if (types.function_already_declared(active_namespace,src.data<0>()[i].index_tokens[0].token.first))
 			{	// C++: One Definition Rule
 			};
-		if (types.typedef_already_defined(active_namespace,src.data<0>()[i].index_tokens[0].token.first))
-			{	// C++: One Definition Rule
-			};
 #endif
+		{
+		const zaimoni::POD_triple<type_spec,const char*,size_t>* const tmp = types.get_typedef_CPP(src.data<0>()[i].index_tokens[0].token.first,active_namespace); 
+		if (tmp)
+			{	// C++: One Definition Rule
+				//! \test decl.C99/Error_enum_typedef.h, decl.C99/Error_enum_typedef.hpp 
+			message_header(src.data<0>()[i].index_tokens[0]);
+			INC_INFORM(ERR_STR);
+			INFORM("typedef is already defined, conflicts with enumerator (C99 6.7.2.2p3/C++98 3.2)");
+			INC_INFORM(tmp->second);
+			INC_INFORM(":");
+			INC_INFORM(tmp->third);
+			INFORM(": typedef definition here");
+			zcc_errors.inc_error();
+			return false;
+			};
+		}
 
 		// The type and representation of an enumeration varies by language
 		// C: values are type int; actual representation can be decided after seeing all enumeration values.
@@ -11855,7 +11903,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			// enum-specifier doesn't have a specific declaration mode
 			const type_system::type_index tmp2 = types.register_enum_def_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 			assert(types.get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
-			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp2,NULL,true,CPP_echo_reserved_keyword,CPP_intlike_literal_to_VM,CPP_CondenseParseTree,CPP_EvalParseTree))
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp2,active_namespace,true,CPP_echo_reserved_keyword,CPP_intlike_literal_to_VM,CPP_CondenseParseTree,CPP_EvalParseTree))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 				return;
@@ -11865,7 +11913,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			{	// enum-specifier doesn't have a specific declaration mode
 				//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
 			const type_system::type_index tmp = types.register_enum_def_CPP("<unknown>",active_namespace,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp,NULL,true,CPP_echo_reserved_keyword,CPP_intlike_literal_to_VM,CPP_CondenseParseTree,CPP_EvalParseTree))
+			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp,active_namespace,true,CPP_echo_reserved_keyword,CPP_intlike_literal_to_VM,CPP_CondenseParseTree,CPP_EvalParseTree))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 				return;
