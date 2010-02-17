@@ -11664,8 +11664,23 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 								}	
 							// do not re-register if there is a prior definition
 							}
-						else	// register this with types object
+						else{	// prepare to register this with types object
+							const type_system::enumerator_info* tmp2 = types.get_enumerator(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
+							if (tmp2)
+								{	//! \bug needs test case
+								message_header(src.data<0>()[i].index_tokens[0]);
+								INC_INFORM(ERR_STR);
+//								INFORM("enumerator is already defined, conflicts with typedef (C99 6.7.2.2p3/C++98 3.2)");
+								INFORM("enumerator is already defined, conflicts with typedef (C99 6.7.2.2p3)");
+								INC_INFORM(tmp2->second.second.first);
+								INC_INFORM(":");
+								INC_INFORM(tmp2->second.second.second.first);
+								INFORM(": enumerator definition here");
+								zcc_errors.inc_error();
+								return;
+								}
 							types.set_typedef(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first,src.data<0>()[initdecl_identifier_idx].index_tokens[0].src_filename,src.data<0>()[initdecl_identifier_idx].index_tokens[0].logical_line.first,bootstrap);
+							}
 						}
 #if 0
 					else{	// something else
@@ -12399,6 +12414,19 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 							}
 						else{	// register this with types object
 							free(namespace_name);
+							const type_system::enumerator_info* tmp2 = types.get_enumerator_CPP(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first,active_namespace);
+							if (tmp2)
+								{	//! \bug needs test case
+								message_header(src.data<0>()[i].index_tokens[0]);
+								INC_INFORM(ERR_STR);
+								INFORM("enumerator is already defined, conflicts with typedef (C++98 3.2)");
+								INC_INFORM(tmp2->second.second.first);
+								INC_INFORM(":");
+								INC_INFORM(tmp2->second.second.second.first);
+								INFORM(": enumerator definition here");
+								zcc_errors.inc_error();
+								return;
+								}							
 							types.set_typedef_CPP(src.c_array<0>()[initdecl_identifier_idx].index_tokens[0].token.first,active_namespace,src.data<0>()[initdecl_identifier_idx].index_tokens[0].src_filename,src.data<0>()[initdecl_identifier_idx].index_tokens[0].logical_line.first,bootstrap);
 							}
 						}
