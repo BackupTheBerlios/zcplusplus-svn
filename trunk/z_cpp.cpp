@@ -3,7 +3,7 @@
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
 #include "Zaimoni.STL/LexParse/Token.hpp"
-#include "CSupport.hpp"
+#include "_CSupport2.hpp"
 
 #include "CPreproc.hpp"
 #include "load_src.hpp"
@@ -15,7 +15,6 @@
 #include "errcount.hpp"
 
 #include "Zaimoni.STL/POD.hpp"
-
 #include <stdio.h>
 
 error_counter<size_t> zcc_errors(100,"FATAL: too many preprocessing errors");

@@ -2,7 +2,7 @@
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
 #include "C_PPHexInteger.hpp"
-#include "CSupport.hpp"
+#include "lex_core.h"
 #include "unsigned_aux.hpp"
 
 #include <stdlib.h>

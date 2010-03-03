@@ -3,6 +3,8 @@
 // (C)2009, 2010 Kenneth Boyd, license: MIT.txt
 
 #include "CSupport.hpp"
+#include "_CSupport1.hpp"
+#include "_CSupport2.hpp"
 
 #include "Zaimoni.STL/MetaRAM2.hpp"
 #include "Zaimoni.STL/lite_alg.hpp"
@@ -28,11 +30,12 @@
 #include "struct_type.hpp"
 #include "CheckReturn.hpp"
 
+// call before use; defined later
+void InitializeCLexerDefs(const virtual_machine::CPUInfo& target);
+
 using namespace zaimoni;
 using virtual_machine::umaxint;
 
-#define C_OCTAL_DIGITS "01234567"
-#define C_HEXADECIMAL_DIGITS "0123456789ABCDEFabcdef"
 const char* const list_hexadecimal_digits = C_HEXADECIMAL_DIGITS;
 
 LangConf* CLexer = NULL;
@@ -179,23 +182,6 @@ implementation-defined.
 also ‘‘flush-to-zero’’ underflow.
 
 */
-
-bool IsHexadecimalDigit(unsigned char x)
-{	// FORMALLY CORRECT: Kenneth Boyd, 8/1/2002
-	if (   in_range<'0','9'>(x)
-		|| in_range<'A','F'>(x)
-		|| in_range<'a','f'>(x))
-		return true;
-	return false;
-}
-
-unsigned int InterpretHexadecimalDigit(unsigned char x)
-{	// FORMALLY CORRECT: Kenneth Boyd, 8/1/2002
-	if (in_range<'0','9'>(x)) return x-(unsigned char)'0';
-	if (in_range<'A','F'>(x)) return x-(unsigned char)'A'+10;
-	if (in_range<'a','f'>(x)) return x-(unsigned char)'a'+10;
-	return 0;
-}
 
 bool IsUnaccentedAlphabeticChar(unsigned char x)
 {	// FORMALLY CORRECT: Kenneth Boyd, 7/29/2001

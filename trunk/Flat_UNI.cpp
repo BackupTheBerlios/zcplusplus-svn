@@ -3,7 +3,7 @@
 
 #include "Flat_UNI.hpp"
 
-#include "CSupport.hpp"
+#include "lex_core.h"
 #include "Zaimoni.STL/MetaRAM2.hpp"
 
 using namespace zaimoni;
@@ -44,7 +44,7 @@ FlattenUNICODE(char*& Text)
 		char* bloat_unicode = strstr(Text,"\\U0000");
 		while(NULL!=bloat_unicode)
 			{
-			if (4<=strspn(bloat_unicode+6,list_hexadecimal_digits))
+			if (4<=strspn(bloat_unicode+6,C_HEXADECIMAL_DIGITS))
 				{
 				const size_t block_length = bloat_unicode-Text+2;
 				bloat_unicode[1] = 'u';
@@ -65,7 +65,7 @@ FlattenUNICODE(char*& Text)
 			{	// we down-convert a subset of allowed characters, excluding anything lower than ASCII space to avoid real weirdness
 				//! \todo portability target: want to adapt to preprocessor CHAR_BIT/UCHAR_MAX, this assumes 8/255; also assumes ASCII
 				// we restrict our attention here to the utterly safe \u00A0 - \u00FF conversion
-			if (strchr(list_hexadecimal_digits+10,bloat_unicode[4]) && strchr(list_hexadecimal_digits,bloat_unicode[5]))
+			if (strchr(C_HEXADECIMAL_DIGITS+10,bloat_unicode[4]) && strchr(C_HEXADECIMAL_DIGITS,bloat_unicode[5]))
 				{
 				const size_t block_length = bloat_unicode-Text+1;
 				const unsigned char tmp = (unsigned char)(16*InterpretHexadecimalDigit(bloat_unicode[4]+InterpretHexadecimalDigit(bloat_unicode[5])));

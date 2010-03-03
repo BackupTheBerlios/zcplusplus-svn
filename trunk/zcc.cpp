@@ -3,7 +3,7 @@
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
 #include "Zaimoni.STL/LexParse/Token.hpp"
-#include "CSupport.hpp"
+#include "_CSupport2.hpp"
 
 #include "CPreproc.hpp"
 #include "load_src.hpp"

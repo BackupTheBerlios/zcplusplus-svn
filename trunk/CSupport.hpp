@@ -5,11 +5,12 @@
 #ifndef C_SUPPORT_HPP
 #define C_SUPPORT_HPP 1
 
-#include <cstddef>
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 #include <limits.h>
 #include "type_algebra.hpp"
+#include "lex_core.h"
 #include "Zaimoni.STL/pure.C/auto_int.h"
 #include "Zaimoni.STL/LexParse/std.h"
 
@@ -79,7 +80,6 @@ class CPUInfo;
 
 namespace zaimoni {
 
-class LangConf;
 template<class T1,class T2> struct POD_pair;
 
 // C preprocessor class has to know about this type
@@ -139,8 +139,6 @@ class CPUInfo;
 
 }
 
-extern zaimoni::LangConf* CLexer;			// C99
-extern zaimoni::LangConf* CPlusPlusLexer;	// C++0x
 extern const zaimoni::POD_pair<const char* const,size_t> C_atomic_types[];	// to help out the preprocessor, etc.
 extern const zaimoni::POD_pair<const char* const,size_t> CPP_atomic_types[];	// to help out the preprocessor, etc.
 extern const size_t C_int_priority[];
@@ -152,9 +150,6 @@ extern const size_t C_int_priority[];
 
 // character classification
 // utilities to consider more generally
-inline bool IsNumericChar(unsigned char x) {return 10U>((unsigned int)x-(unsigned int)'0');}
-bool IsHexadecimalDigit(unsigned char x);
-unsigned int InterpretHexadecimalDigit(unsigned char x);
 bool IsUnaccentedAlphabeticChar(unsigned char x);
 bool IsAlphabeticChar(unsigned char x);
 inline bool IsCIdentifierChar(char x) { return '_'==x || IsAlphabeticChar(x) || IsNumericChar(x); }
@@ -179,9 +174,6 @@ void GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, 
 bool CCharLiteralIsFalse(const char* x,size_t x_len);
 bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const zaimoni::lex_flags flags);
 void C99_literal_is_legal(const char* const x,const size_t x_len,const zaimoni::lex_flags flags,const char* src_filename,size_t line,const type_system& types);
-
-// call before use
-void InitializeCLexerDefs(const virtual_machine::CPUInfo& target);
 
 // equivalent tokens
 // following six are dictated by C99 6.4.6 p3, C++98 2.5 p2
