@@ -18,12 +18,6 @@ struct weak_token;
 struct parse_tree;
 class type_system;
 
-namespace virtual_machine {
-
-class CPUInfo;
-
-}
-
 /* the current draft of UNICODE only uses 17 planes so far */
 /* unfortunately, we can't assume wchar_t is correctly defined */
 /* pick the smallest type that works: need 21 bits, do not want more than 32 bits */
@@ -130,12 +124,6 @@ struct PP_auxfunc
 	func_traits<void (*)(parse_tree&,const size_t,const type_system&)>::function_ref_type LocateExpression;
 	func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type LiteralConvertsToBool;
 };
-
-}
-
-namespace virtual_machine {
-
-class CPUInfo;
 
 }
 

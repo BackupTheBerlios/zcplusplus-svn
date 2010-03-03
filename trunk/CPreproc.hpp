@@ -4,7 +4,7 @@
 #ifndef CPREPROC_HPP
 #define CPREPROC_HPP 1
 
-#include <cstddef>
+#include <stddef.h>
 #include <stdint.h>
 #include "Zaimoni.STL/LexParse/std.h"
 
