@@ -1,8 +1,8 @@
-// CPreproc_autogen.cpp
+// CPreproc_autogen_pp.cpp
 // (C)2009,2010 Kenneth Boyd, license: MIT.txt
 // class CPreprocessor support for autogenerating headers for arbitrary machine targets.
 
-#include "CPreproc.hpp"
+#include "CPreproc_pp.hpp"
 #include "CPUInfo.hpp"
 #include "errors.hpp"
 #include "Zaimoni.STL/POD.hpp"

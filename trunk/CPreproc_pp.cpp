@@ -1,15 +1,15 @@
-// CPreproc.cpp
+// CPreproc_pp.cpp
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
-#include "CPreproc.hpp"
+#include "CPreproc_pp.hpp"
 
-#include <climits>
-#include <ctime>
+#include <limits.h>
+#include <time.h>
 #include <stdexcept>
 #include <unistd.h>
 
 #include "AtomicString.h"
-#include "CSupport.hpp"
+#include "CSupport_pp.hpp"
 #include "C_PPDecimalInteger.hpp"
 #include "CPUInfo.hpp"
 #include "errors.hpp"

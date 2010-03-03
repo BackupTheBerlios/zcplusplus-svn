@@ -3,8 +3,8 @@
 
 #include "CPreproc.hpp"
 
-#include <climits>
-#include <ctime>
+#include <limits.h>
+#include <time.h>
 #include <stdexcept>
 #include <unistd.h>
 

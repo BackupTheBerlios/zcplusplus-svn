@@ -1,4 +1,4 @@
-// CPreproc.hpp
+// CPreproc_pp.hpp
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
 #ifndef CPREPROC_HPP

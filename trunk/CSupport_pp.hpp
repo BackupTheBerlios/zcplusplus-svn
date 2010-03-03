@@ -1,4 +1,4 @@
-// CSupport.hpp
+// CSupport_pp.hpp
 // support for C/C++ language parsing
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
