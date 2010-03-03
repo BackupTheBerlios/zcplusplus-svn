@@ -9,6 +9,8 @@
 #include "Zaimoni.STL/LexParse/Token.hpp"
 #include "Zaimoni.STL/pure.C/format_util.h"
 
+using virtual_machine::umaxint;
+
 #ifndef ZCC_LEGACY_FIXED_INT
 // XXX adjust VM_MAX_BIT_PLATFORM to work inside of CPreprocessor XXX
 #undef VM_MAX_BIT_PLATFORM
@@ -454,11 +456,7 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		if (1==target_machine.C_sizeof_int()) tmp[LIMITS_CHAR_MAX_LINE]->append('U');
 		}
 	// signed character limits
-#ifdef ZCC_LEGACY_FIXED_INT
-	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> s_max(target_machine.signed_max<virtual_machine::std_int_char>());
-#else
-	unsigned_var_int s_max(target_machine.signed_max<virtual_machine::std_int_char>());
-#endif
+	umaxint s_max(target_machine.signed_max<virtual_machine::std_int_char>());
 	tmp[LIMITS_SCHAR_MAX_LINE]->append(z_ucharint_toa(s_max,buf+1,10)-1);
 	if (target_machine.char_is_signed_char()) tmp[LIMITS_CHAR_MAX_LINE]->append(buf);
 	const bool twos_complement_non_trapping = virtual_machine::twos_complement==target_machine.C_signed_int_representation() && !bool_options[boolopt::int_traps];
@@ -756,11 +754,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	zaimoni::autovalarray_ptr_throws<char> signed_min_metabuf(virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+4));
 #endif
 	char* signed_min_buf[virtual_machine::std_int_enum_max] = {signed_min_metabuf, signed_min_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
-#ifdef ZCC_LEGACY_FIXED_INT
-	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp_VM;
-#else
-	unsigned_var_int tmp_VM;
-#endif
+	umaxint tmp_VM;
 	if (target_is_twos_complement && !bool_options[boolopt::int_traps])
 		{
 		*signed_min_buf[0] = '-';

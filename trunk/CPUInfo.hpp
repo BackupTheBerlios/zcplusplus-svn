@@ -51,6 +51,12 @@ struct promotion_info
 #define VM_MAX_BIT_PLATFORM target_machine->C_bit<virtual_machine::std_int_long_long>()
 #endif
 
+#ifdef ZCC_LEGACY_FIXED_INT
+	typedef unsigned_fixed_int<VM_MAX_BIT_PLATFORM> umaxint;
+#else
+	typedef unsigned_var_int umaxint;
+#endif	
+
 // names of macro parameters match names of constructor variables
 // target wchar_t is assumed to be an unsigned integral type
 // we first try to choose the smallest type that can represent a 32-bit UNICODE point
@@ -76,13 +82,8 @@ class CPUInfo
 	CPUInfo(const CPUInfo& src);		// disable copy-construction
 	void operator=(const CPUInfo& src);
 
-#ifdef ZCC_LEGACY_FIXED_INT
-	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> unsigned_maxima[std_int_enum_max];
-	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> signed_maxima[std_int_enum_max];
-#else
-	unsigned_var_int unsigned_maxima[std_int_enum_max];
-	unsigned_var_int signed_maxima[std_int_enum_max];
-#endif
+	umaxint unsigned_maxima[std_int_enum_max];
+	umaxint signed_maxima[std_int_enum_max];
 
 	const unsigned short char_bit;
 	const unsigned short sizeof_short;
@@ -126,26 +127,15 @@ public:
 																	(std_int_long==x) ? C_char_bit()*C_sizeof_long() : C_char_bit()*C_sizeof_long_long() ;}
 
 	signed_int_rep C_signed_int_representation() const {return (signed_int_rep)(signed_int_representation & 3U);};
-#ifdef ZCC_LEGACY_FIXED_INT
-	bool trap_int(const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,std_int_enum machine_type) const;
-	void signed_additive_inverse(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,std_int_enum machine_type) const;
-	void unsigned_additive_inverse(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,std_int_enum machine_type) const;
-	void sign_extend(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,std_int_enum machine_type_from,std_int_enum machine_type_to) const
-#else
-	bool trap_int(const unsigned_var_int& src_int,std_int_enum machine_type) const;
-	void signed_additive_inverse(unsigned_var_int& src_int,std_int_enum machine_type) const;
-	void unsigned_additive_inverse(unsigned_var_int& src_int,std_int_enum machine_type) const;
-	void sign_extend(unsigned_var_int& src_int,std_int_enum machine_type_from,std_int_enum machine_type_to) const
-#endif
+	bool trap_int(const umaxint& src_int,std_int_enum machine_type) const;
+	void signed_additive_inverse(umaxint& src_int,std_int_enum machine_type) const;
+	void unsigned_additive_inverse(umaxint& src_int,std_int_enum machine_type) const;
+	void sign_extend(umaxint& src_int,std_int_enum machine_type_from,std_int_enum machine_type_to) const
 		{
 		signed_additive_inverse(src_int,machine_type_from);
 		signed_additive_inverse(src_int,machine_type_to);
 		};
-#ifdef ZCC_LEGACY_FIXED_INT
-	void C_cast_signed_to_unsigned(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& src_int,std_int_enum machine_type) const
-#else
-	void C_cast_signed_to_unsigned(unsigned_var_int& src_int,std_int_enum machine_type) const
-#endif
+	void C_cast_signed_to_unsigned(umaxint& src_int,std_int_enum machine_type) const
 		{	// C99 6.3.1.3p2 dictates modulo conversion to unsigned
 		if (twos_complement!=C_signed_int_representation() && src_int.test(C_bit(machine_type)-1))
 			{
@@ -160,24 +150,13 @@ public:
 	// use different functions for ptrdiff_t and size_t to future-proof (e.g., DOS has ptrdiff 2 bytes but can go larger than that in object size in some memory models)
 	std_int_enum ptrdiff_t_type() const {return (std_int_enum)((signed_int_representation>>7) & 7U);};
 	std_int_enum size_t_type() const {return (std_int_enum)((signed_int_representation>>7) & 7U);};
-#ifdef ZCC_LEGACY_FIXED_INT
-	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& unsigned_max(std_int_enum x) const {return unsigned_maxima[x-1];};
-	template<std_int_enum x> const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& unsigned_max() const {return unsigned_maxima[x-1];}
-	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& signed_max(std_int_enum x) const {return signed_maxima[x-1];};
-	template<std_int_enum x> const unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& signed_max() const {return signed_maxima[x-1];}
-#else
-	const unsigned_var_int& unsigned_max(std_int_enum x) const {return unsigned_maxima[x-1];};
-	template<std_int_enum x> const unsigned_var_int& unsigned_max() const {return unsigned_maxima[x-1];}
-	const unsigned_var_int& signed_max(std_int_enum x) const {return signed_maxima[x-1];};
-	template<std_int_enum x> const unsigned_var_int& signed_max() const {return signed_maxima[x-1];}
-#endif
+	const umaxint& unsigned_max(std_int_enum x) const {return unsigned_maxima[x-1];};
+	template<std_int_enum x> const umaxint& unsigned_max() const {return unsigned_maxima[x-1];}
+	const umaxint& signed_max(std_int_enum x) const {return signed_maxima[x-1];};
+	template<std_int_enum x> const umaxint& signed_max() const {return signed_maxima[x-1];}
 
 	// return value is weird...it's true iff the promoted x is a negative numeral
-#ifdef ZCC_LEGACY_FIXED_INT
-	bool C_promote_integer(unsigned_fixed_int<VM_MAX_BIT_PLATFORM>& x,const promotion_info& src_type, const promotion_info& dest_type) const;
-#else
-	bool C_promote_integer(unsigned_var_int& x,const promotion_info& src_type, const promotion_info& dest_type) const;
-#endif
+	bool C_promote_integer(umaxint& x,const promotion_info& src_type, const promotion_info& dest_type) const;
 };
 
 #undef SELECT_TARGET_WCHAR_T
