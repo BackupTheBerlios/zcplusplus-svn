@@ -30,9 +30,6 @@
 #include "struct_type.hpp"
 #include "CheckReturn.hpp"
 
-// call before use; defined later
-void InitializeCLexerDefs(const virtual_machine::CPUInfo& target);
-
 using namespace zaimoni;
 using virtual_machine::umaxint;
 
