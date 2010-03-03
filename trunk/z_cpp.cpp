@@ -5,7 +5,7 @@
 #include "Zaimoni.STL/LexParse/Token.hpp"
 #include "_CSupport2.hpp"
 
-#include "CPreproc.hpp"
+#include "CPreproc_pp.hpp"
 #include "load_src.hpp"
 #include "AtomicString.h"
 #include "filesystem.h"
