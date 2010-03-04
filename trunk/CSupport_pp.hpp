@@ -115,14 +115,6 @@ struct PP_auxfunc
 	func_traits<int (*)(const char* src, size_t src_len, const char* src2, size_t src2_len, char*& target)>::function_ref_type EscapedStringConcatenate;
 	// z_cpp 0.0.2
 	func_traits<void (*)(const char* const x, size_t x_len, lex_flags& flags, const char* const src_filename, size_t line_no)>::function_ref_type AddPostLexFlags;
-	// zcc 0.0.2
-	func_traits<const char* (*)(const char* x,size_t x_len)>::function_ref_type EchoReservedKeyword;
-	func_traits<const char* (*)(const char* x,size_t x_len)>::function_ref_type EchoReservedSymbol;
-	func_traits<void (*)(parse_tree&,const type_system&)>::function_ref_type ContextFreeParse;		// return true iff no errors
-	func_traits<void (*)(parse_tree&,type_system&)>::function_ref_type ContextParse;		// return true iff no errors
-	// zcc 0.0.3
-	func_traits<void (*)(parse_tree&,const size_t,const type_system&)>::function_ref_type LocateExpression;
-	func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type LiteralConvertsToBool;
 };
 
 }

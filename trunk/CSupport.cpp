@@ -537,6 +537,7 @@ static const char* CPP_echo_reserved_keyword(const char* x,size_t x_len)
 	return NULL;
 }
 
+#/*cut-cpp*/
 static const char* C99_echo_reserved_symbol(const char* x,size_t x_len)
 {
 	assert(NULL!=x);
@@ -558,6 +559,7 @@ static const char* CPP_echo_reserved_symbol(const char* x,size_t x_len)
 	while(0<i);
 	return NULL;
 }
+#/*cut-cpp*/
 
 namespace C_TYPE {
 
@@ -1049,6 +1051,7 @@ static void message_header(const weak_token& src)
 	message_header(src.src_filename,src.logical_line.first);
 }
 
+#/*cut-cpp*/
 /* XXX this may belong with enum_type XXX */
 static void message_header(const enum_def& src)
 {
@@ -1062,6 +1065,7 @@ static void message_header(const C_union_struct_def& src)
 	assert(src.filename() && *src.filename());
 	message_header(src.filename(),src.loc().first);
 }
+#/*cut-cpp*/
 
 // balanced character count
 static POD_pair<size_t,size_t>
@@ -4497,6 +4501,7 @@ static void _label_literals(parse_tree& src,const type_system& types)
 		}
 }
 
+#/*cut-cpp*/
 // returns true if and only if no errors
 static bool _this_vaguely_where_it_could_be_cplusplus(const parse_tree& src)
 {
@@ -4531,6 +4536,7 @@ static bool _this_vaguely_where_it_could_be_cplusplus(const parse_tree& src)
 	while(0<j);
 	return starting_errors==zcc_errors.err_count();
 }
+#/*cut-cpp*/
 
 // this handles: ( ), [ ], { }
 // the content of ( ), [ ], { } fills the zeroth argument array
@@ -9177,14 +9183,17 @@ static bool CPP_CondenseParseTree(parse_tree& src,const type_system& types)
 	_label_literals(src,types);
 	std::for_each(src.begin<0>(),src.end<0>(),_label_CPP_literal);	// intercepts: true, false, this
 	if (!_match_pairs(src)) return false;
+#/*cut-cpp*/
 	// check that this is at least within a brace pair or a parentheses pair (it is actually required to be in a non-static member function, or constructor mem-initializer
 	if (!_this_vaguely_where_it_could_be_cplusplus(src)) return false;
+#/*cut-cpp*/	
 	CPP_locate_expressions(src,SIZE_MAX,types);
 	if (starting_errors<zcc_errors.err_count()) return false;
 	while(src.is_raw_list() && 1==src.size<0>()) src.eval_to_arg<0>(0);
 	return true;
 }
 
+#/*cut-cpp*/
 //! \todo check that the fact all literals are already legal-form is used
 static void C99_ContextFreeParse(parse_tree& src,const type_system& types)
 {
@@ -9196,6 +9205,7 @@ static void C99_ContextFreeParse(parse_tree& src,const type_system& types)
 	// struct/union/enum specifiers can occur in all sorts of strange places
 	C99_notice_struct_union_enum(src);
 }
+#/*cut-cpp*/
 
 bool CPP_ok_for_toplevel_qualified_name(const parse_tree& x)
 {
@@ -9323,6 +9333,7 @@ static void CPP_notice_scope_glue(parse_tree& src)
 		};
 }
 
+#/*cut-cpp*/
 //! \todo check that the fact all literals are already legal-form is used
 static void CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 {
@@ -9337,6 +9348,7 @@ static void CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 	// class/struct/union/enum specifiers can occur in all sorts of strange places
 	CPP_notice_class_struct_union_enum(src);
 }
+#/*cut-cpp*/
 
 //! \test if.C99/Pass_zero.hpp, if.C99/Pass_zero.h
 bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const lex_flags flags)
@@ -9947,6 +9959,7 @@ void CPP_PPHackTree(parse_tree& src,const type_system& types)
 		}
 }
 
+#/*cut-cpp*/
 static void conserve_tokens(parse_tree& x)
 {
 	if (x.own_index_token<0>())
@@ -9972,6 +9985,7 @@ static void conserve_tokens(parse_tree& x)
 			}
 		}
 }
+#/*cut-cpp*/
 
 //! \todo really should be somewhere in natural-language output
 void INFORM_separated_list(const char* const* x,size_t x_len, const char* const sep)
@@ -10345,6 +10359,7 @@ size_t CPP_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& targ
 	return 0;
 }
 
+#/*cut-cpp*/
 static size_t span_to_semicolon(const parse_tree* const first,const parse_tree* const last)
 {
 	assert(first);
@@ -12129,6 +12144,7 @@ static void CPP_ContextParse(parse_tree& src,type_system& types)
 {
 	CPP_ParseNamespace(src,types,NULL);
 }
+#/*cut-cpp*/
 
 PP_auxfunc C99_aux
  = 	{
@@ -12143,12 +12159,14 @@ PP_auxfunc C99_aux
 	C99_PPHackTree,
 	ConcatenateCStringLiterals,
 	C99_bad_syntax_tokenized,
+#/*cut-cpp*/
 	C99_echo_reserved_keyword,
 	C99_echo_reserved_symbol,
 	C99_ContextFreeParse,
 	C99_ContextParse,
 	C99_locate_expressions,
 	C99_literal_converts_to_bool
+#/*cut-cpp*/
 	};
 
 PP_auxfunc CPlusPlus_aux
@@ -12164,12 +12182,14 @@ PP_auxfunc CPlusPlus_aux
 	CPP_PPHackTree,
 	ConcatenateCStringLiterals,
 	CPP_bad_syntax_tokenized,
+#/*cut-cpp*/
 	CPP_echo_reserved_keyword,
 	CPP_echo_reserved_symbol,
 	CPP_ContextFreeParse,
 	CPP_ContextParse,
 	CPP_locate_expressions,
 	CPP_literal_converts_to_bool
+#/*cut-cpp*/
 	};
 
 #if 0
