@@ -26,8 +26,6 @@
 #include "C_PPOctalInteger.hpp"
 #include "C_PPDecimalFloat.hpp"
 #include "C_PPHexFloat.hpp"
-#include "enum_type.hpp"
-#include "struct_type.hpp"
 #include "CheckReturn.hpp"
 
 using namespace zaimoni;

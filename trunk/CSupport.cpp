@@ -2,7 +2,10 @@
 // support for C/C++ parsing
 // (C)2009, 2010 Kenneth Boyd, license: MIT.txt
 
+#/*cut-cpp*/
 #include "CSupport.hpp"
+#/*cut-cpp*/
+#include "CSupport_pp.hpp"
 #include "_CSupport1.hpp"
 #include "_CSupport2.hpp"
 
@@ -26,8 +29,10 @@
 #include "C_PPOctalInteger.hpp"
 #include "C_PPDecimalFloat.hpp"
 #include "C_PPHexFloat.hpp"
+#/*cut-cpp*/
 #include "enum_type.hpp"
 #include "struct_type.hpp"
+#/*cut-cpp*/
 #include "CheckReturn.hpp"
 
 using namespace zaimoni;
