@@ -1,7 +1,10 @@
 // CPreproc.cpp
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
+#/*cut-cpp*/
 #include "CPreproc.hpp"
+#/*cut-cpp*/
+#include "CPreproc_pp.hpp"
 
 #include <limits.h>
 #include <time.h>
@@ -9,7 +12,10 @@
 #include <unistd.h>
 
 #include "AtomicString.h"
+#/*cut-cpp*/
 #include "CSupport.hpp"
+#/*cut-cpp*/
+#include "CSupport_pp.hpp"
 #include "C_PPDecimalInteger.hpp"
 #include "CPUInfo.hpp"
 #include "errors.hpp"

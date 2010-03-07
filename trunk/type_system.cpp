@@ -1,7 +1,10 @@
 // type_system.cpp
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
+#/*cut-cpp*/
 #include "type_system.hpp"
+#/*cut-cpp*/
+#include "type_system_pp.hpp"
 #include "enum_type.hpp"
 #include "struct_type.hpp"
 #include "Zaimoni.STL/search.hpp"
@@ -14,6 +17,7 @@
 #define DYNAMIC_STRUCTDECL 2
 #define DYNAMIC_C_STRUCTDEF 3
 #define DYNAMIC_ENUMDEF 4
+#/*cut-cpp*/
 
 type_system::type_index type_system::_get_id_union(const char* const x) const
 {
@@ -267,6 +271,7 @@ type_system::get_id_enum_CPP(const char* alias,const char* active_namespace) con
 		}
 	return _get_id_enum_CPP(alias);
 }
+#/*cut-cpp*/
 
 const char* type_system::_name(size_t id) const
 {
@@ -276,6 +281,7 @@ const char* type_system::_name(size_t id) const
 		return dynamic_types[id].first;
 	return "(?)";
 }
+#/*cut-cpp*/
 
 // implement C/C++ typedef system
 void type_system::set_typedef(const char* const alias, const char* filename, const size_t lineno, type_spec& src)
@@ -851,4 +857,5 @@ void type_system::upgrade_decl_to_def(type_index i,C_union_struct_def*& src)
 	tmp.third.first.third = src;
 	src = NULL;
 }
+#/*cut-cpp*/
 

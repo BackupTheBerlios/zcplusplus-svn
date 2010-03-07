@@ -2,7 +2,10 @@
 // (C)2009,2010 Kenneth Boyd, license: MIT.txt
 // class CPreprocessor support for autogenerating headers for arbitrary machine targets.
 
+#/*cut-cpp*/
 #include "CPreproc.hpp"
+#/*cut-cpp*/
+#include "CPreproc_pp.hpp"
 #include "CPUInfo.hpp"
 #include "errors.hpp"
 #include "Zaimoni.STL/POD.hpp"

@@ -28,10 +28,12 @@ public:
 private:
 	typedef zaimoni::POD_triple<const char*,size_t,zaimoni::POD_pair<zaimoni::union_quartet<function_type*,union_struct_decl*,C_union_struct_def*,enum_def*>, unsigned char> > dynamic_type_format;
 	zaimoni::autovalarray_ptr<dynamic_type_format> dynamic_types;
+#/*cut-cpp*/
 	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> > > typedef_registry;
 	zaimoni::weakautovalarray_ptr<const char*> inline_namespace_alias_targets;
 	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,const char*> > inline_namespace_alias_map;
 	zaimoni::autovalarray_ptr<enumerator_info> enumerator_registry;
+#/*cut-cpp*/
 	// uncopyable
 	type_system(const type_system& src);
 	void operator=(const type_system& src);
@@ -42,6 +44,7 @@ public:
 		core_types_size((assert(0<_core_types_size),_core_types_size)),
 		int_priority_size((assert(0<_int_priority_size),_int_priority_size)) {};
 
+#/*cut-cpp*/
 	type_index get_id_union(const char* x) const
 		{
 		assert(x && *x);
@@ -60,14 +63,16 @@ public:
 		return _get_id_enum(x);
 		}
 	type_index get_id_enum_CPP(const char* alias,const char* active_namespace) const;
+#/*cut-cpp*/
 	const char* name(type_index id) const
 		{
 		assert(core_types_size+dynamic_types.size()>=id);
 		return _name(id);
 		}
+#/*cut-cpp*/
 
 	// can throw std::bad_alloc; returned string is owned by the caller (use free to deallocate)
-	// defer seven other variants for now (YAGNI)
+	// defer five other variants for now (YAGNI)
 	static char* namespace_concatenate(const char* const name, const char* const active_namespace,const char* namespace_separator)
 		{
 		assert(name && *name);
@@ -75,8 +80,6 @@ public:
 		assert(namespace_separator && *namespace_separator);
 		return _namespace_concatenate(name,strlen(name),active_namespace,strlen(active_namespace),namespace_separator,strlen(namespace_separator));
 		};
-
-	// defer six other variants for now (YAGNI)
 	static void namespace_concatenate(char* buf, const char* const name, const char* const active_namespace,const char* namespace_separator)
 		{
 		assert(buf);
@@ -94,7 +97,6 @@ public:
 		assert(namespace_separator && *namespace_separator);
 		_namespace_concatenate(buf,name,strlen(name),active_namespace,active_namespace_len,namespace_separator,strlen(namespace_separator));
 		};
-
 
 	void set_typedef(const char* const alias, const char* filename, const size_t lineno, type_spec& src);	// invalidates src
 	void set_typedef_CPP(const char* const name, const char* const active_namespace, const char* filename, const size_t lineno, type_spec& src);	// invalidates src
@@ -120,7 +122,9 @@ public:
 	const C_union_struct_def* get_C_structdef(type_index i);
 	const enum_def* get_enum_def(type_index i);
 	void upgrade_decl_to_def(type_index i,C_union_struct_def*& src);
+#/*cut-cpp*/
 private:
+#/*cut-cpp*/
 	type_index _get_id_union(const char* x) const;
 	type_index _get_id_union_CPP(const char* x) const;
 	type_index _get_id_enum(const char* x) const;
@@ -128,11 +132,12 @@ private:
 	type_index _get_id_struct_class(const char* x) const;
 	type_index _get_id_struct_class_CPP(const char* x) const;
 
+#/*cut-cpp*/
 	const char* _name(type_index id) const;
+#/*cut-cpp*/
 	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> dealias_inline_namespace_index(const char* alias) const;
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* _get_typedef_CPP(const char* alias) const;
 	const enumerator_info* _get_enumerator_CPP(const char* alias) const;
-
 	bool is_inline_namespace_CPP(const char* active_namespace, size_t active_namespace_len) const;
 	const char* canonical_name_is_inline_namespace_alias_target(const char* name, size_t name_len, const char* active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len) const;
 	const char* construct_canonical_name_and_aliasing_CPP(const char* name, size_t name_len, const char* active_namespace, size_t active_namespace_len);
@@ -140,5 +145,6 @@ private:
 	// can throw std::bad_alloc; returned string is owned by the caller (use free to deallocate)
 	static char* _namespace_concatenate(const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len);
 	static void _namespace_concatenate(char* buf, const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len);
+#/*cut-cpp*/
 };
 #endif
