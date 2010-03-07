@@ -1,5 +1,5 @@
 // type_system.cpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #/*cut-cpp*/
 #include "type_system.hpp"
@@ -383,6 +383,7 @@ void type_system::set_enumerator_def(const char* const alias, zaimoni::POD_pair<
 {
 	assert(alias && *alias);
 	assert(src_filename && *src_filename);
+	assert(type);
 	errr tmp = binary_find(alias,strlen(alias),enumerator_registry.data(),enumerator_registry.size());
 	assert(0>tmp);		// error to call with conflicting prior definition
 	if (0<=tmp) return;	// conflicting prior definition
@@ -397,6 +398,7 @@ void type_system::set_enumerator_def_CPP(const char* name, const char* const act
 {
 	assert(name && *name);
 	assert(src_filename && *src_filename);
+	assert(type);
 
 	// use active namespace if present
 	if (active_namespace && *active_namespace)
@@ -411,7 +413,11 @@ const type_system::enumerator_info* type_system::get_enumerator(const char* cons
 	//! \todo: strip off trailing inline namespaces
 	// <unknown> is the hack for anonymous namespaces taken from GCC, it's always inline
 	errr tmp = binary_find(alias,strlen(alias),enumerator_registry.data(),enumerator_registry.size());
-	if (0<=tmp) return &enumerator_registry[tmp];
+	if (0<=tmp)
+		{
+		assert(get_enum_def(enumerator_registry[tmp].second.first.first));
+		return &enumerator_registry[tmp];
+		}
 	return NULL;
 }
 
@@ -798,7 +804,7 @@ type_system::type_index type_system::register_enum_def_CPP(const char* name, con
 	return register_enum_def(name,logical_line,src_filename);
 }
 
-const function_type* type_system::get_functype(type_system::type_index i)
+const function_type* type_system::get_functype(type_system::type_index i)  const
 {
 	if (core_types_size>=i) return NULL;
 	i -= core_types_size;
@@ -809,7 +815,7 @@ const function_type* type_system::get_functype(type_system::type_index i)
 	return tmp.third.first.first;
 }
 
-const union_struct_decl* type_system::get_structdecl(type_system::type_index i)
+const union_struct_decl* type_system::get_structdecl(type_system::type_index i)  const
 {
 	if (core_types_size>=i) return NULL;
 	i -= core_types_size;
@@ -820,7 +826,7 @@ const union_struct_decl* type_system::get_structdecl(type_system::type_index i)
 	return tmp.third.first.second;
 }
 
-const C_union_struct_def* type_system::get_C_structdef(type_system::type_index i)
+const C_union_struct_def* type_system::get_C_structdef(type_system::type_index i)  const
 {
 	if (core_types_size>=i) return NULL;
 	i -= core_types_size;
@@ -831,7 +837,7 @@ const C_union_struct_def* type_system::get_C_structdef(type_system::type_index i
 	return tmp.third.first.third;
 }
 
-const enum_def* type_system::get_enum_def(type_index i)
+const enum_def* type_system::get_enum_def(type_index i)  const
 {
 	if (core_types_size>=i) return NULL;
 	i -= core_types_size;

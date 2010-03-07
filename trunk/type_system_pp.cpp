@@ -1,5 +1,5 @@
 // type_system_pp.cpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #include "type_system_pp.hpp"
 #include "enum_type.hpp"

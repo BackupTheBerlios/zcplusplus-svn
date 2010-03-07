@@ -1,5 +1,5 @@
 // type_system.hpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #ifndef TYPE_SYSTEM_HPP
 #define TYPE_SYSTEM_HPP 1
@@ -117,10 +117,10 @@ public:
 	type_index register_C_structdef_CPP(const char* name, const char* active_namespace, zaimoni::POD_pair<size_t,size_t> logical_line, const char* src_filename, int keyword);
 	type_index register_enum_def(const char* alias, zaimoni::POD_pair<size_t,size_t> logical_line, const char* src_filename);
 	type_index register_enum_def_CPP(const char* name, const char* active_namespace, zaimoni::POD_pair<size_t,size_t> logical_line, const char* src_filename);
-	const function_type* get_functype(type_index i);
-	const union_struct_decl* get_structdecl(type_index i);
-	const C_union_struct_def* get_C_structdef(type_index i);
-	const enum_def* get_enum_def(type_index i);
+	const function_type* get_functype(type_index i) const;
+	const union_struct_decl* get_structdecl(type_index i) const;
+	const C_union_struct_def* get_C_structdef(type_index i) const;
+	const enum_def* get_enum_def(type_index i) const;
 	void upgrade_decl_to_def(type_index i,C_union_struct_def*& src);
 #/*cut-cpp*/
 private:

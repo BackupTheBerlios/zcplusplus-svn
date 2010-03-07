@@ -1,5 +1,5 @@
 // type_system_pp.hpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #ifndef TYPE_SYSTEM_HPP
 #define TYPE_SYSTEM_HPP 1

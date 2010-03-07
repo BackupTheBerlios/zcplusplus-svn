@@ -1,4 +1,4 @@
-// CSupport.hpp
+// CSupport_pp.hpp
 // support for C/C++ language parsing
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
@@ -83,7 +83,6 @@ struct PP_auxfunc
 	func_traits<size_t (*)(const char*)>::function_ref_type LengthOfSystemHeader;			// non-zero iff system header exactly matched
 	func_traits<signed int (*)(const char* const x, size_t x_len)>::function_ref_type EncodePPOpPunc;	// encode pp op/punc; 0>= if not found
 	func_traits<unsigned int (*)(signed int)>::function_ref_type GetPPOpPuncFlags;			// returns flag set, 0 if nothing matched
-	func_traits<size_t (*)(const char*,size_t)>::function_ref_type LengthOfStringLiteral;	// returns length of string literal as an array of its char type
 	func_traits<bool (*)(const weak_token*,size_t,bool,bool)>::function_ref_type BalancingErrorCheck;		// slow; returns true if any errors found
 	func_traits<bool (*)(const weak_token*,size_t,bool,bool)>::function_ref_type ControlExpressionContextFreeErrorCheck;	// returns true if any errors found
 	func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type CondenseParseTree;	// returns number of errors detected
