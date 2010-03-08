@@ -519,6 +519,7 @@ static const POD_pair<const char*,size_t> valid_keyword[]
 
 BOOST_STATIC_ASSERT(C_KEYWORD_NONSTRICT_LB<C_KEYWORD_STRICT_UB);
 BOOST_STATIC_ASSERT(CPP_KEYWORD_NONSTRICT_LB<C_KEYWORD_STRICT_UB);
+#/*cut-cpp*/
 
 static const char* C99_echo_reserved_keyword(const char* x,size_t x_len)
 {
@@ -542,7 +543,6 @@ static const char* CPP_echo_reserved_keyword(const char* x,size_t x_len)
 	return NULL;
 }
 
-#/*cut-cpp*/
 static const char* C99_echo_reserved_symbol(const char* x,size_t x_len)
 {
 	assert(NULL!=x);
@@ -3450,6 +3450,7 @@ static bool is_naked_parentheses_pair(const parse_tree& src)
 #endif
 			&&	src.empty<1>() && src.empty<2>();
 }
+#/*cut-cpp*/
 
 static bool is_naked_brace_pair(const parse_tree& src)
 {
@@ -3470,6 +3471,7 @@ static bool is_naked_bracket_pair(const parse_tree& src)
 #endif
 			&&	src.empty<1>() && src.empty<2>();
 }
+#/*cut-cpp*/
 
 #ifndef NDEBUG
 static bool is_array_deref_strict(const parse_tree& src)
@@ -3838,6 +3840,7 @@ static bool is_C99_conditional_operator_expression(const parse_tree& src)
 			&&	1==src.size<1>() && (PARSE_EXPRESSION & src.data<2>()->flags)
 			&&	1==src.size<2>() && (PARSE_EXPRESSION & src.data<2>()->flags);
 }
+#/*cut-cpp*/
 
 static bool is_C99_anonymous_specifier(const parse_tree& src,const char* const spec_name)
 {
@@ -3911,7 +3914,7 @@ static void make_target_postfix_arg(parse_tree& src,size_t& offset,const size_t 
 	src.c_array<0>()[j].clear();
 }
 
-void C99_notice_struct_union_enum(parse_tree& src)
+static void C99_notice_struct_union_enum(parse_tree& src)
 {
 	assert(!src.empty<0>());
 	size_t i = 0;
@@ -4005,7 +4008,7 @@ void C99_notice_struct_union_enum(parse_tree& src)
 	if (0<offset) src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
 }
 
-void CPP_notice_class_struct_union_enum(parse_tree& src)
+static void CPP_notice_class_struct_union_enum(parse_tree& src)
 {
 	assert(!src.empty<0>());
 	size_t i = 0;
@@ -4099,6 +4102,7 @@ void CPP_notice_class_struct_union_enum(parse_tree& src)
 		};
 	if (0<offset) src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
 }
+#/*cut-cpp*/
 
 bool convert_to(umaxint& dest,const C_PPIntCore& src)
 {
@@ -9260,9 +9264,8 @@ static void C99_ContextFreeParse(parse_tree& src,const type_system& types)
 	// struct/union/enum specifiers can occur in all sorts of strange places
 	C99_notice_struct_union_enum(src);
 }
-#/*cut-cpp*/
 
-bool CPP_ok_for_toplevel_qualified_name(const parse_tree& x)
+static bool CPP_ok_for_toplevel_qualified_name(const parse_tree& x)
 {
 	if (!x.is_atomic()) return false;
 	if (PARSE_PRIMARY_TYPE & x.flags) return false;
@@ -9388,7 +9391,6 @@ static void CPP_notice_scope_glue(parse_tree& src)
 		};
 }
 
-#/*cut-cpp*/
 //! \todo check that the fact all literals are already legal-form is used
 static void CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 {
@@ -10057,6 +10059,7 @@ void INFORM_separated_list(const char* const* x,size_t x_len, const char* const 
 			}
 		};
 }
+#/*cut-cpp*/
 
 //! \todo should this be a type_system member?
 static bool check_for_typedef(type_spec& dest,const char* const src,const type_system& types)
@@ -10389,6 +10392,7 @@ public:
 	uintmax_t get_flags() const {return flags;};
 	void value_copy_type(type_spec& dest) const {value_copy(dest,base_type);};
 };
+#/*cut-cpp*/
 
 size_t C99_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
 {
