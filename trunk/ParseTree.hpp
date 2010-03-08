@@ -341,6 +341,15 @@ struct parse_tree
 		index_tokens[dest_idx].flags = src_flags;
 		control_index_token<dest_idx>(false);
 		}
+	template<size_t dest_idx> void set_index_token_from_str_literal(const char* const src)
+		{
+		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>dest_idx);
+		assert(NULL!=src);
+		if (own_index_token<dest_idx>()) { free(const_cast<char*>(index_tokens[dest_idx].token.first)); };
+		index_tokens[dest_idx].token.first = src;
+		index_tokens[dest_idx].token.second = strlen(src);
+		control_index_token<dest_idx>(false);
+		}
 
 	template<size_t src_idx,class scanner> size_t get_span(size_t i,scanner& x) const
 		{

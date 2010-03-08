@@ -5156,6 +5156,7 @@ static bool eval_unary_plus(parse_tree& src, const type_system& types)
 	assert(is_C99_unary_operator_expression<'+'>(src));
 	if (0<src.data<2>()->type_code.pointer_power_after_array_decay())
 		{	// assume C++98 interpretation, as this is illegal in C99
+		//! \test cpp/default/Pass_if_control27.hpp
 		if (!(parse_tree::INVALID & src.flags))
 			{
 			assert(src.type_code==src.data<2>()->type_code);
@@ -5164,7 +5165,7 @@ static bool eval_unary_plus(parse_tree& src, const type_system& types)
 			}
 		return false;
 		}
-	// handle integer-like literals like a real integer literal
+ 	// handle integer-like literals like a real integer literal
 	else if (converts_to_integerlike(src.data<2>()->type_code) && (PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
 		{
 		const type_spec old_type = src.type_code;
@@ -5231,7 +5232,7 @@ static void C_unary_plusminus_easy_syntax_check(parse_tree& src,const type_syste
 	// can type if result is a primitive arithmetic type
 	if (converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index))
 		src.type_code.set_type(default_promote_type(src.data<2>()->type_code.base_type_index));
-
+	
 	const size_t arg_unary_subtype 	= (is_C99_unary_operator_expression<'-'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_NEG
 									: (is_C99_unary_operator_expression<'+'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_PLUS : 0;
 	if (!arg_unary_subtype) return;
@@ -5688,8 +5689,10 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool ha
 		if (negative_signed_int)
 			// convert to parsed - literal
 			force_unary_negative_literal(src,tmp);
-		else	// convert to positive literal
+		else{	// convert to positive literal
+			src.destroy();
 			src = tmp;
+			}
 		src.type_code = old_type;
 		return true;
 		};

@@ -5231,12 +5231,23 @@ static parse_tree decimal_literal(const char* src,const parse_tree& loc_src,cons
 	_label_one_literal(dest,types);
 	return dest;
 }
+#/*cut-cpp*/
+
+static const enum_def* is_noticed_enumerator(const parse_tree& x,const type_system& types)
+{
+	const enum_def* tmp = NULL;
+	if (x.is_atomic() && (C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags))
+		tmp = types.get_enum_def(x.type_code.base_type_index);
+	return tmp;
+}
+#/*cut-cpp*/
 
 static bool eval_unary_plus(parse_tree& src, const type_system& types)
 {
 	assert(is_C99_unary_operator_expression<'+'>(src));
 	if (0<src.data<2>()->type_code.pointer_power_after_array_decay())
 		{	// assume C++98 interpretation, as this is illegal in C99
+		//! \test cpp/default/Pass_if_control27.hpp
 		if (!(parse_tree::INVALID & src.flags))
 			{
 			assert(src.type_code==src.data<2>()->type_code);
@@ -5245,7 +5256,26 @@ static bool eval_unary_plus(parse_tree& src, const type_system& types)
 			}
 		return false;
 		}
-	// handle integer-like literals like a real integer literal
+#/*cut-cpp*/
+#if 0-0
+	else if (is_noticed_enumerator(*src.data<2>(),types))
+		{
+		parse_tree tmp3;
+		const promote_aux dest_type(src.type_code.base_type_index);
+		const type_system::enumerator_info* const tmp2 = types.get_enumerator(src.data<2>()->index_tokens[0].token.first);
+		assert(tmp2);
+		{
+		umaxint res_int;
+		const bool tmp_negative = target_machine->C_promote_integer(res_int,umaxint(tmp2->second.first.third),dest_type);
+		if (!VM_to_signed_literal(tmp3,tmp_negative,res_int,*src.data<2>(),types) return false;
+		}
+		src.destroy();
+		src = tmp3;
+		return true;
+		}
+#endif
+#/*cut-cpp*/
+ 	// handle integer-like literals like a real integer literal
 	else if (converts_to_integerlike(src.data<2>()->type_code) && (PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
 		{
 		const type_spec old_type = src.type_code;
@@ -5312,7 +5342,16 @@ static void C_unary_plusminus_easy_syntax_check(parse_tree& src,const type_syste
 	// can type if result is a primitive arithmetic type
 	if (converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index))
 		src.type_code.set_type(default_promote_type(src.data<2>()->type_code.base_type_index));
-
+#/*cut-cpp*/
+	// can type if an (C++0X unscoped) enumerator
+	else if (is_noticed_enumerator(*src.data<2>(),types))
+		{
+		const type_system::enumerator_info* const tmp2 = types.get_enumerator(src.data<2>()->index_tokens[0].token.first);
+		assert(tmp2);
+		src.type_code.set_type(tmp2->second.first.first);
+		}
+#/*cut-cpp*/
+	
 	const size_t arg_unary_subtype 	= (is_C99_unary_operator_expression<'-'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_NEG
 									: (is_C99_unary_operator_expression<'+'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_PLUS : 0;
 	if (!arg_unary_subtype) return;
@@ -5342,6 +5381,15 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 	// can type if result is a primitive arithmetic type
 	if (converts_to_arithmeticlike(src.data<2>()->type_code))
 		src.type_code.set_type(default_promote_type(src.data<2>()->type_code.base_type_index));
+#/*cut-cpp*/
+	// can type if an (C++0X unscoped) enumerator
+	else if (is_noticed_enumerator(*src.data<2>(),types))
+		{
+		const type_system::enumerator_info* const tmp2 = types.get_enumerator(src.data<2>()->index_tokens[0].token.first);
+		assert(tmp2);
+		src.type_code.set_type(tmp2->second.first.first);
+		}
+#/*cut-cpp*/
 
 	// two deep:
 	// 1) if inner +/- is applied to an arithmetic literal, try to crunch it (but leave - signed alone)
@@ -5769,8 +5817,10 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool ha
 		if (negative_signed_int)
 			// convert to parsed - literal
 			force_unary_negative_literal(src,tmp);
-		else	// convert to positive literal
+		else{	// convert to positive literal
+			src.destroy();
 			src = tmp;
+			}
 		src.type_code = old_type;
 		return true;
 		};
@@ -10401,7 +10451,21 @@ static bool is_identifier_list(const parse_tree& src,func_traits<const char* (*)
 }
 #endif
 
-static void C99_CPP_handle_static_assertion(parse_tree& src,type_system& types,PP_auxfunc& langinfo,const size_t i,const char* const err)
+static void notice_enumerator_CPP(parse_tree& x,const type_system& types,const char* const active_namespace)
+{
+	if (x.is_atomic() && (C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags))
+		{
+		const type_system::enumerator_info* const tmp = types.get_enumerator_CPP(x.index_tokens[0].token.first,active_namespace);
+		if (tmp)
+			{
+			x.set_index_token_from_str_literal<0>(tmp->first);
+			x.type_code.set_type(tmp->second.first.first);
+			// XXX would be handy to keep the tmp around, consider as time optimization XXX
+			}
+		}
+}
+
+static void C99_CPP_handle_static_assertion(parse_tree& src,type_system& types,PP_auxfunc& langinfo,const size_t i,const char* const err,const char* const active_namespace)
 {
 	assert(err && *err);
 	// find the next ';'
@@ -10454,6 +10518,10 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,type_system& types,P
 		_fatal("insufficient RAM to parse static assertion");
 		};
 	zaimoni::autotransform_n<void (*)(parse_tree&,const parse_tree&)>(parsetree.c_array<0>(),src.data<0>()[i+1].data<0>(),k,value_copy);
+	// type all enumerators now to make life reasonable later on for the expression-parser
+	size_t enum_scan = k;
+	do	notice_enumerator_CPP(parsetree.c_array<0>()[--enum_scan],types,active_namespace);
+	while(0<enum_scan);
 	}
 	// init above correctly
 	// snip from Condense
@@ -10959,7 +11027,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		// C static assertion scanner
 		if (robust_token_is_string<14>(src.data<0>()[i],"_Static_Assert"))
 			{	// _Static_Assert ( constant-expression , string-literal ) ;
-			C99_CPP_handle_static_assertion(src,types,*CLexer->pp_support,i," : control expression for static assertion must evaluate to a single integer constant (C1X 6.7.9p3)");
+			C99_CPP_handle_static_assertion(src,types,*CLexer->pp_support,i," : control expression for static assertion must evaluate to a single integer constant (C1X 6.7.9p3)",NULL);
 			continue;
 			};
 		// XXX C allows mixing definitions and declaring variables at the same time, but this is a bit unusual
@@ -11448,7 +11516,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		// C++ static assertion scanner
 		if (robust_token_is_string<13>(src.data<0>()[i],"static_assert"))
 			{	// static_assert ( constant-expression , string-literal ) ;
-			C99_CPP_handle_static_assertion(src,types,*CPlusPlusLexer->pp_support,i," : control expression for static assertion must be a constant convertible to bool (C++0X 7p4)");
+			C99_CPP_handle_static_assertion(src,types,*CPlusPlusLexer->pp_support,i," : control expression for static assertion must be a constant convertible to bool (C++0X 7p4)",active_namespace);
 			continue;
 			};
 		// XXX C++ allows mixing definitions and declaring variables at the same time, but this is a bit unusual
