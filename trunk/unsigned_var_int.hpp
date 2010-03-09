@@ -18,6 +18,7 @@ public:
 	explicit unsigned_var_int(uintmax_t src);
 	unsigned_var_int(uintmax_t src,size_t bytecount);
 	unsigned_var_int(const unsigned_var_int& src);
+	unsigned_var_int(const uchar_blob& src);
 
 	unsigned_var_int& operator=(const unsigned_var_int& src);
 	unsigned_var_int& operator=(uintmax_t src);

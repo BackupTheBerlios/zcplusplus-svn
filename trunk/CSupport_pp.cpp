@@ -4847,6 +4847,57 @@ static parse_tree decimal_literal(const char* src,const parse_tree& loc_src,cons
 	return dest;
 }
 
+static void force_unary_positive_literal(parse_tree& dest,const parse_tree& src)
+{
+	assert(0==dest.size<0>());
+	assert(0==dest.size<1>());
+	assert(1==dest.size<2>());
+	assert(NULL==dest.index_tokens[1].token.first);
+	dest.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+	*dest.c_array<2>() = src;
+	dest.core_flag_update();
+	dest.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+	dest.subtype = C99_UNARY_SUBTYPE_PLUS;
+	assert(NULL!=dest.index_tokens[0].src_filename);
+	assert(is_C99_unary_operator_expression<'+'>(dest));
+}
+
+static void force_unary_negative_token(parse_tree& dest,parse_tree* src,const parse_tree& loc_src)
+{
+	assert(NULL!=src);
+	dest.clear();
+	dest.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
+	dest.grab_index_token_location_from<0,0>(loc_src);
+	dest.fast_set_arg<2>(src);
+	dest.core_flag_update();
+	dest.flags |= PARSE_STRICT_UNARY_EXPRESSION;
+	dest.subtype = C99_UNARY_SUBTYPE_NEG;
+	// do not handle type here: C++ operator overloading risk
+	assert(NULL!=dest.index_tokens[0].src_filename);
+	assert(is_C99_unary_operator_expression<'-'>(dest));
+}
+
+// this one hides a slight inefficiency: negative literals take 2 dynamic memory allocations, positive literals take one
+// return code is true for success, false for memory failure
+static bool VM_to_signed_literal(parse_tree& x,const bool is_negative, const umaxint& src_int,const parse_tree& src,const type_system& types)
+{
+	if (is_negative)
+		{
+		parse_tree* tmp = _new_buffer<parse_tree>(1);
+		if (NULL==tmp) return false;
+		if (!VM_to_literal(*tmp,src_int,src,types)) return false;
+		force_unary_negative_token(x,tmp,*tmp);
+		}
+	else if (!VM_to_literal(x,src_int,src,types))
+		return false;
+	return true;
+}
+
+static bool is_integerlike_literal(const parse_tree& x)
+{
+	return converts_to_integerlike(x.type_code) && (PARSE_PRIMARY_EXPRESSION & x.flags);
+}
+
 static bool eval_unary_plus(parse_tree& src, const type_system& types)
 {
 	assert(is_C99_unary_operator_expression<'+'>(src));
@@ -4860,9 +4911,9 @@ static bool eval_unary_plus(parse_tree& src, const type_system& types)
 			return true;
 			}
 		return false;
-		}
+		};
  	// handle integer-like literals like a real integer literal
-	else if (converts_to_integerlike(src.data<2>()->type_code) && (PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+	if (is_integerlike_literal(*src.data<2>()))
 		{
 		const type_spec old_type = src.type_code;
 		src.eval_to_arg<2>(0);
@@ -4884,7 +4935,7 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,func_trai
 		src.type_code = old_type;		
 		return true;
 		};
-	if (converts_to_integer(src.data<2>()->type_code) && 1==(src.type_code.base_type_index-C_TYPE::INT)%2 && (PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+	if (is_integerlike_literal(*src.data<2>()) && 1==(src.type_code.base_type_index-C_TYPE::INT)%2)
 		{	// unsigned...we're fine
 		const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(src.type_code.base_type_index);
 		const type_spec old_type = src.type_code;
@@ -5216,36 +5267,6 @@ static void force_unary_negative_literal(parse_tree& dest,const parse_tree& src)
 	dest.core_flag_update();
 	dest.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 	dest.subtype = C99_UNARY_SUBTYPE_NEG;
-	assert(NULL!=dest.index_tokens[0].src_filename);
-	assert(is_C99_unary_operator_expression<'-'>(dest));
-}
-
-static void force_unary_positive_literal(parse_tree& dest,const parse_tree& src)
-{
-	assert(0==dest.size<0>());
-	assert(0==dest.size<1>());
-	assert(1==dest.size<2>());
-	assert(NULL==dest.index_tokens[1].token.first);
-	dest.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-	*dest.c_array<2>() = src;
-	dest.core_flag_update();
-	dest.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-	dest.subtype = C99_UNARY_SUBTYPE_PLUS;
-	assert(NULL!=dest.index_tokens[0].src_filename);
-	assert(is_C99_unary_operator_expression<'+'>(dest));
-}
-
-static void force_unary_negative_token(parse_tree& dest,parse_tree* src,const parse_tree& loc_src)
-{
-	assert(NULL!=src);
-	dest.clear();
-	dest.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
-	dest.grab_index_token_location_from<0,0>(loc_src);
-	dest.fast_set_arg<2>(src);
-	dest.core_flag_update();
-	dest.flags |= PARSE_STRICT_UNARY_EXPRESSION;
-	dest.subtype = C99_UNARY_SUBTYPE_NEG;
-	// do not handle type here: C++ operator overloading risk
 	assert(NULL!=dest.index_tokens[0].src_filename);
 	assert(is_C99_unary_operator_expression<'-'>(dest));
 }
@@ -6391,22 +6412,6 @@ static bool terse_locate_add_expression(parse_tree& src, size_t& i)
 			}
 		}
 	return false;
-}
-
-// this one hides a slight inefficiency: negative literals take 2 dynamic memory allocations, positive literals take one
-// return code is true for success, false for memory failure
-static bool VM_to_signed_literal(parse_tree& x,const bool is_negative, const umaxint& src_int,const parse_tree& src,const type_system& types)
-{
-	if (is_negative)
-		{
-		parse_tree* tmp = _new_buffer<parse_tree>(1);
-		if (NULL==tmp) return false;
-		if (!VM_to_literal(*tmp,src_int,src,types)) return false;
-		force_unary_negative_token(x,tmp,*tmp);
-		}
-	else if (!VM_to_literal(x,src_int,src,types))
-		return false;
-	return true;
 }
 
 static bool eval_add_expression(parse_tree& src, const type_system& types, bool hard_error, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool,func_traits<bool (*)(umaxint&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)

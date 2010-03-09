@@ -20,6 +20,12 @@ unsigned_var_int::unsigned_var_int(const unsigned_var_int& src)
 	memmove(_data.c_array(),src._data.data(),src._data.size());
 }
 
+unsigned_var_int::unsigned_var_int(const uchar_blob& src)
+{
+	_data.init(src.size());
+	memmove(_data.c_array(),src.data(),src.size());
+}
+
 unsigned_var_int::unsigned_var_int(uintmax_t src)
 {
 	const size_t n = bytes_to_represent(src);
