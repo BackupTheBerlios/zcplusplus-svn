@@ -63,6 +63,13 @@
 @for %%f in (staticassert.C1X\Pass*.hpp) do @echo %CPP_ISO% %%f & @%CPP_ISO% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
 @for %%f in (staticassert.C1X\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
 
+@echo Checking ZCC implementation-defined errors and features
+@echo ====
+@for %%f in (default\staticassert\Pass*.h) do @echo %CPP% %%f & @%CPP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\staticassert\Pass*.h) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+@for %%f in (default\staticassert\Pass*.hpp) do @echo %CPP% %%f & @%CPP% %%f || (set /a FAILED=FAILED+1 & set BAD_FAIL_NAME=%BAD_FAIL_NAME% %%f)
+@for %%f in (default\staticassert\Pass*.hpp) do @set /a ACCEPT_TEST=ACCEPT_TEST+1
+
 @echo %BAD_PASS% of %REJECT_TEST% rejection tests accepted
 @if not "%BAD_PASS_NAME%"=="LastAccepted:" @echo %BAD_PASS_NAME%
 @echo %FAILED% of %ACCEPT_TEST% acceptance tests rejected

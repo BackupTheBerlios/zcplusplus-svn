@@ -24,5 +24,8 @@ PASS CPP_ISO Pass*
 PASS CPP_ISO decl.C99/Pass*
 PASS CPP_ISO staticassert.C1X/Pass*
 
+ECHO Checking ZCC implementation-defined errors and features
+PASS CPP default/staticassert/Pass*
+
 EPILOG
 

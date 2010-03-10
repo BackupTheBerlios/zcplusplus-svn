@@ -48,6 +48,7 @@ def SpawnTestCases(filename):
 	test_lines = []
 	suffixes = []
 	include_files = []
+	object_macros = {}
 	with open(filename,'r') as f:
 		for line in f:
 			if line.startswith('SUFFIXES '):
@@ -62,6 +63,20 @@ def SpawnTestCases(filename):
 				target = line[17:].strip()
 				test_lines.append('#if '+target+'\n')
 				test_lines.append('#endif\n')
+			elif line.startswith('TRUE_EXPRESSION '):
+				target = line[16:].strip()
+				test_lines.append('#if '+target+'\n')
+				test_lines.append('#else\n')
+				test_lines.append('#error '+target+' is false\n')
+				test_lines.append('#endif\n')
+			elif line.startswith('FALSE_EXPRESSION '):
+				target = line[17:].strip()
+				test_lines.append('#if '+target+'\n')
+				test_lines.append('#error '+target+' is true\n')
+				test_lines.append('#endif\n')
+			elif line.startswith('OBJECTLIKE_MACRO '):
+				target = line[17:].strip().split()
+				object_macros[target[0]] = target[1:]
 			else:
 				test_lines.append(line);
 
@@ -74,6 +89,11 @@ def SpawnTestCases(filename):
 		for line in test_lines:
 			if line.startswith('INCLUDE_FILES '):
 				TargetFile.write('#include <'+include_files[Idx]+'>\n')
+			elif 0<len(object_macros):
+				for x in object_macros.keys():
+					if -1<line.find(x):
+						line = object_macros[x][Idx].join(line.split(x))
+				TargetFile.write(line)
 			else:
 				TargetFile.write(line)
 		TargetFile.close()
