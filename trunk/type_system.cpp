@@ -384,6 +384,7 @@ void type_system::set_enumerator_def(const char* const alias, zaimoni::POD_pair<
 	assert(alias && *alias);
 	assert(src_filename && *src_filename);
 	assert(type);
+	assert(get_enum_def(type));
 	errr tmp = binary_find(alias,strlen(alias),enumerator_registry.data(),enumerator_registry.size());
 	assert(0>tmp);		// error to call with conflicting prior definition
 	if (0<=tmp) return;	// conflicting prior definition

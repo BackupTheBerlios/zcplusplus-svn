@@ -4819,7 +4819,9 @@ static bool VM_to_literal(parse_tree& dest, const umaxint& src_int,const parse_t
 	dest.clear();
 	dest.grab_index_token_from<0>(new_token.first,new_token.second);
 	dest.grab_index_token_location_from<0,0>(src);
+	assert((C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_PP_NUMERAL) & dest.index_tokens[0].flags);
 	_label_one_literal(dest,types);
+	assert(PARSE_EXPRESSION & dest.flags);
 	return true;
 }
 
@@ -4864,7 +4866,8 @@ static void force_unary_positive_literal(parse_tree& dest,const parse_tree& src)
 
 static void force_unary_negative_token(parse_tree& dest,parse_tree* src,const parse_tree& loc_src)
 {
-	assert(NULL!=src);
+	assert(src);
+	assert(PARSE_EXPRESSION & src->flags);
 	dest.clear();
 	dest.grab_index_token_from_str_literal<0>("-",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
 	dest.grab_index_token_location_from<0,0>(loc_src);
@@ -4886,6 +4889,7 @@ static bool VM_to_signed_literal(parse_tree& x,const bool is_negative, const uma
 		parse_tree* tmp = _new_buffer<parse_tree>(1);
 		if (NULL==tmp) return false;
 		if (!VM_to_literal(*tmp,src_int,src,types)) return false;
+		assert(PARSE_EXPRESSION & tmp->flags);
 		force_unary_negative_token(x,tmp,*tmp);
 		}
 	else if (!VM_to_literal(x,src_int,src,types))
