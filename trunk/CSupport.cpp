@@ -5249,6 +5249,8 @@ static void force_unary_positive_literal(parse_tree& dest,const parse_tree& src)
 	dest.core_flag_update();
 	dest.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 	dest.subtype = C99_UNARY_SUBTYPE_PLUS;
+	if (converts_to_arithmeticlike(dest.data<2>()->type_code))
+		dest.type_code = dest.data<2>()->type_code;
 	assert(NULL!=dest.index_tokens[0].src_filename);
 	assert(is_C99_unary_operator_expression<'+'>(dest));
 }
@@ -5264,6 +5266,8 @@ static void force_unary_negative_token(parse_tree& dest,parse_tree* src,const pa
 	dest.core_flag_update();
 	dest.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 	dest.subtype = C99_UNARY_SUBTYPE_NEG;
+	if (converts_to_arithmeticlike(dest.data<2>()->type_code))
+		dest.type_code = dest.data<2>()->type_code;
 	// do not handle type here: C++ operator overloading risk
 	assert(NULL!=dest.index_tokens[0].src_filename);
 	assert(is_C99_unary_operator_expression<'-'>(dest));
@@ -5342,7 +5346,17 @@ static bool eval_unary_plus(parse_tree& src, const type_system& types)
 		};
 #/*cut-cpp*/
 	if (is_noticed_enumerator(*src.data<2>(),types))
+		{
 		if (!enumerator_to_integer_representation(*src.c_array<2>(),types)) return false;
+		if (is_C99_unary_operator_expression<'-'>(*src.data<2>()))
+			{	// enumerator went negative: handle
+			parse_tree tmp = *src.c_array<2>();
+			src.c_array<2>()->clear();
+			src.destroy();
+			src = tmp;
+			return true;
+			}
+		}
 #/*cut-cpp*/
  	// handle integer-like literals like a real integer literal
 	if (is_integerlike_literal(*src.data<2>()))
@@ -5369,7 +5383,18 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,func_trai
 		};
 #/*cut-cpp*/
 	if (is_noticed_enumerator(*src.data<2>(),types))
-		if (enumerator_to_integer_representation(*src.c_array<2>(),types)) return false;
+		{
+		if (!enumerator_to_integer_representation(*src.c_array<2>(),types)) return false;
+		if (is_C99_unary_operator_expression<'-'>(*src.data<2>()))
+			{	// enumerator went negative: handle
+			parse_tree tmp = *src.c_array<2>()->c_array<2>();
+			src.c_array<2>()->c_array<2>()->clear();
+			src.destroy();
+			src = tmp;
+			return true;
+			}
+		src.type_code = src.data<2>()->type_code;
+		}
 #/*cut-cpp*/
 	if (is_integerlike_literal(*src.data<2>()) && 1==(src.type_code.base_type_index-C_TYPE::INT)%2)
 		{	// unsigned...we're fine
@@ -5808,7 +5833,6 @@ static bool construct_twos_complement_int_min(parse_tree& dest, const type_syste
 		return false;
 		}
 	force_unary_negative_token(*tmp3,tmp,src_loc);
-	tmp3->type_code = tmp->type_code;
 
 	parse_tree tmp4;
 	tmp4.clear();
@@ -6270,21 +6294,19 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 	if (	(literal_converts_to_bool(*src.data<1>(),is_true) && !is_true)	// 0 * __
 		||	(literal_converts_to_bool(*src.data<2>(),is_true) && !is_true))	// __ * 0
 		{
+		// construct +0 to defuse 1-0*6
+		parse_tree tmp = decimal_literal("0",src,types);
 		if (C_TYPE::INTEGERLIKE==old_type.base_type_index)
 			{
 			message_header(src.index_tokens[0]);
 			INC_INFORM("invalid ");
 			INC_INFORM(src);
 			INFORM(" optimized to valid 0");
-			};
-		// construct +0 to defuse 1-0*6
-		parse_tree tmp = decimal_literal("0",src,types);
+			tmp.type_code.set_type(C_TYPE::LLONG);	// legalize
+			}
+		else tmp.type_code = old_type;
 		src.DeleteIdx<1>(0);
 		force_unary_positive_literal(src,tmp);
-		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
-			src.type_code = old_type;
-		else
-			src.type_code.set_type(C_TYPE::LLONG);	// legalize
 		return true;
 		};
 
@@ -6363,10 +6385,9 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 		// convert to parsed + literal
 		parse_tree tmp;
 		if (!VM_to_literal(tmp,res_int,src,types)) return false;
-
+		tmp.type_code = old_type;
 		src.DeleteIdx<1>(0);
 		force_unary_positive_literal(src,tmp);
-		src.type_code = old_type;
 		return true;
 		}
 	return false;
@@ -6390,21 +6411,19 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 		/*! \todo would like a simple comparison of absolute values to auto-detect zero, possibly after mainline code */
 		else if (literal_converts_to_bool(*src.data<1>(),is_true) && !is_true)
 			{
+			// construct +0 to defuse 1-0/6
+			parse_tree tmp = decimal_literal("0",src,types);
 			if (C_TYPE::INTEGERLIKE==old_type.base_type_index)
 				{
 				message_header(src.index_tokens[0]);
 				INC_INFORM("invalid ");
 				INC_INFORM(src);
 				INFORM(" optimized to valid 0");
-				};
-			// construct +0 to defuse 1-0/6
-			parse_tree tmp = decimal_literal("0",src,types);
+				tmp.type_code.set_type(C_TYPE::LLONG);	// legalize
+				}
+			else tmp.type_code = old_type;
 			src.DeleteIdx<1>(0);
 			force_unary_positive_literal(src,tmp);
-			if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
-				src.type_code = old_type;
-			else
-				src.type_code.set_type(C_TYPE::LLONG);	// legalize
 			return true;
 			}
 		//! \todo change target for formal verification; would like to inject a constraint against div-by-integer-zero here
@@ -6444,22 +6463,14 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 			if (rhs_negative!=lhs_negative && virtual_machine::twos_complement==target_machine->C_signed_int_representation()) ub += 1;
 			if (lhs_test<rhs_test)
 				{
-				if (rhs_negative==lhs_negative || !bool_options[boolopt::int_neg_div_rounds_away_from_zero])
-					{	// 0
-					parse_tree tmp = decimal_literal("0",src,types);
-
-					// convert to parsed + literal
-					src.DeleteIdx<1>(0);
-					force_unary_positive_literal(src,tmp);
-					}
-				else{	// -1
-					parse_tree tmp = decimal_literal("1",src,types);
-
-					// convert to parsed - literal
-					src.DeleteIdx<1>(0);
-					force_unary_negative_literal(src,tmp);
-					}
-				src.type_code = old_type;
+				const bool want_zero = rhs_negative==lhs_negative || !bool_options[boolopt::int_neg_div_rounds_away_from_zero];
+				parse_tree tmp = decimal_literal(want_zero ? "0" : "1",src,types);
+				tmp.type_code = old_type;
+				src.DeleteIdx<1>(0);
+				if (want_zero)
+					force_unary_positive_literal(src,tmp); // +0
+				else	
+					force_unary_negative_literal(src,tmp); // -1
 				return true;
 				}
 
@@ -6500,10 +6511,10 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 		// convert to parsed + literal
 		parse_tree tmp;
 		if (!VM_to_literal(tmp,res_int,src,types)) return false;
+		tmp.type_code = old_type;
 
 		src.DeleteIdx<1>(0);
 		force_unary_positive_literal(src,tmp);
-		src.type_code = old_type;
 		return true;
 		}
 	return false;
@@ -6527,21 +6538,19 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 		/*! \todo would like a simple comparison of absolute values to auto-detect zero, possibly after mainline code */
 		else if (literal_converts_to_bool(*src.data<1>(),is_true) && !is_true)
 			{
+			// construct +0 to defuse 1-0%6
+			parse_tree tmp = decimal_literal("0",src,types);
 			if (C_TYPE::INTEGERLIKE==old_type.base_type_index)
 				{
 				message_header(src.index_tokens[0]);
 				INC_INFORM("invalid ");
 				INC_INFORM(src);
 				INFORM(" optimized to valid 0");
-				};
-			// construct +0 to defuse 1-0%6
-			parse_tree tmp = decimal_literal("0",src,types);
+				tmp.type_code.set_type(C_TYPE::LLONG);	// legalize
+				}
+			else tmp.type_code = old_type;
 			src.DeleteIdx<1>(0);
 			force_unary_positive_literal(src,tmp);
-			if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
-				src.type_code = old_type;
-			else
-				src.type_code.set_type(C_TYPE::LLONG);	// legalize
 			return true;
 			}
 		//! \todo change target for formal verification; would like to inject a constraint against div-by-integer-zero here
@@ -6554,12 +6563,12 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 	if (rhs_converted && rhs_int==1)
 		{	// __%1 |-> +0
 		parse_tree tmp = decimal_literal("0",src,types);
+		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
+			tmp.type_code = old_type;
+		else
+			tmp.type_code.set_type(C_TYPE::LLONG);	// legalize
 		src.DeleteIdx<1>(0);
 		force_unary_positive_literal(src,tmp);
-		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
-			src.type_code = old_type;
-		else
-			src.type_code.set_type(C_TYPE::LLONG);	// legalize
 		return true;
 		};
 	if (lhs_converted && rhs_converted)
@@ -6610,10 +6619,10 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, bool 
 		// convert to parsed + literal
 		parse_tree tmp;
 		if (!VM_to_literal(tmp,res_int,src,types)) return false;
+		tmp.type_code = old_type;
 
 		src.DeleteIdx<1>(0);
 		force_unary_positive_literal(src,tmp);
-		src.type_code = old_type;
 		return true;
 		}
 	return false;
@@ -6977,10 +6986,10 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 				// convert to parsed + literal
 				parse_tree tmp;
 				if (!VM_to_literal(tmp,res_int,src,types)) return false;
+				tmp.type_code = old_type;
 
 				src.DeleteIdx<1>(0);
 				force_unary_positive_literal(src,tmp);
-				src.type_code = old_type;
 				return true;
 				}
 			break;
@@ -7129,10 +7138,10 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 				// convert to parsed + literal
 				parse_tree tmp;
 				if (!VM_to_literal(tmp,res_int,src,types)) return false;
+				tmp.type_code = old_type;
 
 				src.DeleteIdx<1>(0);
 				force_unary_positive_literal(src,tmp);
-				src.type_code = old_type;
 				return true;
 				}
 			break;
@@ -10583,6 +10592,11 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,type_system& types,P
 			return;
 			}
 		// end snip from CPreproc
+
+		// handle top-level enumerators
+		if (is_noticed_enumerator(parsetree,types))
+			if (!enumerator_to_integer_representation(parsetree,types)) throw std::bad_alloc();
+
 		bool is_true = false;
 		if (!(langinfo.LiteralConvertsToBool)(parsetree,is_true))
 			{	//! \bug need test cases
