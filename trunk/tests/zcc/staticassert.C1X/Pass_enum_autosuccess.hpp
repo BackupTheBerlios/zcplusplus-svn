@@ -18,3 +18,5 @@ static_assert(+one,"automatic success has failed");
 static_assert(-neg_one,"automatic success has failed");
 static_assert(-one,"automatic success has failed");
 
+// check unary !
+static_assert(!zero,"automatic success has failed");

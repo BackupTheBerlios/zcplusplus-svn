@@ -6,3 +6,8 @@ OBJECTLIKE_MACRO STATIC_ASSERT _Static_Assert static_assert
 // exercise string literal uses in (extended) integer constant expressions
 STATIC_ASSERT("A","automatic success has failed");
 
+STATIC_ASSERT("A"[0],"automatic success has failed");
+STATIC_ASSERT(+"A"[0],"automatic success has failed");
+STATIC_ASSERT(-"A"[0],"automatic success has failed");
+STATIC_ASSERT(!"A"[1],"automatic success has failed");
+

@@ -18,3 +18,5 @@ _Static_Assert(+one,"automatic success has failed");
 _Static_Assert(-neg_one,"automatic success has failed");
 _Static_Assert(-one,"automatic success has failed");
 
+// check unary !
+_Static_Assert(!zero,"automatic success has failed");

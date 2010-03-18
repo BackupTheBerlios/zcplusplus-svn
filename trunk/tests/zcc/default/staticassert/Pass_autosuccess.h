@@ -5,3 +5,8 @@
 // exercise string literal uses in (extended) integer constant expressions
 _Static_Assert("A","automatic success has failed");
 
+_Static_Assert("A"[0],"automatic success has failed");
+_Static_Assert(+"A"[0],"automatic success has failed");
+_Static_Assert(-"A"[0],"automatic success has failed");
+_Static_Assert(!"A"[1],"automatic success has failed");
+

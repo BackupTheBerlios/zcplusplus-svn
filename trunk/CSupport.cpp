@@ -630,16 +630,29 @@ static bool is_innate_definite_type(size_t base_type_index)
 
 static bool converts_to_integerlike(size_t base_type_index)
 {	//! \todo handle cast operator overloading
-	//! \todo handle enum types
 	return C_TYPE::BOOL<=base_type_index && C_TYPE::INTEGERLIKE>=base_type_index;
 }
 
 static bool converts_to_integerlike(const type_spec& type_code)
 {	//! \todo handle cast operator overloading
-	//! \todo handle enum types
 	if (0<type_code.pointer_power_after_array_decay()) return false;	// pointers do not have a standard conversion to integers
-	return C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::INTEGERLIKE>=type_code.base_type_index;
+	return converts_to_integerlike(type_code.base_type_index);
 }
+#/*cut-cpp*/
+
+static bool converts_to_integerlike(size_t base_type_index,const type_system& types)
+{
+	if (converts_to_integerlike(base_type_index)) return true;
+	return types.get_enum_def(base_type_index);
+}
+
+static bool converts_to_integerlike(const type_spec& type_code,const type_system& types)
+{
+	if (0<type_code.pointer_power_after_array_decay()) return false;	// pointers do not have a standard conversion to integers
+	if (converts_to_integerlike(type_code.base_type_index)) return true;
+	return types.get_enum_def(type_code.base_type_index);
+}
+#/*cut-cpp*/
 
 static bool converts_to_integer(const type_spec& type_code)
 {	//! \todo handle cast operator overloading
@@ -664,8 +677,25 @@ static bool converts_to_arithmeticlike(const type_spec& type_code)
 {	//! \todo handle cast operator overloading
 	//! \todo handle enum types
 	if (0<type_code.pointer_power_after_array_decay()) return false;	// pointers do not have a standard conversion to integers/floats/complex
-	return C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::LDOUBLE__COMPLEX>=type_code.base_type_index;
+	return converts_to_arithmeticlike(type_code.base_type_index);
 }
+#/*cut-cpp*/
+
+static bool converts_to_arithmeticlike(size_t base_type_index,const type_system& types)
+{	//! \todo handle cast operator overloading
+	//! \todo handle enum types
+	if (converts_to_arithmeticlike(base_type_index)) return true;
+	return types.get_enum_def(base_type_index);
+}
+
+static bool converts_to_arithmeticlike(const type_spec& type_code,const type_system& types)
+{	//! \todo handle cast operator overloading
+	//! \todo handle enum types
+	if (0<type_code.pointer_power_after_array_decay()) return false;	// pointers do not have a standard conversion to integers/floats/complex
+	if (converts_to_arithmeticlike(type_code.base_type_index)) return true;
+	return types.get_enum_def(type_code.base_type_index);
+}
+#/*cut-cpp*/
 
 static bool converts_to_bool(const type_spec& type_code)
 {
@@ -674,6 +704,17 @@ static bool converts_to_bool(const type_spec& type_code)
 	// C++: run through type conversion weirdness
 	return false;
 }
+#/*cut-cpp*/
+
+static bool converts_to_bool(const type_spec& type_code,const type_system& types)
+{
+	if (0<type_code.pointer_power_after_array_decay()) return true;	// pointers are comparable to NULL
+	if (converts_to_arithmeticlike(type_code.base_type_index)) return true;	// arithmetic types are comparable to zero, and include bool
+	if (types.get_enum_def(type_code.base_type_index)) return true;	// (unscoped) enumerators convert to integers
+	// C++: run through type conversion weirdness
+	return false;
+}
+#/*cut-cpp*/
 
 // the integer promotions rely on low-level weirdness, so test that here
 static size_t arithmetic_reconcile(size_t base_type_index1, size_t base_type_index2)
@@ -4298,7 +4339,7 @@ static bool CPP_intlike_literal_to_VM(umaxint& dest, const parse_tree& src)
  *         pointer constant
  */
 int is_null_pointer_constant(const parse_tree& src, func_traits<bool (*)(umaxint&,const parse_tree&)>::function_ref_type intlike_literal_to_VM)
-{
+{	//! \bug doesn't recognize enumerators with value zero
 	if (!converts_to_integerlike(src.type_code)) return 0;
 	umaxint tmp;
 	if (intlike_literal_to_VM(tmp,src)) return tmp==0;
@@ -4630,12 +4671,12 @@ static bool _match_pairs(parse_tree& src)
 			}
 		else if (token_is_char<'['>(src.data<0>()[i].index_tokens[0].token))
 			{
-			assert(bracket_stack.size()>paren_idx);
+			assert(bracket_stack.size()>bracket_idx);
 			bracket_stack[bracket_idx++] = i;
 			}
 		else if (token_is_char<'{'>(src.data<0>()[i].index_tokens[0].token))
 			{
-			assert(brace_stack.size()>paren_idx);
+			assert(brace_stack.size()>brace_idx);
 			brace_stack[brace_idx++] = i;
 			}
 		// introduces sequence points; this causes errors if caught in brackets or parentheses
@@ -4881,7 +4922,11 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 			simple_error(src,"array dereference of pointer by pointer (C99 6.5.2.1p1; C++98 5.2.1p1,13.3.1.2p1)");
 			return;
 			}
-		else if (converts_to_integerlike(src.data<0>()->type_code.base_type_index))
+		else if (converts_to_integerlike(src.data<0>()->type_code.base_type_index
+#/*cut-cpp*/
+			,types
+#/*cut-cpp*/
+			))
 			{
 			value_copy(src.type_code,src.data<1>()->type_code);
 			ZAIMONI_PASSTHROUGH_ASSERT(src.type_code.dereference());
@@ -4899,7 +4944,11 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 		}
 	else if (0<effective_pointer_power_infix)
 		{
-		if (converts_to_integerlike(src.data<1>()->type_code.base_type_index))
+		if (converts_to_integerlike(src.data<1>()->type_code.base_type_index
+#/*cut-cpp*/
+			,types
+#/*cut-cpp*/
+			))
 			{
 			value_copy(src.type_code,src.data<0>()->type_code);
 			ZAIMONI_PASSTHROUGH_ASSERT(src.type_code.dereference());
@@ -5637,6 +5686,12 @@ static bool terse_locate_CPP_logical_NOT(parse_tree& src, size_t& i,const type_s
 static bool eval_logical_NOT(parse_tree& src, const type_system& types, func_traits<bool (*)(const parse_tree&)>::function_ref_type is_logical_NOT, func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type literal_converts_to_bool)
 {
 	assert(is_logical_NOT(src));
+#/*cut-cpp*/
+	// unscoped enumerators use their integer representation
+	if (   is_noticed_enumerator(*src.data<2>(),types)
+		&& !enumerator_to_integer_representation(*src.c_array<2>(),types))
+		return false;
+#/*cut-cpp*/
 	{	// deal with literals that convert to bool here
 	bool is_true = false;
 	if (literal_converts_to_bool(*src.data<2>(),is_true))
@@ -5671,8 +5726,12 @@ static void C_logical_NOT_easy_syntax_check(parse_tree& src,const type_system& t
 	src.type_code.set_type(C_TYPE::BOOL);	// technically wrong for C, but the range is restricted to _Bool's range
 	if (eval_logical_NOT(src,types,is_C99_unary_operator_expression<'!'>,C99_literal_converts_to_bool)) return;
 
-	if (!converts_to_bool(src.data<2>()->type_code))
-		{	// can't test this from preprocessor
+	if (!converts_to_bool(src.data<2>()->type_code
+#/*cut-cpp*/
+		,types
+#/*cut-cpp*/
+		))
+		{	// can't test this from preprocessor or static assertion
 		simple_error(src," applies ! to a nonscalar type (C99 6.5.3.3p1)");
 		return;
 		}
@@ -5684,8 +5743,12 @@ static void CPP_logical_NOT_easy_syntax_check(parse_tree& src,const type_system&
 	src.type_code.set_type(C_TYPE::BOOL);	// technically wrong for C, but the range is restricted to _Bool's range
 	if (eval_logical_NOT(src,types,is_CPP_logical_NOT_expression,CPP_literal_converts_to_bool)) return;
 
-	if (!converts_to_bool(src.data<2>()->type_code))
-		{	// can't test this from preprocessor
+	if (!converts_to_bool(src.data<2>()->type_code
+#/*cut-cpp*/
+		,types
+#/*cut-cpp*/
+		))
+		{	// can't test this from preprocessor or static assertion
 		simple_error(src," applies ! to a type not convertible to bool (C++98 5.3.1p8)");
 		return;
 		}
@@ -10912,22 +10975,21 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 		// * invoke -Wc-c++-compat if not within INT_MIN..INT_MAX
 		// in any case, do not react if the default-init isn't used
 		value_copy(prior_value,latest_value);
-		bool value_is_nonnegative_or_twos_complement = true;
-		if (virtual_machine::twos_complement!=target_machine->C_signed_int_representation())
+		{
+		bool value_is_nonnegative = true;
+		const promote_aux test(current_enumerator_type);
+		if (test.is_signed && latest_value.test(test.bitcount-1))
 			{
-			const promote_aux test(current_enumerator_type);
-			if (test.is_signed && latest_value.test(test.bitcount-1))
+			target_machine->signed_additive_inverse(latest_value,test.machine_type);
+			if (0<latest_value)
 				{
-				target_machine->signed_additive_inverse(latest_value,test.machine_type);
-				if (0<latest_value)
-					{
-					latest_value -= 1;
-					if (0<latest_value) target_machine->signed_additive_inverse(latest_value,test.machine_type);
-					value_is_nonnegative_or_twos_complement = false;
-					}
+				latest_value -= 1;
+				if (0<latest_value) target_machine->signed_additive_inverse(latest_value,test.machine_type);
+				value_is_nonnegative = false;
 				}
 			}
-		if (value_is_nonnegative_or_twos_complement) latest_value += 1;
+		if (value_is_nonnegative) latest_value += 1;
+		}
 
 		if (1>=src.size<0>()-i)
 			{	// default-update

@@ -19,3 +19,5 @@ STATIC_ASSERT(+one,"automatic success has failed");
 STATIC_ASSERT(-neg_one,"automatic success has failed");
 STATIC_ASSERT(-one,"automatic success has failed");
 
+// check unary !
+STATIC_ASSERT(!zero,"automatic success has failed");
