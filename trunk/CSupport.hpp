@@ -122,7 +122,7 @@ struct PP_auxfunc
 	func_traits<void (*)(parse_tree&,type_system&)>::function_ref_type ContextParse;		// return true iff no errors
 	// zcc 0.0.3
 	func_traits<void (*)(parse_tree&,const size_t,const type_system&)>::function_ref_type LocateExpression;
-	func_traits<bool (*)(const parse_tree&, bool&)>::function_ref_type LiteralConvertsToBool;
+	func_traits<bool (*)(const parse_tree&, bool&,const type_system&)>::function_ref_type LiteralConvertsToBool;
 #/*cut-cpp*/
 };
 
