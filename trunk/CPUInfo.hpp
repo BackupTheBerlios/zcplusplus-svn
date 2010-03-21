@@ -130,6 +130,7 @@ public:
 	bool trap_int(const umaxint& src_int,std_int_enum machine_type) const;
 	void signed_additive_inverse(umaxint& src_int,std_int_enum machine_type) const;
 	void unsigned_additive_inverse(umaxint& src_int,std_int_enum machine_type) const;
+	bool is_zero(const unsigned char* x, size_t x_len, const promotion_info& targettype) const;
 	void sign_extend(umaxint& src_int,std_int_enum machine_type_from,std_int_enum machine_type_to) const
 		{
 		signed_additive_inverse(src_int,machine_type_from);

@@ -124,6 +124,37 @@ void CPUInfo::unsigned_additive_inverse(umaxint& src_int,std_int_enum machine_ty
 #endif
 }
 
+bool CPUInfo::is_zero(const unsigned char* x, size_t x_len, const promotion_info& targettype) const
+{
+	assert(x);
+	assert(0<x_len);
+	assert(x_len*CHAR_BIT>=targettype.bitcount);
+	if (targettype.is_signed && ((1U<<((targettype.bitcount-1)%CHAR_BIT)) & x[(targettype.bitcount-1)/CHAR_BIT]))
+		{	// negative
+		switch(C_signed_int_representation())
+		{
+		default: return false;
+		case sign_and_magnitude:
+			x_len = (targettype.bitcount-1)/CHAR_BIT;
+			if (1U<<((targettype.bitcount-1)%CHAR_BIT) != x[x_len]) return false;
+			while(0<x_len)
+				if (0!=x[--x_len]) return false;
+			return true;
+		case ones_complement:
+			x_len = (targettype.bitcount-1)/CHAR_BIT;
+			if (UCHAR_MAX>>((CHAR_BIT-1)-(targettype.bitcount-1)%CHAR_BIT) != x[x_len]) return false;
+			while(0<x_len)
+				if (UCHAR_MAX!=x[--x_len]) return false;
+			return true;
+		}
+		}
+	// positive
+	do	if (0!=x[--x_len]) return false;
+	while(0<x_len);
+	return true;
+}
+
+
 bool CPUInfo::C_promote_integer(umaxint& x,const promotion_info& src_type, const promotion_info& dest_type) const
 {
 	if (src_type.is_signed && x.test(src_type.bitcount-1))
