@@ -2,6 +2,8 @@ SUFFIXES h hpp
 OBJECTLIKE_MACRO STATIC_ASSERT _Static_Assert static_assert
 // (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
+#include <limits.h>
+
 STATIC_ASSERT(1,"automatic success has failed");
 
 // check unary +
@@ -14,4 +16,16 @@ STATIC_ASSERT(-'A',"automatic success has failed");
 
 // check unary !
 STATIC_ASSERT(!0,"automatic success has failed");
+
+// check unary ~ (unsigned only, signed is target-specific testing)
+STATIC_ASSERT(~0U,"automatic success has failed");
+STATIC_ASSERT(~0UL,"automatic success has failed");
+STATIC_ASSERT(~0ULL,"automatic success has failed");
+STATIC_ASSERT(~1U,"automatic success has failed");
+STATIC_ASSERT(~1UL,"automatic success has failed");
+STATIC_ASSERT(~1ULL,"automatic success has failed");
+STATIC_ASSERT(!~UINT_MAX,"automatic success has failed");
+STATIC_ASSERT(!~ULONG_MAX,"automatic success has failed");
+STATIC_ASSERT(!~ULLONG_MAX,"automatic success has failed");
+
 
