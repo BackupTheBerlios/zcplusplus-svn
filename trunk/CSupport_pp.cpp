@@ -795,6 +795,17 @@ static POD_pair<size_t,bool> default_promotion_is_integerlike(const type_spec& t
 	return tmp;
 }
 
+static POD_pair<size_t,bool> default_promotion_is_arithmeticlike(const type_spec& type_code SIG_CONST_TYPES)
+{	// uses NRVO
+	POD_pair<size_t,bool> tmp = {0,false};
+	if (0==type_code.pointer_power_after_array_decay())	// pointers do not have a standard conversion to integers
+		{
+		tmp.first = default_promote_type(type_code.base_type_index ARG_TYPES);
+		tmp.second = (C_TYPE::BOOL<=tmp.first && C_TYPE::LDOUBLE__COMPLEX>=tmp.first);
+		}
+	return tmp;
+}
+
 // auxilliary structure to aggregate useful information for type promotions
 // this will malfunction badly for anything other than an integer type
 class promote_aux : public virtual_machine::promotion_info
@@ -6236,22 +6247,24 @@ static bool _mult_div_expression_typecheck(parse_tree& src SIG_CONST_TYPES)
 {
 	assert(C99_MULT_SUBTYPE_DIV==src.subtype || C99_MULT_SUBTYPE_MULT==src.subtype);
 	assert((C99_MULT_SUBTYPE_DIV==src.subtype) ? is_C99_mult_operator_expression<'/'>(src) : is_C99_mult_operator_expression<'*'>(src));
-	const bool rhs_is_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code ARG_TYPES);
-	if (!converts_to_arithmeticlike(src.data<1>()->type_code ARG_TYPES))
+	POD_pair<size_t,bool> lhs = default_promotion_is_arithmeticlike(src.data<1>()->type_code ARG_TYPES);
+	POD_pair<size_t,bool> rhs = default_promotion_is_arithmeticlike(src.data<2>()->type_code ARG_TYPES);
+	if (!lhs.second)
 		{	//! \test default/Error_if_control36.hpp, default/Error_if_control36.h
 			//! \test default/Error_if_control37.hpp, default/Error_if_control37.h
 			//! \test default/Error_if_control39.hpp, default/Error_if_control39.h
 			//! \test default/Error_if_control40.hpp, default/Error_if_control40.h
-		simple_error(src,rhs_is_arithmeticlike ? " has nonarithmetic LHS (C99 6.5.5p2, C++98 5.6p2)" : " has nonarithmetic LHS and RHS (C99 6.5.5p2, C++98 5.6p2)");
+		simple_error(src,rhs.second ? " has nonarithmetic LHS (C99 6.5.5p2, C++98 5.6p2)" : " has nonarithmetic LHS and RHS (C99 6.5.5p2, C++98 5.6p2)");
 		return false;
 		}
-	else if (!rhs_is_arithmeticlike)
+	else if (!rhs.second)
 		{	//! \test default/Error_if_control35.hpp, default/Error_if_control35.h
 			//! \test default/Error_if_control38.hpp, default/Error_if_control38.h
 		simple_error(src," has nonarithmetic RHS (C99 6.5.5p2, C++98 5.6p2)");
 		return false;
 		};
-	src.type_code.set_type(arithmetic_reconcile(src.data<1>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index ARG_TYPES));
+
+	src.type_code.set_type(arithmetic_reconcile(lhs.first,rhs.first ARG_TYPES));
 	return true;
 }
 
@@ -6785,18 +6798,20 @@ static void C_CPP_add_expression_easy_syntax_check(parse_tree& src,const type_sy
 	default: FATAL_CODE("hardware/compiler error: invalid linear combination in C_add_expression_easy_syntax_check",3);
 #endif
 	case 0:	{	// cannot test errors from preprocessor
-			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index ARG_TYPES);
-			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index ARG_TYPES))
+			POD_pair<size_t,bool> lhs = default_promotion_is_arithmeticlike(src.data<1>()->type_code ARG_TYPES);
+			POD_pair<size_t,bool> rhs = default_promotion_is_arithmeticlike(src.data<2>()->type_code ARG_TYPES);
+			if (!lhs.second)
 				{
-				simple_error(src,rhs_arithmeticlike ? " has non-arithmetic non-pointer right argument (C99 6.5.6p2; C++98 5.7p1)" : " has non-arithmetic non-pointer arguments (C99 6.5.6p2; C++98 5.7p1)");
+				simple_error(src,rhs.second ? " has non-arithmetic non-pointer right argument (C99 6.5.6p2; C++98 5.7p1)" : " has non-arithmetic non-pointer arguments (C99 6.5.6p2; C++98 5.7p1)");
 				return;
 				}
-			else if (!rhs_arithmeticlike)
+			else if (!rhs.second)
 				{
 				simple_error(src," has non-arithmetic non-pointer left argument (C99 6.5.6p2; C++98 5.7p1)");
 				return;
 				}
-			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index ARG_TYPES),default_promote_type(src.data<2>()->type_code.base_type_index ARG_TYPES) ARG_TYPES));
+
+			src.type_code.set_type(arithmetic_reconcile(lhs.first,rhs.first ARG_TYPES));
 			eval_add_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
@@ -6828,18 +6843,20 @@ static void C_CPP_add_expression_easy_syntax_check(parse_tree& src,const type_sy
 			return;
 			}
 	case 4:	{	// cannot test errors from preprocessor
-			const bool rhs_arithmeticlike = converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index ARG_TYPES);
-			if (!converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index ARG_TYPES))
+			POD_pair<size_t,bool> lhs = default_promotion_is_arithmeticlike(src.data<1>()->type_code ARG_TYPES);
+			POD_pair<size_t,bool> rhs = default_promotion_is_arithmeticlike(src.data<2>()->type_code ARG_TYPES);
+			if (!lhs.second)
 				{
-				simple_error(src,rhs_arithmeticlike ? " has non-arithmetic non-pointer right argument (C99 6.5.6p3; C++98 5.7p2)" : " has non-arithmetic non-pointer arguments (C99 6.5.6p3; C++98 5.7p2)");
+				simple_error(src,rhs.second ? " has non-arithmetic non-pointer right argument (C99 6.5.6p3; C++98 5.7p2)" : " has non-arithmetic non-pointer arguments (C99 6.5.6p3; C++98 5.7p2)");
 				return;
 				}
-			else if (!rhs_arithmeticlike)
+			else if (!rhs.second)
 				{
 				simple_error(src," has non-arithmetic non-pointer left argument (C99 6.5.6p3; C++98 5.7p2)");
 				return;
 				}
-			src.type_code.set_type(arithmetic_reconcile(default_promote_type(src.data<1>()->type_code.base_type_index ARG_TYPES),default_promote_type(src.data<2>()->type_code.base_type_index ARG_TYPES) ARG_TYPES));
+
+			src.type_code.set_type(arithmetic_reconcile(lhs.first,rhs.first ARG_TYPES));
 			eval_sub_expression(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
 			break;
 			}
