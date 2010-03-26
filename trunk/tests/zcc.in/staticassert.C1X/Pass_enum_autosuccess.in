@@ -29,3 +29,8 @@ STATIC_ASSERT(!(zero%two),"automatic success has failed");
 STATIC_ASSERT(!(one%one),"automatic success has failed");
 STATIC_ASSERT(!(zero%one),"automatic success has failed");
 
+// check /
+STATIC_ASSERT(two/one,"automatic success has failed");
+STATIC_ASSERT(one/one,"automatic success has failed");
+STATIC_ASSERT(!(one/two),"automatic success has failed");
+

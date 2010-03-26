@@ -28,3 +28,8 @@ static_assert(!(zero%two),"automatic success has failed");
 static_assert(!(one%one),"automatic success has failed");
 static_assert(!(zero%one),"automatic success has failed");
 
+// check /
+static_assert(two/one,"automatic success has failed");
+static_assert(one/one,"automatic success has failed");
+static_assert(!(one/two),"automatic success has failed");
+

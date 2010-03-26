@@ -28,3 +28,8 @@ _Static_Assert(!(zero%two),"automatic success has failed");
 _Static_Assert(!(one%one),"automatic success has failed");
 _Static_Assert(!(zero%one),"automatic success has failed");
 
+// check /
+_Static_Assert(two/one,"automatic success has failed");
+_Static_Assert(one/one,"automatic success has failed");
+_Static_Assert(!(one/two),"automatic success has failed");
+
