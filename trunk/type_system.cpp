@@ -838,7 +838,7 @@ const C_union_struct_def* type_system::get_C_structdef(type_system::type_index i
 	return tmp.third.first.third;
 }
 
-const enum_def* type_system::get_enum_def(type_index i)  const
+enum_def* type_system::_get_enum_def(type_index i) const
 {
 	if (core_types_size>=i) return NULL;
 	i -= core_types_size;
@@ -847,6 +847,14 @@ const enum_def* type_system::get_enum_def(type_index i)  const
 	const dynamic_type_format& tmp = dynamic_types[i];
 	if (DYNAMIC_ENUMDEF!=tmp.third.second) return NULL;
 	return tmp.third.first.fourth;
+}
+
+void type_system::set_enum_underlying_type(type_index i,size_t new_type)
+{
+	assert(UCHAR_MAX>=new_type);
+	enum_def* const tmp = _get_enum_def(i);
+	assert(tmp);
+	tmp->represent_as = new_type;
 }
 
 void type_system::upgrade_decl_to_def(type_index i,C_union_struct_def*& src)

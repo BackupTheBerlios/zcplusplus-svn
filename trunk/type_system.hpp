@@ -120,7 +120,8 @@ public:
 	const function_type* get_functype(type_index i) const;
 	const union_struct_decl* get_structdecl(type_index i) const;
 	const C_union_struct_def* get_C_structdef(type_index i) const;
-	const enum_def* get_enum_def(type_index i) const;
+	const enum_def* get_enum_def(type_index i) const {return _get_enum_def(i);};
+	void set_enum_underlying_type(type_index i,size_t new_type);
 	void upgrade_decl_to_def(type_index i,C_union_struct_def*& src);
 #/*cut-cpp*/
 private:
@@ -131,7 +132,8 @@ private:
 	type_index _get_id_enum_CPP(const char* x) const;
 	type_index _get_id_struct_class(const char* x) const;
 	type_index _get_id_struct_class_CPP(const char* x) const;
-
+	enum_def* _get_enum_def(type_index i) const;
+	
 #/*cut-cpp*/
 	const char* _name(type_index id) const;
 #/*cut-cpp*/
