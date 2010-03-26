@@ -5048,7 +5048,7 @@ static void C_unary_plusminus_easy_syntax_check(parse_tree& src,const type_syste
 	// can type if result is a primitive arithmetic type
 	if (converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index ARG_TYPES))
 		src.type_code.set_type(default_promote_type(src.data<2>()->type_code.base_type_index ARG_TYPES));
-	
+
 	const size_t arg_unary_subtype 	= (is_C99_unary_operator_expression<'-'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_NEG
 									: (is_C99_unary_operator_expression<'+'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_PLUS : 0;
 	if (!arg_unary_subtype) return;
@@ -5570,6 +5570,8 @@ static bool terse_locate_C99_unary_plusminus(parse_tree& src, size_t& i, const t
 			{
 			assemble_unary_postfix_arguments(src,i,unary_subtype);
 			src.c_array<0>()[i].type_code.set_type(C_TYPE::NOT_VOID);	// defer to later
+			if (0==i)	// unless no predecessor possible
+				C_unary_plusminus_easy_syntax_check(src.c_array<0>()[0],types);
 			assert((C99_UNARY_SUBTYPE_PLUS==unary_subtype) ? is_C99_unary_operator_expression<'+'>(src.data<0>()[i]) : is_C99_unary_operator_expression<'-'>(src.data<0>()[i]));
 			return true;
 			};
@@ -5596,6 +5598,8 @@ static bool terse_locate_CPP_unary_plusminus(parse_tree& src, size_t& i, const t
 			{
 			assemble_unary_postfix_arguments(src,i,unary_subtype);
 			src.c_array<0>()[i].type_code.set_type(C_TYPE::NOT_VOID);	// defer to later
+			if (0==i)	// unless no predecessor possible
+				CPP_unary_plusminus_easy_syntax_check(src.c_array<0>()[0],types);
 			assert((C99_UNARY_SUBTYPE_PLUS==unary_subtype) ? is_C99_unary_operator_expression<'+'>(src.data<0>()[i]) : is_C99_unary_operator_expression<'-'>(src.data<0>()[i]));
 			return true;
 			};

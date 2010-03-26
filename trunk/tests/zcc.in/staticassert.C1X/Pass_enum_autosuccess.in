@@ -34,3 +34,20 @@ STATIC_ASSERT(two/one,"automatic success has failed");
 STATIC_ASSERT(one/one,"automatic success has failed");
 STATIC_ASSERT(!(one/two),"automatic success has failed");
 
+// check *
+STATIC_ASSERT(!(zero*neg_one),"automatic success has failed");
+STATIC_ASSERT(!(zero*one),"automatic success has failed");
+STATIC_ASSERT(!(zero*two),"automatic success has failed");
+STATIC_ASSERT(!(neg_one*zero),"automatic success has failed");
+STATIC_ASSERT(!(one*zero),"automatic success has failed");
+STATIC_ASSERT(!(two*zero),"automatic success has failed");
+STATIC_ASSERT(neg_one*neg_one,"automatic success has failed");
+STATIC_ASSERT(neg_one*one,"automatic success has failed");
+STATIC_ASSERT(neg_one*two,"automatic success has failed");
+STATIC_ASSERT(one*neg_one,"automatic success has failed");
+STATIC_ASSERT(one*one,"automatic success has failed");
+STATIC_ASSERT(one*two,"automatic success has failed");
+STATIC_ASSERT(two*neg_one,"automatic success has failed");
+STATIC_ASSERT(two*one,"automatic success has failed");
+STATIC_ASSERT(two*two,"automatic success has failed");
+
