@@ -27,4 +27,9 @@ static_assert(!~UINT_MAX,"automatic success has failed");
 static_assert(!~ULONG_MAX,"automatic success has failed");
 static_assert(!~ULLONG_MAX,"automatic success has failed");
 
+// check %
+static_assert(1%2,"automatic success has failed");
+static_assert(!(0%2),"automatic success has failed");
+static_assert(!(1%1),"automatic success has failed");
+static_assert(!(0%1),"automatic success has failed");
 

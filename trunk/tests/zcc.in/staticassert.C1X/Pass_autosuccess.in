@@ -28,4 +28,9 @@ STATIC_ASSERT(!~UINT_MAX,"automatic success has failed");
 STATIC_ASSERT(!~ULONG_MAX,"automatic success has failed");
 STATIC_ASSERT(!~ULLONG_MAX,"automatic success has failed");
 
+// check %
+STATIC_ASSERT(1%2,"automatic success has failed");
+STATIC_ASSERT(!(0%2),"automatic success has failed");
+STATIC_ASSERT(!(1%1),"automatic success has failed");
+STATIC_ASSERT(!(0%1),"automatic success has failed");
 

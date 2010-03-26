@@ -860,7 +860,7 @@ static POD_pair<size_t,bool> default_promotion_is_integerlike(const type_spec& t
 	if (0==type_code.pointer_power_after_array_decay())	// pointers do not have a standard conversion to integers
 		{
 		tmp.first = default_promote_type(type_code.base_type_index ARG_TYPES);
-		tmp.second = (C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::INTEGERLIKE>=type_code.base_type_index);
+		tmp.second = (C_TYPE::BOOL<=tmp.first && C_TYPE::INTEGERLIKE>=tmp.first);
 		}
 	return tmp;
 }
@@ -4383,7 +4383,7 @@ static bool CPP_intlike_literal_to_VM(umaxint& dest, const parse_tree& src SIG_C
  *         pointer constant
  */
 static int is_null_pointer_constant(const parse_tree& src,intlike_literal_to_VM_func& intlike_literal_to_VM SIG_CONST_TYPES)
-{	//! \bug doesn't recognize enumerators with value zero
+{
 	if (!converts_to_integerlike(src.type_code ARG_TYPES)) return 0;
 	umaxint tmp;
 	if (intlike_literal_to_VM(tmp,src ARG_TYPES)) return tmp==0;
@@ -6367,7 +6367,7 @@ static bool terse_locate_mult_expression(parse_tree& src, size_t& i)
 		parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
 		inspect_potential_paren_primary_expression(tmp_c_array[0]);
 		inspect_potential_paren_primary_expression(tmp_c_array[2]);
-		if (	(PARSE_MULT_EXPRESSION & tmp_c_array[0].flags)
+		if ((PARSE_MULT_EXPRESSION & tmp_c_array[0].flags)
 			&&	(PARSE_PM_EXPRESSION & tmp_c_array[2].flags))
 			{
 			assemble_binary_infix_arguments(src,i,PARSE_STRICT_MULT_EXPRESSION);	// tmp_c_array goes invalid here
@@ -6735,8 +6735,8 @@ BOOST_STATIC_ASSERT(1==C99_MULT_SUBTYPE_MULT-C99_MULT_SUBTYPE_MOD);
 static bool _mod_expression_typecheck(parse_tree& src SIG_CONST_TYPES)
 {
 	assert(C99_MULT_SUBTYPE_MOD==src.subtype && is_C99_mult_operator_expression<'%'>(src));
-	const POD_pair<size_t,bool> lhs = default_promotion_is_integerlike(src.data<1>()->type_code ARG_TYPES);
-	const POD_pair<size_t,bool> rhs = default_promotion_is_integerlike(src.data<2>()->type_code ARG_TYPES);
+	POD_pair<size_t,bool> lhs = default_promotion_is_integerlike(src.data<1>()->type_code ARG_TYPES);
+	POD_pair<size_t,bool> rhs = default_promotion_is_integerlike(src.data<2>()->type_code ARG_TYPES);
 	if (!lhs.second)
 		{	//! \test default/Error_if_control33.hpp, default/Error_if_control33.h
 			//! \test default/Error_if_control34.hpp, default/Error_if_control34.h
@@ -6748,6 +6748,20 @@ static bool _mod_expression_typecheck(parse_tree& src SIG_CONST_TYPES)
 		simple_error(src," has nonintegral RHS (C99 6.5.5p2, C++98 5.6p2)");
 		return false;
 		};
+#/*cut-cpp*/
+	if (is_noticed_enumerator(*src.data<1>(),types))
+		{
+		if (!enumerator_to_integer_representation(*src.c_array<1>(),types)) return false;
+		lhs = default_promotion_is_integerlike(src.data<1>()->type_code,types);
+		assert(lhs.second);
+		}
+	if (is_noticed_enumerator(*src.data<2>(),types)) 
+		{
+		if (!enumerator_to_integer_representation(*src.c_array<2>(),types)) return false;
+		rhs = default_promotion_is_integerlike(src.data<2>()->type_code,types);
+		assert(rhs.second);
+		}
+#/*cut-cpp*/
 	src.type_code.set_type(arithmetic_reconcile(lhs.first,rhs.first ARG_TYPES));
 	return true;
 }
@@ -10602,6 +10616,10 @@ static void notice_enumerator_CPP(parse_tree& x,const type_system& types,const c
 			// XXX would be handy to keep the tmp around, consider as time optimization XXX
 			}
 		}
+	size_t i = x.size<0>();
+	while(0<i) notice_enumerator_CPP(x.c_array<0>()[--i],types,active_namespace);
+	assert(x.empty<1>());	// expand these into loops if needed
+	assert(x.empty<2>());
 }
 
 static void C99_CPP_handle_static_assertion(parse_tree& src,type_system& types,PP_auxfunc& langinfo,const size_t i,const char* const err,const char* const active_namespace)
@@ -10904,8 +10922,8 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 	unsigned_var_int latest_value(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
 	unsigned_var_int prior_value(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
 	unsigned char current_enumerator_type = C_TYPE::INT;
-//	bool cpp_using_negative = false;
-//	bool cpp_using_above_LLONG_MAX = false;
+	unsigned char base_enum_type = C_TYPE::INT;
+	bool cpp_using_negative = false;
 	i = 0;
 	while(src.size<0>()>i)
 		{	// require identifier that is neither keyword nor a primitive type
@@ -10952,6 +10970,7 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 					if (bool_options[boolopt::warnings_are_errors])
 						zcc_errors.inc_error();
 					}
+				}
 			else{	// C
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
@@ -11135,9 +11154,43 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 			types.set_enumerator_def_CPP(src.data<0>()[origin-2].index_tokens[0].token.first, active_namespace,src.data<0>()[origin-2].index_tokens[0].logical_line,src.data<0>()[origin-2].index_tokens[0].src_filename,current_enumerator_type,latest_value_copy,enum_type_index);
 		else
 			types.set_enumerator_def(src.data<0>()[origin-2].index_tokens[0].token.first,src.data<0>()[origin-2].index_tokens[0].logical_line,src.data<0>()[origin-2].index_tokens[0].src_filename,current_enumerator_type,latest_value_copy,enum_type_index);
+		if (allow_empty && !cpp_using_negative)
+			{
+			const promote_aux test(current_enumerator_type,types);
+			if (test.is_signed && latest_value.test(test.bitcount-1))
+				{
+				cpp_using_negative = true;
+				switch(base_enum_type)
+				{
+				case C_TYPE::INT:
+				case C_TYPE::LONG:
+				case C_TYPE::LLONG:
+					break;	// these three are already signed, no representation change incurred
+				case C_TYPE::UINT:
+					if (target_machine->C_sizeof_int()<target_machine->C_sizeof_long())
+						{
+						base_enum_type = C_TYPE::LONG;
+						break;
+						}
+				case C_TYPE::ULONG:
+					if (target_machine->C_sizeof_long()<target_machine->C_sizeof_long_long())
+						{
+						base_enum_type = C_TYPE::LLONG;
+						break;
+						}
+				default:	//! \bug needs test case
+					message_header(src.data<0>()[origin-2].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("enumeration requires both negative values and values above INTMAX_MAX, underlying type doesn't exist (C++0X 7.2p6)");
+					zcc_errors.inc_error();
+					return false;
+				}
+				}
+			}
 		}
 		}
 	// now ok to crunch underlying type/machine representation
+	types.set_enum_underlying_type(enum_type_index,allow_empty ? base_enum_type : C_TYPE::INT);
 	return true;
 }
 

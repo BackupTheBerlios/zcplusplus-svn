@@ -790,7 +790,7 @@ static POD_pair<size_t,bool> default_promotion_is_integerlike(const type_spec& t
 	if (0==type_code.pointer_power_after_array_decay())	// pointers do not have a standard conversion to integers
 		{
 		tmp.first = default_promote_type(type_code.base_type_index ARG_TYPES);
-		tmp.second = (C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::INTEGERLIKE>=type_code.base_type_index);
+		tmp.second = (C_TYPE::BOOL<=tmp.first && C_TYPE::INTEGERLIKE>=tmp.first);
 		}
 	return tmp;
 }
@@ -3992,7 +3992,7 @@ static bool CPP_intlike_literal_to_VM(umaxint& dest, const parse_tree& src SIG_C
  *         pointer constant
  */
 static int is_null_pointer_constant(const parse_tree& src,intlike_literal_to_VM_func& intlike_literal_to_VM SIG_CONST_TYPES)
-{	//! \bug doesn't recognize enumerators with value zero
+{
 	if (!converts_to_integerlike(src.type_code ARG_TYPES)) return 0;
 	umaxint tmp;
 	if (intlike_literal_to_VM(tmp,src ARG_TYPES)) return tmp==0;
@@ -5847,7 +5847,7 @@ static bool terse_locate_mult_expression(parse_tree& src, size_t& i)
 		parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
 		inspect_potential_paren_primary_expression(tmp_c_array[0]);
 		inspect_potential_paren_primary_expression(tmp_c_array[2]);
-		if (	(PARSE_MULT_EXPRESSION & tmp_c_array[0].flags)
+		if ((PARSE_MULT_EXPRESSION & tmp_c_array[0].flags)
 			&&	(PARSE_PM_EXPRESSION & tmp_c_array[2].flags))
 			{
 			assemble_binary_infix_arguments(src,i,PARSE_STRICT_MULT_EXPRESSION);	// tmp_c_array goes invalid here
@@ -6215,8 +6215,8 @@ BOOST_STATIC_ASSERT(1==C99_MULT_SUBTYPE_MULT-C99_MULT_SUBTYPE_MOD);
 static bool _mod_expression_typecheck(parse_tree& src SIG_CONST_TYPES)
 {
 	assert(C99_MULT_SUBTYPE_MOD==src.subtype && is_C99_mult_operator_expression<'%'>(src));
-	const POD_pair<size_t,bool> lhs = default_promotion_is_integerlike(src.data<1>()->type_code ARG_TYPES);
-	const POD_pair<size_t,bool> rhs = default_promotion_is_integerlike(src.data<2>()->type_code ARG_TYPES);
+	POD_pair<size_t,bool> lhs = default_promotion_is_integerlike(src.data<1>()->type_code ARG_TYPES);
+	POD_pair<size_t,bool> rhs = default_promotion_is_integerlike(src.data<2>()->type_code ARG_TYPES);
 	if (!lhs.second)
 		{	//! \test default/Error_if_control33.hpp, default/Error_if_control33.h
 			//! \test default/Error_if_control34.hpp, default/Error_if_control34.h
