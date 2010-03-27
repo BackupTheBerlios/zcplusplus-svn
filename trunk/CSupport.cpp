@@ -10160,6 +10160,14 @@ void C99_PPHackTree(parse_tree& src,const type_system& types)
 				}
 			}
 		}
+#/*cut-cpp*/
+	if (src.type_code.decays_to_nonnull_pointer())
+		{
+		force_decimal_literal(src,"1",types);
+		src.type_code.set_type(C_TYPE::INT);
+		return;
+		}
+#/*cut-cpp*/
 }
 
 void CPP_PPHackTree(parse_tree& src,const type_system& types)
@@ -10228,6 +10236,14 @@ void CPP_PPHackTree(parse_tree& src,const type_system& types)
 				}
 			}
 		}
+#/*cut-cpp*/
+	if (src.type_code.decays_to_nonnull_pointer())
+		{
+		force_decimal_literal(src,"1",types);
+		src.type_code.set_type(C_TYPE::INT);
+		return;
+		}
+#/*cut-cpp*/
 }
 
 #/*cut-cpp*/

@@ -11,3 +11,8 @@ STATIC_ASSERT(+"A"[0],"automatic success has failed");
 STATIC_ASSERT(-"A"[0],"automatic success has failed");
 STATIC_ASSERT(!"A"[1],"automatic success has failed");
 
+STATIC_ASSERT("A"+0,"automatic success has failed");
+STATIC_ASSERT(0+"A","automatic success has failed");
+STATIC_ASSERT("A"+1,"automatic success has failed");
+STATIC_ASSERT(1+"A","automatic success has failed");
+
