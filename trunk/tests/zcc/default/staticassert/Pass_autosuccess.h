@@ -15,3 +15,5 @@ _Static_Assert(0+"A","automatic success has failed");
 _Static_Assert("A"+1,"automatic success has failed");
 _Static_Assert(1+"A","automatic success has failed");
 
+_Static_Assert("A"-0,"automatic success has failed");
+

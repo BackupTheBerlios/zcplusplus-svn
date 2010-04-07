@@ -61,3 +61,15 @@ _Static_Assert(!(one+neg_one),"automatic success has failed");
 _Static_Assert(one+zero,"automatic success has failed");
 _Static_Assert(one+one,"automatic success has failed");
 
+// check -
+_Static_Assert(!(neg_one-neg_one),"automatic success has failed");
+_Static_Assert(neg_one-zero,"automatic success has failed");
+_Static_Assert(neg_one-one,"automatic success has failed");
+_Static_Assert(zero-neg_one,"automatic success has failed");
+_Static_Assert(!(zero-zero),"automatic success has failed");
+_Static_Assert(zero-one,"automatic success has failed");
+_Static_Assert(one-neg_one,"automatic success has failed");
+_Static_Assert(one-zero,"automatic success has failed");
+_Static_Assert(!(one-one),"automatic success has failed");
+
+
