@@ -7623,6 +7623,12 @@ static bool eval_shift(parse_tree& src, const type_system& types, bool hard_erro
 		{
 		if (!is_true)
 			{	// __ << 0 or __ >> 0: lift
+#/*cut-cpp*/
+			// handle enumerators now
+			if (   is_noticed_enumerator(*src.data<1>(),types)
+				&& !enumerator_to_integer_representation(*src.c_array<1>(),types))
+				return false;
+#/*cut-cpp*/
 			src.eval_to_arg<1>(0);
 			src.type_code = old_type;
 			return true;
