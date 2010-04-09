@@ -678,7 +678,6 @@ static bool converts_to_integer(const type_spec& type_code SIG_CONST_TYPES)
 
 static bool converts_to_reallike(size_t base_type_index SIG_CONST_TYPES)
 {	//! \todo handle cast operator overloading
-	return C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE>=base_type_index;
 #ifdef ZCC_NOT_BUILDING_CPP
 	if (C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE>=base_type_index) return true;
 	return types.get_enum_def(base_type_index);

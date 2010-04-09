@@ -83,3 +83,44 @@ static_assert(!(0<<1),"automatic success has failed");
 static_assert(1<<0,"automatic success has failed");
 static_assert(1<<1,"automatic success has failed");
 
+// check <, <=, >=, >
+static_assert(!(-1< -1),"automatic success has failed");
+static_assert(-1<0,"automatic success has failed");
+static_assert(-1<1,"automatic success has failed");
+static_assert(!(0< -1),"automatic success has failed");
+static_assert(!(0<0),"automatic success has failed");
+static_assert(0<1,"automatic success has failed");
+static_assert(!(1< -1),"automatic success has failed");
+static_assert(!(1<0),"automatic success has failed");
+static_assert(!(1<1),"automatic success has failed");
+
+static_assert(-1<= -1,"automatic success has failed");
+static_assert(-1<=0,"automatic success has failed");
+static_assert(-1<=1,"automatic success has failed");
+static_assert(!(0<= -1),"automatic success has failed");
+static_assert(0<=0,"automatic success has failed");
+static_assert(0<=1,"automatic success has failed");
+static_assert(!(1<= -1),"automatic success has failed");
+static_assert(!(1<=0),"automatic success has failed");
+static_assert(1<=1,"automatic success has failed");
+
+static_assert(-1>= -1,"automatic success has failed");
+static_assert(!(-1>=0),"automatic success has failed");
+static_assert(!(-1>=1),"automatic success has failed");
+static_assert(0>= -1,"automatic success has failed");
+static_assert(0>=0,"automatic success has failed");
+static_assert(!(0>=1),"automatic success has failed");
+static_assert(1>= -1,"automatic success has failed");
+static_assert(1>=0,"automatic success has failed");
+static_assert(1>=1,"automatic success has failed");
+
+static_assert(!(-1> -1),"automatic success has failed");
+static_assert(!(-1>0),"automatic success has failed");
+static_assert(!(-1>1),"automatic success has failed");
+static_assert(0> -1,"automatic success has failed");
+static_assert(!(0>0),"automatic success has failed");
+static_assert(!(0>1),"automatic success has failed");
+static_assert(1> -1,"automatic success has failed");
+static_assert(1>0,"automatic success has failed");
+static_assert(!(1>1),"automatic success has failed");
+
