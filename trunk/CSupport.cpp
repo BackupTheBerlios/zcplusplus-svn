@@ -3598,7 +3598,8 @@ static bool is_CPP_logical_NOT_expression(const parse_tree& src)
 			&&	NULL==src.index_tokens[1].token.first
 			&&	src.empty<0>()
 			&&	src.empty<1>()
-			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
+			&&	1==src.size<2>() && (PARSE_EXPRESSION & src.data<2>()->flags);
+//			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
 }
 
 static bool is_CPP_bitwise_complement_expression(const parse_tree& src)
@@ -7795,25 +7796,73 @@ static bool eval_relation_expression(parse_tree& src, const type_system& types,i
 	if (lhs_converted && rhs_converted)
 		{
 		const char* result 	= NULL;
-		switch(src.subtype)
-		{
-		case C99_RELATION_SUBTYPE_LT:	{
-										result = (lhs_int<rhs_int) ? "1" : "0";
-										break;
-										}
-		case C99_RELATION_SUBTYPE_GT:	{
-										result = (lhs_int>rhs_int) ? "1" : "0";
-										break;
-										}
-		case C99_RELATION_SUBTYPE_LTE:	{
-										result = (lhs_int<=rhs_int) ? "1" : "0";
-										break;
-										}
-		case C99_RELATION_SUBTYPE_GTE:	{
-										result = (lhs_int>=rhs_int) ? "1" : "0";
-										break;
-										}
-		}
+		const promote_aux targ(arithmetic_reconcile(src.data<1>()->type_code.base_type_index, src.data<2>()->type_code.base_type_index ARG_TYPES) ARG_TYPES);
+		const promote_aux lhs(src.data<1>()->type_code.base_type_index ARG_TYPES);
+		assert(targ.bitcount>=lhs.bitcount);
+		const promote_aux rhs(src.data<2>()->type_code.base_type_index ARG_TYPES);
+		assert(targ.bitcount>=rhs.bitcount);
+
+		// handle sign-extension of lhs, rhs
+		bool use_unsigned_compare = true;
+		const bool lhs_negative = target_machine->C_promote_integer(lhs_int,lhs,targ);
+		const bool rhs_negative = target_machine->C_promote_integer(rhs_int,rhs,targ);
+		if (rhs_negative) target_machine->signed_additive_inverse(rhs_int,targ.machine_type);
+		if (lhs_negative) target_machine->signed_additive_inverse(lhs_int,targ.machine_type);
+
+		//! \todo --do-what-i-mean redefines < > operators to handle cross-domain
+		if (targ.is_signed && (lhs_negative || rhs_negative))
+			{	// repair switch to handle signed numerals
+			if (lhs_negative && rhs_negative)
+				std::swap(lhs_int,rhs_int);
+			else{
+				const bool lhs_zero = target_machine->is_zero(lhs_int.data(),lhs_int.size(),targ);
+				const bool rhs_zero = target_machine->is_zero(rhs_int.data(),rhs_int.size(),targ);
+				const bool op_uses_less_than = (src.subtype%2);	// low-level, check with static assertions
+				// is above correct?
+				BOOST_STATIC_ASSERT(C99_RELATION_SUBTYPE_LT%2);
+				BOOST_STATIC_ASSERT(C99_RELATION_SUBTYPE_LTE%2);
+				BOOST_STATIC_ASSERT(!(C99_RELATION_SUBTYPE_GT%2));
+				BOOST_STATIC_ASSERT(!(C99_RELATION_SUBTYPE_GTE%2));
+				use_unsigned_compare = false;
+				if (!lhs_zero)
+					{
+					result = lhs_negative ? (op_uses_less_than ? "1" : "0") : (op_uses_less_than ? "0" : "1");
+					}
+				else if (rhs_zero)
+					{
+					result = (C99_RELATION_SUBTYPE_LTE<=src.subtype) ? "1" : "0"; 	// low-level, check with static assertions
+					// is above correct?
+					BOOST_STATIC_ASSERT(C99_RELATION_SUBTYPE_LTE<=C99_RELATION_SUBTYPE_GTE);
+					BOOST_STATIC_ASSERT(C99_RELATION_SUBTYPE_LT<C99_RELATION_SUBTYPE_LTE);
+					BOOST_STATIC_ASSERT(C99_RELATION_SUBTYPE_GT<C99_RELATION_SUBTYPE_LTE);
+					}
+				else{
+					result = rhs_negative ? (op_uses_less_than ? "0" : "1") : (op_uses_less_than ? "1" : "0");
+					}
+				}
+			};
+		if (use_unsigned_compare)
+			{
+			switch(src.subtype)
+			{
+			case C99_RELATION_SUBTYPE_LT:	{
+											result = (lhs_int<rhs_int) ? "1" : "0";
+											break;
+											}
+			case C99_RELATION_SUBTYPE_GT:	{
+											result = (lhs_int>rhs_int) ? "1" : "0";
+											break;
+											}
+			case C99_RELATION_SUBTYPE_LTE:	{
+											result = (lhs_int<=rhs_int) ? "1" : "0";
+											break;
+											}
+			case C99_RELATION_SUBTYPE_GTE:	{
+											result = (lhs_int>=rhs_int) ? "1" : "0";
+											break;
+											}
+			}
+			}
 		force_decimal_literal(src,result,types);
 		return true;
 		};
