@@ -516,6 +516,7 @@ static const POD_pair<const char*,size_t> valid_keyword[]
 			DICT_STRUCT("xor"),
 			DICT_STRUCT("xor_eq"),		// end C++98 alternate-operators
 			DICT_STRUCT("constexpr"),	// C++0X keywords we pay attention to
+			DICT_STRUCT("noexcept"),	// C++0X n3090
 			DICT_STRUCT("static_assert"),
 			DICT_STRUCT("thread_local")
 		};
