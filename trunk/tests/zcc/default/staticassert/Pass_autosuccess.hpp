@@ -17,3 +17,9 @@ static_assert(1+"A","automatic success has failed");
 
 static_assert("A"-0,"automatic success has failed");
 
+static_assert("A"=="A","automatic success has failed");
+static_assert("A"!="B","automatic success has failed");
+static_assert("A"!=0,"automatic success has failed");
+static_assert(0!="B","automatic success has failed");
+
+

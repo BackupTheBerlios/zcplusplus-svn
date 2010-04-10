@@ -119,3 +119,23 @@ static_assert(one>neg_one,"automatic success has failed");
 static_assert(one>zero,"automatic success has failed");
 static_assert(!(one>one),"automatic success has failed");
 
+// check ==, !=
+static_assert(neg_one==neg_one,"automatic success has failed");
+static_assert(!(neg_one==zero),"automatic success has failed");
+static_assert(!(neg_one==one),"automatic success has failed");
+static_assert(!(zero==neg_one),"automatic success has failed");
+static_assert(zero==zero,"automatic success has failed");
+static_assert(!(zero==one),"automatic success has failed");
+static_assert(!(one==neg_one),"automatic success has failed");
+static_assert(!(one==zero),"automatic success has failed");
+static_assert(one==one,"automatic success has failed");
+
+static_assert(!(neg_one!=neg_one),"automatic success has failed");
+static_assert(neg_one!=zero,"automatic success has failed");
+static_assert(neg_one!=one,"automatic success has failed");
+static_assert(zero!=neg_one,"automatic success has failed");
+static_assert(!(zero!=zero),"automatic success has failed");
+static_assert(zero!=one,"automatic success has failed");
+static_assert(one!=neg_one,"automatic success has failed");
+static_assert(one!=zero,"automatic success has failed");
+static_assert(!(one!=one),"automatic success has failed");
