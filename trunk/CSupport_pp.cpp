@@ -3468,6 +3468,7 @@ static bool is_array_deref(const parse_tree& src)
 #define C99_UNARY_SUBTYPE_ADDRESSOF 4
 #define C99_UNARY_SUBTYPE_NOT 5
 #define C99_UNARY_SUBTYPE_COMPL 6
+#define C99_UNARY_SUBTYPE_SIZEOF 7
 
 template<char c> static bool is_C99_unary_operator_expression(const parse_tree& src)
 {
@@ -5672,9 +5673,6 @@ static void locate_C99_unary_expression(parse_tree& src, size_t& i, const type_s
 	else if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"--"))
 		{
 		}
-	else if (token_is_string<6>(src.data<0>()[i].index_tokens[0].token,"sizeof"))
-		{
-		}
 	else if (   token_is_char<'('>(src.data<0>()[i].index_tokens[0].token)
 			 && token_is_char<')'>(src.data<0>()[i].index_tokens[1].token))
 		{
@@ -5744,9 +5742,6 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 		{
 		}
 	else if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"--"))
-		{
-		}
-	else if (token_is_string<6>(src.data<0>()[i].index_tokens[0].token,"sizeof"))
 		{
 		}
 	else if (   token_is_char<'('>(src.data<0>()[i].index_tokens[0].token)

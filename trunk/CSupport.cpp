@@ -622,6 +622,13 @@ static inline virtual_machine::std_int_enum machine_type_from_type_index(size_t 
 	assert(C_TYPE::INT<=base_type_index && C_TYPE::ULLONG>=base_type_index);
 	return (virtual_machine::std_int_enum)((base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
 }
+#/*cut-cpp*/
+
+static inline size_t unsigned_type_from_machine_type(virtual_machine::std_int_enum x)
+{
+	return C_TYPE::SCHAR+2*(x-virtual_machine::std_int_char)+1;
+}
+#/*cut-cpp*/
 
 #if 0
 static bool is_innate_type(size_t base_type_index)
@@ -3575,6 +3582,7 @@ static bool is_array_deref(const parse_tree& src)
 #define C99_UNARY_SUBTYPE_ADDRESSOF 4
 #define C99_UNARY_SUBTYPE_NOT 5
 #define C99_UNARY_SUBTYPE_COMPL 6
+#define C99_UNARY_SUBTYPE_SIZEOF 7
 
 template<char c> static bool is_C99_unary_operator_expression(const parse_tree& src)
 {
@@ -3614,6 +3622,23 @@ static bool is_CPP_bitwise_complement_expression(const parse_tree& src)
 			&&	1==src.size<2>() && (PARSE_EXPRESSION & src.data<2>()->flags);
 //			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
 }
+#/*cut-cpp*/
+
+#ifndef NDEBUG
+static bool is_C99_CPP_sizeof_expression(const parse_tree& src)
+{
+	return		(robust_token_is_string<6>(src.index_tokens[0].token,"sizeof"))
+#ifndef NDEBUG
+			&&	NULL!=src.index_tokens[0].src_filename
+#endif
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	src.empty<1>()
+			&&	1==src.size<2>() && ((PARSE_EXPRESSION | PARSE_TYPE) & src.data<2>()->flags);
+//			&&	1==src.size<2>() && ((PARSE_UNARY_EXPRESSION | PARSE_TYPE) & src.data<2>()->flags);
+}
+#endif
+#/*cut-cpp*/
 
 #define C99_MULT_SUBTYPE_DIV 1
 #define C99_MULT_SUBTYPE_MOD 2
@@ -6149,6 +6174,203 @@ static bool locate_CPP_unary_plusminus(parse_tree& src, size_t& i, const type_sy
 
 	return terse_locate_CPP_unary_plusminus(src,i,types);
 }
+#/*cut-cpp*/
+
+// handle C++0X sizeof... elsewhere (context-free syntax checks should be fixed first, possibly consider sizeof... a psuedo-identifier)
+static bool terse_locate_C99_CPP_sizeof(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
+	assert(src.data<0>()[i].is_atomic());
+
+	if (token_is_string<6>(src.data<0>()[i].index_tokens[0].token,"sizeof"))
+		{
+		assert(1<src.size<0>()-i);
+		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
+		if (is_C99_unary_operator_expression<'+'>(src.data<0>()[i+1]) || is_C99_unary_operator_expression<'-'>(src.data<0>()[i+1]))
+			C_unary_plusminus_easy_syntax_check(src.c_array<0>()[i+1],types);
+		if (   (PARSE_UNARY_EXPRESSION & src.data<0>()[i+1].flags)
+			|| (is_naked_parentheses_pair(src.data<0>()[i+1]) && (PARSE_TYPE & src.data<0>()[i+1].flags)))
+			{
+			assemble_unary_postfix_arguments(src,i,C99_UNARY_SUBTYPE_SIZEOF);
+			src.c_array<0>()[i].type_code.set_type(unsigned_type_from_machine_type(target_machine->size_t_type()));
+			assert(is_C99_CPP_sizeof_expression(src.c_array<0>()[i]));
+			return true;			
+			}
+		}
+	return false;
+}
+
+static bool eval_sizeof_core_type(parse_tree& src,const size_t base_type_index,const type_system& types)
+{	//! \todo eventually handle the floating and complex types here as well
+	//! \todo types parameter is close to redundant
+	// floating is just a matter of modeling
+	// complex may also involve ABI issues (cf. Intel)
+	parse_tree tmp;
+	switch(base_type_index)
+	{
+	default: return false;
+	case C_TYPE::CHAR:
+	case C_TYPE::SCHAR:
+	case C_TYPE::UCHAR:
+		{	// defined to be 1: C99 6.5.3.4p3, C++98 5.3.3p1, same paragraphs in C1X and C++0X 
+		src.destroy();
+		src.index_tokens[0].token.first = "1";
+		src.index_tokens[0].token.second = 1;
+		src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
+		}	
+	case C_TYPE::SHRT:
+	case C_TYPE::USHRT:
+		{
+		if (!VM_to_literal(tmp,umaxint(target_machine->C_sizeof_short()),src,types)) return false;
+		src.destroy();
+		src = tmp;			
+		}
+	case C_TYPE::INT:
+	case C_TYPE::UINT:
+		{
+		if (!VM_to_literal(tmp,umaxint(target_machine->C_sizeof_int()),src,types)) return false;
+		src.destroy();
+		src = tmp;			
+		}
+	case C_TYPE::LONG:
+	case C_TYPE::ULONG:
+		{
+		if (!VM_to_literal(tmp,umaxint(target_machine->C_sizeof_long()),src,types)) return false;
+		src.destroy();
+		src = tmp;			
+		}
+	case C_TYPE::LLONG:
+	case C_TYPE::ULLONG:
+		{
+		if (!VM_to_literal(tmp,umaxint(target_machine->C_sizeof_long_long()),src,types)) return false;
+		src.destroy();
+		src = tmp;			
+		}
+	}
+#if 0
+	FLOAT,
+	DOUBLE,
+	LDOUBLE,
+	FLOAT__COMPLEX,
+	DOUBLE__COMPLEX,
+	LDOUBLE__COMPLEX,
+#endif
+	src.type_code.set_type(unsigned_type_from_machine_type(target_machine->size_t_type()));
+	return true;
+}
+
+static bool eval_C99_CPP_sizeof(parse_tree& src,const type_system& types)
+{
+	assert(is_C99_CPP_sizeof_expression(src));
+	if (0==src.data<2>()->type_code.pointer_power_after_array_decay())
+		{
+		if (eval_sizeof_core_type(src,src.data<2>()->type_code.base_type_index,types)) return true;
+		}
+	return false;
+}
+
+static bool eval_C99_sizeof(parse_tree& src,const type_system& types)
+{
+	assert(is_C99_CPP_sizeof_expression(src));
+	if (eval_C99_CPP_sizeof(src,types)) return true;
+	if (0==src.data<2>()->type_code.pointer_power_after_array_decay())
+		{
+		const enum_def* const tmp = types.get_enum_def(src.data<2>()->type_code.base_type_index);
+		if (tmp)
+			{
+			if (is_noticed_enumerator(src,types))
+				return eval_sizeof_core_type(src,C_TYPE::INT,types); // type is int per C99 6.7.2.2p3
+			if (!tmp->represent_as)
+				{
+				simple_error(src," applies sizeof to incomplete enumeration (C99 6.5.3.4p1)");
+				return false;
+				}
+			// process tmp->represent_as as a core type
+			// C99 6.7.2.2p4 merely requires the underlying type to be able to represent all values
+			assert(C_TYPE::CHAR<=tmp->represent_as && C_TYPE::INT>=tmp->represent_as);
+			return eval_sizeof_core_type(src,tmp->represent_as,types);
+			}
+		}
+	return false;
+}
+
+static bool eval_CPP_sizeof(parse_tree& src,const type_system& types)
+{
+	assert(is_C99_CPP_sizeof_expression(src));
+	if (eval_C99_CPP_sizeof(src,types)) return true;
+	if (0==src.data<2>()->type_code.pointer_power_after_array_decay())
+		{
+		if (C_TYPE::WCHAR_T==src.data<2>()->type_code.base_type_index)
+			return eval_sizeof_core_type(src,unsigned_type_from_machine_type(target_machine->UNICODE_wchar_t()),types);
+		const enum_def* const tmp = types.get_enum_def(src.data<2>()->type_code.base_type_index);
+		if (tmp)
+			{
+			if (is_noticed_enumerator(*src.data<2>(),types))
+				{
+				const type_system::enumerator_info* const tmp2 = types.get_enumerator(src.data<2>()->index_tokens[0].token.first);
+				assert(tmp2);
+				assert(C_TYPE::INT<=tmp2->second.first.second && C_TYPE::ULLONG>=tmp2->second.first.second);
+				return eval_sizeof_core_type(src,tmp2->second.first.second,types);
+				}
+			if (!tmp->represent_as)
+				{
+				simple_error(src," applies sizeof to incomplete enumeration (C++98 5.3.3p1)");
+				return false;
+				}
+			// C++0X 7.2p6 merely requires the underlying type to be able to represent all values
+			assert(C_TYPE::CHAR<=tmp->represent_as && C_TYPE::ULLONG>=tmp->represent_as);
+			return eval_sizeof_core_type(src,tmp->represent_as,types);
+			}
+		}
+	return false;
+}
+
+static void C99_sizeof_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	assert(is_C99_CPP_sizeof_expression(src));
+	//! \todo intercept incomplete types, function types here
+	if (eval_C99_sizeof(src,types)) return;
+}
+
+static void CPP_sizeof_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	assert(is_C99_CPP_sizeof_expression(src));
+	//! \todo intercept incomplete types, function types here
+	if (eval_CPP_sizeof(src,types)) return;
+}
+
+static bool locate_C99_sizeof(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+
+	if (	!(PARSE_OBVIOUS & src.data<0>()[i].flags)
+		&&	src.data<0>()[i].is_atomic()
+		&&	terse_locate_C99_CPP_sizeof(src,i,types))
+		{
+		C99_sizeof_easy_syntax_check(src.c_array<0>()[i],types);
+		return true;
+		}
+	return false;
+}
+
+static bool locate_CPP_sizeof(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+
+	if (	!(PARSE_OBVIOUS & src.data<0>()[i].flags)
+		&&	src.data<0>()[i].is_atomic()
+		&&	terse_locate_C99_CPP_sizeof(src,i,types))
+		{
+		CPP_sizeof_easy_syntax_check(src.c_array<0>()[i],types);
+		return true;
+		}
+	return false;
+}
+#/*cut-cpp*/
 
 /* Scan for unary operators and cast expressions
 unary-expression:
@@ -6179,6 +6401,9 @@ static void locate_C99_unary_expression(parse_tree& src, size_t& i, const type_s
 	if (locate_C99_logical_NOT(src,i,types)) return;
 	if (locate_C99_bitwise_complement(src,i,types)) return;
 	if (locate_C99_unary_plusminus(src,i,types)) return;
+#/*cut-cpp*/
+	if (locate_C99_sizeof(src,i,types)) return;
+#/*cut-cpp*/
 
 #if 0
 	if (terse_locate_unary_operator(src,i))
@@ -6190,9 +6415,6 @@ static void locate_C99_unary_expression(parse_tree& src, size_t& i, const type_s
 		{
 		}
 	else if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"--"))
-		{
-		}
-	else if (token_is_string<6>(src.data<0>()[i].index_tokens[0].token,"sizeof"))
 		{
 		}
 	else if (   token_is_char<'('>(src.data<0>()[i].index_tokens[0].token)
@@ -6258,15 +6480,15 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 	if (locate_CPP_logical_NOT(src,i,types)) return;
 	if (locate_CPP_bitwise_complement(src,i,types)) return;
 	if (locate_CPP_unary_plusminus(src,i,types)) return;
+#/*cut-cpp*/
+	if (locate_CPP_sizeof(src,i,types)) return;
+#/*cut-cpp*/
 
 #if 0
 	if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"++"))
 		{
 		}
 	else if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"--"))
-		{
-		}
-	else if (token_is_string<6>(src.data<0>()[i].index_tokens[0].token,"sizeof"))
 		{
 		}
 	else if (   token_is_char<'('>(src.data<0>()[i].index_tokens[0].token)
