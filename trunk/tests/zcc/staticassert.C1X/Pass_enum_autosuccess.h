@@ -156,3 +156,53 @@ _Static_Assert(zero|one,"automatic success has failed");
 _Static_Assert(one|zero,"automatic success has failed");
 _Static_Assert(one|one,"automatic success has failed");
 
+// check && ||
+_Static_Assert(neg_one&&neg_one,"automatic success has failed");
+_Static_Assert(!(neg_one&&zero),"automatic success has failed");
+_Static_Assert(neg_one&&one,"automatic success has failed");
+_Static_Assert(!(zero&&neg_one),"automatic success has failed");
+_Static_Assert(!(zero&&zero),"automatic success has failed");
+_Static_Assert(!(zero&&one),"automatic success has failed");
+_Static_Assert(one&&neg_one,"automatic success has failed");
+_Static_Assert(!(one&&zero),"automatic success has failed");
+_Static_Assert(one&&one,"automatic success has failed");
+
+_Static_Assert(neg_one||neg_one,"automatic success has failed");
+_Static_Assert(neg_one||zero,"automatic success has failed");
+_Static_Assert(neg_one||one,"automatic success has failed");
+_Static_Assert(zero||neg_one,"automatic success has failed");
+_Static_Assert(!(zero||zero),"automatic success has failed");
+_Static_Assert(zero||one,"automatic success has failed");
+_Static_Assert(one||neg_one,"automatic success has failed");
+_Static_Assert(one||zero,"automatic success has failed");
+_Static_Assert(one||one,"automatic success has failed");
+
+// check ? :
+_Static_Assert(neg_one ? neg_one : neg_one,"automatic success has failed");
+_Static_Assert(neg_one ? neg_one : zero,"automatic success has failed");
+_Static_Assert(neg_one ? neg_one : one,"automatic success has failed");
+_Static_Assert(!(neg_one ? zero : neg_one),"automatic success has failed");
+_Static_Assert(!(neg_one ? zero : zero),"automatic success has failed");
+_Static_Assert(!(neg_one ? zero : one),"automatic success has failed");
+_Static_Assert(neg_one ? one : neg_one,"automatic success has failed");
+_Static_Assert(neg_one ? one : zero,"automatic success has failed");
+_Static_Assert(neg_one ? one : one,"automatic success has failed");
+_Static_Assert(zero ? neg_one : neg_one,"automatic success has failed");
+_Static_Assert(!(zero ? neg_one : zero),"automatic success has failed");
+_Static_Assert(zero ? neg_one : one,"automatic success has failed");
+_Static_Assert(zero ? zero : neg_one,"automatic success has failed");
+_Static_Assert(!(zero ? zero : zero),"automatic success has failed");
+_Static_Assert(zero ? zero : one,"automatic success has failed");
+_Static_Assert(zero ? one : neg_one,"automatic success has failed");
+_Static_Assert(!(zero ? one : zero),"automatic success has failed");
+_Static_Assert(zero ? one : one,"automatic success has failed");
+_Static_Assert(one ? neg_one : neg_one,"automatic success has failed");
+_Static_Assert(one ? neg_one : zero,"automatic success has failed");
+_Static_Assert(one ? neg_one : one,"automatic success has failed");
+_Static_Assert(!(one ? zero : neg_one),"automatic success has failed");
+_Static_Assert(!(one ? zero : zero),"automatic success has failed");
+_Static_Assert(!(one ? zero : one),"automatic success has failed");
+_Static_Assert(one ? one : neg_one,"automatic success has failed");
+_Static_Assert(one ? one : zero,"automatic success has failed");
+_Static_Assert(one ? one : one,"automatic success has failed");
+

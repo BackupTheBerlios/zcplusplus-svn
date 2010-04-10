@@ -161,3 +161,53 @@ _Static_Assert(0|1,"automatic success has failed");
 _Static_Assert(1|0,"automatic success has failed");
 _Static_Assert(1|1,"automatic success has failed");
 
+// check && ||
+_Static_Assert(-1&& -1,"automatic success has failed");
+_Static_Assert(!(-1&&0),"automatic success has failed");
+_Static_Assert(-1&&1,"automatic success has failed");
+_Static_Assert(!(0&& -1),"automatic success has failed");
+_Static_Assert(!(0&&0),"automatic success has failed");
+_Static_Assert(!(0&&1),"automatic success has failed");
+_Static_Assert(1&& -1,"automatic success has failed");
+_Static_Assert(!(1&&0),"automatic success has failed");
+_Static_Assert(1&&1,"automatic success has failed");
+
+_Static_Assert(-1|| -1,"automatic success has failed");
+_Static_Assert(-1||0,"automatic success has failed");
+_Static_Assert(-1||1,"automatic success has failed");
+_Static_Assert(0|| -1,"automatic success has failed");
+_Static_Assert(!(0||0),"automatic success has failed");
+_Static_Assert(0||1,"automatic success has failed");
+_Static_Assert(1|| -1,"automatic success has failed");
+_Static_Assert(1||0,"automatic success has failed");
+_Static_Assert(1||1,"automatic success has failed");
+
+// check ? :
+_Static_Assert(-1 ? -1 : -1,"automatic success has failed");
+_Static_Assert(-1 ? -1 : 0,"automatic success has failed");
+_Static_Assert(-1 ? -1 : 1,"automatic success has failed");
+_Static_Assert(!(-1 ? 0 : -1),"automatic success has failed");
+_Static_Assert(!(-1 ? 0 : 0),"automatic success has failed");
+_Static_Assert(!(-1 ? 0 : 1),"automatic success has failed");
+_Static_Assert(-1 ? 1 : -1,"automatic success has failed");
+_Static_Assert(-1 ? 1 : 0,"automatic success has failed");
+_Static_Assert(-1 ? 1 : 1,"automatic success has failed");
+_Static_Assert(0 ? -1 : -1,"automatic success has failed");
+_Static_Assert(!(0 ? -1 : 0),"automatic success has failed");
+_Static_Assert(0 ? -1 : 1,"automatic success has failed");
+_Static_Assert(0 ? 0 : -1,"automatic success has failed");
+_Static_Assert(!(0 ? 0 : 0),"automatic success has failed");
+_Static_Assert(0 ? 0 : 1,"automatic success has failed");
+_Static_Assert(0 ? 1 : -1,"automatic success has failed");
+_Static_Assert(!(0 ? 1 : 0),"automatic success has failed");
+_Static_Assert(0 ? 1 : 1,"automatic success has failed");
+_Static_Assert(1 ? -1 : -1,"automatic success has failed");
+_Static_Assert(1 ? -1 : 0,"automatic success has failed");
+_Static_Assert(1 ? -1 : 1,"automatic success has failed");
+_Static_Assert(!(1 ? 0 : -1),"automatic success has failed");
+_Static_Assert(!(1 ? 0 : 0),"automatic success has failed");
+_Static_Assert(!(1 ? 0 : 1),"automatic success has failed");
+_Static_Assert(1 ? 1 : -1,"automatic success has failed");
+_Static_Assert(1 ? 1 : 0,"automatic success has failed");
+_Static_Assert(1 ? 1 : 1,"automatic success has failed");
+
