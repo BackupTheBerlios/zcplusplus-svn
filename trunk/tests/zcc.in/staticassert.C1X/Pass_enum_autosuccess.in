@@ -140,3 +140,20 @@ STATIC_ASSERT(zero!=one,"automatic success has failed");
 STATIC_ASSERT(one!=neg_one,"automatic success has failed");
 STATIC_ASSERT(one!=zero,"automatic success has failed");
 STATIC_ASSERT(!(one!=one),"automatic success has failed");
+
+// check & ^ | 
+STATIC_ASSERT(!(zero&zero),"automatic success has failed");
+STATIC_ASSERT(!(zero&one),"automatic success has failed");
+STATIC_ASSERT(!(one&zero),"automatic success has failed");
+STATIC_ASSERT(one&one,"automatic success has failed");
+
+STATIC_ASSERT(!(zero^zero),"automatic success has failed");
+STATIC_ASSERT(zero^one,"automatic success has failed");
+STATIC_ASSERT(one^zero,"automatic success has failed");
+STATIC_ASSERT(!(one^one),"automatic success has failed");
+
+STATIC_ASSERT(!(zero|zero),"automatic success has failed");
+STATIC_ASSERT(zero|one,"automatic success has failed");
+STATIC_ASSERT(one|zero,"automatic success has failed");
+STATIC_ASSERT(one|one,"automatic success has failed");
+

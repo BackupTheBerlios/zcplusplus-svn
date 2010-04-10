@@ -8288,10 +8288,30 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 
 		if 		(res_int==lhs_int)
 			// lhs & rhs = lhs; conserve type
+#/*cut-cpp*/
+			{
+			// handle enumerators now
+			if (   is_noticed_enumerator(*src.data<1>(),types)
+				&& !enumerator_to_integer_representation(*src.c_array<1>(),types))
+				return false;
+#/*cut-cpp*/
 			src.eval_to_arg<1>(0);
+#/*cut-cpp*/
+			}
+#/*cut-cpp*/
 		else if (res_int==rhs_int)
 			// lhs & rhs = rhs; conserve type
+#/*cut-cpp*/
+			{
+			// handle enumerators now
+			if (   is_noticed_enumerator(*src.data<2>(),types)
+				&& !enumerator_to_integer_representation(*src.c_array<2>(),types))
+				return false;
+#/*cut-cpp*/
 			src.eval_to_arg<2>(0);
+#/*cut-cpp*/
+			}
+#/*cut-cpp*/
 		else{
 			const bool negative_signed_int = old.is_signed && res_int.test(old.bitcount-1);
 			if (negative_signed_int) target_machine->signed_additive_inverse(res_int,old.machine_type);
@@ -8435,6 +8455,12 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 		{
 		if (!is_true)
 			{	// 0 ^ __
+#/*cut-cpp*/
+			// handle enumerators now
+			if (   is_noticed_enumerator(*src.data<2>(),types)
+				&& !enumerator_to_integer_representation(*src.c_array<2>(),types))
+				return false;
+#/*cut-cpp*/
 			src.eval_to_arg<2>(0);
 			//! \todo convert char literal to appropriate integer
 			return true;
@@ -8444,6 +8470,12 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 		{
 		if (!is_true)
 			{	// __ ^ 0
+#/*cut-cpp*/
+			// handle enumerators now
+			if (   is_noticed_enumerator(*src.data<1>(),types)
+				&& !enumerator_to_integer_representation(*src.c_array<1>(),types))
+				return false;
+#/*cut-cpp*/
 			src.eval_to_arg<1>(0);
 			//! \todo convert char literal to appropriate integer
 			return true;
@@ -8603,6 +8635,12 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 		{
 		if (!is_true)
 			{	// 0 | __
+#/*cut-cpp*/
+			// handle enumerators now
+			if (   is_noticed_enumerator(*src.data<2>(),types)
+				&& !enumerator_to_integer_representation(*src.c_array<2>(),types))
+				return false;
+#/*cut-cpp*/
 			src.eval_to_arg<2>(0);
 			//! \todo convert char literal to appropriate integer
 			return true;
@@ -8612,6 +8650,12 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 		{
 		if (!is_true)
 			{	// __ | 0
+#/*cut-cpp*/
+			// handle enumerators now
+			if (   is_noticed_enumerator(*src.data<1>(),types)
+				&& !enumerator_to_integer_representation(*src.c_array<1>(),types))
+				return false;
+#/*cut-cpp*/
 			src.eval_to_arg<1>(0);
 			//! \todo convert char literal to appropriate integer
 			return true;
@@ -8629,10 +8673,30 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 //		res_int.mask_to(target_machine->C_bit(machine_type));	// shouldn't need this
 		if 		(res_int==lhs_int)
 			// lhs | rhs = lhs; conserve type
+#/*cut-cpp*/
+			{
+			// handle enumerators now
+			if (   is_noticed_enumerator(*src.data<1>(),types)
+				&& !enumerator_to_integer_representation(*src.c_array<1>(),types))
+				return false;
+#/*cut-cpp*/
 			src.eval_to_arg<1>(0);
+#/*cut-cpp*/
+			}
+#/*cut-cpp*/
 		else if (res_int==rhs_int)
 			// lhs | rhs = rhs; conserve type
+#/*cut-cpp*/
+			{
+			// handle enumerators now
+			if (   is_noticed_enumerator(*src.data<1>(),types)
+				&& !enumerator_to_integer_representation(*src.c_array<1>(),types))
+				return false;
+#/*cut-cpp*/
 			src.eval_to_arg<2>(0);
+#/*cut-cpp*/
+			}
+#/*cut-cpp*/
 		else{
 			if (int_has_trapped(src,res_int,hard_error)) return false;
 
