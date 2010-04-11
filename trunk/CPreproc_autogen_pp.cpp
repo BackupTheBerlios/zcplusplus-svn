@@ -304,9 +304,9 @@ disallow_prior_definitions(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& To
 		strcpy(tmp2,"#ifdef ");
 		strcpy(tmp2+sizeof("#ifdef ")-1,*identifiers);
 #ifndef ZAIMONI_FORCE_ISO
-		tmp[i] = new zaimoni::Token<char>(tmp2,NULL);
+		tmp[i] = new(std::nothrow) zaimoni::Token<char>(tmp2,NULL);
 #else
-		tmp[i] = new zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#ifdef ")-1+identifier_len),NULL);
+		tmp[i] = new(std::nothrow) zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#ifdef ")-1+identifier_len),NULL);
 #endif
 		if (NULL==tmp[i])
 			{
@@ -318,9 +318,9 @@ disallow_prior_definitions(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& To
 		strcpy(tmp2,"#undef ");
 		strcpy(tmp2+sizeof("#undef ")-1,*identifiers);
 #ifndef ZAIMONI_FORCE_ISO
-		tmp[i+2] = new zaimoni::Token<char>(tmp2,NULL);
+		tmp[i+2] = new(std::nothrow) zaimoni::Token<char>(tmp2,NULL);
 #else
-		tmp[i+2] = new zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#undef ")-1+identifier_len),NULL);
+		tmp[i+2] = new(std::nothrow) zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#undef ")-1+identifier_len),NULL);
 #endif
 		if (NULL==tmp[i+2])
 			{
@@ -333,9 +333,9 @@ disallow_prior_definitions(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& To
 		strcpy(tmp2+sizeof("#error Undefined Behavior: reserved identifier '")-1,*identifiers);
 		strcpy(tmp2+sizeof("#error Undefined Behavior: reserved identifier '")-1+identifier_len,"' defined as macro");
 #ifndef ZAIMONI_FORCE_ISO
-		tmp[i+1] = new zaimoni::Token<char>(tmp2,NULL);
+		tmp[i+1] = new(std::nothrow) zaimoni::Token<char>(tmp2,NULL);
 #else
-		tmp[i+1] = new zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#error Undefined Behavior: reserved identifier '")-1+identifier_len+sizeof("' defined as macro")-1),NULL);
+		tmp[i+1] = new(std::nothrow) zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#error Undefined Behavior: reserved identifier '")-1+identifier_len+sizeof("' defined as macro")-1),NULL);
 #endif
 		if (NULL==tmp[i+1])
 			{
@@ -427,9 +427,10 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	buf[0] = ' ';
 #endif
 	assert(NULL!=header_name);
-	TokenList.clear();
-	TokenList.resize(STATIC_SIZE(limits_h_core));
-	zaimoni::Token<char>** tmp = TokenList.c_array();
+	assert(TokenList.empty());
+	zaimoni::autovalarray_ptr<zaimoni::Token<char>* > TmpTokenList(STATIC_SIZE(limits_h_core));
+	zaimoni::Token<char>** tmp = TmpTokenList.c_array();
+	
 	size_t i = STATIC_SIZE(limits_h_core);
 	do	{
 		--i;
@@ -507,14 +508,15 @@ CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	tmp[LIMITS_WORD_BIT_LINE]->append(z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_int>(),buf+1,10)-1);
 	tmp[LIMITS_LONG_BIT_LINE]->append(z_umaxtoa(target_machine.C_bit<virtual_machine::std_int_long>(),buf+1,10)-1);
 
-	lockdown_reserved_identifiers(TokenList,LIMITS_INJECT_LOCK,limits_h_reserved+18,STATIC_SIZE(limits_h_reserved)-18);
-	lockdown_reserved_identifiers(TokenList,LIMITS_INJECT_LOCK,limits_h_reserved+12,6);
-	lockdown_reserved_identifiers(TokenList,LIMITS_INJECT_LOCK,limits_h_reserved+6,6);
-	lockdown_reserved_identifiers(TokenList,LIMITS_INJECT_LOCK,limits_h_reserved,6);
-	lockdown_reserved_identifiers(TokenList,LIMITS_POSIX_INJECT_LOCK,limits_h_POSIX_reserved,STATIC_SIZE(limits_h_POSIX_reserved));
-	disallow_prior_definitions(TokenList,LIMITS_POSIX_INJECT_REALITY,limits_h_POSIX_reserved,STATIC_SIZE(limits_h_POSIX_reserved));
-	disallow_prior_definitions(TokenList,LIMITS_INJECT_REALITY,limits_h_reserved,STATIC_SIZE(limits_h_reserved));
-
+	lockdown_reserved_identifiers(TmpTokenList,LIMITS_INJECT_LOCK,limits_h_reserved+18,STATIC_SIZE(limits_h_reserved)-18);
+	lockdown_reserved_identifiers(TmpTokenList,LIMITS_INJECT_LOCK,limits_h_reserved+12,6);
+	lockdown_reserved_identifiers(TmpTokenList,LIMITS_INJECT_LOCK,limits_h_reserved+6,6);
+	lockdown_reserved_identifiers(TmpTokenList,LIMITS_INJECT_LOCK,limits_h_reserved,6);
+	lockdown_reserved_identifiers(TmpTokenList,LIMITS_POSIX_INJECT_LOCK,limits_h_POSIX_reserved,STATIC_SIZE(limits_h_POSIX_reserved));
+	disallow_prior_definitions(TmpTokenList,LIMITS_POSIX_INJECT_REALITY,limits_h_POSIX_reserved,STATIC_SIZE(limits_h_POSIX_reserved));
+	disallow_prior_definitions(TmpTokenList,LIMITS_INJECT_REALITY,limits_h_reserved,STATIC_SIZE(limits_h_reserved));
+	zaimoni::swap(TokenList,TmpTokenList);
+	
 	final_init_tokenlist(TokenList.c_array(),TokenList.size(),header_name);
 }
 
@@ -605,9 +607,10 @@ void
 CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const
 {
 	assert(NULL!=header_name);
-	TokenList.clear();
-	TokenList.resize(STATIC_SIZE(stddef_h_core));
-	zaimoni::Token<char>** tmp = TokenList.c_array();
+	assert(TokenList.empty());
+	zaimoni::autovalarray_ptr<zaimoni::Token<char>* > TmpTokenList(STATIC_SIZE(stddef_h_core));
+	zaimoni::Token<char>** tmp = TmpTokenList.c_array();
+
 	size_t i = STATIC_SIZE(stddef_h_core);
 	do	{
 		--i;
@@ -635,9 +638,10 @@ CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	tmp[STDDEF_NULL_LINE]->append(NULL_constant_from_machine(target_machine.ptrdiff_t_type()));
 
 	BOOST_STATIC_ASSERT(6==STATIC_SIZE(stddef_h_reserved));
-	disallow_prior_definitions(TokenList,STDDEF_INJECT_CPP_REALITY,stddef_h_reserved+5,1);
-	disallow_prior_definitions(TokenList,STDDEF_INJECT_C_REALITY,stddef_h_reserved,1);
-	disallow_prior_definitions(TokenList,STDDEF_INJECT_REALITY,stddef_h_reserved+1,4);
+	disallow_prior_definitions(TmpTokenList,STDDEF_INJECT_CPP_REALITY,stddef_h_reserved+5,1);
+	disallow_prior_definitions(TmpTokenList,STDDEF_INJECT_C_REALITY,stddef_h_reserved,1);
+	disallow_prior_definitions(TmpTokenList,STDDEF_INJECT_REALITY,stddef_h_reserved+1,4);
+	zaimoni::swap(TokenList,TmpTokenList);
 
 	final_init_tokenlist(TokenList.c_array(),TokenList.size(),header_name);
 }
@@ -687,6 +691,7 @@ void
 CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const
 {
 	assert(NULL!=header_name);
+	assert(TokenList.empty());
 	// 2 for: leading space, trailing null-termination
 	// (VM_MAX_BIT_PLATFORM/3) for: digits (using octal rather than decimal count because that's easy to do at compile-time)
 #ifdef ZCC_LEGACY_FIXED_INT
@@ -695,9 +700,11 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 #else
 	zaimoni::autovalarray_ptr_throws<char> buf(2+(VM_MAX_BIT_PLATFORM/3));
 #endif
-	TokenList.clear();
-	TokenList.resize(STATIC_SIZE(stdint_h_core));
-	zaimoni::Token<char>** tmp = TokenList.c_array();
+	zaimoni::autovalarray_ptr<zaimoni::Token<char>* > TmpTokenList(STATIC_SIZE(stdint_h_core));
+	zaimoni::Token<char>** tmp = TmpTokenList.c_array();
+
+//	TokenList.resize(STATIC_SIZE(stdint_h_core));
+//	zaimoni::Token<char>** tmp = TokenList.c_array();
 	size_t i = STATIC_SIZE(stdint_h_core);
 	do	{
 		--i;
@@ -994,14 +1001,14 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		stack[stack_size++] = STDINT_CPP_EXACT_LINEORIGIN+STDINT_EXACT_UCHAR_OFFSET;
 		--inject_CPP_index;
 		}	
-	if (0<stack_size) TokenList.DeleteNSlots(stack,stack_size);
+	if (0<stack_size) TmpTokenList.DeleteNSlots(stack,stack_size);
 	}
 
 	// limits macros cleanup
 	char lock_buf[sizeof("#pragma ZCC lock INT_LEAST_MIN INT_LEAST_MAX UINT_LEAST_MAX INT_FAST_MIN INT_FAST_MAX UINT_FAST_MAX INT_C UINT_C")+8*2] = "#pragma ZCC lock ";
 	if (suppress[virtual_machine::std_int_long_long-2])
 		{
-		TokenList.DeleteNSlotsAt(3,STDINT_EXACT_LLONG_LIMITS_LINEORIGIN);
+		TmpTokenList.DeleteNSlotsAt(3,STDINT_EXACT_LLONG_LIMITS_LINEORIGIN);
 		inject_CPP_index -= 3;
 		inject_C_index -= 3;
 		}
@@ -1016,19 +1023,19 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			strcat(lock_buf,buf+1);
 			};
 		strcat(lock_buf,"_MAX");
-		new_token_at(TokenList,STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
+		new_token_at(TmpTokenList,STDINT_EXACT_LLONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
 		++inject_CPP_index;
 		++inject_C_index;
 		if (!target_is_twos_complement)
 			{
-			TokenList.DeleteNSlotsAt(2,STDINT_EXACT_LLONG_LIMITS_LINEORIGIN);
+			TmpTokenList.DeleteNSlotsAt(2,STDINT_EXACT_LLONG_LIMITS_LINEORIGIN);
 			inject_CPP_index -= 2;
 			inject_C_index -= 2;
 			};
 		};
 	if (suppress[virtual_machine::std_int_long-2])
 		{
-		TokenList.DeleteNSlotsAt(3,STDINT_EXACT_LONG_LIMITS_LINEORIGIN);
+		TmpTokenList.DeleteNSlotsAt(3,STDINT_EXACT_LONG_LIMITS_LINEORIGIN);
 		inject_CPP_index -= 3;
 		inject_C_index -= 3;
 		}
@@ -1043,12 +1050,12 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			strcat(lock_buf,buf+1);
 			};
 		strcat(lock_buf,"_MAX");
-		new_token_at(TokenList,STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
+		new_token_at(TmpTokenList,STDINT_EXACT_LONG_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
 		++inject_CPP_index;
 		++inject_C_index;
 		if (!target_is_twos_complement)
 			{
-			TokenList.DeleteNSlotsAt(2,STDINT_EXACT_LONG_LIMITS_LINEORIGIN);
+			TmpTokenList.DeleteNSlotsAt(2,STDINT_EXACT_LONG_LIMITS_LINEORIGIN);
 			inject_CPP_index -= 2;
 			inject_C_index -= 2;
 			};
@@ -1064,18 +1071,18 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		strcat(lock_buf,buf+1);
 		};
 	strcat(lock_buf,"_MAX");
-	new_token_at(TokenList,STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
+	new_token_at(TmpTokenList,STDINT_EXACT_INT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
 	++inject_CPP_index;
 	++inject_C_index;
 	if (!target_is_twos_complement)
 		{
-		TokenList.DeleteNSlotsAt(2,STDINT_EXACT_INT_LIMITS_LINEORIGIN);
+		TmpTokenList.DeleteNSlotsAt(2,STDINT_EXACT_INT_LIMITS_LINEORIGIN);
 		inject_CPP_index -= 2;
 		inject_C_index -= 2;
 		};
 	if (suppress[virtual_machine::std_int_short-1])
 		{
-		TokenList.DeleteNSlotsAt(3,STDINT_EXACT_SHRT_LIMITS_LINEORIGIN);
+		TmpTokenList.DeleteNSlotsAt(3,STDINT_EXACT_SHRT_LIMITS_LINEORIGIN);
 		inject_CPP_index -= 3;
 		inject_C_index -= 3;
 		}
@@ -1090,19 +1097,19 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			strcat(lock_buf,buf+1);
 			};
 		strcat(lock_buf,"_MAX");
-		new_token_at(TokenList,STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
+		new_token_at(TmpTokenList,STDINT_EXACT_SHRT_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
 		++inject_CPP_index;
 		++inject_C_index;
 		if (!target_is_twos_complement)
 			{
-			TokenList.DeleteNSlotsAt(2,STDINT_EXACT_SHRT_LIMITS_LINEORIGIN);
+			TmpTokenList.DeleteNSlotsAt(2,STDINT_EXACT_SHRT_LIMITS_LINEORIGIN);
 			inject_CPP_index -= 2;
 			inject_C_index -= 2;
 			}
 		}
 	if (suppress[virtual_machine::std_int_char-1])
 		{
-		TokenList.DeleteNSlotsAt(3,STDINT_EXACT_CHAR_LIMITS_LINEORIGIN);
+		TmpTokenList.DeleteNSlotsAt(3,STDINT_EXACT_CHAR_LIMITS_LINEORIGIN);
 		inject_CPP_index -= 3;
 		inject_C_index -= 3;
 		}
@@ -1117,12 +1124,12 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 			strcat(lock_buf,buf+1);
 			};
 		strcat(lock_buf,"_MAX");
-		new_token_at(TokenList,STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
+		new_token_at(TmpTokenList,STDINT_EXACT_CHAR_LIMITS_LINEORIGIN+STDINT_UMAX_OFFSET+1,lock_buf);
 		++inject_CPP_index;
 		++inject_C_index;
 		if (!target_is_twos_complement)
 			{
-			TokenList.DeleteNSlotsAt(2,STDINT_EXACT_CHAR_LIMITS_LINEORIGIN);
+			TmpTokenList.DeleteNSlotsAt(2,STDINT_EXACT_CHAR_LIMITS_LINEORIGIN);
 			inject_CPP_index -= 2;
 			inject_C_index -= 2;
 			}
@@ -1196,7 +1203,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		--inject_CPP_index;
 		--inject_C_index;
 		}
-	if (0<stack_size) TokenList.DeleteNSlots(stack,stack_size);	
+	if (0<stack_size) TmpTokenList.DeleteNSlots(stack,stack_size);	
 	}
 
 	// prepare to inject least/fast types and their adapter macros
@@ -1209,8 +1216,8 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	const unsigned short bitspan_types = type_bits[virtual_machine::std_int_long_long-1]-7;
 	assert(USHRT_MAX/13>=bitspan_types);
 	i = 4*bitspan_types;
-	TokenList.InsertNSlotsAt(i,inject_CPP_index);
-	tmp = TokenList.c_array()+inject_CPP_index;
+	TmpTokenList.InsertNSlotsAt(i,inject_CPP_index);
+	tmp = TmpTokenList.c_array()+inject_CPP_index;
 	do	{
 		const int target_bits = --i/4+8;
 		assert(target_bits<=target_machine.C_bit(virtual_machine::std_int_long_long));
@@ -1256,8 +1263,8 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	strcpy(define_buf,"#define ");
 #endif
 	i = 13*bitspan_types;
-	TokenList.InsertNSlotsAt(i,inject_C_index);
-	tmp = TokenList.c_array()+inject_C_index;
+	TmpTokenList.InsertNSlotsAt(i,inject_C_index);
+	tmp = TmpTokenList.c_array()+inject_C_index;
 	do	{
 		const int target_bits = --i/13+8;
 		assert(target_bits<=target_machine.C_bit(virtual_machine::std_int_long_long));
@@ -1372,6 +1379,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		tmp[i] = new zaimoni::Token<char>(typedef_buf,0,strlen(typedef_buf),0);
 		}
 	while(0<i);
+	zaimoni::swap(TokenList,TmpTokenList);
 
 	final_init_tokenlist(TokenList.c_array(),TokenList.size(),header_name);
 }
