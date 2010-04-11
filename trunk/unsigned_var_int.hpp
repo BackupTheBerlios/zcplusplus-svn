@@ -81,9 +81,8 @@ public:
 	bool representable_as_uint() const
 		{	//! \todo remove assumption host has no padding bits in uintmax_t
 		size_t i = _data.size();
-		if (sizeof(uintmax_t)>=i) return true;
-		do	if ((unsigned char)('\0')!=_data.data()[--i]) return false;
-		while(sizeof(uintmax_t)<i);
+		while(sizeof(uintmax_t)<i)
+			if (_data.data()[--i]) return false;
 		return true;
 		};
 

@@ -27,8 +27,7 @@ ISO/IEC 10646 is the hexadecimal value 0000NNNN.
 [also see Appendix E for a validation list...probably should update against latest UNICODE references]
 */
 
-bool
-FlattenUNICODE(char*& Text)
+bool FlattenUNICODE(char*& Text)
 {
 	if (NULL==Text) return true;
 
@@ -39,50 +38,50 @@ FlattenUNICODE(char*& Text)
 	size_t TextLength = Text_len++;
 #endif
 	bool want_realloc = false;
-	if (10<=TextLength)
+	// full encoding
+	char* bloat_unicode = strstr(Text,"\\U0000");
+	if (bloat_unicode && 10>TextLength-(bloat_unicode-Text)) bloat_unicode = NULL;
+	while(NULL!=bloat_unicode)
 		{
-		char* bloat_unicode = strstr(Text,"\\U0000");
-		while(NULL!=bloat_unicode)
+		if (4<=strspn(bloat_unicode+6,C_HEXADECIMAL_DIGITS))
 			{
-			if (4<=strspn(bloat_unicode+6,C_HEXADECIMAL_DIGITS))
-				{
-				const size_t block_length = bloat_unicode-Text+2;
-				bloat_unicode[1] = 'u';
-				TextLength -= 4;
-				if (block_length<TextLength)
-					memmove(bloat_unicode+2,bloat_unicode+6,(TextLength-block_length));
-				memset(Text+TextLength,0,4);
-				want_realloc = true;
-				}
-			bloat_unicode += 6;
-			bloat_unicode = ((bloat_unicode-Text)+10U>TextLength) ? NULL : strstr(bloat_unicode,"\\U0000");
+			const size_t block_length = bloat_unicode-Text+2;
+			bloat_unicode[1] = 'u';
+			TextLength -= 4;
+			if (block_length<TextLength)
+				memmove(bloat_unicode+2,bloat_unicode+6,(TextLength-block_length));
+			memset(Text+TextLength,0,4);
+			want_realloc = true;
 			}
+		bloat_unicode += 6;
+		bloat_unicode = strstr(bloat_unicode,"\\U0000");
+		if (bloat_unicode && 10>TextLength-(bloat_unicode-Text)) bloat_unicode = NULL;
 		}
-	if (6<=TextLength)
-		{
-		char* bloat_unicode = strstr(Text,"\\u00");
-		while(NULL!=bloat_unicode)
-			{	// we down-convert a subset of allowed characters, excluding anything lower than ASCII space to avoid real weirdness
-				//! \todo portability target: want to adapt to preprocessor CHAR_BIT/UCHAR_MAX, this assumes 8/255; also assumes ASCII
-				// we restrict our attention here to the utterly safe \u00A0 - \u00FF conversion
-			if (strchr(C_HEXADECIMAL_DIGITS+10,bloat_unicode[4]) && strchr(C_HEXADECIMAL_DIGITS,bloat_unicode[5]))
-				{
-				const size_t block_length = bloat_unicode-Text+1;
-				const unsigned char tmp = (unsigned char)(16*InterpretHexadecimalDigit(bloat_unicode[4]+InterpretHexadecimalDigit(bloat_unicode[5])));
-				assert(160<=tmp);
-				bloat_unicode[0] = tmp;
-				TextLength -= 5;
-				if (block_length<TextLength)
-					memmove(bloat_unicode+1,bloat_unicode+6,(TextLength-block_length));
-				memset(Text+TextLength,0,5);
-				want_realloc = true;
-				++bloat_unicode;
-				}
-			else
-				bloat_unicode += 4;
-
-			bloat_unicode = ((bloat_unicode-Text)+6U>TextLength) ? NULL : strstr(bloat_unicode,"\\u00");
+	
+	bloat_unicode = strstr(Text,"\\u00");
+	if (bloat_unicode && 6>TextLength-(bloat_unicode-Text)) bloat_unicode = NULL;
+	while(NULL!=bloat_unicode)
+		{	// we down-convert a subset of allowed characters, excluding anything lower than ASCII space to avoid real weirdness
+			//! \todo portability target: want to adapt to preprocessor CHAR_BIT/UCHAR_MAX, this assumes 8/255; also assumes ASCII
+			// we restrict our attention here to the utterly safe \u00A0 - \u00FF conversion
+		if (strchr(C_HEXADECIMAL_DIGITS+10,bloat_unicode[4]) && strchr(C_HEXADECIMAL_DIGITS,bloat_unicode[5]))
+			{
+			const size_t block_length = bloat_unicode-Text+1;
+			const unsigned char tmp = (unsigned char)(16*InterpretHexadecimalDigit(bloat_unicode[4]+InterpretHexadecimalDigit(bloat_unicode[5])));
+			assert(160<=tmp);
+			bloat_unicode[0] = tmp;
+			TextLength -= 5;
+			if (block_length<TextLength)
+				memmove(bloat_unicode+1,bloat_unicode+6,(TextLength-block_length));
+			memset(Text+TextLength,0,5);
+			want_realloc = true;
+			++bloat_unicode;
 			}
+		else
+			bloat_unicode += 4;
+
+		bloat_unicode = strstr(bloat_unicode,"\\u00");
+		if (bloat_unicode && 6>TextLength-(bloat_unicode-Text)) bloat_unicode = NULL;
 		}
 #ifndef ZAIMONI_FORCE_ISO
 	if (want_realloc) _shrink(Text,TextLength);

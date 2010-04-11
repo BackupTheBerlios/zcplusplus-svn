@@ -23,21 +23,21 @@ struct _unsigned_fixed_charint
 	_unsigned_fixed_charint& operator=(uintmax_t src);
 	_unsigned_fixed_charint& operator~() {bitwise_compl(_x,N); return *this;};
 	void auto_bitwise_complement() {bitwise_compl(_x,N);};
-	_unsigned_fixed_charint& operator+=(const _unsigned_fixed_charint& RHS) {unsigned_sum(_x,N,RHS._x); return *this;};
-	_unsigned_fixed_charint& operator+=(uintmax_t RHS) {unsigned_sum(_x,N,RHS); return *this;};
-	_unsigned_fixed_charint& operator-=(const _unsigned_fixed_charint& RHS) {unsigned_diff(_x,N,RHS._x); return *this;};
-	_unsigned_fixed_charint& operator-=(uintmax_t RHS) {unsigned_diff(_x,N,RHS); return *this;};
-	_unsigned_fixed_charint& operator*=(const _unsigned_fixed_charint& RHS);
-	_unsigned_fixed_charint& operator&=(const _unsigned_fixed_charint& RHS) {bitwise_and(_x,N,RHS._x); return *this;};
-	_unsigned_fixed_charint& operator^=(const _unsigned_fixed_charint& RHS) {bitwise_xor(_x,N,RHS._x); return *this;};
-	_unsigned_fixed_charint& operator|=(const _unsigned_fixed_charint& RHS) {bitwise_or(_x,N,RHS._x); return *this;};
-	_unsigned_fixed_charint& operator>>=(uintmax_t RHS) {unsigned_right_shift(_x,N,RHS); return *this;};
-	_unsigned_fixed_charint& operator<<=(uintmax_t RHS) {unsigned_left_shift(_x,N,RHS); return *this;};
+	_unsigned_fixed_charint& operator+=(const _unsigned_fixed_charint& rhs) {unsigned_sum(_x,N,rhs._x); return *this;};
+	_unsigned_fixed_charint& operator+=(uintmax_t rhs) {unsigned_sum(_x,N,rhs); return *this;};
+	_unsigned_fixed_charint& operator-=(const _unsigned_fixed_charint& rhs) {unsigned_diff(_x,N,rhs._x); return *this;};
+	_unsigned_fixed_charint& operator-=(uintmax_t rhs) {unsigned_diff(_x,N,rhs); return *this;};
+	_unsigned_fixed_charint& operator*=(const _unsigned_fixed_charint& rhs);
+	_unsigned_fixed_charint& operator&=(const _unsigned_fixed_charint& rhs) {bitwise_and(_x,N,rhs._x); return *this;};
+	_unsigned_fixed_charint& operator^=(const _unsigned_fixed_charint& rhs) {bitwise_xor(_x,N,rhs._x); return *this;};
+	_unsigned_fixed_charint& operator|=(const _unsigned_fixed_charint& rhs) {bitwise_or(_x,N,rhs._x); return *this;};
+	_unsigned_fixed_charint& operator>>=(uintmax_t rhs) {unsigned_right_shift(_x,N,rhs); return *this;};
+	_unsigned_fixed_charint& operator<<=(uintmax_t rhs) {unsigned_left_shift(_x,N,rhs); return *this;};
 
 	void div_op(const _unsigned_fixed_charint& divisor, _unsigned_fixed_charint& quotient) {remainder_quotient<N>(c_array(),divisor.data(),quotient.c_array());};
 
-	_unsigned_fixed_charint& operator/=(const _unsigned_fixed_charint& RHS);
-	_unsigned_fixed_charint& operator%=(const _unsigned_fixed_charint& RHS);
+	_unsigned_fixed_charint& operator/=(const _unsigned_fixed_charint& rhs);
+	_unsigned_fixed_charint& operator%=(const _unsigned_fixed_charint& rhs);
 
 	unsigned int int_log2() const {return ::int_log2(_x,N);};
 
@@ -171,112 +171,112 @@ _unsigned_fixed_charint<N>::operator=(const _unsigned_fixed_charint<M>& src)
 }
 
 template<size_t N>
-_unsigned_fixed_charint<N> operator+(const _unsigned_fixed_charint<N>& LHS,const _unsigned_fixed_charint<N>& RHS)
+_unsigned_fixed_charint<N> operator+(const _unsigned_fixed_charint<N>& lhs,const _unsigned_fixed_charint<N>& rhs)
 {
-	_unsigned_fixed_charint<N> tmp(LHS);
-	tmp += RHS;
+	_unsigned_fixed_charint<N> tmp(lhs);
+	tmp += rhs;
 	return tmp;
 }
 
 template<size_t N>
-_unsigned_fixed_charint<N> operator-(const _unsigned_fixed_charint<N>& LHS,const _unsigned_fixed_charint<N>& RHS)
+_unsigned_fixed_charint<N> operator-(const _unsigned_fixed_charint<N>& lhs,const _unsigned_fixed_charint<N>& rhs)
 {
-	_unsigned_fixed_charint<N> tmp(LHS);
-	tmp -= RHS;
+	_unsigned_fixed_charint<N> tmp(lhs);
+	tmp -= rhs;
 	return tmp;
 }
 
 template<size_t N>
 _unsigned_fixed_charint<N>&
-_unsigned_fixed_charint<N>::operator*=(const _unsigned_fixed_charint<N>& RHS)
+_unsigned_fixed_charint<N>::operator*=(const _unsigned_fixed_charint<N>& rhs)
 {
 	_unsigned_fixed_charint<N> tmp;
-	unsigned_mult(tmp._x,N,_x,N,RHS._x,N);
+	unsigned_mult(tmp._x,N,_x,N,rhs._x,N);
 	return *this = tmp;
 }
 
 template<size_t N>
 _unsigned_fixed_charint<N>
-operator/(_unsigned_fixed_charint<N> LHS,const _unsigned_fixed_charint<N>& RHS)
+operator/(_unsigned_fixed_charint<N> lhs,const _unsigned_fixed_charint<N>& rhs)
 {
 	_unsigned_fixed_charint<N> quotient;
-	LHS.div_op(RHS,quotient);
+	lhs.div_op(rhs,quotient);
 	return quotient;
 }
 
 
 template<size_t N>
 _unsigned_fixed_charint<N>&
-_unsigned_fixed_charint<N>::operator/=(const _unsigned_fixed_charint<N>& RHS)
+_unsigned_fixed_charint<N>::operator/=(const _unsigned_fixed_charint<N>& rhs)
 {
 	_unsigned_fixed_charint<N> quotient;
-	div_op(RHS,quotient);
+	div_op(rhs,quotient);
 	return *this = quotient;
 }
 
 template<size_t N>
 _unsigned_fixed_charint<N>&
-_unsigned_fixed_charint<N>::operator%=(const _unsigned_fixed_charint<N>& RHS)
+_unsigned_fixed_charint<N>::operator%=(const _unsigned_fixed_charint<N>& rhs)
 {
 	_unsigned_fixed_charint<N> quotient;
-	div_op(RHS,quotient);
+	div_op(rhs,quotient);
 	return *this;
 }
 
 // comparison operators
 template<size_t N> inline
-bool operator==(const _unsigned_fixed_charint<N>& LHS, const _unsigned_fixed_charint<N>& RHS) {return 0==unsigned_cmp(LHS._x,N,RHS._x);}
+bool operator==(const _unsigned_fixed_charint<N>& lhs, const _unsigned_fixed_charint<N>& rhs) {return 0==unsigned_cmp(lhs._x,N,rhs._x);}
 
 template<size_t N> inline
-bool operator==(const _unsigned_fixed_charint<N>& LHS, uintmax_t RHS) {return 0==unsigned_cmp(LHS._x,N,RHS);}
+bool operator==(const _unsigned_fixed_charint<N>& lhs, uintmax_t rhs) {return 0==unsigned_cmp(lhs._x,N,rhs);}
 
 template<size_t N> inline
-bool operator==(const uintmax_t LHS, const _unsigned_fixed_charint<N>& RHS) {return 0==unsigned_cmp(RHS._x,N,LHS);}
+bool operator==(const uintmax_t lhs, const _unsigned_fixed_charint<N>& rhs) {return 0==unsigned_cmp(rhs._x,N,lhs);}
 
 template<size_t N> inline
-bool operator!=(const _unsigned_fixed_charint<N>& LHS, const _unsigned_fixed_charint<N>& RHS) {return 0!=unsigned_cmp(LHS._x,N,RHS._x);}
+bool operator!=(const _unsigned_fixed_charint<N>& lhs, const _unsigned_fixed_charint<N>& rhs) {return 0!=unsigned_cmp(lhs._x,N,rhs._x);}
 
 template<size_t N> inline
-bool operator!=(const _unsigned_fixed_charint<N>& LHS, uintmax_t RHS) {return 0==unsigned_cmp(LHS._x,N,RHS);}
+bool operator!=(const _unsigned_fixed_charint<N>& lhs, uintmax_t rhs) {return 0==unsigned_cmp(lhs._x,N,rhs);}
 
 template<size_t N> inline
-bool operator!=(const uintmax_t LHS, const _unsigned_fixed_charint<N>& RHS) {return 0==unsigned_cmp(RHS._x,N,LHS);}
+bool operator!=(const uintmax_t lhs, const _unsigned_fixed_charint<N>& rhs) {return 0==unsigned_cmp(rhs._x,N,lhs);}
 
 template<size_t N> inline
-bool operator<(const _unsigned_fixed_charint<N>& LHS, const _unsigned_fixed_charint<N>& RHS) {return -1==unsigned_cmp(LHS._x,N,RHS._x);}
+bool operator<(const _unsigned_fixed_charint<N>& lhs, const _unsigned_fixed_charint<N>& rhs) {return -1==unsigned_cmp(lhs._x,N,rhs._x);}
 
 template<size_t N> inline
-bool operator<(const _unsigned_fixed_charint<N>& LHS, uintmax_t RHS) {return -1==unsigned_cmp(LHS._x,N,RHS);}
+bool operator<(const _unsigned_fixed_charint<N>& lhs, uintmax_t rhs) {return -1==unsigned_cmp(lhs._x,N,rhs);}
 
 template<size_t N> inline
-bool operator<(const uintmax_t LHS, const _unsigned_fixed_charint<N>& RHS) {return 1==unsigned_cmp(RHS._x,N,LHS);}
+bool operator<(const uintmax_t lhs, const _unsigned_fixed_charint<N>& rhs) {return 1==unsigned_cmp(rhs._x,N,lhs);}
 
 template<size_t N> inline
-bool operator>(const _unsigned_fixed_charint<N>& LHS, const _unsigned_fixed_charint<N>& RHS) {return 1==unsigned_cmp(LHS._x,N,RHS._x);}
+bool operator>(const _unsigned_fixed_charint<N>& lhs, const _unsigned_fixed_charint<N>& rhs) {return 1==unsigned_cmp(lhs._x,N,rhs._x);}
 
 template<size_t N> inline
-bool operator>(const _unsigned_fixed_charint<N>& LHS, uintmax_t RHS) {return 1==unsigned_cmp(LHS._x,N,RHS);}
+bool operator>(const _unsigned_fixed_charint<N>& lhs, uintmax_t rhs) {return 1==unsigned_cmp(lhs._x,N,rhs);}
 
 template<size_t N> inline
-bool operator>(const uintmax_t LHS, const _unsigned_fixed_charint<N>& RHS) {return -1==unsigned_cmp(RHS._x,N,LHS);}
+bool operator>(const uintmax_t lhs, const _unsigned_fixed_charint<N>& rhs) {return -1==unsigned_cmp(rhs._x,N,lhs);}
 
 template<size_t N> inline
-bool operator<=(const _unsigned_fixed_charint<N>& LHS, const _unsigned_fixed_charint<N>& RHS) {return 0>=unsigned_cmp(LHS._x,N,RHS._x);}
+bool operator<=(const _unsigned_fixed_charint<N>& lhs, const _unsigned_fixed_charint<N>& rhs) {return 0>=unsigned_cmp(lhs._x,N,rhs._x);}
 
 template<size_t N> inline
-bool operator<=(const _unsigned_fixed_charint<N>& LHS, uintmax_t RHS) {return 0>=unsigned_cmp(LHS._x,N,RHS);}
+bool operator<=(const _unsigned_fixed_charint<N>& lhs, uintmax_t rhs) {return 0>=unsigned_cmp(lhs._x,N,rhs);}
 
 template<size_t N> inline
-bool operator<=(const uintmax_t LHS, const _unsigned_fixed_charint<N>& RHS) {return 0<=unsigned_cmp(RHS._x,N,LHS);}
+bool operator<=(const uintmax_t lhs, const _unsigned_fixed_charint<N>& rhs) {return 0<=unsigned_cmp(rhs._x,N,lhs);}
 
 template<size_t N> inline
-bool operator>=(const _unsigned_fixed_charint<N>& LHS, const _unsigned_fixed_charint<N>& RHS) {return 0<=unsigned_cmp(LHS._x,N,RHS._x);}
+bool operator>=(const _unsigned_fixed_charint<N>& lhs, const _unsigned_fixed_charint<N>& rhs) {return 0<=unsigned_cmp(lhs._x,N,rhs._x);}
 
 template<size_t N> inline
-bool operator>=(const _unsigned_fixed_charint<N>& LHS, uintmax_t RHS) {return 0<=unsigned_cmp(LHS._x,N,RHS);}
+bool operator>=(const _unsigned_fixed_charint<N>& lhs, uintmax_t rhs) {return 0<=unsigned_cmp(lhs._x,N,rhs);}
 
 template<size_t N> inline
-bool operator>=(const uintmax_t LHS, const _unsigned_fixed_charint<N>& RHS) {return 0>=unsigned_cmp(RHS._x,N,LHS);}
+bool operator>=(const uintmax_t lhs, const _unsigned_fixed_charint<N>& rhs) {return 0>=unsigned_cmp(rhs._x,N,lhs);}
 
 template<size_t N>
 char* z_ucharint_toa(_unsigned_fixed_charint<N> target,char* const buf,unsigned int radix)

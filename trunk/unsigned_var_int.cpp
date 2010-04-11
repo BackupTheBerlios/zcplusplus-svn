@@ -126,19 +126,13 @@ unsigned_var_int& unsigned_var_int::operator&=(const unsigned_var_int& rhs)
 
 unsigned_var_int& unsigned_var_int::operator^=(const unsigned_var_int& rhs)
 {
-	if (size()<=rhs.size())
-		bitwise_xor(c_array(),size(),rhs.data());
-	else
-		bitwise_xor(c_array(),rhs.size(),rhs.data());
+	bitwise_xor(c_array(),size()<=rhs.size() ? size() : rhs.size(),rhs.data());
 	return *this;
 }
 
 unsigned_var_int& unsigned_var_int::operator|=(const unsigned_var_int& rhs)
 {
-	if (size()<=rhs.size())
-		bitwise_or(c_array(),size(),rhs.data());
-	else
-		bitwise_or(c_array(),rhs.size(),rhs.data());
+	bitwise_or(c_array(),size()<=rhs.size() ? size() : rhs.size(),rhs.data());
 	return *this;
 }
 
