@@ -26,6 +26,7 @@
 #include "ParseTree.hpp"
 #include "type_system.hpp"
 #include "weak_token.hpp"
+#include "_version.h"
 #include "Zaimoni.STL/POD.hpp"
 #include "Zaimoni.STL/LexParse/Token.hpp"
 #include "Zaimoni.STL/LexParse/LangConf.hpp"
@@ -42,10 +43,6 @@ using namespace zaimoni;
 #define WARN_STR "warning: "
 
 #define INSTALL_TO "\\CPP_App\\Z.C++"
-#define ZCC_VERSION "0.0.3"
-#define ZCC_VERSION_MAJOR 0
-#define ZCC_VERSION_MINOR 0
-#define ZCC_VERSION_PATCH 3
 
 //! \todo this should be language-sensitive; LangConf not a good location
 static const char* const fixed_system_include_search[] = {

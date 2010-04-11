@@ -38,30 +38,29 @@ bool parse_tree::is_raw_list() const
 #ifndef ZAIMONI_FORCE_ISO
 bool parse_tree::syntax_ok() const
 {
-	if (NULL!=args[0] && !_memory_block_start_valid(args[0])) return false;
-	if (NULL!=args[1] && !_memory_block_start_valid(args[1])) return false;
-	if (NULL!=args[2] && !_memory_block_start_valid(args[2])) return false;
+	if (args[0] && !_memory_block_start_valid(args[0])) return false;
+	if (args[1] && !_memory_block_start_valid(args[1])) return false;
+	if (args[2] && !_memory_block_start_valid(args[2])) return false;
 
 	if (own_index_token<0>())
 		{
-		if (NULL==index_tokens[0].token.first) return false;
-		if (!_memory_block_start_valid(index_tokens[0].token.first)) return false;
+		if (!index_tokens[0].token.first) return false;
+		if (!_memory_block_start_valid(index_tokens[0].token.first))
+			return false;
 		};
 	if (own_index_token<1>())
 		{
-		if (NULL==index_tokens[1].token.first) return false;
-		if (!_memory_block_start_valid(index_tokens[1].token.first)) return false;
+		if (!index_tokens[1].token.first) return false;
+		if (!_memory_block_start_valid(index_tokens[1].token.first))
+			return false;
 		};
 
 	size_t i = 0;
-	while(size<0>()>i)
-		if (!data<0>()[i++].syntax_ok()) return false;
+	while(size<0>()>i) if (!data<0>()[i++].syntax_ok()) return false;
 	i = 0;
-	while(size<1>()>i)
-		if (!data<1>()[i++].syntax_ok()) return false;
+	while(size<1>()>i) if (!data<1>()[i++].syntax_ok()) return false;
 	i = 0;
-	while(size<2>()>i)
-		if (!data<2>()[i++].syntax_ok()) return false;
+	while(size<2>()>i) if (!data<2>()[i++].syntax_ok()) return false;
 	return true;
 }
 #endif
@@ -352,9 +351,7 @@ parse_tree_class::parse_tree_class(const parse_tree& src,size_t begin,size_t end
 	if (begin<end)
 		{
 		if (begin+1==end)
-			{
 			value_copy(*this,src.data(dest_idx)[begin]);
-			}
 		else{
 			size_t i = end-begin;
 			if (!resize(dest_idx,end-begin)) throw std::bad_alloc();
@@ -366,5 +363,3 @@ parse_tree_class::parse_tree_class(const parse_tree& src,size_t begin,size_t end
 			}
 		}
 }
-
-

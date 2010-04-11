@@ -325,8 +325,7 @@ _unsigned_cmp(const unsigned char* lhs, size_t lhs_len, const unsigned char* rhs
 	return 0;
 }
 
-int
-_unsigned_cmp(const unsigned char* lhs, size_t lhs_len, uintmax_t rhs)
+int _unsigned_cmp(const unsigned char* lhs, size_t lhs_len, uintmax_t rhs)
 {	// reverse memcmp
 	do	{
 		--lhs_len;
@@ -354,7 +353,7 @@ void _remainder_quotient(const size_t buf_len,unsigned char* dividend_remainder,
 	memset(quotient,0,buf_len);
 	SUCCEED_OR_DIE(1==_unsigned_cmp(divisor,buf_len,quotient));
 	if (0==_unsigned_cmp(dividend_remainder,buf_len,quotient)) return;
-	unsigned char* interim = reinterpret_cast<unsigned char*>(malloc(2*buf_len));	//! \todo candidate for alloca
+	unsigned char* interim = reinterpret_cast<unsigned char*>(malloc(2*buf_len));
 	SUCCEED_OR_DIE(NULL!=interim);
 	while(0<=_unsigned_cmp(dividend_remainder,buf_len,divisor))
 		{

@@ -159,6 +159,36 @@ _new_buffer_nonNULL(size_t Idx)
 	return tmp;
 }
 
+
+template<typename T>
+inline typename boost::enable_if<boost::type_traits::ice_and<boost::has_trivial_constructor<T>::value, boost::has_trivial_destructor<T>::value>, T*>::type
+_new_buffer_uninitialized(size_t Idx)
+{
+	if (((size_t)(-1))/sizeof(T)>=Idx) return NULL; // CERT C MEM07
+	return reinterpret_cast<T*>(malloc(Idx*sizeof(T)));
+}
+
+template<typename T>
+inline typename boost::enable_if<boost::type_traits::ice_and<boost::has_trivial_constructor<T>::value, boost::has_trivial_destructor<T>::value>, T*>::type
+_new_buffer_uninitialized_nonNULL(size_t Idx)
+{
+	if (((size_t)(-1))/sizeof(T)>=Idx) // CERT C MEM07
+		_fatal("requested memory exceeds SIZE_T_MAX");
+	T* tmp = reinterpret_cast<T*>(malloc(Idx*sizeof(T)));
+	if (NULL==tmp) _fatal("Irrecoverable failure to allocate memory");
+	return tmp;
+}
+
+template<typename T>
+inline typename boost::enable_if<boost::type_traits::ice_and<boost::has_trivial_constructor<T>::value, boost::has_trivial_destructor<T>::value>, T*>::type
+_new_buffer_uninitialized_nonNULL_throws(size_t Idx)
+{
+	if (((size_t)(-1))/sizeof(T)>=Idx) throw std::bad_alloc(); // CERT C MEM07
+	T* tmp = reinterpret_cast<T*>(malloc(Idx*sizeof(T)));
+	if (NULL==tmp) throw std::bad_alloc();
+	return tmp;
+}
+
 template<typename T>
 inline typename boost::disable_if<boost::type_traits::ice_and<boost::has_trivial_constructor<T>::value, boost::has_trivial_destructor<T>::value>, void>::type
 _flush(T* _ptr)

@@ -15,6 +15,7 @@
 #include "errcount.hpp"
 #include "ParseTree.hpp"
 #include "ZParser.hpp"
+#include "_version.h"
 
 #include "Zaimoni.STL/POD.hpp"
 
@@ -152,7 +153,7 @@ static bool process_options(const size_t argc, char* argv[])
 
 static void help(void)
 {
-	STRING_LITERAL_TO_STDOUT("Z.C++ 0.0.3 zcc\n");
+	STRING_LITERAL_TO_STDOUT("Z.C++ " ZCC_VERSION " zcc\n");
 	STRING_LITERAL_TO_STDOUT("usage: zcc [options] infile\n");
 	STRING_LITERAL_TO_STDOUT("boolean options\n");
 	size_t i = 0;

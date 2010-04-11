@@ -13,6 +13,7 @@
 #include "errors.hpp"
 #include "CPUInfo.hpp"
 #include "errcount.hpp"
+#include "_version.h"
 
 #include "Zaimoni.STL/POD.hpp"
 #include <stdio.h>
@@ -147,7 +148,7 @@ static bool process_options(const size_t argc, char* argv[])
 
 static void help(void)
 {
-	STRING_LITERAL_TO_STDOUT("Z.C++ 0.0.3 z_cpp\n");
+	STRING_LITERAL_TO_STDOUT("Z.C++ " ZCC_VERSION " z_cpp\n");
 	STRING_LITERAL_TO_STDOUT("usage: z_cpp [options] infile\n");
 	STRING_LITERAL_TO_STDOUT("boolean options\n");
 	size_t i = 0;
