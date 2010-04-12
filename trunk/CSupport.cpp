@@ -11542,7 +11542,7 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 			{	// C++
 			current_enumerator_type = tmp.type_code.base_type_index;
 			const promote_aux test(current_enumerator_type,types);
-			if (latest_value.test(test.bitcount-1))
+			if (test.is_signed && latest_value.test(test.bitcount-1))
 				{	// negative
 				unsigned_var_int abs_latest_value(latest_value);
 				target_machine->signed_additive_inverse(abs_latest_value,test.machine_type);
@@ -11568,7 +11568,7 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 						base_enum_type = C_TYPE::LLONG;
 						break;
 						}
-				default:	//! \bug needs test case
+				default:	//! \test decl.C99\Error_enum_nobase.hpp
 					message_header(src.data<0>()[origin-2].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("enumeration requires both negative values and values above INTMAX_MAX, underlying type doesn't exist (C++0X 7.2p6)");
@@ -11607,7 +11607,7 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 						base_enum_type = C_TYPE::LLONG;
 					case C_TYPE::LLONG:
 						if (target_machine->signed_max<virtual_machine::std_int_long_long>()>=latest_value) break;
-					default:	//! \bug needs test case
+					default:	//! \test decl.C99\Error_enum_nobase2.hpp
 						message_header(src.data<0>()[origin-2].index_tokens[0]);
 						INC_INFORM(ERR_STR);
 						INFORM("enumeration requires both negative values and values above INTMAX_MAX, underlying type doesn't exist (C++0X 7.2p6)");
