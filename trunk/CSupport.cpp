@@ -7950,7 +7950,8 @@ static void locate_C99_shift_expression(parse_tree& src, size_t& i, const type_s
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_shift_expression(src,i)) C_shift_expression_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_shift_expression(src,i))
+		C_shift_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 /*
@@ -8156,7 +8157,8 @@ static void locate_C99_relation_expression(parse_tree& src, size_t& i, const typ
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_relation_expression(src,i)) C_relation_expression_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_relation_expression(src,i))
+		C_relation_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 /*
@@ -8395,7 +8397,8 @@ static void locate_C99_equality_expression(parse_tree& src, size_t& i, const typ
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_C99_equality_expression(src,i)) C_equality_expression_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_C99_equality_expression(src,i))
+		C_equality_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 /*
@@ -8592,7 +8595,8 @@ static void locate_C99_bitwise_AND(parse_tree& src, size_t& i, const type_system
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_C99_bitwise_AND(src,i)) C_bitwise_AND_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_C99_bitwise_AND(src,i))
+		C_bitwise_AND_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 /*
@@ -11661,11 +11665,12 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 				}
 			if (out_of_range)
 				{	//! \test decl.C99/Error_enum_overflow2.h
-					//! \bug need -Wc-c++-compat to go off here
 				message_header(src.data<0>()[origin-2].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("initializer of enumerator not representable as signed int (C99 6.7.2.2p3)");
 				zcc_errors.inc_error();
+				if (bool_options[boolopt::warn_crosslang_compatibility])
+					INFORM("(this may be valid C++, if the value is representable as either uintmax_t or intmax_t)");
 				return false;
 				}
 			if (is_negative)
@@ -12084,7 +12089,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 									zcc_errors.inc_error();
 								}
 							else{	// error if there is a prior, inconsistent definition
-									//! \test zcc/decl.C99/Warn_redeclare_typedef.h
+									//! \test zcc/decl.C99/Error_redeclare_typedef.h
 								message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
 								INC_INFORM(ERR_STR);
 								INC_INFORM("redeclaring typedef ");
@@ -12100,10 +12105,9 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 						else{	// prepare to register this with types object
 							const type_system::enumerator_info* tmp2 = types.get_enumerator(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
 							if (tmp2)
-								{	//! \bug needs test case
+								{	//! \test zcc/decl.C99/Error_typedef_enum.h
 								message_header(src.data<0>()[i].index_tokens[0]);
 								INC_INFORM(ERR_STR);
-//								INFORM("enumerator is already defined, conflicts with typedef (C99 6.7.2.2p3/C++98 3.2)");
 								INFORM("enumerator is already defined, conflicts with typedef (C99 6.7.2.2p3)");
 								INC_INFORM(tmp2->second.second.first);
 								INC_INFORM(":");
@@ -12849,7 +12853,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 							free(namespace_name);
 							const type_system::enumerator_info* tmp2 = types.get_enumerator_CPP(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first,active_namespace);
 							if (tmp2)
-								{	//! \bug needs test case
+								{	//! \test zcc/decl.C99/Error_typedef_enum.hpp
+									//! \test zcc/decl.C99/Error_typedef_enum2.hpp
 								message_header(src.data<0>()[i].index_tokens[0]);
 								INC_INFORM(ERR_STR);
 								INFORM("enumerator is already defined, conflicts with typedef (C++98 3.2)");
@@ -12968,8 +12973,7 @@ static void clear_lexer_defs(void)
 }
 #endif
 
-void
-InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
+void InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
 {
 	// main code
 	target_machine = &target;

@@ -7138,7 +7138,8 @@ static void locate_C99_shift_expression(parse_tree& src, size_t& i, const type_s
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_shift_expression(src,i)) C_shift_expression_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_shift_expression(src,i))
+		C_shift_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 /*
@@ -7344,7 +7345,8 @@ static void locate_C99_relation_expression(parse_tree& src, size_t& i, const typ
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_relation_expression(src,i)) C_relation_expression_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_relation_expression(src,i))
+		C_relation_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 /*
@@ -7583,7 +7585,8 @@ static void locate_C99_equality_expression(parse_tree& src, size_t& i, const typ
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_C99_equality_expression(src,i)) C_equality_expression_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_C99_equality_expression(src,i))
+		C_equality_expression_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 /*
@@ -7760,7 +7763,8 @@ static void locate_C99_bitwise_AND(parse_tree& src, size_t& i, const type_system
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_C99_bitwise_AND(src,i)) C_bitwise_AND_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_C99_bitwise_AND(src,i))
+		C_bitwise_AND_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 /*
@@ -9616,8 +9620,7 @@ static void clear_lexer_defs(void)
 }
 #endif
 
-void
-InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
+void InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
 {
 	// main code
 	target_machine = &target;
