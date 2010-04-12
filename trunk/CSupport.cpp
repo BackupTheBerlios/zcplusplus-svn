@@ -11193,7 +11193,14 @@ static bool default_enumerator_init_legal(const bool allow_empty, unsigned char&
 		//! \todo research how to rewrite this without the goto
 cpp_enum_was_retyped:
 		const promote_aux test(current_enumerator_type,types);
-		//! \bug need -Wc-c++-compat to go off here
+		// -Wc-c++-compat trips: C++ tolerates enumerator values that don't fit in int 
+		if (bool_options[boolopt::warn_crosslang_compatibility] && C_TYPE::INT==current_enumerator_type && prior_value==target_machine->signed_max(test.machine_type))
+			{	//! \test compat/Warn_enum_overflow.hpp
+			message_header(src);
+			INC_INFORM(WARN_STR);
+			INFORM("enumerator value not representable by int is an error in C (C99 6.7.2.2p3)");
+			if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
+			};
 		if (test.is_signed)
 			{
 			if (prior_value==target_machine->signed_max(test.machine_type))
@@ -11534,6 +11541,109 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 		if (allow_empty)
 			{	// C++
 			current_enumerator_type = tmp.type_code.base_type_index;
+			const promote_aux test(current_enumerator_type,types);
+			if (latest_value.test(test.bitcount-1))
+				{	// negative
+				unsigned_var_int abs_latest_value(latest_value);
+				target_machine->signed_additive_inverse(abs_latest_value,test.machine_type);
+				if (virtual_machine::twos_complement==target_machine->C_signed_int_representation() && !bool_options[boolopt::int_traps])
+					abs_latest_value-=1;
+				cpp_using_negative = true;
+				// sign filter
+				switch(base_enum_type)
+				{
+				case C_TYPE::INT:
+				case C_TYPE::LONG:
+				case C_TYPE::LLONG:
+					break;	// these three are already signed, no representation change incurred
+				case C_TYPE::UINT:
+					if (target_machine->C_sizeof_int()<target_machine->C_sizeof_long())
+						{
+						base_enum_type = C_TYPE::LONG;
+						break;
+						}
+				case C_TYPE::ULONG:
+					if (target_machine->C_sizeof_long()<target_machine->C_sizeof_long_long())
+						{
+						base_enum_type = C_TYPE::LLONG;
+						break;
+						}
+				default:	//! \bug needs test case
+					message_header(src.data<0>()[origin-2].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("enumeration requires both negative values and values above INTMAX_MAX, underlying type doesn't exist (C++0X 7.2p6)");
+					zcc_errors.inc_error();
+					return false;
+				}
+				// value filter
+				switch(base_enum_type)
+				{
+				case C_TYPE::INT:
+					if (target_machine->signed_max<virtual_machine::std_int_int>()>=abs_latest_value) break;
+					base_enum_type = C_TYPE::LONG;
+				case C_TYPE::LONG:
+					if (target_machine->signed_max<virtual_machine::std_int_long>()>=abs_latest_value) break;
+					base_enum_type = C_TYPE::LLONG;
+				case C_TYPE::LLONG:
+					if (target_machine->signed_max<virtual_machine::std_int_long_long>()>=abs_latest_value) break;
+				default:	//! \bug needs test case
+					message_header(src.data<0>()[origin-2].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("enumeration requires value below INTMAX_MIN, underlying type doesn't exist (C++0X 7.2p6)");
+					zcc_errors.inc_error();
+					return false;
+				}
+				}
+			else{	// positive
+				if (cpp_using_negative)
+					{
+					switch(base_enum_type)
+					{
+					case C_TYPE::INT:
+						if (target_machine->signed_max<virtual_machine::std_int_int>()>=latest_value) break;
+						base_enum_type = C_TYPE::LONG;
+					case C_TYPE::LONG:
+						if (target_machine->signed_max<virtual_machine::std_int_long>()>=latest_value) break;
+						base_enum_type = C_TYPE::LLONG;
+					case C_TYPE::LLONG:
+						if (target_machine->signed_max<virtual_machine::std_int_long_long>()>=latest_value) break;
+					default:	//! \bug needs test case
+						message_header(src.data<0>()[origin-2].index_tokens[0]);
+						INC_INFORM(ERR_STR);
+						INFORM("enumeration requires both negative values and values above INTMAX_MAX, underlying type doesn't exist (C++0X 7.2p6)");
+						zcc_errors.inc_error();
+						return false;
+					}
+					}
+				else{
+					switch(base_enum_type)
+					{
+					case C_TYPE::INT:
+						if (target_machine->signed_max<virtual_machine::std_int_int>()>=latest_value) break;
+						base_enum_type = C_TYPE::UINT;
+					case C_TYPE::UINT:
+						if (target_machine->unsigned_max<virtual_machine::std_int_int>()>=latest_value) break;
+						base_enum_type = C_TYPE::LONG;
+					case C_TYPE::LONG:
+						if (target_machine->signed_max<virtual_machine::std_int_long>()>=latest_value) break;
+						base_enum_type = C_TYPE::ULONG;
+					case C_TYPE::ULONG:
+						if (target_machine->unsigned_max<virtual_machine::std_int_long>()>=latest_value) break;
+						base_enum_type = C_TYPE::LLONG;
+					case C_TYPE::LLONG:
+						if (target_machine->signed_max<virtual_machine::std_int_long_long>()>=latest_value) break;
+						base_enum_type = C_TYPE::ULLONG;
+					case C_TYPE::ULLONG:
+						if (target_machine->unsigned_max<virtual_machine::std_int_long_long>()>=latest_value) break;
+					default:	//! \bug needs test case
+						message_header(src.data<0>()[origin-2].index_tokens[0]);
+						INC_INFORM(ERR_STR);
+						INFORM("enumeration requires values above UINTMAX_MAX, underlying type doesn't exist (C++0X 7.2p6)");
+						zcc_errors.inc_error();
+						return false;
+					}
+					}
+				}
 			}
 		else{	// C
 			const promote_aux test(tmp.type_code.base_type_index,types);
@@ -11577,39 +11687,6 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 			types.set_enumerator_def_CPP(src.data<0>()[origin-2].index_tokens[0].token.first, active_namespace,src.data<0>()[origin-2].index_tokens[0].logical_line,src.data<0>()[origin-2].index_tokens[0].src_filename,current_enumerator_type,latest_value_copy,enum_type_index);
 		else
 			types.set_enumerator_def(src.data<0>()[origin-2].index_tokens[0].token.first,src.data<0>()[origin-2].index_tokens[0].logical_line,src.data<0>()[origin-2].index_tokens[0].src_filename,current_enumerator_type,latest_value_copy,enum_type_index);
-		if (allow_empty && !cpp_using_negative)
-			{
-			const promote_aux test(current_enumerator_type,types);
-			if (test.is_signed && latest_value.test(test.bitcount-1))
-				{
-				cpp_using_negative = true;
-				switch(base_enum_type)
-				{
-				case C_TYPE::INT:
-				case C_TYPE::LONG:
-				case C_TYPE::LLONG:
-					break;	// these three are already signed, no representation change incurred
-				case C_TYPE::UINT:
-					if (target_machine->C_sizeof_int()<target_machine->C_sizeof_long())
-						{
-						base_enum_type = C_TYPE::LONG;
-						break;
-						}
-				case C_TYPE::ULONG:
-					if (target_machine->C_sizeof_long()<target_machine->C_sizeof_long_long())
-						{
-						base_enum_type = C_TYPE::LLONG;
-						break;
-						}
-				default:	//! \bug needs test case
-					message_header(src.data<0>()[origin-2].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM("enumeration requires both negative values and values above INTMAX_MAX, underlying type doesn't exist (C++0X 7.2p6)");
-					zcc_errors.inc_error();
-					return false;
-				}
-				}
-			}
 		}
 		}
 	// now ok to crunch underlying type/machine representation
