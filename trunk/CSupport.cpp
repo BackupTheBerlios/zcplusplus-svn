@@ -4871,6 +4871,15 @@ static bool inspect_potential_paren_primary_expression(parse_tree& src)
 				value_copy(src.type_code,src.data<0>()->type_code);
 				return true;
 				}
+#/*cut-cpp*/
+			else if (PARSE_TYPE & src.data<0>()->flags)
+				{	// abuse: handle parenthesized type-specifiers here
+				src.flags &= parse_tree::RESERVED_MASK;	// just in case
+				src.flags |= (PARSE_TYPE & src.data<0>()->flags);
+				value_copy(src.type_code,src.data<0>()->type_code);
+				return false;	// not an expression 
+				}
+#/*cut-cpp*/
 			};
 		}
 	return false;
@@ -6222,6 +6231,7 @@ static bool eval_sizeof_core_type(parse_tree& src,const size_t base_type_index,c
 		src.index_tokens[0].token.second = 2;
 		src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
 		src.type_code.set_type(size_t_type);
+		src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
 		break;
 		}
 	case C_TYPE::SHRT:
@@ -11740,7 +11750,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		// C static assertion scanner
 		if (robust_token_is_string<14>(src.data<0>()[i],"_Static_Assert"))
 			{	// _Static_Assert ( constant-expression , string-literal ) ;
-			C99_CPP_handle_static_assertion(src,types,*CLexer->pp_support,i," : control expression for static assertion must evaluate to a single integer constant (C1X 6.7.9p3)",NULL);
+			C99_CPP_handle_static_assertion(src,types,*CLexer->pp_support,i,"control expression for static assertion must evaluate to a single integer constant (C1X 6.7.9p3)",NULL);
 			continue;
 			};
 		// XXX C allows mixing definitions and declaring variables at the same time, but this is a bit unusual
@@ -12228,7 +12238,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		// C++ static assertion scanner
 		if (robust_token_is_string<13>(src.data<0>()[i],"static_assert"))
 			{	// static_assert ( constant-expression , string-literal ) ;
-			C99_CPP_handle_static_assertion(src,types,*CPlusPlusLexer->pp_support,i," : control expression for static assertion must be a constant convertible to bool (C++0X 7p4)",active_namespace);
+			C99_CPP_handle_static_assertion(src,types,*CPlusPlusLexer->pp_support,i,"control expression for static assertion must be a constant convertible to bool (C++0X 7p4)",active_namespace);
 			continue;
 			};
 		// XXX C++ allows mixing definitions and declaring variables at the same time, but this is a bit unusual

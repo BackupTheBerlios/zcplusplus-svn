@@ -211,3 +211,13 @@ static_assert(1 ? 1 : -1,"automatic success has failed");
 static_assert(1 ? 1 : 0,"automatic success has failed");
 static_assert(1 ? 1 : 1,"automatic success has failed");
 
+// check sizeof
+static_assert(1==sizeof 'A',"automatic success has failed");
+static_assert(1==sizeof(char),"automatic success has failed");
+static_assert(1==sizeof(signed char),"automatic success has failed");
+static_assert(1==sizeof(unsigned char),"automatic success has failed");
+
+static_assert(sizeof 'A'==1,"automatic success has failed");
+static_assert(sizeof(char)==1,"automatic success has failed");
+static_assert(sizeof(signed char)==1,"automatic success has failed");
+static_assert(sizeof(unsigned char)==1,"automatic success has failed");
