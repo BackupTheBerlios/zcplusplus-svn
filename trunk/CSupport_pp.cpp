@@ -4843,6 +4843,7 @@ static void assemble_unary_postfix_arguments(parse_tree& src, size_t& i, const s
 // return code is true for success, false for memory failure
 static bool VM_to_token(const umaxint& src_int,const size_t base_type_index,POD_pair<char*,lex_flags>& dest)
 {
+	assert(C_TYPE::INT<=base_type_index && C_TYPE::ULLONG>=base_type_index);
 	const char* const suffix = literal_suffix(base_type_index);
 #ifdef ZCC_LEGACY_FIXED_INT
 	char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint

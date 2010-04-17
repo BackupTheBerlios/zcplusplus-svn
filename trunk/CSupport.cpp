@@ -5304,6 +5304,7 @@ static void assemble_unary_postfix_arguments(parse_tree& src, size_t& i, const s
 // return code is true for success, false for memory failure
 static bool VM_to_token(const umaxint& src_int,const size_t base_type_index,POD_pair<char*,lex_flags>& dest)
 {
+	assert(C_TYPE::INT<=base_type_index && C_TYPE::ULLONG>=base_type_index);
 	const char* const suffix = literal_suffix(base_type_index);
 #ifdef ZCC_LEGACY_FIXED_INT
 	char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
@@ -6207,6 +6208,7 @@ static bool eval_sizeof_core_type(parse_tree& src,const size_t base_type_index,c
 	//! \todo types parameter is close to redundant
 	// floating is just a matter of modeling
 	// complex may also involve ABI issues (cf. Intel)
+	const size_t size_t_type = unsigned_type_from_machine_type(target_machine->size_t_type());
 	parse_tree tmp;
 	switch(base_type_index)
 	{
@@ -6216,37 +6218,47 @@ static bool eval_sizeof_core_type(parse_tree& src,const size_t base_type_index,c
 	case C_TYPE::UCHAR:
 		{	// defined to be 1: C99 6.5.3.4p3, C++98 5.3.3p1, same paragraphs in C1X and C++0X 
 		src.destroy();
-		src.index_tokens[0].token.first = "1";
-		src.index_tokens[0].token.second = 1;
+		src.index_tokens[0].token.first = "1U";
+		src.index_tokens[0].token.second = 2;
 		src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-		}	
+		src.type_code.set_type(size_t_type);
+		break;
+		}
 	case C_TYPE::SHRT:
 	case C_TYPE::USHRT:
 		{
+		src.type_code.set_type(size_t_type);
 		if (!VM_to_literal(tmp,umaxint(target_machine->C_sizeof_short()),src,types)) return false;
 		src.destroy();
 		src = tmp;			
+		break;
 		}
 	case C_TYPE::INT:
 	case C_TYPE::UINT:
 		{
+		src.type_code.set_type(size_t_type);
 		if (!VM_to_literal(tmp,umaxint(target_machine->C_sizeof_int()),src,types)) return false;
 		src.destroy();
 		src = tmp;			
+		break;
 		}
 	case C_TYPE::LONG:
 	case C_TYPE::ULONG:
 		{
+		src.type_code.set_type(size_t_type);
 		if (!VM_to_literal(tmp,umaxint(target_machine->C_sizeof_long()),src,types)) return false;
 		src.destroy();
 		src = tmp;			
+		break;
 		}
 	case C_TYPE::LLONG:
 	case C_TYPE::ULLONG:
 		{
+		src.type_code.set_type(size_t_type);
 		if (!VM_to_literal(tmp,umaxint(target_machine->C_sizeof_long_long()),src,types)) return false;
 		src.destroy();
 		src = tmp;			
+//		break;
 		}
 	}
 #if 0
@@ -6257,7 +6269,7 @@ static bool eval_sizeof_core_type(parse_tree& src,const size_t base_type_index,c
 	DOUBLE__COMPLEX,
 	LDOUBLE__COMPLEX,
 #endif
-	src.type_code.set_type(unsigned_type_from_machine_type(target_machine->size_t_type()));
+	assert(size_t_type==src.type_code.base_type_index);
 	return true;
 }
 
