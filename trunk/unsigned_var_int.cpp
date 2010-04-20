@@ -109,7 +109,8 @@ unsigned_var_int& unsigned_var_int::operator*=(const unsigned_var_int& rhs)
 {
 	unsigned_var_int tmp(0,size());
 	unsigned_mult(tmp.c_array(),tmp.size(),data(),size(),rhs.data(),rhs.size());
-	return *this = tmp;
+	tmp.MoveInto(*this);
+	return *this;
 }
 
 unsigned_var_int& unsigned_var_int::operator&=(const unsigned_var_int& rhs)

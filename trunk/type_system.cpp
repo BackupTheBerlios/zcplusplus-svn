@@ -59,9 +59,8 @@ type_system::_get_id_union_CPP(const char* const x) const
 	// it was remapped
 	while(tmp2.first<tmp2.second)
 		{
-		tmp = _get_id_union(inline_namespace_alias_map.data()[tmp2.first].second);
+		tmp = _get_id_union(inline_namespace_alias_map.data()[tmp2.first++].second);
 		if (0<tmp) return tmp;
-		++tmp2.first;
 		}
 	return _get_id_union(inline_namespace_alias_map.data()[tmp2.first].second);
 }
@@ -94,8 +93,7 @@ type_system::get_id_union_CPP(const char* alias,const char* active_namespace) co
 			report_disjoint_substring_instances(active_namespace,"::",intra_namespace.c_array(),extra_namespaces);
 			size_t i = extra_namespaces;
 			do	{
-				--i;
-				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[i]-active_namespace,"::");
+				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[--i]-active_namespace,"::");
 				const type_index tmp2 = _get_id_union_CPP(tmp_alias);
 				if (tmp2) return (free(tmp_alias),tmp2);
 				}
@@ -147,9 +145,8 @@ type_system::_get_id_struct_class_CPP(const char* const x) const
 	// it was remapped
 	while(tmp2.first<tmp2.second)
 		{
-		tmp = _get_id_struct_class(inline_namespace_alias_map.data()[tmp2.first].second);
+		tmp = _get_id_struct_class(inline_namespace_alias_map.data()[tmp2.first++].second);
 		if (0<tmp) return tmp;
-		++tmp2.first;
 		}
 	return _get_id_struct_class(inline_namespace_alias_map.data()[tmp2.first].second);
 }
@@ -182,8 +179,7 @@ type_system::get_id_struct_class_CPP(const char* alias,const char* active_namesp
 			report_disjoint_substring_instances(active_namespace,"::",intra_namespace.c_array(),extra_namespaces);
 			size_t i = extra_namespaces;
 			do	{
-				--i;
-				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[i]-active_namespace,"::");
+				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[--i]-active_namespace,"::");
 				const type_index tmp2 = _get_id_struct_class_CPP(tmp_alias);
 				if (tmp2) return (free(tmp_alias),tmp2);
 				}
@@ -225,9 +221,8 @@ type_system::_get_id_enum_CPP(const char* const x) const
 	// it was remapped
 	while(tmp2.first<tmp2.second)
 		{
-		tmp = _get_id_enum(inline_namespace_alias_map.data()[tmp2.first].second);
+		tmp = _get_id_enum(inline_namespace_alias_map.data()[tmp2.first++].second);
 		if (0<tmp) return tmp;
-		++tmp2.first;
 		}
 	return _get_id_enum(inline_namespace_alias_map.data()[tmp2.first].second);
 }
@@ -260,8 +255,7 @@ type_system::get_id_enum_CPP(const char* alias,const char* active_namespace) con
 			report_disjoint_substring_instances(active_namespace,"::",intra_namespace.c_array(),extra_namespaces);
 			size_t i = extra_namespaces;
 			do	{
-				--i;
-				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[i]-active_namespace,"::");
+				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[--i]-active_namespace,"::");
 				const type_index tmp2 = _get_id_enum_CPP(tmp_alias);
 				if (tmp2) return (free(tmp_alias),tmp2);
 				}
@@ -333,9 +327,8 @@ const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::_get_typed
 	// it was remapped
 	while(tmp2.first<tmp2.second)
 		{
-		tmp = get_typedef(inline_namespace_alias_map.data()[tmp2.first].second);
+		tmp = get_typedef(inline_namespace_alias_map.data()[tmp2.first++].second);
 		if (tmp) return tmp;
-		++tmp2.first;
 		}
 	return get_typedef(inline_namespace_alias_map.data()[tmp2.first].second);
 }
@@ -367,8 +360,7 @@ const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_typede
 			report_disjoint_substring_instances(active_namespace,"::",intra_namespace.c_array(),extra_namespaces);
 			size_t i = extra_namespaces;
 			do	{
-				--i;
-				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[i]-active_namespace,"::");
+				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[--i]-active_namespace,"::");
 				const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp2 = _get_typedef_CPP(tmp_alias);
 				if (tmp2) return (free(tmp_alias),tmp2);
 				}
@@ -434,9 +426,8 @@ const type_system::enumerator_info* type_system::_get_enumerator_CPP(const char*
 	// it was remapped
 	while(tmp2.first<tmp2.second)
 		{
-		tmp = get_enumerator(inline_namespace_alias_map.data()[tmp2.first].second);
+		tmp = get_enumerator(inline_namespace_alias_map.data()[tmp2.first++].second);
 		if (tmp) return tmp;
-		++tmp2.first;
 		}
 	return get_enumerator(inline_namespace_alias_map.data()[tmp2.first].second);
 }
@@ -468,8 +459,7 @@ const type_system::enumerator_info* type_system::get_enumerator_CPP(const char* 
 			report_disjoint_substring_instances(active_namespace,"::",intra_namespace.c_array(),extra_namespaces);
 			size_t i = extra_namespaces;
 			do	{
-				--i;
-				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[i]-active_namespace,"::");
+				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[--i]-active_namespace,"::");
 				const enumerator_info* tmp2 = _get_enumerator_CPP(tmp_alias);
 				if (tmp2) return (free(tmp_alias),tmp2);
 				}
@@ -761,7 +751,11 @@ type_system::type_index type_system::register_C_structdef(const char* const alia
 	dynamic_type_format tmp = {alias,strlen(alias),{{NULL},DYNAMIC_C_STRUCTDEF}};
 	tmp.third.first.third = new C_union_struct_def((union_struct_decl::keywords)keyword,alias,logical_line,src_filename);
 
-	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp)) throw std::bad_alloc();
+	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp))
+		{
+		delete tmp.third.first.third;
+		throw std::bad_alloc();
+		}
 	return dynamic_types_size+1+core_types_size;
 }
 
@@ -781,15 +775,20 @@ type_system::type_index type_system::register_enum_def(const char* const alias, 
 {
 	assert(alias && *alias);
 	assert(src_filename && *src_filename);
-	dynamic_type_format tmp = {alias,strlen(alias),{{NULL},DYNAMIC_ENUMDEF}};
-	tmp.third.first.fourth = new enum_def(alias,logical_line,src_filename);
-
 	const size_t dynamic_types_size = dynamic_types.size();
 	const size_t dynamic_types_max_size = dynamic_types.max_size();
 	if (	dynamic_types_max_size<2+core_types_size
 		|| 	dynamic_types_max_size-(2+core_types_size)<dynamic_types_size)
 		FATAL("Host implementation limit exceeded: cannot record enum type used in program");
-	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp)) throw std::bad_alloc();
+
+	dynamic_type_format tmp = {alias,strlen(alias),{{NULL},DYNAMIC_ENUMDEF}};
+	tmp.third.first.fourth = new enum_def(alias,logical_line,src_filename);
+
+	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp))
+		{
+		delete tmp.third.first.fourth;
+		throw std::bad_alloc();
+		}
 	return dynamic_types_size+1+core_types_size;
 }
 
@@ -809,8 +808,7 @@ const function_type* type_system::get_functype(type_system::type_index i)  const
 {
 	if (core_types_size>=i) return NULL;
 	i -= core_types_size;
-	--i;
-	if (dynamic_types.size()<=i) return NULL;
+	if (dynamic_types.size()<= --i) return NULL;
 	const dynamic_type_format& tmp = dynamic_types[i];
 	if (DYNAMIC_FUNCTYPE!=tmp.third.second) return NULL;
 	return tmp.third.first.first;
@@ -820,8 +818,7 @@ const union_struct_decl* type_system::get_structdecl(type_system::type_index i) 
 {
 	if (core_types_size>=i) return NULL;
 	i -= core_types_size;
-	--i;
-	if (dynamic_types.size()<=i) return NULL;
+	if (dynamic_types.size()<= --i) return NULL;
 	const dynamic_type_format& tmp = dynamic_types[i];
 	if (DYNAMIC_STRUCTDECL!=tmp.third.second) return NULL;
 	return tmp.third.first.second;
@@ -831,8 +828,7 @@ const C_union_struct_def* type_system::get_C_structdef(type_system::type_index i
 {
 	if (core_types_size>=i) return NULL;
 	i -= core_types_size;
-	--i;
-	if (dynamic_types.size()<=i) return NULL;
+	if (dynamic_types.size()<= --i) return NULL;
 	const dynamic_type_format& tmp = dynamic_types[i];
 	if (DYNAMIC_C_STRUCTDEF!=tmp.third.second) return NULL;
 	return tmp.third.first.third;
@@ -842,8 +838,7 @@ enum_def* type_system::_get_enum_def(type_index i) const
 {
 	if (core_types_size>=i) return NULL;
 	i -= core_types_size;
-	--i;
-	if (dynamic_types.size()<=i) return NULL;
+	if (dynamic_types.size()<= --i) return NULL;
 	const dynamic_type_format& tmp = dynamic_types[i];
 	if (DYNAMIC_ENUMDEF!=tmp.third.second) return NULL;
 	return tmp.third.first.fourth;
