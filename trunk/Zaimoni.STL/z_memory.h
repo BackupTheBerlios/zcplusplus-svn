@@ -21,6 +21,11 @@
 #define ZAIMONI_LEN_WITH_NULL(A) (A)
 #define ZAIMONI_NULL_TERMINATE(A)
 
+/*
+ * our realloc implements realloc(x,0) is NULL
+ */
+#undef ZAIMONI_REALLOC_TO_ZERO_IS_NULL
+#define ZAIMONI_REALLOC_TO_ZERO_IS_NULL 1
 
 /*
  * defined in memory.cpp: controls Microsoft bypass for realloc.

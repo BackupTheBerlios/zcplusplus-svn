@@ -34,6 +34,9 @@ comptest.h : comptest.in compile.test/exists_MS_io_h.c
 	-$(CC) -oexists_MS_io_h.exe $(CFLAGS) -mconsole $(ARCH_FLAGS) compile.test/exists_MS_io_h.c
 	-./exists_MS_io_h.exe >> comptest.h
 	-rm exists_MS_io_h.exe
+	-$(CC) -orealloc_0.exe $(CFLAGS) -mconsole $(ARCH_FLAGS) compile.test/realloc_0.c
+	-./realloc_0.exe >> comptest.h
+	-rm realloc_0.exe
 
 .c.o:
 	$(CC) -c $< $(CFLAGS) $(ARCH_FLAGS) -o $*.o
