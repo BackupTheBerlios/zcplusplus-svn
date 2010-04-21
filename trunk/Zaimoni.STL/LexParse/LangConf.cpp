@@ -58,17 +58,17 @@ void LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 #else
 	size_t BufferLength = strlen(Buffer);
 #endif
-	size_t SweepIdx = 0;
+	size_t i = 0;
 	if (BreakTokenOnNewline)
 		{
-		while('\n'!=Buffer[SweepIdx])
+		while('\n'!=Buffer[i])
 			{
-			if (SweepIdx+2==BufferLength && '\n'==Buffer[SweepIdx+1])
+			if (i+2==BufferLength && '\n'==Buffer[i+1])
 				{
 				Buffer = REALLOC(Buffer,ZAIMONI_LEN_WITH_NULL(--BufferLength));
 				ZAIMONI_NULL_TERMINATE(Buffer[BufferLength]);
 				}
-			if (++SweepIdx==BufferLength)
+			if (++i==BufferLength)
 				{
 				NewLine = Buffer;
 				Buffer = NULL;
@@ -78,24 +78,24 @@ void LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 		}
 	else{
 		bool InQuotes = false;
-		while('\n'!=Buffer[SweepIdx] || InQuotes)
+		while('\n'!=Buffer[i] || InQuotes)
 			{
-			if (SweepIdx+2==BufferLength && '\n'==Buffer[SweepIdx+1] && !InQuotes)
+			if (i+2==BufferLength && '\n'==Buffer[i+1] && !InQuotes)
 				{
 				Buffer = REALLOC(Buffer,ZAIMONI_LEN_WITH_NULL(--BufferLength));
 				ZAIMONI_NULL_TERMINATE(Buffer[BufferLength]);
 				}
-			if (strchr(Quotes,Buffer[SweepIdx]))
+			if (strchr(Quotes,Buffer[i]))
 				InQuotes = !InQuotes;
-			else if ((InQuotes || !EscapeOnlyWithinQuotes) && SweepIdx+1<BufferLength)
+			else if ((InQuotes || !EscapeOnlyWithinQuotes) && i+1<BufferLength)
 				{
-				if (	(   EscapeEscape==Buffer[SweepIdx]
-						 && Escape==Buffer[SweepIdx+1])
-					||	(   Escape==Buffer[SweepIdx]
-						 && strchr(Quotes,Buffer[SweepIdx+1])))
-					SweepIdx++;
+				if (	(   EscapeEscape==Buffer[i]
+						 && Escape==Buffer[i+1])
+					||	(   Escape==Buffer[i]
+						 && strchr(Quotes,Buffer[i+1])))
+					i++;
 				}
-			if (++SweepIdx==BufferLength)
+			if (++i==BufferLength)
 				{
 				NewLine = Buffer;
 				Buffer = NULL;
@@ -104,23 +104,27 @@ void LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 			}
 		}
 
-	size_t NewLineLength = (SweepIdx<=(BufferLength>>1)) ? SweepIdx : BufferLength-(SweepIdx+1);
+	size_t NewLineLength = (i<=(BufferLength>>1)) ? i : BufferLength-(i+1);
+#if ZAIMONI_REALLOC_TO_ZERO_IS_NULL
+	NewLine = REALLOC(NewLine,ZAIMONI_LEN_WITH_NULL(NewLineLength));
+#else
 	NewLine = (0<NewLineLength) ? REALLOC(NewLine,ZAIMONI_LEN_WITH_NULL(NewLineLength)) : NULL;
-	if (NULL==NewLine) return;
+#endif
+	if (!NewLine) return;
 	ZAIMONI_NULL_TERMINATE(NewLine[NewLineLength]);
 
-	Buffer[SweepIdx] = '\0';
-	if (SweepIdx<=(BufferLength>>1))
+	Buffer[i] = '\0';
+	if (i<=(BufferLength>>1))
 		{
 		strcpy(NewLine,Buffer);
-		memmove(Buffer,&Buffer[SweepIdx+1],BufferLength-(SweepIdx+1));
-		Buffer = REALLOC(Buffer,ZAIMONI_LEN_WITH_NULL(BufferLength-(SweepIdx+1)));
-		ZAIMONI_NULL_TERMINATE(Buffer[BufferLength-(SweepIdx+1)]);
+		memmove(Buffer,&Buffer[i+1],BufferLength-(i+1));
+		Buffer = REALLOC(Buffer,ZAIMONI_LEN_WITH_NULL(BufferLength-(i+1)));
+		ZAIMONI_NULL_TERMINATE(Buffer[BufferLength-(i+1)]);
 		}
 	else{
-		strcpy(NewLine,&Buffer[SweepIdx+1]);
-		Buffer = REALLOC(Buffer,ZAIMONI_LEN_WITH_NULL(SweepIdx));
-		ZAIMONI_NULL_TERMINATE(Buffer[SweepIdx]);
+		strcpy(NewLine,&Buffer[i+1]);
+		Buffer = REALLOC(Buffer,ZAIMONI_LEN_WITH_NULL(i));
+		ZAIMONI_NULL_TERMINATE(Buffer[i]);
 		char* AltNewLine = Buffer;
 		Buffer = NewLine;
 		NewLine = AltNewLine;
