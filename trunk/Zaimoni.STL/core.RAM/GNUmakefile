@@ -18,6 +18,7 @@ clean:
 	rm -f *.a *.o
 
 install: $(addprefix $(libdir)/, $(LIBS))
+host_install: $(addprefix ../../$(host_libdir)/, $(LIBS))
 
 uninstall:
 	rm -f $(libdir)/libz_memory.a
@@ -41,4 +42,10 @@ $(libdir)/libz_memory.a: libz_memory.a
 
 $(libdir)/libz_memory_c.a: libz_memory_c.a
 	cp libz_memory_c.a $(libdir)/libz_memory_c.a
+
+../../$(host_libdir)/libz_memory.a: libz_memory.a
+	cp libz_memory.a ../../$(host_libdir)/libz_memory.a
+
+../../$(host_libdir)/libz_memory_c.a: libz_memory_c.a
+	cp libz_memory_c.a ../../$(host_libdir)/libz_memory_c.a
 

@@ -18,6 +18,7 @@ clean:
 	rm -f *.a *.o
 
 install: $(addprefix $(libdir)/, $(LIBS))
+host_install: $(addprefix ../../$(host_libdir)/, $(LIBS))
 
 uninstall:
 	rm -f $(addprefix $(libdir)/, $(LIBS))
@@ -43,4 +44,10 @@ $(libdir)/libz_langconf.a: libz_langconf.a
 
 $(libdir)/libz_langconf_iso.a: libz_langconf_iso.a
 	cp libz_langconf_iso.a $(libdir)/libz_langconf_iso.a
+
+../../$(host_libdir)/libz_langconf.a: libz_langconf.a
+	cp libz_langconf.a ../../$(host_libdir)/libz_langconf.a
+
+../../$(host_libdir)/libz_langconf_iso.a: libz_langconf_iso.a
+	cp libz_langconf_iso.a ../../$(host_libdir)/libz_langconf_iso.a
 

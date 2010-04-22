@@ -18,6 +18,7 @@ clean:
 	rm -f *.a *.o
 
 install: $(addprefix $(libdir)/, $(LIBS))
+host_install: $(addprefix ../../../$(host_libdir)/, $(LIBS))
 
 uninstall:
 	rm -f $(addprefix $(libdir)/, $(LIBS))
@@ -29,12 +30,9 @@ mutex.o: mutex.cpp
 libz_mutex.a: mutex.o
 	$(AR) -ru libz_mutex.a mutex.o
 
-#define lib_install
-#$(libdir)/$(1): $(1)
-#	cp $(1) $(libdir)/$(1)
-#endef
-
-#$(foreach lib,$(LIBS),$(eval(call lib_install,$(lib))))
 $(libdir)/libz_mutex.a: libz_mutex.a
 	cp libz_mutex.a $(libdir)/libz_mutex.a
+
+../../../$(host_libdir)/libz_mutex.a: libz_mutex.a
+	cp libz_mutex.a ../../../$(host_libdir)/libz_mutex.a
 

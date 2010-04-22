@@ -17,6 +17,7 @@ clean:
 	rm -f *.a *.o auto_int.h comptest.h
 
 install: $(addprefix $(libdir)/, $(LIBS))
+host_install: $(addprefix ../../$(host_libdir)/, $(LIBS))
 
 uninstall:
 	rm -f $(libdir)/libz_format_util.a
@@ -53,4 +54,10 @@ $(libdir)/libz_format_util.a: libz_format_util.a
 	
 $(libdir)/libz_stdio_c.a: libz_stdio_c.a
 	cp libz_stdio_c.a $(libdir)/libz_stdio_c.a
+
+../../$(host_libdir)/libz_format_util.a: libz_format_util.a
+	cp libz_format_util.a ../../$(host_libdir)/libz_format_util.a
+	
+../../$(host_libdir)/libz_stdio_c.a: libz_stdio_c.a
+	cp libz_stdio_c.a ../../$(host_libdir)/libz_stdio_c.a
 

@@ -19,6 +19,7 @@ clean:
 	rm -f *.a *.o
 
 install: $(addprefix $(libdir)/, $(LIBS))
+host_install: $(addprefix ../../$(host_libdir)/, $(LIBS))
 
 uninstall:
 	rm -f $(addprefix $(libdir)/, $(LIBS))
@@ -36,4 +37,7 @@ libz_log_adapter.a: log_adapter_inc_inform.o log_adapter_inform.o log_adapter_lo
 
 $(libdir)/libz_log_adapter.a: libz_log_adapter.a
 	cp libz_log_adapter.a $(libdir)/libz_log_adapter.a
+
+../../$(host_libdir)/libz_log_adapter.a: libz_log_adapter.a
+	cp libz_log_adapter.a ../../$(host_libdir)/libz_log_adapter.a
 

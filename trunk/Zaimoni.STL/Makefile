@@ -1,6 +1,7 @@
 # POSIX makefile for Zaimoni.STL
 # POSIX requires make sets $(MAKE)
-# pure.C must be done first: Pure.C/auto_int.h is a generated file
+# pure.C must be done first: Pure.C/auto_int.h, Pure.C/comptest.h
+#  are generated files
 
 # GNU targets we know about
 all:
@@ -30,4 +31,12 @@ uninstall:
 	cd LexParse; $(MAKE) uninstall
 	cd OS; $(MAKE) uninstall
 	cd OS; cd Win32; $(MAKE) uninstall
+
+# use this to avoid polluting host compiler with our libraries
+host_install:
+	cd pure.C; $(MAKE) host_install; cd stdio.log; $(MAKE) host_install
+	cd core.RAM; $(MAKE) host_install
+	cd LexParse; $(MAKE) host_install
+	cd OS; $(MAKE) host_install
+	cd OS; cd Win32; $(MAKE) host_install
 
