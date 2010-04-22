@@ -72,6 +72,9 @@ bool type_spec::dereference()
 	q_vector.resize(old_ptr_power);	// lost a level of indirection
 	if (0<pointer_power)
 		{
+#if ZAIMONI_REALLOC_TO_ZERO_IS_NULL
+		extent_vector = REALLOC(extent_vector,--pointer_power*sizeof(*extent_vector));
+#else
 		if (0== --pointer_power)
 			{
 			FREE_AND_NULL(extent_vector);
@@ -79,6 +82,7 @@ bool type_spec::dereference()
 		else{
 			extent_vector = REALLOC(extent_vector,pointer_power*sizeof(*extent_vector));
 			}
+#endif
 		return true;
 		}
 	assert(0<static_array_size);	// other cause of non-zero pointer power after array decay

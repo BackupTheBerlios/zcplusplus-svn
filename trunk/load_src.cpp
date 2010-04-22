@@ -30,16 +30,16 @@ clean_linesplice_whitespace(autovalarray_ptr<Token<char>* >& TokenList, size_t v
 	assert(TokenList.size()>v_idx);
 	bool want_to_zap_line = true;
 	if ('\\'==TokenList[v_idx]->data()[TokenList[v_idx]->size()-1])
-	{	// line continue
+		{	// line continue
 		if (TokenList[v_idx]->logical_line.first+1==TokenList[v_idx+1]->logical_line.first)
-		{
+			{
 			TokenList[v_idx]->append(1,*TokenList[v_idx+1]);
 			TokenList.DeleteIdx(v_idx+1);
 			want_to_zap_line = false;
-		}
+			}
 		else
 			TokenList[v_idx]->rtrim(1);
-	}
+		}
 	if (want_to_zap_line) clean_whitespace(TokenList,v_idx,lang);
 }
 
@@ -54,7 +54,7 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 	size_t Buffer_size = 0;
 #endif
 
-	assert(!zaimoni::is_empty_string(filename));
+	assert(filename && *filename);
 
 	// XXX should return true for empty files XXX
 #ifndef ZAIMONI_FORCE_ISO
@@ -73,31 +73,32 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 	while(newline_count<BufferSizeSub1 && '\n'==Buffer[BufferSizeSub1-newline_count]) ++newline_count;
 	if (0<newline_count)
 		{
+		if (Buffer_size<=newline_count) return free(Buffer),true;
 #ifndef ZAIMONI_FORCE_ISO
 		Buffer = REALLOC(Buffer,(ArraySize(Buffer)-newline_count));
 #else
 		Buffer = REALLOC(Buffer,(Buffer_size -= newline_count));
 #endif
-		if (NULL==Buffer) return true;
 		}
 	else{	// works for C/C++
 		INC_INFORM(filename);
 		INFORM(": warning: did not end in \\n, undefined behavior.  Proceeding as if it was there.");
-		if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
+		if (bool_options[boolopt::warnings_are_errors])
+			zcc_errors.inc_error();
 		}
 	}
 
 	if ('\\'==Buffer[Buffer_size-1])	// works for C/C++ and other line-continue languages
-	{
+		{
 		INC_INFORM(filename);
 		INFORM(": warning: line continue \\ without a subsequent line, undefined behavior.  Proceeding as if subsequent line was empty.");
+		if (1==Buffer_size) return free(Buffer),true;
 #ifndef ZAIMONI_FORCE_ISO
 		Buffer = REALLOC(Buffer,ArraySize(Buffer)-1);
 #else
 		Buffer = REALLOC(Buffer,--Buffer_size);
 #endif
-		if (NULL==Buffer) return true;
-	}
+		}
 	if (!lang.ApplyGlobalFilters(Buffer)) exit(EXIT_FAILURE);
 	lang.FlattenComments(Buffer);
 
@@ -111,17 +112,13 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 
 	// next: split on newline, to simplify spotting preprocessing-directives vs file to be preprocessed
 	TokenList[0]->ltrim(strspn(TokenList[0]->data(),"\n"));
-	if (TokenList[0]->empty())
-	{
-		TokenList.reset();
-		return true;
-	};
+	if (TokenList[0]->empty()) return TokenList.reset(),true;
 
 	if (lang.BreakTokenOnNewline)
-	{
-		char* newline_where = strchr(TokenList.back()->data(),'\n');
-		while(NULL!=newline_where)
 		{
+		char* newline_where = strchr(TokenList.back()->data(),'\n');
+		while(newline_where)
+			{
 			const size_t offset = newline_where-TokenList.back()->data();
 			if (!TokenList.InsertNSlotsAt(1,TokenList.size()-1)) throw std::bad_alloc();
 			TokenList[TokenList.size()-2] = new Token<char>(*TokenList.back(),offset,0);
@@ -129,29 +126,29 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 			if (3<=TokenList.size()) clean_linesplice_whitespace(TokenList,TokenList.size()-3,lang);
 			TokenList.back()->ltrim(strspn(TokenList.back()->data(),"\n"));
 			if (TokenList.back()->empty())
-			{
+				{
 				TokenList.DeleteIdx(TokenList.size()-1);
 				break;
-			}
+				}
 			newline_where = strchr(TokenList.back()->data(),'\n');
-		}
+			}
 
 		// final cleanup: works for line-continue languages that consider pure whitespace lines meaningless
 		if (2<=TokenList.size()) clean_linesplice_whitespace(TokenList,TokenList.size()-2,lang);
 		if (!TokenList.empty()) clean_whitespace(TokenList,TokenList.size()-1,lang);
-	}
+		}
 
 	// if the language approves, flush leading whitespace
 	// do not trim trailing whitespace at this time: this breaks error reporting for incomplete C [wide/narrow] character/string literals
 	//! \todo work out how to handle tab stops cleanly
 	{
-		size_t i = TokenList.size();
-		while(0<i)
+	size_t i = TokenList.size();
+	while(0<i)
 		{
-			assert(NULL!=TokenList[i-1]);
-			size_t LeadingWS = strspn(TokenList[--i]->data(),lang.WhiteSpace+1);
-			TokenList[i]->ltrim(LeadingWS);
-			assert(!TokenList[i]->empty());
+		assert(NULL!=TokenList[i-1]);
+		size_t LeadingWS = strspn(TokenList[--i]->data(),lang.WhiteSpace+1);
+		TokenList[i]->ltrim(LeadingWS);
+		assert(!TokenList[i]->empty());
 		}
 	}
 
@@ -190,7 +187,7 @@ bool load_raw_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& Toke
 	size_t Buffer_size = 0;
 #endif
 
-	assert(!zaimoni::is_empty_string(filename));
+	assert(filename && *filename);
 
 	// XXX should return true for empty files XXX
 #ifndef ZAIMONI_FORCE_ISO
@@ -209,12 +206,12 @@ bool load_raw_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& Toke
 	while(newline_count<BufferSizeSub1 && '\n'==Buffer[BufferSizeSub1-newline_count]) ++newline_count;
 	if (0<newline_count)
 		{
+		if (Buffer_size<=newline_count) return free(Buffer),true;
 #ifndef ZAIMONI_FORCE_ISO
 		Buffer = REALLOC(Buffer,(ArraySize(Buffer)-newline_count));
 #else
 		Buffer = REALLOC(Buffer,(Buffer_size -= newline_count));
 #endif
-		if (NULL==Buffer) return true;
 		}
 	else{	// works for C/C++
 		INC_INFORM(filename);
@@ -238,20 +235,19 @@ bool load_raw_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& Toke
 		}
 
 	char* newline_where = strchr(TokenList.back()->data(),'\n');
-	while(NULL!=newline_where)
-	{
+	while(newline_where)
+		{
 		const size_t offset = newline_where-TokenList.back()->data();
 		if (!TokenList.InsertNSlotsAt(1,TokenList.size()-1)) throw std::bad_alloc();
 		TokenList[TokenList.size()-2] = new Token<char>(*TokenList.back(),offset,0);
 		assert('\n'==TokenList.back()->data()[0]);
 		TokenList.back()->ltrim(strspn(TokenList.back()->data(),"\n"));
 		if (TokenList.back()->empty())
-		{
+			{
 			TokenList.DeleteIdx(TokenList.size()-1);
 			break;
-		}
+			}
 		newline_where = strchr(TokenList.back()->data(),'\n');
-	}
+		}
 	return true;
 }
-

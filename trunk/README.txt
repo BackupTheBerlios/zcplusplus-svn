@@ -19,9 +19,9 @@ Installation instructions with GNU make for MingW32 (Official 3.4.5, official 4.
   for use with the Windows command processor, with mostly-comparable meaning.
 * They do not have the assertion-count capability.
 * They only list the last test case in each category that had unexpected behavior.
-* They do not run the content-comparison tests.
+* You'll need a POSIX-like cmp.  MingW's is recommended, but you can build the one in POSIX/cmp.
 
-4) make install [to be implemented]
+4) make install
 
 Installation instructions with Microsoft NMake for Visual C++ 2008 Express, 32-bit
 -1) Install the Boost libraries ( http://www.boost.org/ ) first.
@@ -48,6 +48,6 @@ Installation instructions with Microsoft NMake for Visual C++ 2008 Express, 32-b
   for use with the Windows command processor, with mostly-comparable meaning.
 * They do not have the assertion-count capability.
 * They only list the last test case in each category that had unexpected behavior.
-* They do not run the content-comparison tests.
+* You'll need a POSIX-like cmp.  MingW's is recommended, but you can build the one in POSIX/cmp.
 
 4) nmake /F NMakefile install [to be implemented]
