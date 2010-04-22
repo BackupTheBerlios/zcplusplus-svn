@@ -8,10 +8,10 @@ include ../POSIX.inc
 
 CFLAGS := -Os -Wall -Wextra -finline -Winline -Wdisabled-optimization --param max-inline-insns-single=500 -pipe -DNDEBUG
 
-LIBS := libz_format_util.a
+LIBS := libz_format_util.a libz_stdio_c.a
 
 # GNU targets we know about
-all: $(LIBS) auto_int.h comptest.h
+all: auto_int.h comptest.h $(LIBS)
 
 clean:
 	rm -f *.a *.o auto_int.h comptest.h
@@ -20,6 +20,7 @@ install: $(addprefix $(libdir)/, $(LIBS))
 
 uninstall:
 	rm -f $(libdir)/libz_format_util.a
+	rm -f $(libdir)/libz_stdio_c.a
 
 # rules
 format_util.o: format_util.c format_util.h
@@ -44,6 +45,12 @@ comptest.h : comptest.in compile.test/exists_MS_io_h.c
 libz_format_util.a: format_util.o
 	$(AR) -ru libz_format_util.a format_util.o
 
+libz_stdio_c.a: stdio_c.o
+	$(AR) -ru libz_stdio_c.a stdio_c.o
+
 $(libdir)/libz_format_util.a: libz_format_util.a
 	cp libz_format_util.a $(libdir)/libz_format_util.a
+	
+$(libdir)/libz_stdio_c.a: libz_stdio_c.a
+	cp libz_stdio_c.a $(libdir)/libz_stdio_c.a
 
