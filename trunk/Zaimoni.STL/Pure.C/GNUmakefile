@@ -17,7 +17,7 @@ clean:
 	rm -f *.a *.o auto_int.h comptest.h
 
 install: $(addprefix $(libdir)/, $(LIBS))
-host_install: $(addprefix ../../$(host_libdir)/, $(LIBS))
+host_install: auto_int.h comptest.h $(addprefix ../../$(host_libdir)/, $(LIBS))
 
 uninstall:
 	rm -f $(libdir)/libz_format_util.a

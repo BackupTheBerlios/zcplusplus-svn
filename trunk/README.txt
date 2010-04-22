@@ -1,11 +1,7 @@
 Installation instructions with GNU make for MingW32 (Official 3.4.5, official 4.2.1, or TDM 4.3.3)
--1) Install the Boost libraries ( http://www.boost.org/ ) first.
-0) Install the Zaimoni.STL directory second.
-0.1) Adjust POSIX.inc to have the correct values for your system.
-0.2) make
-0.3) make install if there were no errors
+0) Install the Boost libraries ( http://www.boost.org/ ) first.
 
-1) Adjust POSIX.inc to have the correct values for your system.  Also adjust 
+1) Adjust POSIX.inc and Zaimoni.STL to have the correct values for your system.  Also adjust 
    the INSTALL_TO macro in CPreproc.cpp to point to the root build directory.
 2) make
 3) using a Bourne shell in the tests/cpp subdirectory:

@@ -9,16 +9,20 @@ include POSIX.inc
 all: z_cpp.exe zcc.exe
 
 clean:
-	rm -f *.o *.exe
+	rm -f *.o *.exe lib/host.zcc/*.a
+	cd Zaimoni.STL; make clean
 
 # dependencies
 include POSIX.dep
 
-z_cpp.exe : $(OBJECTS_Z_CPP_LINK_PRIORITY)
+make_Zaimoni_STL:
+	cd Zaimoni.STL; make host_install
+
+z_cpp.exe : make_Zaimoni_STL $(OBJECTS_Z_CPP_LINK_PRIORITY)
 	g++ $(LINK_FLAGS) -oz_cpp.exe $(OBJECTS_Z_CPP) -lz_langconf  -lz_langconf -lz_log_adapter -lz_stdio_log -lz_mutex -lz_format_util -lz_stdio_c -lz_memory
 	strip --preserve-dates --strip-unneeded z_cpp.exe
 
-zcc.exe : $(OBJECTS_ZCC_LINK_PRIORITY)
+zcc.exe : make_Zaimoni_STL $(OBJECTS_ZCC_LINK_PRIORITY)
 	g++ $(LINK_FLAGS) -ozcc.exe $(OBJECTS_ZCC) -lz_langconf  -lz_langconf -lz_log_adapter -lz_stdio_log -lz_mutex -lz_format_util -lz_stdio_c -lz_memory
 	strip --preserve-dates --strip-unneeded zcc.exe
 
