@@ -4,11 +4,7 @@
 #ifndef CPUINFO_HPP
 #define CPUINFO_HPP
 
-#ifdef ZCC_LEGACY_FIXED_INT
-#include "unsigned_fixed_int.hpp"
-#else
 #include "unsigned_var_int.hpp"
-#endif
 
 namespace virtual_machine {
 
@@ -41,21 +37,13 @@ struct promotion_info
 	bool is_signed;	// as in std::numeric_limits
 };
 
-#ifdef ZCC_LEGACY_FIXED_INT
-// adjust this upwards as needed
-#define VM_MAX_BIT_PLATFORM 64
-#else
 // as the implementation, we are free to not provide a larger type than
 // C long long.  Yhis macro doesn't work so well outside of the language 
 // support files, which are expected to declare a CPUInfo* target_machine
 #define VM_MAX_BIT_PLATFORM target_machine->C_bit<virtual_machine::std_int_long_long>()
-#endif
 
-#ifdef ZCC_LEGACY_FIXED_INT
-	typedef unsigned_fixed_int<VM_MAX_BIT_PLATFORM> umaxint;
-#else
-	typedef unsigned_var_int umaxint;
-#endif	
+// leave this typedef, just in case we have to change this around again
+typedef unsigned_var_int umaxint;
 
 // names of macro parameters match names of constructor variables
 // target wchar_t is assumed to be an unsigned integral type

@@ -14,12 +14,9 @@
 
 using virtual_machine::umaxint;
 
-#ifndef ZCC_LEGACY_FIXED_INT
 // XXX adjust VM_MAX_BIT_PLATFORM to work inside of CPreprocessor XXX
 #undef VM_MAX_BIT_PLATFORM
 #define VM_MAX_BIT_PLATFORM target_machine.C_bit<virtual_machine::std_int_long_long>()
-#endif
-
 
 //! \bug Once And Only Once violation
 #define DICT_STRUCT(A) { (A), sizeof(A)-1 }
@@ -286,7 +283,7 @@ static void
 disallow_prior_definitions(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,size_t i,const char* const * identifiers,size_t identifiers_len)
 {
 	assert(TokenList.size()>i);
-	assert(NULL!=identifiers);
+	assert(identifiers);
 	assert(0<identifiers_len);
 	assert(SIZE_MAX/4>=identifiers_len);
 /*
@@ -298,7 +295,7 @@ disallow_prior_definitions(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& To
 	if (!TokenList.InsertNSlotsAt(4*identifiers_len,i)) throw std::bad_alloc();
 	while(0<identifiers_len)
 		{
-		assert(NULL!=*identifiers && '\0'!=**identifiers);
+		assert(*identifiers && **identifiers);
 		zaimoni::Token<char>** const tmp = TokenList.c_array();
 		tmp[i+3] = new zaimoni::Token<char>("#endif",0,sizeof("#endif")-1,0);
 
@@ -357,12 +354,12 @@ static void
 lockdown_reserved_identifiers(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const size_t i,const char* const * identifiers,size_t identifiers_len)
 {
 	assert(TokenList.size()>i);
-	assert(NULL!=identifiers);
+	assert(identifiers);
 	assert(0<identifiers_len);
 	size_t target_len = sizeof("#pragma ZCC lock")-1;
 	size_t j = 0;
 	do	{
-		assert(NULL!=*identifiers && '\0'!=**identifiers);
+		assert(*identifiers && **identifiers);
 		target_len += strlen(identifiers[j])+1;
 		}
 	while(identifiers_len> ++j);
@@ -397,13 +394,13 @@ lockdown_reserved_identifiers(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >&
 
 static void final_init_tokenlist(zaimoni::Token<char>* const * x, size_t x_len, const char* const header_name)
 {
-	assert(NULL!=x);
+	assert(x);
 	assert(0<x_len);
-	assert(NULL!=header_name);
+	assert(header_name && *header_name);
 	while(0<x_len)
 		{
 		--x_len;
-		assert(NULL!=x[x_len]);
+		assert(x[x_len]);
 		x[x_len]->logical_line.first = x_len+1;
 		x[x_len]->logical_line.second = 0;
 		x[x_len]->original_line = x[x_len]->logical_line;
@@ -420,17 +417,12 @@ static void final_init_tokenlist(zaimoni::Token<char>* const * x, size_t x_len, 
 void
 CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const
 {
+	assert(header_name && *header_name);
+	assert(TokenList.empty());
 	// 2 for: leading space, trailing null-termination
 	// (VM_MAX_BIT_PLATFORM/3) for: digits (using octal rather than decimal count because that's easy to do at compile-time)
-#ifdef ZCC_LEGACY_FIXED_INT
-	// currently, worst-case platform we support has a 64-bit two's-complenent long long
-	char buf[2+(VM_MAX_BIT_PLATFORM/3)] = " ";
-#else
 	zaimoni::autovalarray_ptr_throws<char> buf(2+(VM_MAX_BIT_PLATFORM/3));
 	buf[0] = ' ';
-#endif
-	assert(NULL!=header_name);
-	assert(TokenList.empty());
 	zaimoni::autovalarray_ptr<zaimoni::Token<char>* > TmpTokenList(STATIC_SIZE(limits_h_core));
 	zaimoni::Token<char>** tmp = TmpTokenList.c_array();
 	
@@ -609,7 +601,7 @@ static const char* NULL_constant_from_machine(const virtual_machine::std_int_enu
 void
 CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const
 {
-	assert(NULL!=header_name);
+	assert(header_name && *header_name);
 	assert(TokenList.empty());
 	zaimoni::autovalarray_ptr<zaimoni::Token<char>* > TmpTokenList(STATIC_SIZE(stddef_h_core));
 	zaimoni::Token<char>** tmp = TmpTokenList.c_array();
@@ -623,17 +615,17 @@ CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 
 	// C99 17.7p2 : typedefs; C++ versions in namespace std
 	const char* const ptrdiff_str = signed_type_from_machine(target_machine.ptrdiff_t_type());
-	assert(NULL!=ptrdiff_str);
+	assert(ptrdiff_str);
 	tmp[STDDEF_PTRDIFF_T_LINE]->append(ptrdiff_str," ptrdiff_t;");
 	tmp[STDDEF_CPP_PTRDIFF_T_LINE]->append(ptrdiff_str," ptrdiff_t;");
 
 	const char* const size_t_str = unsigned_type_from_machine(target_machine.size_t_type());
-	assert(NULL!=size_t_str);
+	assert(size_t_str);
 	tmp[STDDEF_SIZE_T_LINE]->append(size_t_str," size_t;");
 	tmp[STDDEF_CPP_SIZE_T_LINE]->append(size_t_str," size_t;");
 
 	const char* const wchar_t_str = unsigned_type_from_machine(target_machine.UNICODE_wchar_t());
-	assert(NULL!=wchar_t_str);
+	assert(wchar_t_str);
 	tmp[STDDEF_WCHAR_T_LINE]->append(wchar_t_str," wchar_t;");
 
 	// C99 17.7p3 : macros
@@ -651,7 +643,7 @@ CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 
 static void new_token_at(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& dest,size_t i,const char* const src)
 {
-	assert(NULL!=src && *src);
+	assert(src && *src);
 	zaimoni::Token<char>* tmp = new zaimoni::Token<char>(src,0,strlen(src),0);
 	if (!dest.InsertSlotAt(i,tmp))
 		{
@@ -664,8 +656,8 @@ template<size_t offset,size_t buf_size>
 static void memset_strcpy(char* dest,const char* src)
 {
 	BOOST_STATIC_ASSERT(offset<buf_size);
-	assert(NULL!=dest);
-	assert(NULL!=src);
+	assert(dest);
+	assert(src);
 	assert(buf_size-offset>strlen(src));
 	memset(dest += offset,0,buf_size-offset);
 	strcpy(dest,src);
@@ -675,8 +667,8 @@ template<size_t offset>
 static void memset_strcpy(char* dest,const char* src,size_t buf_size)
 {
 	assert(offset<buf_size);
-	assert(NULL!=dest);
-	assert(NULL!=src);
+	assert(dest);
+	assert(src);
 	assert(buf_size-offset>strlen(src));
 	memset(dest += offset,0,buf_size-offset);
 	strcpy(dest,src);
@@ -693,16 +685,11 @@ static void memset_strcpy(char* dest,const char* src,size_t buf_size)
 void
 CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const
 {
-	assert(NULL!=header_name);
+	assert(header_name && *header_name);
 	assert(TokenList.empty());
 	// 2 for: leading space, trailing null-termination
 	// (VM_MAX_BIT_PLATFORM/3) for: digits (using octal rather than decimal count because that's easy to do at compile-time)
-#ifdef ZCC_LEGACY_FIXED_INT
-	// currently, worst-case platform we support has a 64-bit two's-complenent long long
-	char buf[2+(VM_MAX_BIT_PLATFORM/3)] = " ";
-#else
 	zaimoni::autovalarray_ptr_throws<char> buf(2+(VM_MAX_BIT_PLATFORM/3));
-#endif
 	zaimoni::autovalarray_ptr<zaimoni::Token<char>* > TmpTokenList(STATIC_SIZE(stdint_h_core));
 	zaimoni::Token<char>** tmp = TmpTokenList.c_array();
 
@@ -716,11 +703,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	while(0<i);
 
 	// set up some result strings
-#ifdef ZCC_LEGACY_FIXED_INT
-	char signed_max_metabuf[virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+4)] = "";
-#else
 	zaimoni::autovalarray_ptr_throws<char> signed_max_metabuf(virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+4));
-#endif
 	char* signed_max_buf[virtual_machine::std_int_enum_max] = {signed_max_metabuf, signed_max_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_max_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
 	*signed_max_buf[0] = ' ';
 	*signed_max_buf[1] = ' ';
@@ -735,11 +718,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	strcat(signed_max_buf[virtual_machine::std_int_long-1],"L");
 	strcat(signed_max_buf[virtual_machine::std_int_long_long-1],"LL");
 
-#ifdef ZCC_LEGACY_FIXED_INT
-	char unsigned_max_metabuf[virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+3)] = "";
-#else
 	zaimoni::autovalarray_ptr_throws<char> unsigned_max_metabuf(virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+3));
-#endif
 	char* unsigned_max_buf[virtual_machine::std_int_enum_max] = {unsigned_max_metabuf, unsigned_max_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), unsigned_max_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
 	*unsigned_max_buf[0] = ' ';
 	*unsigned_max_buf[1] = ' ';
@@ -758,11 +737,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	strcat(unsigned_max_buf[virtual_machine::std_int_long_long-1],"ULL");
 
 	const bool target_is_twos_complement = virtual_machine::twos_complement==target_machine.C_signed_int_representation();
-#ifdef ZCC_LEGACY_FIXED_INT
-	char signed_min_metabuf[virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+4)] = "";
-#else
 	zaimoni::autovalarray_ptr_throws<char> signed_min_metabuf(virtual_machine::std_int_enum_max*(2+(VM_MAX_BIT_PLATFORM/3)+4));
-#endif
 	char* signed_min_buf[virtual_machine::std_int_enum_max] = {signed_min_metabuf, signed_min_metabuf+(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+2*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+3*(2+(VM_MAX_BIT_PLATFORM/3)+2), signed_min_metabuf+4*(2+(VM_MAX_BIT_PLATFORM/3)+2)};
 	umaxint tmp_VM;
 	if (target_is_twos_complement && !bool_options[boolopt::int_traps])
@@ -791,13 +766,8 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		strcat(signed_min_buf[virtual_machine::std_int_long_long-1],"LL)");
 		}
 	else{
-#ifdef ZCC_LEGACY_FIXED_INT
-		BOOST_STATIC_ASSERT(sizeof(signed_min_metabuf)==sizeof(signed_max_metabuf));
-		memmove(signed_min_metabuf,signed_max_metabuf,sizeof(signed_max_metabuf));
-#else
 		assert(signed_min_metabuf.size()==signed_max_metabuf.size());
 		memmove(signed_min_metabuf,signed_max_metabuf,signed_max_metabuf.size());
-#endif
 		*signed_min_buf[0] = '-';
 		*signed_min_buf[1] = '-';
 		*signed_min_buf[2] = '-';
@@ -1259,12 +1229,8 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 		}
 	while(0<i);
 
-#ifdef ZCC_LEGACY_FIXED_INT
-	char define_buf[sizeof("#define UINT_LEAST_MAX")+2+VM_MAX_BIT_PLATFORM/3+5] = "#define ";
-#else
 	zaimoni::autovalarray_ptr_throws<char> define_buf(sizeof("#define UINT_LEAST_MAX")+2+VM_MAX_BIT_PLATFORM/3+5);
 	strcpy(define_buf,"#define ");
-#endif
 	i = 13*bitspan_types;
 	TmpTokenList.InsertNSlotsAt(i,inject_C_index);
 	tmp = TmpTokenList.c_array()+inject_C_index;

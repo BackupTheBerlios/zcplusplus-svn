@@ -10,15 +10,6 @@ namespace virtual_machine {
 
 void CPUInfo::_init()
 {
-#ifdef ZCC_LEGACY_FIXED_INT
-	unsigned_fixed_int<VM_MAX_BIT_PLATFORM+1> tmp;
-
-#define SET_MAXIMUM(A)	\
-	tmp.clear();	\
-	tmp.set((SUCCEED_OR_DIE(VM_MAX_BIT_PLATFORM>=C_char_bit()*C_sizeof_##A()),C_char_bit()*C_sizeof_##A()));	\
-	tmp -= 1;	\
-	unsigned_maxima[std_int_##A-1] = tmp
-#else
 	unsigned_var_int tmp;
 
 #define SET_MAXIMUM(A)	\
@@ -28,7 +19,6 @@ void CPUInfo::_init()
 	tmp -= 1;	\
 	tmp.set_bitcount(C_bit<std_int_long_long>());	\
 	tmp.MoveInto(unsigned_maxima[std_int_##A-1])
-#endif
 
 	SET_MAXIMUM(char);
 	SET_MAXIMUM(short);
@@ -55,11 +45,7 @@ bool CPUInfo::trap_int(const umaxint& src_int,std_int_enum machine_type) const
 	const unsigned int bitcount = C_bit(machine_type);
 	const int target_bytecount = bitcount/CHAR_BIT;
 	const unsigned int target_bitcount = bitcount%CHAR_BIT;
-#ifdef ZCC_LEGACY_FIXED_INT
-	assert(VM_MAX_BIT_PLATFORM>=bitcount && 1<=bitcount);
-#else
 	assert(C_bit<std_int_long_long>()>=bitcount && 1<=bitcount);
-#endif
 
 	switch(C_signed_int_representation())
 	{
@@ -99,29 +85,17 @@ void CPUInfo::signed_additive_inverse(umaxint& src_int,std_int_enum machine_type
 		tmp += 1;
 		tmp.mask_to(C_bit(machine_type));
 		}
-#ifdef ZCC_LEGACY_FIXED_INT
-	src_int = tmp;
-#else
 	tmp.MoveInto(src_int);
-#endif
 }
 
 void CPUInfo::unsigned_additive_inverse(umaxint& src_int,std_int_enum machine_type) const
 {
 	assert(machine_type);
 	assert(src_int<=unsigned_max(machine_type));
-#ifdef ZCC_LEGACY_FIXED_INT
-	umaxint tmp(0);
-#else
 	umaxint tmp(0,src_int.size());
-#endif
 	tmp -= src_int;
 	tmp.mask_to(C_bit(machine_type));
-#ifdef ZCC_LEGACY_FIXED_INT
-	src_int = tmp;
-#else
 	tmp.MoveInto(src_int);
-#endif
 }
 
 bool CPUInfo::is_zero(const unsigned char* x, size_t x_len, const promotion_info& targettype) const

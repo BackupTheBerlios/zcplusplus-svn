@@ -2526,11 +2526,7 @@ static umaxint eval_hex_escape(const char* src, size_t src_len)
 {
 	assert(NULL!=src);
 	assert(0<src_len);
-#ifdef ZCC_LEGACY_FIXED_INT
-	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
-#else
 	unsigned_var_int tmp(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
-#endif
 #ifndef NDEBUG
 	umaxint uchar_max(target_machine->unsigned_max<virtual_machine::std_int_long_long>());
 	uchar_max >>= 4;
@@ -3043,21 +3039,13 @@ bool CCharLiteralIsFalse(const char* x,size_t x_len)
 	{
 	default: return false;
 	case virtual_machine::ones_complement:		{
-#ifdef ZCC_LEGACY_FIXED_INT
-												unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
-#else
 												unsigned_var_int tmp(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
-#endif
 												if (VM_MAX_BIT_PLATFORM>target_machine->C_char_bit()) tmp.set(target_machine->C_char_bit());
 												tmp -= 1;
 												return tmp==result;
 												}
 	case virtual_machine::sign_and_magnitude:	{
-#ifdef ZCC_LEGACY_FIXED_INT
-												unsigned_fixed_int<VM_MAX_BIT_PLATFORM> tmp(0);
-#else
 												unsigned_var_int tmp(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
-#endif
 												tmp.set(target_machine->C_char_bit()-1);
 												return tmp==result;
 												}
@@ -4207,13 +4195,8 @@ bool convert_to(umaxint& dest,const C_PPIntCore& src)
 	assert(8==src.radix || 10==src.radix || 16==src.radix);
 	assert(NULL!=src.ptr && 0<src.digit_span);
 
-#ifdef ZCC_LEGACY_FIXED_INT
-	const unsigned_fixed_int<VM_MAX_BIT_PLATFORM> alt_radix(src.radix);
-	unsigned_fixed_int<VM_MAX_BIT_PLATFORM> strict_ub;
-#else
 	const unsigned_var_int alt_radix(src.radix,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
 	unsigned_var_int strict_ub(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
-#endif
 	const char* target = src.ptr;
 	size_t target_len = src.digit_span;
 
@@ -5315,12 +5298,8 @@ static bool VM_to_token(const umaxint& src_int,const size_t base_type_index,POD_
 {
 	assert(C_TYPE::INT<=base_type_index && C_TYPE::ULLONG>=base_type_index);
 	const char* const suffix = literal_suffix(base_type_index);
-#ifdef ZCC_LEGACY_FIXED_INT
-	char buf[(VM_MAX_BIT_PLATFORM/3)+4];	// null-termination: 1 byte; 3 bytes for type hint
-#else
 	char* buf = _new_buffer<char>((VM_MAX_BIT_PLATFORM/3)+4);
 	if (!buf) return false;
-#endif
 	dest.second = literal_flags(base_type_index);
 	dest.second |= C_TESTFLAG_DECIMAL;
 	z_ucharint_toa(src_int,buf,10);
@@ -5329,19 +5308,13 @@ static bool VM_to_token(const umaxint& src_int,const size_t base_type_index,POD_
 	if (suffix) strcat(buf,suffix);
 
 	dest.first = _new_buffer<char>(ZAIMONI_LEN_WITH_NULL(strlen(buf)));
-#ifdef ZCC_LEGACY_FIXED_INT
-	if (!dest.first) return false;
-#else
 	if (!dest.first)
 		{
 		free(buf);
 		return false;
 		}
-#endif
 	strcpy(dest.first,buf);
-#ifndef ZCC_LEGACY_FIXED_INT
 	free(buf);
-#endif
 	return true;
 }
 
