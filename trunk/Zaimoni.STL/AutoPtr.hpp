@@ -792,4 +792,6 @@ _copy_buffer(autoarray_ptr<T>* dest, autoarray_ptr<T>* src, size_t Idx)
 
 }		// end namespace zaimoni
 
+#include "bits/cstdio_autoptr.hpp"
+
 #endif

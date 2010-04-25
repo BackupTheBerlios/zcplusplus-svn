@@ -7,12 +7,7 @@
 
 #include "Logging.h"
 #include "MetaRAM.hpp"
-#include <stdio.h>
-#include "Pure.C/comptest.h"
-
-#ifdef ZAIMONI_HAVE_MICROSOFT_IO_H
-#include <io.h>
-#endif
+#include "Pure.C/stdio_c.h"
 
 namespace zaimoni {
 
@@ -74,28 +69,12 @@ GetBinaryFileImage(const char* const Filename,T*& Buffer,size_t& Buffer_size)
 	if (NULL==TargetFile) return false;
 
 	// Want to know the file length *BEFORE* inhaling it
-#ifdef ZAIMONI_HAVE_MICROSOFT_IO_H
-	long ScriptLength = _filelength(_fileno(TargetFile));
-	if (-1==ScriptLength)	/* XXX required by secure coding standards XXX */
-	{
+	long ScriptLength = get_filelength(TargetFile);
+	if (-1==ScriptLength)
+		{
 		fclose(TargetFile);
 		return false;
-	}
-#else
-	// Failing over to implementation-defined extension of ISO C.
-	if (fseek(TargetFile,0,SEEK_END))	// ISO does not guarantee this works.
-	{
-		fclose(TargetFile);
-		return false;
-	};
-	long ScriptLength = ftell(TargetFile);
-	if (-1==ScriptLength)	/* XXX required by secure coding standards XXX */
-	{
-		fclose(TargetFile);
-		return false;
-	}
-	rewind(TargetFile);
-#endif
+		}
 
 	assert(0==ScriptLength%sizeof(T));
 	size_t ActuallyRead = 0;
@@ -128,5 +107,7 @@ SaveBinaryFileImage(const char* const Filename,const T* const Buffer,size_t Buff
 }
 
 }	// end namespace zaimoni
+
+#include "bits/cstdio_autoptr.hpp"
 
 #endif
