@@ -4,6 +4,8 @@
 .SUFFIXES:  .c .o .exe
 
 include ../../POSIX.inc
+# override link flags
+LINK_FLAGS = -L../../lib/host.zcc
 
 # GNU targets we know about
 all: cmp.exe
