@@ -5725,9 +5725,6 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 	else if (token_is_string<3>(src.data<0>()[i].index_tokens[0].token,"new"))
 		{
 		}
-	else if (token_is_string<5>(src.data<0>()[i].index_tokens[0].token,"compl"))
-		{
-		}
 	else if (token_is_string<6>(src.data<0>()[i].index_tokens[0].token,"delete"))
 		{
 		}
