@@ -4,6 +4,7 @@ Where is the source?
 * freezer: hard-to-replicate source code that used to be in Z.C++, but no longer is.
 * include: this would be the general include directory.
 * lib: this would be the binary library directory.
+** lib/host.zcc : library directory for building Z.C++
 ** lib/MSVC32.zcc : include directory for getting MSVC 32-bit builds going.  Known-good for MSVC 2008 Express.
 ** lib/zc++ : include directory for core Z.C++ files (C++ specific, those that are safe for all versions)
 ** lib/zcc : include director for core ZCC files (C++ specific, those that are safe for all versions)
