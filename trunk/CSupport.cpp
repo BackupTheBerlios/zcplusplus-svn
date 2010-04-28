@@ -10959,9 +10959,8 @@ public:
 	uintmax_t get_flags() const {return flags;};
 	void value_copy_type(type_spec& dest) const {value_copy(dest,base_type);};
 };
-#/*cut-cpp*/
 
-size_t C99_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+static size_t C99_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
 {
 	assert(x.size<0>()>i);
 	// identifier?
@@ -10973,7 +10972,7 @@ size_t C99_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& targ
 	return 0;
 }
 
-size_t CPP_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+static size_t CPP_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
 {
 	assert(x.size<0>()>i);
 	// identifier?
@@ -10985,7 +10984,6 @@ size_t CPP_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& targ
 	return 0;
 }
 
-#/*cut-cpp*/
 static size_t span_to_semicolon(const parse_tree* const first,const parse_tree* const last)
 {
 	assert(first);

@@ -9529,31 +9529,6 @@ void INFORM_separated_list(const char* const* x,size_t x_len, const char* const 
 		};
 }
 
-size_t C99_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
-{
-	assert(x.size<0>()>i);
-	// identifier?
-	if (x.data<0>()[i].is_atomic() && (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags))
-		{	// for now, do nothing else
-		initdecl_identifier_idx = i;
-		return 1;
-		};
-	return 0;
-}
-
-size_t CPP_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
-{
-	assert(x.size<0>()>i);
-	// identifier?
-	if (x.data<0>()[i].is_atomic() && (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags))
-		{	// for now, do nothing else
-		initdecl_identifier_idx = i;
-		return 1;
-		};
-	return 0;
-}
-
-
 PP_auxfunc C99_aux
  = 	{
 	LengthOfCSystemHeader,
