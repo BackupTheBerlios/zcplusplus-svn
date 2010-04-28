@@ -47,6 +47,7 @@ struct type_spec
 
 	void set_static_array_size(size_t _size);
 	void set_pointer_power(size_t _size);	// ACID, throws std::bad_alloc on failure
+	void make_C_pointer() {set_pointer_power(pointer_power+1);};
 	bool dereference();
 	unsigned char& qualifier(size_t i) {return q_vector.c_array()[i];};
 	template<size_t i> unsigned char& qualifier() {return q_vector.c_array()[i];}

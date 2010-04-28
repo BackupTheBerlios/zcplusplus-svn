@@ -10960,27 +10960,208 @@ public:
 	void value_copy_type(type_spec& dest) const {value_copy(dest,base_type);};
 };
 
-static size_t C99_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+/*
+C99 6.7.5p1, C1X 6.7.6p1
+pointer:
+* type-qualifier-listopt
+* type-qualifier-listopt pointer
+*/
+static size_t C99_recognize_pointerlike_declarator_section(parse_tree& x, size_t i,type_spec& target_type)
 {
 	assert(x.size<0>()>i);
-	// identifier?
+	size_t ub = 0;
+	while(robust_token_is_char<'*'>(x.data<0>()[i+ub]))
+		{
+		unsigned int warn_queue = 0;
+		target_type.make_C_pointer();
+		while(x.size<0>()<=i+ ++ub)
+			{
+			if (robust_token_is_string<5>(x.data<0>()[i+ub],"const"))
+				{	//! \bug need test cases
+				if (target_type.q_vector.back() & type_spec::_const)
+					{
+					warn_queue |= type_spec::_const;
+					// optimize source
+					x.DeleteIdx<0>(i + ub--);
+					continue;
+					}
+				target_type.q_vector.back() |= type_spec::_const;
+				}
+			else if (robust_token_is_string<5>(x.data<0>()[i+ub],"volatile"))
+				{	//! \bug need test cases
+				if (target_type.q_vector.back() & type_spec::_volatile)
+					{
+					warn_queue |= type_spec::_volatile;
+					// optimize source
+					x.DeleteIdx<0>(i + ub--);
+					continue;
+					}
+				target_type.q_vector.back() |= type_spec::_volatile;
+				}
+			else if (robust_token_is_string<5>(x.data<0>()[i+ub],"restrict"))
+				{	//! \bug need test cases
+				if (target_type.q_vector.back() & type_spec::_restrict)
+					{
+					warn_queue |= type_spec::_restrict;
+					// optimize source
+					x.DeleteIdx<0>(i + ub--);
+					continue;
+					}
+				target_type.q_vector.back() |= type_spec::_restrict;
+				}
+			else break;
+			}
+		//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+		//! \todo should this be a context-free check?
+		if (warn_queue)
+			{	//! \bug need test cases
+			message_header(x.data<0>()[i].index_tokens[0]);
+			INC_INFORM(WARN_STR);
+			INFORM("duplicate type qualifiers have no effect (C99 6.7.3p4)");
+			if (bool_options[boolopt::warnings_are_errors])
+				zcc_errors.inc_error();
+			}
+		}
+	return ub;
+}
+
+/*
+C99 6.7.5p1, C1X 6.7.6p1
+direct-declarator:
+identifier
+( declarator )
+direct-declarator [ type-qualifier-listopt assignment-expressionopt ]
+direct-declarator [ static type-qualifier-listopt assignment-expression ]
+direct-declarator [ type-qualifier-list static assignment-expression ]
+direct-declarator [ type-qualifier-listopt * ]
+direct-declarator ( parameter-type-list )
+direct-declarator ( identifier-listopt )
+*/
+
+static size_t C99_recognize_direct_declaratorlike_section(parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+{
+	assert(x.size<0>()>i);
+	size_t ub = 0;
 	if (x.data<0>()[i].is_atomic() && (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags))
-		{	// for now, do nothing else
+		{	// identifier counts
+		ub = 1;
 		initdecl_identifier_idx = i;
-		return 1;
-		};
+		}
+	return ub;
+}
+
+/*
+declarator:
+pointeropt direct-declarator
+*/
+static size_t C99_init_declarator_scanner(parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+{
+	assert(x.size<0>()>i);
+	const size_t ptr_like = C99_recognize_pointerlike_declarator_section(x,i,target_type);
+	if (x.size<0>()-i <= ptr_like) return 0;
+	const size_t direct_decl_like = C99_recognize_direct_declaratorlike_section(x,i+ptr_like,target_type,initdecl_identifier_idx);
+	if (0<direct_decl_like) return ptr_like+direct_decl_like;
 	return 0;
 }
 
-static size_t CPP_init_declarator_scanner(const parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+/*
+C++0X 8p4
+ptr-operator:
+* attribute-specifieropt cv-qualifier-seqopt
+& attribute-specifieropt
+&& attribute-specifieropt
+::opt nested-name-specifier * attribute-specifieropt cv-qualifier-seqopt*/
+static size_t CPP_recognize_pointerlike_declarator_section(parse_tree& x, size_t i,type_spec& target_type)
 {
 	assert(x.size<0>()>i);
-	// identifier?
+	size_t ub = 0;
+	// handle C-like case
+	while(robust_token_is_char<'*'>(x.data<0>()[i+ub]))
+		{
+		unsigned int warn_queue = 0;
+		target_type.make_C_pointer();
+		//! \todo would check for attributes here
+		while(x.size<0>()<=i+ ++ub)
+			{
+			if (robust_token_is_string<5>(x.data<0>()[i+ub],"const"))
+				{	//! \bug need test cases
+				if (target_type.q_vector.back() & type_spec::_const)
+					{
+					warn_queue |= type_spec::_const;
+					// optimize source
+					x.DeleteIdx<0>(i + ub--);
+					continue;
+					}
+				target_type.q_vector.back() |= type_spec::_const;
+				}
+			else if (robust_token_is_string<5>(x.data<0>()[i+ub],"volatile"))
+				{	//! \bug need test cases
+				if (target_type.q_vector.back() & type_spec::_volatile)
+					{
+					warn_queue |= type_spec::_volatile;
+					// optimize source
+					x.DeleteIdx<0>(i + ub--);
+					continue;
+					}
+				target_type.q_vector.back() |= type_spec::_volatile;
+				}
+			else break;
+			}
+		//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+		//! \todo should this be a context-free check?
+		if (warn_queue)
+			{	//! \bug need test cases
+			message_header(x.data<0>()[i].index_tokens[0]);
+			INC_INFORM(WARN_STR);
+			INFORM("duplicate type qualifiers have no effect (C++0X 7.1.6.1p1)");
+			if (bool_options[boolopt::warnings_are_errors])
+				zcc_errors.inc_error();
+			}
+		}
+	return ub;
+}
+
+/*
+noptr-declarator:
+declarator-id attribute-specifieropt
+noptr-declarator parameters-and-qualifiers
+noptr-declarator [ constant-expressionopt ] attribute-specifieropt
+( ptr-declarator )
+*/
+static size_t CPP_recognize_noptr_declaratorlike_section(parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+{
+	assert(x.size<0>()>i);
+	size_t ub = 0;
 	if (x.data<0>()[i].is_atomic() && (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags))
-		{	// for now, do nothing else
+		{	// identifier counts
+		ub = 1;
 		initdecl_identifier_idx = i;
-		return 1;
-		};
+		//! \todo check for attributes here
+		}
+	return ub;
+}
+
+/*
+declarator:
+ptr-declarator
+noptr-declarator parameters-and-qualifiers trailing-return-type
+
+ptr-declarator:
+noptr-declarator
+ptr-operator ptr-declarator
+*/
+static size_t CPP_init_declarator_scanner(parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+{
+	assert(x.size<0>()>i);
+	const size_t ptr_like = CPP_recognize_pointerlike_declarator_section(x,i,target_type);
+	if (x.size<0>()-i <= ptr_like) return 0;
+	const size_t noptr_like = CPP_recognize_noptr_declaratorlike_section(x,i+ptr_like,target_type,initdecl_identifier_idx);
+	if (0<noptr_like)
+		{
+		if (0<ptr_like) return ptr_like+noptr_like;
+		//! \todo handle rest of other case
+		return noptr_like;
+		}
 	return 0;
 }
 
