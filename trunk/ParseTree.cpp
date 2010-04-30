@@ -5,6 +5,9 @@
 
 using namespace zaimoni;
 
+// in case we have to debug memory corruption
+// #define IRRATIONAL_CAUTION 1
+
 bool parse_tree::is_atomic() const
 {
 	return (	NULL!=index_tokens[0].token.first
@@ -61,7 +64,167 @@ bool parse_tree::syntax_ok() const
 	while(size<1>()>i) if (!data<1>()[i++].syntax_ok()) return false;
 	i = 0;
 	while(size<2>()>i) if (!data<2>()[i++].syntax_ok()) return false;
+	if (!type_code.syntax_ok()) return false;
 	return true;
+}
+
+bool parse_tree::entangled_with(const type_spec& x) const
+{
+	if (x.entangled_with(type_code)) return true;
+	size_t i = 0;
+	while(size<0>()>i)
+		{
+		if (data<0>()[i].entangled_with(x)) return true;
+		++i;
+		}
+	i = 0;
+	while(size<1>()>i)
+		{
+		if (data<1>()[i].entangled_with(x)) return true;
+		++i;
+		}
+	i = 0;
+	while(size<2>()>i)
+		{
+		if (data<2>()[i].entangled_with(x)) return true;
+		++i;
+		}
+	return false;
+}
+
+bool parse_tree::entangled_with(const parse_tree& x) const
+{
+	if (x.type_code.entangled_with(type_code)) return true;
+	if (args[0] && x.args[0] && args[0]==x.args[0]) return true;
+	if (args[0] && x.args[1] && args[0]==x.args[1]) return true;
+	if (args[0] && x.args[2] && args[0]==x.args[2]) return true;
+	if (args[1] && x.args[0] && args[1]==x.args[0]) return true;
+	if (args[1] && x.args[1] && args[1]==x.args[1]) return true;
+	if (args[1] && x.args[2] && args[1]==x.args[2]) return true;
+	if (args[2] && x.args[0] && args[2]==x.args[0]) return true;
+	if (args[2] && x.args[1] && args[2]==x.args[1]) return true;
+	if (args[2] && x.args[2] && args[2]==x.args[2]) return true;
+
+	size_t i = 0;
+	size_t j = 0;
+	while(size<0>()>i)
+		{
+		while(x.size<0>()>j)
+			{
+			if (data<0>()[i].entangled_with(x.data<0>()[j])) return true;
+			++j;
+			}
+		j = 0;
+		while(x.size<1>()>j)
+			{
+			if (data<0>()[i].entangled_with(x.data<1>()[j])) return true;
+			++j;
+			}
+		j = 0;
+		while(x.size<2>()>j)
+			{
+			if (data<0>()[i].entangled_with(x.data<2>()[j])) return true;
+			++j;
+			}
+		j = 0;
+		++i;
+		}
+	i = 0;
+	while(size<1>()>i)
+		{
+		while(x.size<0>()>j)
+			{
+			if (data<1>()[i].entangled_with(x.data<0>()[j])) return true;
+			++j;
+			}
+		j = 0;
+		while(x.size<1>()>j)
+			{
+			if (data<1>()[i].entangled_with(x.data<1>()[j])) return true;
+			++j;
+			}
+		j = 0;
+		while(x.size<2>()>j)
+			{
+			if (data<1>()[i].entangled_with(x.data<2>()[j])) return true;
+			++j;
+			}
+		j = 0;
+		++i;
+		}
+	i = 0;
+	while(size<2>()>i)
+		{
+		while(x.size<0>()>j)
+			{
+			if (data<2>()[i].entangled_with(x.data<0>()[j])) return true;
+			++j;
+			}
+		j = 0;
+		while(x.size<1>()>j)
+			{
+			if (data<2>()[i].entangled_with(x.data<1>()[j])) return true;
+			++j;
+			}
+		j = 0;
+		while(x.size<2>()>j)
+			{
+			if (data<2>()[i].entangled_with(x.data<2>()[j])) return true;
+			++j;
+			}
+		j = 0;
+		++i;
+		}
+	return false;
+}
+
+bool parse_tree::self_entangled() const
+{
+	if (args[0] && args[1] && args[0]==args[1]) return true;
+	if (args[0] && args[2] && args[0]==args[2]) return true;
+	if (args[1] && args[2] && args[1]==args[2]) return true;
+
+	size_t i = 0;
+	size_t j = 0;
+	while(size<0>()>i)
+		{
+		if (data<0>()[i].self_entangled()) return true;
+		if (data<0>()[i].entangled_with(type_code)) return true;
+		while(i>j)
+			{
+			if (data<0>()[i].entangled_with(data<0>()[j])) return true;
+			++j;
+			}
+		j = 0;
+		++i;
+		}
+	i = 0;
+	while(size<1>()>i)
+		{
+		if (data<1>()[i].self_entangled()) return true;
+		if (data<1>()[i].entangled_with(type_code)) return true;
+		while(i>j)
+			{
+			if (data<1>()[i].entangled_with(data<1>()[j])) return true;
+			++j;
+			}
+		j = 0;
+		++i;
+		}
+	i = 0;
+	while(size<2>()>i)
+		{
+		if (data<2>()[i].self_entangled()) return true;
+		if (data<2>()[i].entangled_with(type_code)) return true;
+		while(i>j)
+			{
+			if (data<2>()[i].entangled_with(data<2>()[j])) return true;
+			++j;
+			}
+		j = 0;
+		++i;
+		}
+	return false;
 }
 #endif
 
@@ -182,6 +345,10 @@ parse_tree::collapse_matched_pair(parse_tree& src, const zaimoni::POD_pair<size_
 	while(0<i);
 	src.DeleteNSlotsAt<0>(zap_span+1,target.first+1);
 	src.c_array<0>()[target.first] = tmp;
+#ifdef IRRATIONAL_CAUTION
+	assert(src.syntax_ok());
+	assert(!src.self_entangled());
+#endif
 	return true;
 }
 
@@ -232,6 +399,10 @@ void value_copy(parse_tree& dest, const parse_tree& src)
 	dest.destroy();
 	dest = tmp;
 	tmp.clear();
+#ifdef IRRATIONAL_CAUTION
+	assert(dest.syntax_ok());
+	assert(!dest.self_entangled());
+#endif
 }
 
 void parse_tree::MoveInto(parse_tree& dest)
@@ -243,6 +414,10 @@ void parse_tree::MoveInto(parse_tree& dest)
 	dest.subtype = subtype;
 	dest.type_code = type_code;
 	clear();
+#ifdef IRRATIONAL_CAUTION
+	assert(dest.syntax_ok());
+	assert(!dest.self_entangled());
+#endif
 }
 
 
@@ -252,6 +427,10 @@ void parse_tree::_eval_to_arg(size_t arg_idx, size_t i)
 	c_array(arg_idx)[i].clear();
 	destroy();
 	*this = tmp;
+#ifdef IRRATIONAL_CAUTION
+	assert(syntax_ok());
+	assert(!self_entangled());
+#endif
 }
 
 bool parse_tree::_resize(const size_t arg_idx,size_t n)

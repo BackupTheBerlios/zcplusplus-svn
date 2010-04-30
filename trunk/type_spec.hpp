@@ -30,7 +30,6 @@ struct type_spec
 {
 	size_t base_type_index;
 	size_t pointer_power;		// use wrappers for altering this (affects valid memory representations) [implement]
-	size_t static_array_size;	// C-ish, but mitigates bloating the type manager; use wrappers for altering this [implement]
 
 	uchar_blob q_vector;	// q(ualifier)_vector
 	uintmax_t* extent_vector;
@@ -39,15 +38,16 @@ struct type_spec
 		lvalue = 1,			// C/C++ sense, assume works for other languages
 		_const = (1<<1),	// C/C++ sense, assume works for other languages
 		_volatile = (1<<2),	// C/C++ sense, assume works for other languages
-		_restrict = (1<<3)	// C99 sense, assume works for other languages
+		_restrict = (1<<3),	// C99 sense, assume works for other languages
+		_array = (1<<4)		// C99 sense, assume works for other languages
 	};
 
-	size_t pointer_power_after_array_decay() const {return pointer_power+(0<static_array_size);};
-	bool decays_to_nonnull_pointer() const {return 0==pointer_power && 0<static_array_size;};
+	size_t pointer_power_after_array_decay() const {return pointer_power;};
+	bool decays_to_nonnull_pointer() const {return 0<pointer_power && (q_vector.back() & _array);};
 
-	void set_static_array_size(size_t _size);
 	void set_pointer_power(size_t _size);	// ACID, throws std::bad_alloc on failure
 	void make_C_pointer() {set_pointer_power(pointer_power+1);};
+	void make_C_array(uintmax_t _size);
 	bool dereference();
 	unsigned char& qualifier(size_t i) {return q_vector.c_array()[i];};
 	template<size_t i> unsigned char& qualifier() {return q_vector.c_array()[i];}
@@ -59,6 +59,12 @@ struct type_spec
 	bool operator!=(const type_spec& rhs) const {return !(*this==rhs);};
 
 	static void value_copy(type_spec& dest, const type_spec& src) {::value_copy(dest,src);};
+	void MoveInto(type_spec& dest);
+	void OverwriteInto(type_spec& dest);
+#ifndef ZAIMONI_FORCE_ISO
+	bool syntax_ok() const;
+	bool entangled_with(const type_spec& x) const;
+#endif
 };
 
 #endif

@@ -274,6 +274,9 @@ struct parse_tree
 	void core_flag_update();
 #ifndef ZAIMONI_FORCE_ISO
 	bool syntax_ok() const;
+	bool entangled_with(const type_spec& x) const;
+	bool entangled_with(const parse_tree& x) const;
+	bool self_entangled() const;
 #endif
 
 	template<size_t dest_idx> void fast_set_arg(parse_tree* src)
