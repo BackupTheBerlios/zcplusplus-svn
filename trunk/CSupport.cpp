@@ -669,13 +669,13 @@ static bool converts_to_integerlike(size_t base_type_index SIG_CONST_TYPES)
 
 static bool converts_to_integerlike(const type_spec& type_code SIG_CONST_TYPES)
 {	//! \todo handle cast operator overloading
-	if (0<type_code.pointer_power_after_array_decay()) return false;	// pointers do not have a standard conversion to integers
+	if (0<type_code.pointer_power) return false;	// pointers do not have a standard conversion to integers
 	return converts_to_integerlike(type_code.base_type_index ARG_TYPES);
 }
 
 static bool converts_to_integer(const type_spec& type_code SIG_CONST_TYPES)
 {	//! \todo handle cast operator overloading
-	if (0<type_code.pointer_power_after_array_decay()) return false;	// pointers do not have a standard conversion to integers
+	if (0<type_code.pointer_power) return false;	// pointers do not have a standard conversion to integers
 #ifdef ZCC_NOT_BUILDING_CPP
 	if (C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::INTEGERLIKE>type_code.base_type_index) return true;
 	return types.get_enum_def(type_code.base_type_index);
@@ -706,13 +706,13 @@ static bool converts_to_arithmeticlike(size_t base_type_index SIG_CONST_TYPES)
 
 static bool converts_to_arithmeticlike(const type_spec& type_code SIG_CONST_TYPES)
 {	//! \todo handle cast operator overloading
-	if (0<type_code.pointer_power_after_array_decay()) return false;	// pointers do not have a standard conversion to integers/floats/complex
+	if (0<type_code.pointer_power) return false;	// pointers do not have a standard conversion to integers/floats/complex
 	return converts_to_arithmeticlike(type_code.base_type_index ARG_TYPES);
 }
 
 static bool converts_to_bool(const type_spec& type_code SIG_CONST_TYPES)
 {
-	if (0<type_code.pointer_power_after_array_decay()) return true;	// pointers are comparable to NULL
+	if (0<type_code.pointer_power) return true;	// pointers are comparable to NULL
 	if (converts_to_arithmeticlike(type_code.base_type_index ARG_TYPES)) return true;	// arithmetic types are comparable to zero, and include bool
 	// C++: run through type conversion weirdness
 	return false;
@@ -864,7 +864,7 @@ static size_t default_promote_type(size_t i SIG_CONST_TYPES)
 static POD_pair<size_t,bool> default_promotion_is_integerlike(const type_spec& type_code SIG_CONST_TYPES)
 {	// uses NRVO
 	POD_pair<size_t,bool> tmp = {0,false};
-	if (0==type_code.pointer_power_after_array_decay())	// pointers do not have a standard conversion to integers
+	if (0==type_code.pointer_power)	// pointers do not have a standard conversion to integers
 		{
 		tmp.first = default_promote_type(type_code.base_type_index ARG_TYPES);
 		tmp.second = (C_TYPE::BOOL<=tmp.first && C_TYPE::INTEGERLIKE>=tmp.first);
@@ -875,7 +875,7 @@ static POD_pair<size_t,bool> default_promotion_is_integerlike(const type_spec& t
 static POD_pair<size_t,bool> default_promotion_is_arithmeticlike(const type_spec& type_code SIG_CONST_TYPES)
 {	// uses NRVO
 	POD_pair<size_t,bool> tmp = {0,false};
-	if (0==type_code.pointer_power_after_array_decay())	// pointers do not have a standard conversion to integers
+	if (0==type_code.pointer_power)	// pointers do not have a standard conversion to integers
 		{
 		tmp.first = default_promote_type(type_code.base_type_index ARG_TYPES);
 		tmp.second = (C_TYPE::BOOL<=tmp.first && C_TYPE::LDOUBLE__COMPLEX>=tmp.first);
@@ -4985,8 +4985,8 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	if (parse_tree::INVALID & src.flags) return;	// cannot optimize to valid
 
-	const size_t effective_pointer_power_prefix = src.data<1>()->type_code.pointer_power_after_array_decay();
-	const size_t effective_pointer_power_infix = src.data<0>()->type_code.pointer_power_after_array_decay();
+	const size_t effective_pointer_power_prefix = src.data<1>()->type_code.pointer_power;
+	const size_t effective_pointer_power_infix = src.data<0>()->type_code.pointer_power;
 	if (0<effective_pointer_power_prefix)
 		{
 		if (0<effective_pointer_power_infix)
@@ -5443,7 +5443,7 @@ static bool is_integerlike_literal(const parse_tree& x SIG_CONST_TYPES)
 static bool eval_unary_plus(parse_tree& src, const type_system& types)
 {
 	assert(is_C99_unary_operator_expression<'+'>(src));
-	if (0<src.data<2>()->type_code.pointer_power_after_array_decay())
+	if (0<src.data<2>()->type_code.pointer_power)
 		{	// assume C++98 interpretation, as this is illegal in C99
 		//! \test cpp/default/Pass_if_control27.hpp
 		if (!(parse_tree::INVALID & src.flags))
@@ -5541,7 +5541,7 @@ static void C_unary_plusminus_easy_syntax_check(parse_tree& src,const type_syste
 	assert(C99_UNARY_SUBTYPE_NEG==src.subtype || C99_UNARY_SUBTYPE_PLUS==src.subtype);
 	assert((C99_UNARY_SUBTYPE_PLUS==src.subtype) ? is_C99_unary_operator_expression<'+'>(src) : is_C99_unary_operator_expression<'-'>(src));
 	// return immediately if applied to a pointer type (C++98 would type here)
-	if (0<src.data<2>()->type_code.pointer_power_after_array_decay())
+	if (0<src.data<2>()->type_code.pointer_power)
 		{
 		src.type_code.set_type(0);
 		simple_error(src,(C99_UNARY_SUBTYPE_PLUS==src.subtype) ? " applies unary + to a pointer (C99 6.5.3.3p1)" : " applies unary - to a pointer (C99 6.5.3.3p1)");
@@ -5606,7 +5606,7 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 	// 2) if inner +/- is applied to a raw pointer, error out and change type to 0
 	if (C99_UNARY_SUBTYPE_PLUS==src.subtype)
 		{
-		if (0<src.data<2>()->type_code.pointer_power_after_array_decay())
+		if (0<src.data<2>()->type_code.pointer_power)
 			// C++98 5.3.1p6: pointer type allowed for unary +, not for unary - (C99 errors)
 			//! \test default/Pass_if_control27.hpp
 			value_copy(src.type_code,src.data<2>()->type_code);
@@ -5618,14 +5618,14 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 		}
 	else{	// if (C99_UNARY_SUBTYPE_NEG==src.subtype)
 		// return immediately if result is a pointer type; nested application to a pointer type dies
-		if (0<src.data<2>()->type_code.pointer_power_after_array_decay())
+		if (0<src.data<2>()->type_code.pointer_power)
 			{
 			src.type_code.set_type(0);
 			simple_error(src," applies unary - to a pointer (C++98 5.3.1p7)");
 			return;
 			}
 
-		if (0<src.data<2>()->type_code.pointer_power_after_array_decay()) return;
+		if (0<src.data<2>()->type_code.pointer_power) return;
 
 		const size_t arg_unary_subtype 	= (is_C99_unary_operator_expression<'-'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_NEG
 										: (is_C99_unary_operator_expression<'+'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_PLUS : 0;
@@ -5765,7 +5765,7 @@ static bool eval_logical_NOT(parse_tree& src, const type_system& types, func_tra
 	if (is_logical_NOT(*src.data<2>()))
 		{
 		if (	is_logical_NOT(*src.data<2>()->data<2>())
-			||	(C_TYPE::BOOL==src.data<2>()->type_code.base_type_index && 0==src.data<2>()->type_code.pointer_power_after_array_decay()))
+			||	(C_TYPE::BOOL==src.data<2>()->type_code.base_type_index && 0==src.data<2>()->type_code.pointer_power))
 			{
 			parse_tree tmp = *src.data<2>()->data<2>();
 			src.c_array<2>()->c_array<2>()->clear();
@@ -6259,7 +6259,7 @@ static bool eval_sizeof_core_type(parse_tree& src,const size_t base_type_index,c
 static bool eval_C99_CPP_sizeof(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_CPP_sizeof_expression(src));
-	if (0==src.data<2>()->type_code.pointer_power_after_array_decay())
+	if (0==src.data<2>()->type_code.pointer_power)
 		{
 		if (eval_sizeof_core_type(src,src.data<2>()->type_code.base_type_index,types)) return true;
 		}
@@ -6270,7 +6270,7 @@ static bool eval_C99_sizeof(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_CPP_sizeof_expression(src));
 	if (eval_C99_CPP_sizeof(src,types)) return true;
-	if (0==src.data<2>()->type_code.pointer_power_after_array_decay())
+	if (0==src.data<2>()->type_code.pointer_power)
 		{
 		const enum_def* const tmp = types.get_enum_def(src.data<2>()->type_code.base_type_index);
 		if (tmp)
@@ -6295,7 +6295,7 @@ static bool eval_CPP_sizeof(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_CPP_sizeof_expression(src));
 	if (eval_C99_CPP_sizeof(src,types)) return true;
-	if (0==src.data<2>()->type_code.pointer_power_after_array_decay())
+	if (0==src.data<2>()->type_code.pointer_power)
 		{
 		if (C_TYPE::WCHAR_T==src.data<2>()->type_code.base_type_index)
 			return eval_sizeof_core_type(src,unsigned_type_from_machine_type(target_machine->UNICODE_wchar_t()),types);
@@ -7244,8 +7244,8 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 {
 	assert(is_C99_add_operator_expression<'+'>(src));
 
-	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power_after_array_decay();
-	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power_after_array_decay();	
+	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power;
+	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power;	
 	// void pointers should have been intercepted by now
 	assert(1!=lhs_pointer || C_TYPE::VOID!=src.data<1>()->type_code.base_type_index);
 	assert(1!=rhs_pointer || C_TYPE::VOID!=src.data<2>()->type_code.base_type_index);
@@ -7397,8 +7397,8 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 static bool eval_sub_expression(parse_tree& src, const type_system& types, bool hard_error, literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	assert(is_C99_add_operator_expression<'-'>(src));
-	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power_after_array_decay();
-	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power_after_array_decay();	
+	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power;
+	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power;	
 	// void pointers should have been intercepted by now
 	assert(1!=lhs_pointer || C_TYPE::VOID!=src.data<1>()->type_code.base_type_index);
 	assert(1!=rhs_pointer || C_TYPE::VOID!=src.data<2>()->type_code.base_type_index);
@@ -7555,8 +7555,8 @@ static void C_CPP_add_expression_easy_syntax_check(parse_tree& src,const type_sy
 {
 	assert((C99_ADD_SUBTYPE_PLUS==src.subtype && is_C99_add_operator_expression<'+'>(src)) || (C99_ADD_SUBTYPE_MINUS==src.subtype && is_C99_add_operator_expression<'-'>(src)));
 	BOOST_STATIC_ASSERT(1==C99_ADD_SUBTYPE_MINUS-C99_ADD_SUBTYPE_PLUS);
-	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power_after_array_decay();
-	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power_after_array_decay();	
+	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power;
+	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power;	
 
 	// pointers to void are disallowed; not testable from preprocessor
 	const bool exact_rhs_voidptr = 1==rhs_pointer && C_TYPE::VOID==src.data<2>()->type_code.base_type_index;
@@ -8099,7 +8099,7 @@ static bool eval_relation_expression(parse_tree& src, const type_system& types,i
 
 static bool C_CPP_relation_expression_core_syntax_ok(parse_tree& src,const type_system& types)
 {
-	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power_after_array_decay())+2*(0<src.data<2>()->type_code.pointer_power_after_array_decay());
+	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power)+2*(0<src.data<2>()->type_code.pointer_power);
 	switch(ptr_case)
 	{
 	case 0:	{	// can't test from preprocessor
@@ -8270,7 +8270,7 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 			break;
 			}
 	case 1:	{
-			if (0<src.data<2>()->type_code.pointer_power_after_array_decay() && literal_converts_to_bool(*src.data<1>(),is_true ARG_TYPES)) 
+			if (0<src.data<2>()->type_code.pointer_power && literal_converts_to_bool(*src.data<1>(),is_true ARG_TYPES)) 
 				{
 				if (!is_true)
 					{	
@@ -8291,7 +8291,7 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 			break;
 			}
 	case 2:	{
-			if (0<src.data<1>()->type_code.pointer_power_after_array_decay() && literal_converts_to_bool(*src.data<2>(),is_true ARG_TYPES)) 
+			if (0<src.data<1>()->type_code.pointer_power && literal_converts_to_bool(*src.data<2>(),is_true ARG_TYPES)) 
 				{
 				if (!is_true)
 					{
@@ -8343,7 +8343,7 @@ static bool C_CPP_equality_expression_syntax_ok_core(parse_tree& src,const type_
 	// string literal == integer literal zero
 	// deny legality of : string literal == integer/float
 	// more to come later
-	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power_after_array_decay())+2*(0<src.data<2>()->type_code.pointer_power_after_array_decay());
+	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power)+2*(0<src.data<2>()->type_code.pointer_power);
 	switch(ptr_case)
 	{
 	case 0:	{	// can't test from preprocessor
@@ -9398,13 +9398,13 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 	// \todo change target for multidimensional arrays
 	// \todo change target for const/volatile/restricted pointers
 	// NOTE: result is always an rvalue in C (C99 6.5.15p4)
-	switch(cmp(src.data<0>()->type_code.pointer_power_after_array_decay(),src.data<2>()->type_code.pointer_power_after_array_decay()))
+	switch(cmp(src.data<0>()->type_code.pointer_power,src.data<2>()->type_code.pointer_power))
 	{
 	case 1:	{	// LHS has more guaranteed indirectability than RHS
 			if (C_TYPE::NOT_VOID==src.data<2>()->type_code.base_type_index)
 				{	// recoverable
 				src.type_code.set_type(C_TYPE::NOT_VOID);
-				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power_after_array_decay());
+				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power);
 				}
 			else if (is_null_pointer_constant(*src.data<2>(),C99_intlike_literal_to_VM ARG_TYPES))
 				// (...) ? string : 0 -- do *not* error (null pointer); check true/false status
@@ -9423,7 +9423,7 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 			if (C_TYPE::NOT_VOID==src.data<0>()->type_code.base_type_index)
 				{	// recoverable
 				src.type_code.set_type(C_TYPE::NOT_VOID);
-				src.type_code.set_pointer_power(src.data<2>()->type_code.pointer_power_after_array_decay());
+				src.type_code.set_pointer_power(src.data<2>()->type_code.pointer_power);
 				}
 			else if (is_null_pointer_constant(*src.data<0>(),C99_intlike_literal_to_VM ARG_TYPES))
 				// (...) ? 0 : string -- do *not* error (null pointer); check true/false status
@@ -9442,22 +9442,22 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 			if (src.data<0>()->type_code.base_type_index==src.data<2>()->type_code.base_type_index)
 				{
 				src.type_code.set_type(src.data<0>()->type_code.base_type_index);
-				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power_after_array_decay());
+				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power);
 				}
-			else if (0==src.data<0>()->type_code.pointer_power_after_array_decay() && (C_TYPE::VOID>=src.data<0>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index))
+			else if (0==src.data<0>()->type_code.pointer_power && (C_TYPE::VOID>=src.data<0>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index))
 				{	// can't test this from preprocessor
 				src.type_code.set_type(0);	// incoherent type
 				simple_error(src," has incoherent type");
 				}
 			//! \todo test cases at preprocessor level
-			else if (0==src.data<0>()->type_code.pointer_power_after_array_decay() && is_innate_definite_type(src.data<0>()->type_code.base_type_index) && is_innate_definite_type(src.data<2>()->type_code.base_type_index))
+			else if (0==src.data<0>()->type_code.pointer_power && is_innate_definite_type(src.data<0>()->type_code.base_type_index) && is_innate_definite_type(src.data<2>()->type_code.base_type_index))
 				// standard arithmetic conversions
 				src.type_code.set_type(arithmetic_reconcile(src.data<0>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index ARG_TYPES));
 			//! \todo --do-what-i-mean can handle elementary integer types with same indirection as well
 			else if (C_TYPE::NOT_VOID==src.data<0>()->type_code.base_type_index || C_TYPE::NOT_VOID==src.data<2>()->type_code.base_type_index)
 				{
 				src.type_code.set_type(C_TYPE::NOT_VOID);
-				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power_after_array_decay());
+				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power);
 				}
 			else{	// can't test this from preprocessor
 				src.type_code.set_type(0);	// incoherent type
@@ -9488,13 +9488,13 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 	// \todo change target for const/volatile/restricted pointers
 	// NOTE: result is an lvalue if both are lvalues of identical type (C++98 5.16p4)
 	// NOTE: throw expressions play nice (they always have the type of the other half)
-	switch(cmp(src.data<0>()->type_code.pointer_power_after_array_decay(),src.data<2>()->type_code.pointer_power_after_array_decay()))
+	switch(cmp(src.data<0>()->type_code.pointer_power,src.data<2>()->type_code.pointer_power))
 	{
 	case 1:	{	// LHS has more guaranteed indirectability than RHS
 			if (C_TYPE::NOT_VOID==src.data<2>()->type_code.base_type_index)
 				{	// recoverable
 				src.type_code.set_type(C_TYPE::NOT_VOID);
-				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power_after_array_decay());
+				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power);
 				}
 			else if (is_null_pointer_constant(*src.data<2>(),CPP_intlike_literal_to_VM ARG_TYPES))
 				// (...) ? string : 0 -- do *not* error (null pointer); check true/false status
@@ -9513,7 +9513,7 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 			if (C_TYPE::NOT_VOID==src.data<0>()->type_code.base_type_index)
 				{	// recoverable
 				src.type_code.set_type(C_TYPE::NOT_VOID);
-				src.type_code.set_pointer_power(src.data<2>()->type_code.pointer_power_after_array_decay());
+				src.type_code.set_pointer_power(src.data<2>()->type_code.pointer_power);
 				}
 			else if (is_null_pointer_constant(*src.data<0>(),CPP_intlike_literal_to_VM ARG_TYPES))
 				// (...) ? 0 : string -- do *not* error (null pointer); check true/false status
@@ -9532,21 +9532,21 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 			if (src.data<0>()->type_code.base_type_index==src.data<2>()->type_code.base_type_index)
 				{
 				src.type_code.set_type(src.data<0>()->type_code.base_type_index);
-				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power_after_array_decay());
+				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power);
 				}
-			else if (0==src.data<0>()->type_code.pointer_power_after_array_decay() && (C_TYPE::VOID>=src.data<0>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index))
+			else if (0==src.data<0>()->type_code.pointer_power && (C_TYPE::VOID>=src.data<0>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index))
 				{	// can't test this from preprocessor
 				src.type_code.set_type(0);	// incoherent type
 				simple_error(src," has incoherent type");
 				}
-			else if (0==src.data<0>()->type_code.pointer_power_after_array_decay() && is_innate_definite_type(src.data<0>()->type_code.base_type_index) && is_innate_definite_type(src.data<2>()->type_code.base_type_index))
+			else if (0==src.data<0>()->type_code.pointer_power && is_innate_definite_type(src.data<0>()->type_code.base_type_index) && is_innate_definite_type(src.data<2>()->type_code.base_type_index))
 				// standard arithmetic conversions
 				src.type_code.set_type(arithmetic_reconcile(src.data<0>()->type_code.base_type_index,src.data<2>()->type_code.base_type_index ARG_TYPES));
 			//! \todo --do-what-i-mean can handle elementary integer types with same indirection as well
 			else if (C_TYPE::NOT_VOID==src.data<0>()->type_code.base_type_index || C_TYPE::NOT_VOID==src.data<2>()->type_code.base_type_index)
 				{
 				src.type_code.set_type(C_TYPE::NOT_VOID);
-				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power_after_array_decay());
+				src.type_code.set_pointer_power(src.data<0>()->type_code.pointer_power);
 				}
 			else{	// can't test this from preprocessor
 				src.type_code.set_type(0);	// incoherent type
@@ -10371,7 +10371,7 @@ static bool cancel_addressof_deref_operators(parse_tree& src)
 	assert(is_C99_unary_operator_expression(src));
 	if ('&'==*src.index_tokens[0].token.first)
 		{	// strip off &*, and remove lvalue-ness of target
-		if (is_C99_unary_operator_expression<'*'>(*src.data<2>()) && 0<src.data<2>()->data<2>()->type_code.pointer_power_after_array_decay())
+		if (is_C99_unary_operator_expression<'*'>(*src.data<2>()) && 0<src.data<2>()->data<2>()->type_code.pointer_power)
 			{
 			parse_tree tmp = *src.data<2>()->data<2>();
 			tmp.type_code.traits &= ~type_spec::lvalue;

@@ -42,7 +42,6 @@ struct type_spec
 		_array = (1<<4)		// C99 sense, assume works for other languages
 	};
 
-	size_t pointer_power_after_array_decay() const {return pointer_power;};
 	bool decays_to_nonnull_pointer() const {return 0<pointer_power && (q_vector.back() & _array);};
 
 	void set_pointer_power(size_t _size);	// ACID, throws std::bad_alloc on failure
