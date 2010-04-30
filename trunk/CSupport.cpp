@@ -4419,7 +4419,7 @@ static void _label_one_literal(parse_tree& src,const type_system& types)
 		if (C_TESTFLAG_STRING_LITERAL==src.index_tokens[0].flags)
 			{
 			src.type_code.set_type(C_TYPE::CHAR);
-			src.type_code.set_static_array_size(LengthOfCStringLiteral(src.index_tokens[0].token.first,src.index_tokens[0].token.second));
+			src.type_code.make_C_array(LengthOfCStringLiteral(src.index_tokens[0].token.first,src.index_tokens[0].token.second));
 			return;
 			}
 		else if (C_TESTFLAG_CHAR_LITERAL==src.index_tokens[0].flags)
@@ -5334,9 +5334,9 @@ static bool VM_to_literal(parse_tree& dest, const umaxint& src_int,const parse_t
 
 static void force_decimal_literal(parse_tree& dest,const char* src,const type_system& types)
 {
-	assert(NULL!=src);
+	assert(src && *src);
 	dest.destroy();
-	assert(NULL!=dest.index_tokens[0].src_filename);
+	assert(dest.index_tokens[0].src_filename && *dest.index_tokens[0].src_filename);
 	dest.index_tokens[0].token.first = src;
 	dest.index_tokens[0].token.second = strlen(src);
 	dest.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
@@ -5345,7 +5345,7 @@ static void force_decimal_literal(parse_tree& dest,const char* src,const type_sy
 
 static parse_tree decimal_literal(const char* src,const parse_tree& loc_src,const type_system& types)
 {
-	assert(NULL!=src);
+	assert(src && *src);
 	parse_tree dest;
 	dest.clear();
 	dest.index_tokens[0].token.first = src;
@@ -7244,7 +7244,6 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 {
 	assert(is_C99_add_operator_expression<'+'>(src));
 
-	const type_spec old_type = src.type_code;
 	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power_after_array_decay();
 	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power_after_array_decay();	
 	// void pointers should have been intercepted by now
@@ -7262,19 +7261,23 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 			bool is_true = false;
 			if 		(literal_converts_to_bool(*src.data<1>(),is_true ARG_TYPES) && !is_true)
 				{	// 0 + __ |-> __
+				type_spec old_type;
+				src.type_code.OverwriteInto(old_type);
 				src.eval_to_arg<2>(0);
-				src.type_code = old_type;
+				old_type.MoveInto(src.type_code);
 				return true;
 				}
 			else if (literal_converts_to_bool(*src.data<2>(),is_true ARG_TYPES) && !is_true)
 				{	// __ + 0 |-> __
+				type_spec old_type;
+				src.type_code.OverwriteInto(old_type);
 				src.eval_to_arg<1>(0);
-				src.type_code = old_type;
+				old_type.MoveInto(src.type_code);
 				return true;
 				};
 			umaxint res_int;
 			umaxint rhs_int;
-			const promote_aux old(old_type.base_type_index ARG_TYPES);
+			const promote_aux old(src.type_code.base_type_index ARG_TYPES);
 			const promote_aux lhs(src.data<1>()->type_code.base_type_index ARG_TYPES);
 			assert(old.bitcount>=lhs.bitcount);
 			const promote_aux rhs(src.data<2>()->type_code.base_type_index ARG_TYPES);
@@ -7336,9 +7339,11 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 						parse_tree tmp;
 						if (!VM_to_literal(tmp,lhs_test,src,types)) return false;
 
+						type_spec old_type;
+						src.type_code.OverwriteInto(old_type);
 						src.DeleteIdx<1>(0);
 						force_unary_negative_literal(src,tmp);
-						src.type_code = old_type;
+						old_type.MoveInto(src.type_code);
 						return true;
 						};
 					res_int = lhs_test;
@@ -7349,8 +7354,7 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 				// convert to parsed + literal
 				parse_tree tmp;
 				if (!VM_to_literal(tmp,res_int,src,types)) return false;
-				tmp.type_code = old_type;
-
+				src.type_code.MoveInto(tmp.type_code);
 				src.DeleteIdx<1>(0);
 				force_unary_positive_literal(src,tmp ARG_TYPES);
 				return true;
@@ -7362,8 +7366,10 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 			bool is_true = false;
 			if (literal_converts_to_bool(*src.data<2>(),is_true ARG_TYPES) && !is_true)
 				{	// __ + 0 |-> __
+				type_spec old_type;
+				src.type_code.OverwriteInto(old_type);
 				src.eval_to_arg<1>(0);
-				src.type_code = old_type;
+				old_type.MoveInto(src.type_code);
 				return true;
 				}
 			break;
@@ -7373,8 +7379,10 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 			bool is_true = false;
 			if (literal_converts_to_bool(*src.data<1>(),is_true ARG_TYPES) && !is_true)
 				{	// 0 + __ |-> __
+				type_spec old_type;
+				src.type_code.OverwriteInto(old_type);
 				src.eval_to_arg<2>(0);
-				src.type_code = old_type;
+				old_type.MoveInto(src.type_code);
 				return true;
 				}
 			break;
@@ -7389,8 +7397,6 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 static bool eval_sub_expression(parse_tree& src, const type_system& types, bool hard_error, literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	assert(is_C99_add_operator_expression<'-'>(src));
-
-	const type_spec old_type = src.type_code;
 	const size_t lhs_pointer = src.data<1>()->type_code.pointer_power_after_array_decay();
 	const size_t rhs_pointer = src.data<2>()->type_code.pointer_power_after_array_decay();	
 	// void pointers should have been intercepted by now
@@ -7400,7 +7406,7 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 	switch((0<lhs_pointer)+2*(0<rhs_pointer))
 	{
 #ifndef NDEBUG
-	default: FATAL_CODE("hardware/compiler error: invalid linear combination in eval_add_expression",3);
+	default: FATAL_CODE("hardware/compiler error: invalid linear combination in eval_sub_expression",3);
 #endif
 	case 0:	{
 			assert(converts_to_arithmeticlike(src.data<1>()->type_code.base_type_index ARG_TYPES));
@@ -7413,13 +7419,14 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 				src.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 				src.subtype = C99_UNARY_SUBTYPE_NEG;
 				assert(is_C99_unary_operator_expression<'-'>(src));
-				src.type_code = old_type;				
 				return true;
 				}
 			else if (literal_converts_to_bool(*src.data<2>(),is_true ARG_TYPES) && !is_true)
 				{	// __ - 0 |-> __
+				type_spec old_type;
+				src.type_code.OverwriteInto(old_type);
 				src.eval_to_arg<1>(0);
-				src.type_code = old_type;
+				old_type.MoveInto(src.type_code);
 				return true;
 				}
 			umaxint res_int;
@@ -7428,7 +7435,7 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 			const bool rhs_converted = intlike_literal_to_VM(rhs_int,*src.data<2>() ARG_TYPES);
 			if (lhs_converted && rhs_converted)
 				{	//! \todo deal with signed integer arithmetic
-				const promote_aux old(old_type.base_type_index ARG_TYPES);
+				const promote_aux old(src.type_code.base_type_index ARG_TYPES);
 				const promote_aux lhs(src.data<1>()->type_code.base_type_index ARG_TYPES);
 				assert(old.bitcount>=lhs.bitcount);
 				const promote_aux rhs(src.data<2>()->type_code.base_type_index ARG_TYPES);
@@ -7487,10 +7494,11 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 						// convert to parsed - literal
 						parse_tree tmp;
 						if (!VM_to_literal(tmp,lhs_test,src,types)) return false;
-
+						type_spec old_type;
+						src.type_code.OverwriteInto(old_type);
 						src.DeleteIdx<1>(0);
 						force_unary_negative_literal(src,tmp);
-						src.type_code = old_type;
+						old_type.MoveInto(src.type_code);
 						return true;
 						};
 					res_int = lhs_test;
@@ -7501,8 +7509,7 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 				// convert to parsed + literal
 				parse_tree tmp;
 				if (!VM_to_literal(tmp,res_int,src,types)) return false;
-				tmp.type_code = old_type;
-
+				src.type_code.MoveInto(tmp.type_code);
 				src.DeleteIdx<1>(0);
 				force_unary_positive_literal(src,tmp ARG_TYPES);
 				return true;
@@ -7514,8 +7521,10 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 			bool is_true = false;
 			if (literal_converts_to_bool(*src.data<2>(),is_true ARG_TYPES) && !is_true)
 				{	// __ - 0 |-> __
+				type_spec old_type;
+				src.type_code.OverwriteInto(old_type);
 				src.eval_to_arg<1>(0);
-				src.type_code = old_type;
+				old_type.MoveInto(src.type_code);
 				return true;
 				}
 			break;
@@ -7528,8 +7537,10 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 			bool is_equal = false;
 			if (C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal) && is_equal)
 				{	//! \test default/Pass_if_zero.hpp, default/Pass_if_zero.h
+				type_spec old_type;
+				src.type_code.OverwriteInto(old_type);
 				force_decimal_literal(src,"0",types);
-				src.type_code = old_type;
+				old_type.MoveInto(src.type_code);
 				return true;
 				}
 			break;
@@ -7600,7 +7611,7 @@ static void C_CPP_add_expression_easy_syntax_check(parse_tree& src,const type_sy
 			}
 	case 1:	{	// ptr + integer, hopefully
 				// requires floating-point literals to test errors from preprocessor
-			src.type_code = src.data<1>()->type_code;
+			value_copy(src.type_code,src.data<1>()->type_code);
 			if (!converts_to_integerlike(src.data<2>()->type_code.base_type_index ARG_TYPES))
 				{
 				simple_error(src," adds pointer to non-integer (C99 6.5.6p2; C++98 5.7p1)");
@@ -7611,7 +7622,7 @@ static void C_CPP_add_expression_easy_syntax_check(parse_tree& src,const type_sy
 			}
 	case 2:	{	// integer + ptr, hopefully
 				// requires floating-point literals to test errors from preprocessor
-			src.type_code = src.data<2>()->type_code;
+			value_copy(src.type_code,src.data<2>()->type_code);
 			if (!converts_to_integerlike(src.data<1>()->type_code.base_type_index ARG_TYPES))
 				{
 				simple_error(src," adds pointer to non-integer (C99 6.5.6p2; C++98 5.7p1)");
@@ -7659,7 +7670,7 @@ static void C_CPP_add_expression_easy_syntax_check(parse_tree& src,const type_sy
 			break;
 			}
 	case 5:	{	// ptr - integer, hopefully; requires floating-point literal to test from preprocessor
-			src.type_code = src.data<1>()->type_code;
+			value_copy(src.type_code,src.data<1>()->type_code);
 			if (!converts_to_integerlike(src.data<2>()->type_code.base_type_index ARG_TYPES))
 				{
 				simple_error(src," subtracts non-integer from pointer (C99 6.5.6p3; C++98 5.7p2)");
@@ -9359,7 +9370,8 @@ static bool eval_conditional_op(parse_tree& src, literal_converts_to_bool_func& 
 	if (literal_converts_to_bool(*src.c_array<1>(),is_true ARG_TYPES))
 		{
 		const bool was_invalid = src.flags & parse_tree::INVALID;
-		const type_spec old_type = src.type_code;
+		type_spec old_type;
+		src.type_code.OverwriteInto(old_type);
 		if (is_true)
 			// it's the infix arg
 			src.eval_to_arg<0>(0);
@@ -9367,12 +9379,13 @@ static bool eval_conditional_op(parse_tree& src, literal_converts_to_bool_func& 
 			src.eval_to_arg<2>(0);
 		if (was_invalid && !(src.flags & parse_tree::INVALID))
 			{
+			old_type.destroy();
 			message_header(src.index_tokens[0]);
 			INC_INFORM("invalid ? : operator optimized to valid ");
 			INFORM(src);
 			}
 		else
-			src.type_code = old_type;
+			old_type.MoveInto(src.type_code);
 		return true;
 		}
 	return false;
@@ -9397,7 +9410,7 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 				// (...) ? string : 0 -- do *not* error (null pointer); check true/false status
 				//! \test default/Pass_if_zero.h, default/Pass_if_zero.hpp 
 				// actually, could be either 1 (positively is null pointer constant) or -1 (could be).  We do the same thing in either case.
-				src.type_code = src.data<0>()->type_code;
+				value_copy(src.type_code,src.data<0>()->type_code);
 			else{
 				src.type_code.set_type(0);	// incoherent type
 				// (...) ? string : int -- error
@@ -9416,7 +9429,7 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 				// (...) ? 0 : string -- do *not* error (null pointer); check true/false status
 				//! \test default/Pass_if_zero.h, default/Pass_if_zero.hpp 
 				// actually, could be either 1 (positively is null pointer constant) or -1 (could be).  We do the same thing in either case.
-				src.type_code = src.data<2>()->type_code;
+				value_copy(src.type_code,src.data<2>()->type_code);
 			else{
 				src.type_code.set_type(0);	// incoherent type
 				// (...) ? int : string -- error
@@ -9487,7 +9500,7 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 				// (...) ? string : 0 -- do *not* error (null pointer); check true/false status
 				//! \test default/Pass_if_zero.h, default/Pass_if_zero.hpp 
 				// actually, could be either 1 (positively is null pointer constant) or -1 (could be).  We do the same thing in either case.
-				src.type_code = src.data<0>()->type_code;
+				value_copy(src.type_code,src.data<0>()->type_code);
 			else{
 				src.type_code.set_type(0);	// incoherent type
 				// (...) ? string : int -- error
@@ -9506,7 +9519,7 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 				// (...) ? 0 : string -- do *not* error (null pointer); check true/false status
 				//! \test default/Pass_if_zero.h, default/Pass_if_zero.hpp 
 				// actually, could be either 1 (positively is null pointer constant) or -1 (could be).  We do the same thing in either case.
-				src.type_code = src.data<2>()->type_code;
+				value_copy(src.type_code,src.data<2>()->type_code);
 			else{
 				src.type_code.set_type(0);	// incoherent type
 				// (...) ? int : string -- error
@@ -9562,7 +9575,8 @@ static void locate_C99_conditional_op(parse_tree& src, size_t& i, const type_sys
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_conditional_op(src,i)) C_conditional_op_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_conditional_op(src,i))
+		C_conditional_op_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 static void locate_CPP_conditional_op(parse_tree& src, size_t& i, const type_system& types)
@@ -9573,7 +9587,8 @@ static void locate_CPP_conditional_op(parse_tree& src, size_t& i, const type_sys
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_conditional_op(src,i)) CPP_conditional_op_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_conditional_op(src,i))
+		CPP_conditional_op_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 template<class T>
