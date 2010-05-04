@@ -5625,8 +5625,6 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 			return;
 			}
 
-		if (0<src.data<2>()->type_code.pointer_power) return;
-
 		const size_t arg_unary_subtype 	= (is_C99_unary_operator_expression<'-'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_NEG
 										: (is_C99_unary_operator_expression<'+'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_PLUS : 0;
 		if (arg_unary_subtype)

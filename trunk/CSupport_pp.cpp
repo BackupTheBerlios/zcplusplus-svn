@@ -1,4 +1,4 @@
-// CSupport.cpp
+// CSupport_pp.cpp
 // support for C/C++ parsing
 // (C)2009, 2010 Kenneth Boyd, license: MIT.txt
 
@@ -5078,8 +5078,6 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 			simple_error(src," applies unary - to a pointer (C++98 5.3.1p7)");
 			return;
 			}
-
-		if (0<src.data<2>()->type_code.pointer_power) return;
 
 		const size_t arg_unary_subtype 	= (is_C99_unary_operator_expression<'-'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_NEG
 										: (is_C99_unary_operator_expression<'+'>(*src.data<2>())) ? C99_UNARY_SUBTYPE_PLUS : 0;
