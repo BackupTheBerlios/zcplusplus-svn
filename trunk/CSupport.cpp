@@ -5434,6 +5434,7 @@ static bool is_integerlike_literal(const parse_tree& x SIG_CONST_TYPES)
 	return converts_to_integerlike(x.type_code ARG_TYPES) && (PARSE_PRIMARY_EXPRESSION & x.flags);
 }
 
+//! \throw std::bad_alloc()
 static bool eval_unary_plus(parse_tree& src, const type_system& types)
 {
 	assert(is_C99_unary_operator_expression<'+'>(src));
@@ -5473,6 +5474,7 @@ static bool eval_unary_plus(parse_tree& src, const type_system& types)
 	return false;
 }
 
+//! \throw std::bad_alloc()
 static bool eval_unary_minus(parse_tree& src, const type_system& types,literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	assert(is_C99_unary_operator_expression<'-'>(src));
@@ -5956,6 +5958,7 @@ static bool construct_twos_complement_int_min(parse_tree& dest, const type_syste
 	return true;
 }
 
+//! \throw std::bad_alloc()
 static bool eval_bitwise_compl(parse_tree& src, const type_system& types,bool hard_error,func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_complement_expression,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	assert(is_bitwise_complement_expression(src));
@@ -6730,7 +6733,8 @@ static bool eval_mult_expression(parse_tree& src, const type_system& types, bool
 	return false;
 }
 
-static bool eval_div_expression(parse_tree& src, const type_system& types, bool hard_error, literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
+//! \throw std::bad_alloc()
+tatic bool eval_div_expression(parse_tree& src, const type_system& types, bool hard_error, literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	assert(is_C99_mult_operator_expression<'/'>(src));
 
@@ -6857,6 +6861,7 @@ static bool eval_div_expression(parse_tree& src, const type_system& types, bool 
 	return false;
 }
 
+//! \throw std::bad_alloc()
 static bool eval_mod_expression(parse_tree& src, const type_system& types, bool hard_error, literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	assert(is_C99_mult_operator_expression<'%'>(src));
@@ -7246,6 +7251,7 @@ static bool terse_locate_add_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
+//! \throw std::bad_alloc()
 static bool eval_add_expression(parse_tree& src, const type_system& types, bool hard_error, literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	assert(is_C99_add_operator_expression<'+'>(src));
@@ -7400,6 +7406,7 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, bool 
 	return false;
 }
 
+//! \throw std::bad_alloc()
 static bool eval_sub_expression(parse_tree& src, const type_system& types, bool hard_error, literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	assert(is_C99_add_operator_expression<'-'>(src));
@@ -7557,6 +7564,7 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, bool 
 
 // +: either both are arithmetic, or one is raw pointer and one is integer
 // -: either both are arithmetic, or both are compatible raw pointer, or left is raw pointer and right is integer
+//! \throw std::bad_alloc()
 static void C_CPP_add_expression_easy_syntax_check(parse_tree& src,const type_system& types,literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	assert((C99_ADD_SUBTYPE_PLUS==src.subtype && is_C99_add_operator_expression<'+'>(src)) || (C99_ADD_SUBTYPE_MINUS==src.subtype && is_C99_add_operator_expression<'-'>(src)));
@@ -7836,6 +7844,7 @@ static bool terse_locate_shift_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
+//! \throw std::bad_alloc()
 static bool eval_shift(parse_tree& src, const type_system& types, bool hard_error, literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	assert(converts_to_integerlike(src.data<1>()->type_code ARG_TYPES));
@@ -8481,6 +8490,7 @@ static bool terse_locate_CPP_bitwise_AND(parse_tree& src, size_t& i)
 	return false;
 }
 
+//! \throw std::bad_alloc()
 static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard_error, literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	assert(converts_to_integerlike(src.data<1>()->type_code ARG_TYPES));
@@ -8677,6 +8687,7 @@ static bool terse_locate_CPP_bitwise_XOR(parse_tree& src, size_t& i)
 	return false;
 }
 
+//! \throw std::bad_alloc()
 static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool hard_error, literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	assert(converts_to_integerlike(src.data<1>()->type_code ARG_TYPES));
@@ -8857,6 +8868,7 @@ static bool terse_locate_CPP_bitwise_OR(parse_tree& src, size_t& i)
 	return false;
 }
 
+//! \throw std::bad_alloc()
 static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard_error, literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	assert(converts_to_integerlike(src.data<1>()->type_code ARG_TYPES));
