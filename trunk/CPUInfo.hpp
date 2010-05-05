@@ -105,6 +105,10 @@ public:
 	unsigned short C_sizeof_int() const {return sizeof_int;};
 	unsigned short C_sizeof_long() const {return sizeof_long;};
 	unsigned short C_sizeof_long_long() const {return sizeof_long_long;};
+	unsigned short C_sizeof(std_int_enum x) const {return	(std_int_char==x) ? 1 : 
+														(std_int_short==x) ? C_sizeof_short() : 
+														(std_int_int==x) ? C_sizeof_int() : 
+														(std_int_long==x) ? C_sizeof_long() : C_sizeof_long_long() ;};
 	unsigned short C_bit(std_int_enum x) const {return	(std_int_char==x) ? C_char_bit() : 
 														(std_int_short==x) ? C_char_bit()*C_sizeof_short() : 
 														(std_int_int==x) ? C_char_bit()*C_sizeof_int() : 
@@ -144,6 +148,11 @@ public:
 	const umaxint& signed_max(std_int_enum x) const {return signed_maxima[x-1];};
 	template<std_int_enum x> const umaxint& signed_max() const {return signed_maxima[x-1];}
 
+	// we'll eventually want to make this independently specified, also
+	// until then, we're targeting a really flat memory space
+	unsigned short C_sizeof_data_ptr() const {return C_sizeof(ptrdiff_t_type());};
+	unsigned short C_sizeof_function_ptr() const {return C_sizeof(ptrdiff_t_type());};
+	
 	// return value is weird...it's true iff the promoted x is a negative numeral
 	bool C_promote_integer(umaxint& x,const promotion_info& src_type, const promotion_info& dest_type) const;
 };

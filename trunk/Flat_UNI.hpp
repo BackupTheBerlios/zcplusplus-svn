@@ -9,7 +9,7 @@
  *
  * \pre string allocated with Zaimoni.STL memory manager
  *
- * \ret true, return value is only to glue into LangConf
+ * \return true, return value is only to glue into LangConf
  */
 bool FlattenUNICODE(char*& Text);
 
