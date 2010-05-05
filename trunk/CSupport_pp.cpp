@@ -4837,14 +4837,8 @@ static bool VM_to_token(const umaxint& src_int,const size_t base_type_index,POD_
 	assert(dest.second);
 	if (suffix) strcat(buf,suffix);
 
-	dest.first = _new_buffer<char>(ZAIMONI_LEN_WITH_NULL(strlen(buf)));
-	if (!dest.first)
-		{
-		free(buf);
-		return false;
-		}
-	strcpy(dest.first,buf);
-	free(buf);
+	// shrinking realloc should be no-fail
+	dest.first = REALLOC(buf,ZAIMONI_LEN_WITH_NULL(strlen(buf)));
 	return true;
 }
 

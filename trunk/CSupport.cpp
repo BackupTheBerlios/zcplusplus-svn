@@ -5307,14 +5307,8 @@ static bool VM_to_token(const umaxint& src_int,const size_t base_type_index,POD_
 	assert(dest.second);
 	if (suffix) strcat(buf,suffix);
 
-	dest.first = _new_buffer<char>(ZAIMONI_LEN_WITH_NULL(strlen(buf)));
-	if (!dest.first)
-		{
-		free(buf);
-		return false;
-		}
-	strcpy(dest.first,buf);
-	free(buf);
+	// shrinking realloc should be no-fail
+	dest.first = REALLOC(buf,ZAIMONI_LEN_WITH_NULL(strlen(buf)));
 	return true;
 }
 
@@ -5913,12 +5907,12 @@ static bool construct_twos_complement_int_min(parse_tree& dest, const type_syste
 {
 	umaxint tmp_int(target_machine->signed_max(machine_type));
 	parse_tree* const tmp = _new_buffer<parse_tree>(1);	// XXX we recycle this variable later
-	if (NULL==tmp) return false;
+	if (!tmp) return false;
 	if (!VM_to_literal(*tmp,tmp_int,src_loc,types)) return false;
 
 	tmp_int = 1;
 	parse_tree* const tmp2 = _new_buffer<parse_tree>(1);
-	if (NULL==tmp2)
+	if (!tmp2)
 		{
 		tmp->destroy();
 		_flush(tmp);
@@ -5934,7 +5928,7 @@ static bool construct_twos_complement_int_min(parse_tree& dest, const type_syste
 		}
 
 	parse_tree* const tmp3 = _new_buffer<parse_tree>(1);
-	if (NULL==tmp3)
+	if (!tmp3)
 		{
 		tmp2->destroy();
 		_flush(tmp2);
@@ -6261,6 +6255,20 @@ static bool eval_C99_CPP_sizeof(parse_tree& src,const type_system& types)
 		{
 		if (eval_sizeof_core_type(src,src.data<2>()->type_code.base_type_index,types)) return true;
 		}
+	else if (!(type_spec::_array & src.type_code.qualifier<0>()))
+		{	// data or function pointer...fine
+			//! \bug need test cases
+		const size_t size_t_type = unsigned_type_from_machine_type(target_machine->size_t_type());
+		parse_tree tmp;
+		src.type_code.set_type(size_t_type);
+		//! \todo eventually, need to check for data vs function pointer when pointer_power is 1
+		if (!VM_to_literal(tmp,umaxint(target_machine->C_sizeof_data_ptr()),src,types)) return false;
+		src.destroy();
+		src = tmp;			
+		assert(size_t_type==src.type_code.base_type_index);
+		return true;
+		}
+	// actual array of something
 	return false;
 }
 
