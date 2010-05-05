@@ -5361,12 +5361,12 @@ static bool construct_twos_complement_int_min(parse_tree& dest, const type_syste
 {
 	umaxint tmp_int(target_machine->signed_max(machine_type));
 	parse_tree* const tmp = _new_buffer<parse_tree>(1);	// XXX we recycle this variable later
-	if (NULL==tmp) return false;
+	if (!tmp) return false;
 	if (!VM_to_literal(*tmp,tmp_int,src_loc,types)) return false;
 
 	tmp_int = 1;
 	parse_tree* const tmp2 = _new_buffer<parse_tree>(1);
-	if (NULL==tmp2)
+	if (!tmp2)
 		{
 		tmp->destroy();
 		_flush(tmp);
@@ -5382,7 +5382,7 @@ static bool construct_twos_complement_int_min(parse_tree& dest, const type_syste
 		}
 
 	parse_tree* const tmp3 = _new_buffer<parse_tree>(1);
-	if (NULL==tmp3)
+	if (!tmp3)
 		{
 		tmp2->destroy();
 		_flush(tmp2);
