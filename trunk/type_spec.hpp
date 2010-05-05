@@ -66,4 +66,34 @@ struct type_spec
 #endif
 };
 
+// non-virtual, intentionally
+class type_spec_class : public type_spec
+{
+public:
+	type_spec_class() {this->clear();};
+	type_spec_class(const type_spec_class& src)
+		{
+		this->clear();
+		value_copy(*this,src);
+		};
+	type_spec_class(const type_spec& src)
+		{
+		this->clear();
+		value_copy(*this,src);
+		};
+	~type_spec_class() {this->destroy();};
+	const type_spec_class& operator=(const type_spec_class& src)
+		{
+		this->destroy();
+		value_copy(*this,src);
+		return *this;
+		}
+	const type_spec_class& operator=(const type_spec& src)
+		{
+		this->destroy();
+		value_copy(*this,src);
+		return *this;
+		}
+};
+
 #endif
