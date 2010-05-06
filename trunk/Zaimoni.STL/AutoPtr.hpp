@@ -39,7 +39,7 @@ public:
 	void MoveInto(_meta_auto_ptr<T>& dest) {dest.reset(_ptr);};
 
 	template<typename U> void TransferOutAndNULL(U*& Target) {_single_flush(Target); Target = _ptr; _ptr = NULL;}
-	template<typename U> void OverwriteAndNULL(U*& Target) {Target = _ptr; _ptr = NULL;}
+	T* release() {T* tmp = _ptr; _ptr = NULL; return tmp;};
 	bool empty() const {return NULL==_ptr;};
 	void NULLPtr() {_ptr = NULL;};
 
@@ -104,7 +104,6 @@ struct c_var_array_CRTP : public c_array_CRTP<c_var_array_CRTP<Derived,T>, T>
 	friend bool operator==<>(const c_var_array_CRTP& lhs, const c_var_array_CRTP& rhs);
 
 	// other support
-	void OverwriteAndNULL(T*& Target) {Target = static_cast<Derived*>(this)->_ptr; static_cast<Derived*>(this)->_ptr = NULL;}
 #ifndef ZAIMONI_FORCE_ISO
 	void NULLPtr() {static_cast<Derived*>(this)->_ptr = NULL;};
 	size_t ArraySize() const {return zaimoni::ArraySize(static_cast<const Derived*>(this)->_ptr);};
@@ -140,7 +139,12 @@ struct c_var_array_CRTP : public c_array_CRTP<c_var_array_CRTP<Derived,T>, T>
 	void rangecheck(size_t i) const { if (i>=size()) FATAL("out-of-bounds array access"); };
 
 	void swap(c_var_array_CRTP& RHS) {std::swap(static_cast<Derived*>(this)->_ptr,static_cast<Derived&>(RHS)._ptr);};
-
+#ifndef ZAIMONI_FORCE_ISO
+	T* release() {T* tmp = static_cast<Derived*>(this)->_ptr; static_cast<Derived*>(this)->_ptr = NULL; return tmp;};
+#else
+	T* release() {T* tmp = static_cast<Derived*>(this)->_ptr; static_cast<Derived*>(this)->_ptr = NULL; static_cast<Derived*>(this)->_size = 0; return tmp;};
+#endif
+	
 	// Perl grep
 	template<typename U> void destructive_grep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));
 	template<typename U> void destructive_invgrep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));

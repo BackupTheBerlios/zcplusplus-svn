@@ -50,6 +50,7 @@ struct parse_tree
     type_spec type_code;
 
 	void MoveInto(parse_tree& dest);
+	void OverwriteInto(parse_tree& dest);
 
 #ifdef ZAIMONI_FORCE_ISO
 #define	ZCC_PARSETREE_CARRAY(I) args[I].first
