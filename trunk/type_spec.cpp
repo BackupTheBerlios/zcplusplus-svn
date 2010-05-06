@@ -6,6 +6,7 @@
 #include "Zaimoni.STL/MetaRAM2.hpp"
 using namespace zaimoni;
 
+//! \throw std::bad_alloc only if _size>pointer_power
 void type_spec::set_pointer_power(size_t _size)
 {
 #ifndef ZAIMONI_FORCE_ISO
@@ -42,6 +43,7 @@ void type_spec::set_pointer_power(size_t _size)
 #endif
 }
 
+//! \throw std::bad_alloc
 void type_spec::make_C_array(uintmax_t _size)
 {	// can't count on type_spec being initialized correctly beforehand
 	// (could be 0 coming in, but then pointer_power=0 as well coming in)
@@ -59,21 +61,32 @@ void type_spec::make_C_array(uintmax_t _size)
 
 
 // XXX properly operator= in C++, but type_spec has to be POD
-// ACID, throws std::bad_alloc on failure
+// ACID
+//! \throw std::bad_alloc only if dest.pointer_power<src.pointer_power 
 void value_copy(type_spec& dest,const type_spec& src)
 {	// again, can't count on src.syntax_ok()
 #ifndef ZAIMONI_FORCE_ISO
 	assert(src.syntax_ok());
 #endif
-	type_spec tmp;
-	tmp.clear();
-	tmp.set_type(src.base_type_index);
-	tmp.set_pointer_power(src.pointer_power);
-	if (tmp.q_vector.size()==src.q_vector.size())
-		value_copy(tmp.q_vector,src.q_vector);
-	if (0<src.pointer_power) memmove(tmp.extent_vector,src.extent_vector,src.pointer_power*sizeof(uintmax_t));
-	dest.destroy();
-	dest = tmp;
+	if (dest.pointer_power<src.pointer_power)
+		{	// set_pointer_power can throw anyway, so be ACID
+		type_spec tmp;
+		tmp.clear();
+		tmp.set_type(src.base_type_index);
+		tmp.set_pointer_power(src.pointer_power);
+		if (tmp.q_vector.size()==src.q_vector.size())
+			value_copy(tmp.q_vector,src.q_vector);
+		if (0<src.pointer_power) memmove(tmp.extent_vector,src.extent_vector,src.pointer_power*sizeof(uintmax_t));
+		dest.destroy();
+		dest = tmp;
+		}
+	else{	// non-enlarging doesn't throw
+		dest.base_type_index = src.base_type_index;
+		dest.set_pointer_power(src.pointer_power);
+		if (dest.q_vector.size()==src.q_vector.size())
+			value_copy(dest.q_vector,src.q_vector);
+		if (0<src.pointer_power) memmove(dest.extent_vector,src.extent_vector,src.pointer_power*sizeof(uintmax_t));
+		}
 #ifndef ZAIMONI_FORCE_ISO
 	assert(dest.syntax_ok());
 #endif
@@ -106,7 +119,7 @@ void type_spec::clear()
 {
 	base_type_index = 0;
 	pointer_power = 0;
-	q_vector.init(0);
+	q_vector.init(1);
 	extent_vector = NULL;
 }
 
@@ -116,7 +129,8 @@ void type_spec::destroy()
 	assert(syntax_ok());
 #endif
 	FREE_AND_NULL(extent_vector);
-	q_vector.resize(0);
+	q_vector.resize(1);
+	q_vector.front() = '\0';
 	base_type_index = 0;
 	pointer_power = 0;
 }
@@ -128,6 +142,7 @@ void type_spec::set_type(size_t _base_type_index)
 #endif
 	FREE_AND_NULL(extent_vector);
 	q_vector.resize(1);
+	q_vector.front() = '\0';
 	base_type_index = _base_type_index;
 	pointer_power = 0;
 }

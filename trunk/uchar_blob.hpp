@@ -43,6 +43,7 @@ public:
 
 	void resize(size_t new_size);
 	void init(size_t new_size);
+	//! \throw std::bad_alloc only if sizeof(unsigned char*)<src.size() and dest.size()<src.size() 
 	static void value_copy(uchar_blob& dest,const uchar_blob& src) {::value_copy(dest,src);};
 };
 

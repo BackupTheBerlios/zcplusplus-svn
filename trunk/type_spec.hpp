@@ -12,7 +12,7 @@
 
 struct type_spec;
 
-// ACID; throws std::bad_alloc on failure
+//! ACID; may be replaced by operator= when 0==dest.pointer_power and 0==src.pointer_power
 void value_copy(type_spec& dest, const type_spec& src);
 
 namespace boost {
@@ -44,8 +44,9 @@ struct type_spec
 
 	bool decays_to_nonnull_pointer() const {return 0<pointer_power && (q_vector.back() & _array);};
 
-	void set_pointer_power(size_t _size);	// ACID, throws std::bad_alloc on failure
+	void set_pointer_power(size_t _size);
 	void make_C_pointer() {set_pointer_power(pointer_power+1);};
+	//! \throw std::bad_alloc
 	void make_C_array(uintmax_t _size);
 	bool dereference();
 	unsigned char& qualifier(size_t i) {return q_vector.c_array()[i];};
@@ -57,6 +58,7 @@ struct type_spec
 	bool operator==(const type_spec& rhs) const;
 	bool operator!=(const type_spec& rhs) const {return !(*this==rhs);};
 
+	//! \throw std::bad_alloc only if dest.pointer_power<src.pointer_power 
 	static void value_copy(type_spec& dest, const type_spec& src) {::value_copy(dest,src);};
 	void MoveInto(type_spec& dest);
 	void OverwriteInto(type_spec& dest);

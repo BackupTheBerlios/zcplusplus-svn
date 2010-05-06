@@ -4,21 +4,23 @@
 #include "uchar_blob.hpp"
 #include "Zaimoni.STL/MetaRAM.hpp"
 
+//! \throw std::bad_alloc only if sizeof(unsigned char*)<new_size 
 void uchar_blob::init(size_t new_size)
 {
-	if (sizeof(unsigned char*)>new_size)
+	if (sizeof(unsigned char*)>=new_size)
 		memset(_x.first,0,sizeof(sizeof(unsigned char*)));
 	else
 		_x.second = zaimoni::_new_buffer_nonNULL_throws<unsigned char>(new_size);
 	_size = new_size;
 }
 
+//! \throw std::bad_alloc only if sizeof(unsigned char*)<new_size and _size<new_size 
 void uchar_blob::resize(size_t new_size)
 {
 	if (_size==new_size) return;
-	if (sizeof(unsigned char*)>_size)
+	if (sizeof(unsigned char*)>=_size)
 		{
-		if (sizeof(unsigned char*)>new_size)
+		if (sizeof(unsigned char*)>=new_size)
 			{
 			const size_t min_N = _size<new_size ? _size : new_size;
 			memset(_x.first+min_N,0,(sizeof(unsigned char*)-min_N));
@@ -34,7 +36,7 @@ void uchar_blob::resize(size_t new_size)
 			}
 		}
 	else{
-		if (sizeof(unsigned char*)>new_size)
+		if (sizeof(unsigned char*)>=new_size)
 			{
 			unsigned char tmp[sizeof(unsigned char*)];
 			memset(tmp,0,sizeof(unsigned char*));
@@ -55,6 +57,7 @@ void uchar_blob::resize(size_t new_size)
 		}
 }
 
+//! \throw std::bad_alloc only if sizeof(unsigned char*)<src.size() and _size<src.size() 
 void value_copy(uchar_blob& dest,const uchar_blob& src)
 {
 	const size_t src_size = src.size();
