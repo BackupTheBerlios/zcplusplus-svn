@@ -8475,7 +8475,6 @@ static bool terse_locate_C99_bitwise_AND(parse_tree& src, size_t& i)
 	return false;
 }
 
-//! \throw std::bad_alloc
 static bool terse_locate_CPP_bitwise_AND(parse_tree& src, size_t& i)
 {
 	assert(!src.empty<0>());
@@ -8511,23 +8510,25 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 	// 0 & __ |-> 0
 	// int-literal | int-literal |-> int-literal *if* both fit
 	// unary - gives us problems (result is target-specific, could generate a trap representation)
-	const type_spec old_type = src.type_code;
 	bool is_true = false;
 	if (	(literal_converts_to_bool(*src.data<1>(),is_true ARG_TYPES) && !is_true)	// 0 & __
 		||	(literal_converts_to_bool(*src.data<2>(),is_true ARG_TYPES) && !is_true))	// __ & 0
 		{
-		if (C_TYPE::INTEGERLIKE==old_type.base_type_index)
+		if (C_TYPE::INTEGERLIKE==src.type_code.base_type_index)
 			{
 			message_header(src.index_tokens[0]);
 			INC_INFORM("invalid ");
 			INC_INFORM(src);
 			INFORM(" optimized to valid 0");
-			};
-		force_decimal_literal(src,"0",types);
-		if (C_TYPE::INTEGERLIKE!=old_type.base_type_index)
-			src.type_code = old_type;
-		else
+			force_decimal_literal(src,"0",types);
 			src.type_code.set_type(C_TYPE::LLONG);	// legalize
+			}
+		else{
+			type_spec tmp;
+			src.type_code.OverwriteInto(tmp);
+			force_decimal_literal(src,"0",types);
+			tmp.MoveInto(src.type_code);
+			}
 		return true;
 		};
 
@@ -8535,7 +8536,7 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 	umaxint rhs_int;
 	if (intlike_literal_to_VM(lhs_int,*src.data<1>() ARG_TYPES) && intlike_literal_to_VM(rhs_int,*src.data<2>() ARG_TYPES))
 		{
-		const promote_aux old(old_type.base_type_index ARG_TYPES);
+		const promote_aux old(src.type_code.base_type_index ARG_TYPES);
 		umaxint res_int(lhs_int);
 		res_int &= rhs_int;
 
@@ -8544,28 +8545,26 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 
 		if 		(res_int==lhs_int)
 			// lhs & rhs = lhs; conserve type
-#/*cut-cpp*/
 			{
+#/*cut-cpp*/
 			// handle enumerators now
 			if (is_noticed_enumerator(*src.data<1>(),types))
 				enumerator_to_integer_representation(*src.c_array<1>(),types);
 #/*cut-cpp*/
+			src.type_code.MoveInto(src.c_array<1>()->type_code);
 			src.eval_to_arg<1>(0);
-#/*cut-cpp*/
 			}
-#/*cut-cpp*/
 		else if (res_int==rhs_int)
 			// lhs & rhs = rhs; conserve type
-#/*cut-cpp*/
 			{
+#/*cut-cpp*/
 			// handle enumerators now
 			if (is_noticed_enumerator(*src.data<2>(),types))
 				enumerator_to_integer_representation(*src.c_array<2>(),types);
 #/*cut-cpp*/
+			src.type_code.MoveInto(src.c_array<2>()->type_code);
 			src.eval_to_arg<2>(0);
-#/*cut-cpp*/
 			}
-#/*cut-cpp*/
 		else{
 			const bool negative_signed_int = old.is_signed && res_int.test(old.bitcount-1);
 			if (negative_signed_int) target_machine->signed_additive_inverse(res_int,old.machine_type);
@@ -8574,28 +8573,21 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types,bool hard
 				&& 	!bool_options[boolopt::int_traps]
 				&&	res_int>target_machine->signed_max(old.machine_type))
 				{	// trap representation; need to get it into -INT_MAX-1 form
-				try {
-					construct_twos_complement_int_min(src,types,old.machine_type,src);
-					}
-				catch(const std::bad_alloc&)
-					{
-					return false;
-					}
-				src.type_code = old_type;
+				construct_twos_complement_int_min(src,types,old.machine_type,src);
 				return true;
 				}
 
 			parse_tree tmp;
 			VM_to_signed_literal(tmp,negative_signed_int,res_int,src,types);
-			src.destroy();
-			src = tmp;
+			src.type_code.MoveInto(tmp.type_code);
+			tmp.MoveInto(src);
 			}
-		src.type_code = old_type;
 		return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc
 static void C_bitwise_AND_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_bitwise_AND_expression(src));
@@ -8606,6 +8598,7 @@ static void C_bitwise_AND_easy_syntax_check(parse_tree& src,const type_system& t
 	if (eval_bitwise_AND(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
 }
 
+//! \throw std::bad_alloc
 static void CPP_bitwise_AND_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_CPP_bitwise_AND_expression(src));
@@ -8621,6 +8614,7 @@ AND-expression:
 	equality-expression
 	AND-expression & equality-expression
 */
+//! \throw std::bad_alloc
 static void locate_C99_bitwise_AND(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -8638,6 +8632,7 @@ AND-expression:
 	equality-expression
 	AND-expression & equality-expression
 */
+//! \throw std::bad_alloc
 static void locate_CPP_bitwise_AND(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -8723,7 +8718,7 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 				enumerator_to_integer_representation(*src.c_array<2>(),types);
 #/*cut-cpp*/
 			src.eval_to_arg<2>(0);
-			//! \todo convert char literal to appropriate integer
+			//! \bug convert char literal to appropriate integer
 			return true;
 			}
 		};
@@ -8737,7 +8732,7 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 				enumerator_to_integer_representation(*src.c_array<1>(),types);
 #/*cut-cpp*/
 			src.eval_to_arg<1>(0);
-			//! \todo convert char literal to appropriate integer
+			//! \bug convert char literal to appropriate integer
 			return true;
 			}
 		};
@@ -8746,8 +8741,7 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 	umaxint rhs_int;
 	if (intlike_literal_to_VM(lhs_int,*src.data<1>() ARG_TYPES) && intlike_literal_to_VM(rhs_int,*src.data<2>() ARG_TYPES))
 		{
-		const type_spec old_type = src.type_code;
-		const promote_aux old(old_type.base_type_index ARG_TYPES);
+		const promote_aux old(src.type_code.base_type_index ARG_TYPES);
 		umaxint res_int(lhs_int);
 		res_int ^= rhs_int;
 //		res_int.mask_to(target_machine->C_bit(machine_type));	// shouldn't need this
@@ -8761,27 +8755,20 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, bool har
 			&& 	!bool_options[boolopt::int_traps]
 			&&	res_int>target_machine->signed_max(old.machine_type))
 			{	// trap representation; need to get it into -INT_MAX-1 form
-			try {
-				construct_twos_complement_int_min(src,types,old.machine_type,src);
-				}
-			catch(const std::bad_alloc&)
-				{
-				return false;
-				}
-			src.type_code = old_type;
+			construct_twos_complement_int_min(src,types,old.machine_type,src);
 			return true;
 			}
 
 		parse_tree tmp;
 		VM_to_signed_literal(tmp,negative_signed_int,res_int,src,types);
-		src.destroy();
-		src = tmp;
-		src.type_code = old_type;
+		src.type_code.MoveInto(tmp.type_code);
+		tmp.MoveInto(src);
 		return true;
 		}
 	return false;
 }
 
+// throws std::bad_alloc
 static void C_bitwise_XOR_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_bitwise_XOR_expression(src));
@@ -8792,6 +8779,7 @@ static void C_bitwise_XOR_easy_syntax_check(parse_tree& src,const type_system& t
 	if (eval_bitwise_XOR(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
 }
 
+// throws std::bad_alloc
 static void CPP_bitwise_XOR_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_CPP_bitwise_XOR_expression(src));
@@ -8807,6 +8795,7 @@ exclusive-OR-expression:
 	AND-expression
 	exclusive-OR-expression ^ AND-expression
 */
+// throws std::bad_alloc
 static void locate_C99_bitwise_XOR(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -8823,6 +8812,7 @@ exclusive-OR-expression:
 	AND-expression
 	exclusive-OR-expression ^ AND-expression
 */
+// throws std::bad_alloc
 static void locate_CPP_bitwise_XOR(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -8908,7 +8898,7 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 				enumerator_to_integer_representation(*src.c_array<2>(),types);
 #/*cut-cpp*/
 			src.eval_to_arg<2>(0);
-			//! \todo convert char literal to appropriate integer
+			//! \bug convert char literal to appropriate integer
 			return true;
 			}
 		};
@@ -8922,7 +8912,7 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 				enumerator_to_integer_representation(*src.c_array<1>(),types);
 #/*cut-cpp*/
 			src.eval_to_arg<1>(0);
-			//! \todo convert char literal to appropriate integer
+			//! \bug convert char literal to appropriate integer
 			return true;
 			}
 		};
@@ -8931,35 +8921,32 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 	umaxint rhs_int;
 	if (intlike_literal_to_VM(lhs_int,*src.data<1>() ARG_TYPES) && intlike_literal_to_VM(rhs_int,*src.data<2>() ARG_TYPES))
 		{
-		const type_spec old_type = src.type_code;
 		umaxint res_int(lhs_int);
 
 		res_int |= rhs_int;
 //		res_int.mask_to(target_machine->C_bit(machine_type));	// shouldn't need this
 		if 		(res_int==lhs_int)
 			// lhs | rhs = lhs; conserve type
-#/*cut-cpp*/
 			{
+#/*cut-cpp*/
 			// handle enumerators now
 			if (is_noticed_enumerator(*src.data<1>(),types))
 				enumerator_to_integer_representation(*src.c_array<1>(),types);
 #/*cut-cpp*/
+			src.type_code.MoveInto(src.c_array<1>()->type_code);
 			src.eval_to_arg<1>(0);
-#/*cut-cpp*/
 			}
-#/*cut-cpp*/
 		else if (res_int==rhs_int)
 			// lhs | rhs = rhs; conserve type
-#/*cut-cpp*/
 			{
+#/*cut-cpp*/
 			// handle enumerators now
 			if (is_noticed_enumerator(*src.data<1>(),types))
 				enumerator_to_integer_representation(*src.c_array<1>(),types);
 #/*cut-cpp*/
+			src.type_code.MoveInto(src.c_array<2>()->type_code);
 			src.eval_to_arg<2>(0);
-#/*cut-cpp*/
 			}
-#/*cut-cpp*/
 		else{
 			if (int_has_trapped(src,res_int,hard_error)) return false;
 
@@ -8974,15 +8961,17 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, bool hard
 				src.DeleteIdx<1>(0);
 				force_unary_negative_literal(src,tmp);
 				}
-			else	// convert to positive literal
+			else{	// convert to positive literal
+				src.type_code.MoveInto(tmp.type_code);
 				tmp.MoveInto(src);
+				}
 			}
-		src.type_code = old_type;
 		return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc()
 static void C_bitwise_OR_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_bitwise_OR_expression(src));
@@ -8993,6 +8982,7 @@ static void C_bitwise_OR_easy_syntax_check(parse_tree& src,const type_system& ty
 	if (eval_bitwise_OR(src,types,false,C99_literal_converts_to_bool,C99_intlike_literal_to_VM)) return;
 }
 
+//! \throw std::bad_alloc()
 static void CPP_bitwise_OR_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_CPP_bitwise_OR_expression(src));
@@ -9008,6 +8998,7 @@ inclusive-OR-expression:
 	exclusive-OR-expression
 	inclusive-OR-expression | exclusive-OR-expression
 */
+//! \throw std::bad_alloc()
 static void locate_C99_bitwise_OR(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -9025,6 +9016,7 @@ inclusive-OR-expression:
 	exclusive-OR-expression
 	inclusive-OR-expression | exclusive-OR-expression
 */
+//! \throw std::bad_alloc()
 static void locate_CPP_bitwise_OR(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -9041,17 +9033,19 @@ static void locate_CPP_bitwise_OR(parse_tree& src, size_t& i, const type_system&
 static bool binary_infix_failed_boolean_arguments(parse_tree& src, const char* standard SIG_CONST_TYPES)
 {	//! \todo so the error message isn't technically right...convertible to bool in C++ is morally equivalent to scalar in C
 	// cannot test this within preprocessor
-	assert(NULL!=standard);
+	assert(standard && *standard);
 
 	const bool rhs_converts_to_bool =  converts_to_bool(src.data<2>()->type_code ARG_TYPES);
 	if (!converts_to_bool(src.data<1>()->type_code ARG_TYPES))
 		{
-		simple_error(src,rhs_converts_to_bool ? " has nonscalar LHS " : " has nonscalar LHS and RHS ");
+		simple_error(src,rhs_converts_to_bool ? " has nonscalar LHS" : " has nonscalar LHS and RHS");
+		INFORM(standard);
 		return true;
 		}
 	else if (!rhs_converts_to_bool)
 		{
-		simple_error(src," has nonscalar RHS ");
+		simple_error(src," has nonscalar RHS");
+		INFORM(standard);
 		return true;
 		}
 	return false;
@@ -9322,7 +9316,8 @@ static void locate_C99_logical_OR(parse_tree& src, size_t& i, const type_system&
 		|| !src.data<0>()[i].is_atomic())
 		return;
 
-	if (terse_locate_C99_logical_OR(src,i)) C_logical_OR_easy_syntax_check(src.c_array<0>()[i],types);
+	if (terse_locate_C99_logical_OR(src,i))
+		C_logical_OR_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
 /*
@@ -9343,6 +9338,7 @@ static void locate_CPP_logical_OR(parse_tree& src, size_t& i, const type_system&
 		CPP_logical_OR_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
+//! \throw std::bad_alloc
 static bool terse_locate_conditional_op(parse_tree& src, size_t& i)
 {
 	assert(!src.empty<0>());
@@ -9365,23 +9361,22 @@ static bool terse_locate_conditional_op(parse_tree& src, size_t& i)
 				&&	(PARSE_EXPRESSION & src.data<0>()[i+1].flags)
 				&&	(PARSE_CONDITIONAL_EXPRESSION & src.data<0>()[i+3].flags))
 				{
-				parse_tree* const tmp = repurpose_inner_parentheses(tmp_c_array[0]);	// RAM conservation
-				*tmp = tmp_c_array[0];
-				parse_tree* const tmp2 = repurpose_inner_parentheses(tmp_c_array[2]);	// RAM conservation
-				*tmp2 = tmp_c_array[2];
+				zaimoni::autoval_ptr<parse_tree> tmp;
+				zaimoni::autoval_ptr<parse_tree> tmp2;
+				tmp = repurpose_inner_parentheses(tmp_c_array[0]);	// RAM conservation
+				tmp2 = repurpose_inner_parentheses(tmp_c_array[2]);	// RAM conservation
 				parse_tree* const tmp3 = repurpose_inner_parentheses(tmp_c_array[4]);	// RAM conservation
-				*tmp3 = tmp_c_array[4];
+				tmp_c_array[0].OverwriteInto(*tmp);
+				tmp_c_array[2].OverwriteInto(*tmp2);
+				tmp_c_array[4].OverwriteInto(*tmp3);
 				tmp_c_array[1].grab_index_token_from<1,0>(tmp_c_array[3]);
 				tmp_c_array[1].grab_index_token_location_from<1,0>(tmp_c_array[3]);
-				tmp_c_array[1].fast_set_arg<0>(tmp2);
-				tmp_c_array[1].fast_set_arg<1>(tmp);
+				tmp_c_array[1].fast_set_arg<0>(tmp2.release());
+				tmp_c_array[1].fast_set_arg<1>(tmp.release());
 				tmp_c_array[1].fast_set_arg<2>(tmp3);
 				tmp_c_array[1].core_flag_update();
 				tmp_c_array[1].flags |= PARSE_STRICT_CONDITIONAL_EXPRESSION;
-				tmp_c_array[0].clear();
-				tmp_c_array[2].clear();
-				tmp_c_array[3].clear();
-				tmp_c_array[4].clear();
+				tmp_c_array[3].destroy();
 				src.DeleteNSlotsAt<0>(3,i+1);	// tmp_c_array becomes invalid here
 				src.DeleteIdx<0>(--i);
 				assert(is_C99_conditional_operator_expression_strict(src.data<0>()[i]));
@@ -9403,22 +9398,21 @@ static bool eval_conditional_op(parse_tree& src, literal_converts_to_bool_func& 
 	if (literal_converts_to_bool(*src.c_array<1>(),is_true ARG_TYPES))
 		{
 		const bool was_invalid = src.flags & parse_tree::INVALID;
-		type_spec old_type;
-		src.type_code.OverwriteInto(old_type);
 		if (is_true)
-			// it's the infix arg
+			{	// it's the infix arg
+			src.type_code.MoveInto(src.c_array<0>()->type_code);
 			src.eval_to_arg<0>(0);
-		else	// it's the postfix arg
+			}
+		else{	// it's the postfix arg
+			src.type_code.MoveInto(src.c_array<2>()->type_code);
 			src.eval_to_arg<2>(0);
+			};
 		if (was_invalid && !(src.flags & parse_tree::INVALID))
 			{
-			old_type.destroy();
 			message_header(src.index_tokens[0]);
 			INC_INFORM("invalid ? : operator optimized to valid ");
 			INFORM(src);
 			}
-		else
-			old_type.MoveInto(src.type_code);
 		return true;
 		}
 	return false;
