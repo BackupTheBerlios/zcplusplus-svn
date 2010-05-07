@@ -4777,6 +4777,7 @@ static bool CPP_literal_converts_to_integer(const parse_tree& src)
 	//! \todo --do-what-i-mean should try to identify floats that are really integers
 }
 
+//! \throw std::bad_alloc()
 static zaimoni::Loki::CheckReturnDisallow<NULL,parse_tree*>::value_type repurpose_inner_parentheses(parse_tree& src)
 {
 	if (1==src.size<0>() && is_naked_parentheses_pair(*src.data<0>()))
@@ -4824,6 +4825,7 @@ static void cancel_outermost_parentheses(parse_tree& src)
  * \param err_count running error count
  * 
  * \return true iff ( ... ) expression was recognized
+ * \throw std::bad_alloc only if 1==src.size<0>() and src.type_code.pointer_power<src.data<0>()->type_code.pointer_power
  */
 static bool inspect_potential_paren_primary_expression(parse_tree& src)
 {
@@ -4908,14 +4910,15 @@ static bool suppress_naked_brackets_and_braces(parse_tree& src,const char* const
 	return false;
 }
 
+// \throw std::bad_alloc only if src.data<0>()[i-1].type_code.pointer_power<src.data<0>()[i-1].data<0>()->type_code.pointer_power
 static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 {
 	assert(!src.empty<0>());
 	assert(i<src.size<0>());
 	assert(src.data<0>()[i].empty<1>());
 	assert(src.data<0>()[i].empty<2>());
-	assert(NULL!=src.data<0>()[i].index_tokens[0].token.first);
-	assert(NULL!=src.data<0>()[i].index_tokens[1].token.first);
+	assert(src.data<0>()[i].index_tokens[0].token.first);
+	assert(src.data<0>()[i].index_tokens[1].token.first);
 
 	if (	!token_is_char<'['>(src.data<0>()[i].index_tokens[0].token)
 		|| 	!token_is_char<']'>(src.data<0>()[i].index_tokens[1].token))
@@ -4929,12 +4932,11 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 		if (PARSE_POSTFIX_EXPRESSION & src.data<0>()[i-1].flags)
 			{
 			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i]);	// RAM conservation
-			*tmp = src.data<0>()[i-1];
+			src.c_array<0>()[i-1].OverwriteInto(*tmp);
 			src.c_array<0>()[i].fast_set_arg<1>(tmp);
 			src.c_array<0>()[i].core_flag_update();
 			src.c_array<0>()[i].flags |= PARSE_STRICT_POSTFIX_EXPRESSION;
-			src.c_array<0>()[--i].clear();
-			src.DeleteIdx<0>(i);
+			src.DeleteIdx<0>(--i);
 			assert(is_array_deref_strict(src.data<0>()[i]));
 			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<1>()[0]);
 			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<0>()[0]);
@@ -4981,6 +4983,7 @@ static bool terse_locate_array_deref(parse_tree& src, size_t& i)
 	return false;
 }
 
+//! \throw std::bad_alloc
 static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	if (parse_tree::INVALID & src.flags) return;	// cannot optimize to valid
@@ -5059,7 +5062,6 @@ static void C_array_easy_syntax_check(parse_tree& src,const type_system& types)
 	( type-name ) { initializer-list }
 	( type-name ) { initializer-list , }
 */
-/* returns error count */
 static void locate_C99_postfix_expression(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -5281,12 +5283,11 @@ static void assemble_unary_postfix_arguments(parse_tree& src, size_t& i, const s
 {
 	assert(1<src.size<0>()-i);
 	parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
-	*tmp = src.data<0>()[i+1];
+	src.c_array<0>()[i+1].OverwriteInto(*tmp);
 	src.c_array<0>()[i].fast_set_arg<2>(tmp);
 	src.c_array<0>()[i].core_flag_update();
 	src.c_array<0>()[i].flags |= PARSE_STRICT_UNARY_EXPRESSION;
 	src.c_array<0>()[i].subtype = _subtype;
-	src.c_array<0>()[i+1].clear();
 	src.DeleteIdx<0>(i+1);
 	cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
 }
@@ -5353,15 +5354,15 @@ static void force_unary_positive_literal(parse_tree& dest,const parse_tree& src 
 	assert(0==dest.size<0>());
 	assert(0==dest.size<1>());
 	assert(1==dest.size<2>());
-	assert(NULL==dest.index_tokens[1].token.first);
+	assert(!dest.index_tokens[1].token.first);
 	dest.grab_index_token_from_str_literal<0>("+",C_TESTFLAG_NONATOMIC_PP_OP_PUNC);
 	*dest.c_array<2>() = src;
 	dest.core_flag_update();
 	dest.flags |= PARSE_STRICT_UNARY_EXPRESSION;
 	dest.subtype = C99_UNARY_SUBTYPE_PLUS;
 	if (converts_to_arithmeticlike(dest.data<2>()->type_code ARG_TYPES))
-		dest.type_code = dest.data<2>()->type_code;	//! \bug doesn't work for enumerators
-	assert(NULL!=dest.index_tokens[0].src_filename);
+		value_copy(dest.type_code,dest.data<2>()->type_code);	//! \bug doesn't work for enumerators
+	assert(dest.index_tokens[0].src_filename);
 	assert(is_C99_unary_operator_expression<'+'>(dest));
 }
 
@@ -5379,7 +5380,7 @@ static void force_unary_negative_token(parse_tree& dest,parse_tree* src,const pa
 	if (converts_to_arithmeticlike(dest.data<2>()->type_code ARG_TYPES))
 		dest.type_code = dest.data<2>()->type_code;	//! \bug doesn't work for enumerators
 	// do not handle type here: C++ operator overloading risk
-	assert(NULL!=dest.index_tokens[0].src_filename);
+	assert(dest.index_tokens[0].src_filename);
 	assert(is_C99_unary_operator_expression<'-'>(dest));
 }
 

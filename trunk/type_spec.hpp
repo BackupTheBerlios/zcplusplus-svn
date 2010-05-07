@@ -49,6 +49,7 @@ struct type_spec
 	//! \throw std::bad_alloc
 	void make_C_array(uintmax_t _size);
 	bool dereference();
+	bool dereference(type_spec& dest) const;
 	unsigned char& qualifier(size_t i) {return q_vector.c_array()[i];};
 	template<size_t i> unsigned char& qualifier() {return q_vector.c_array()[i];}
 

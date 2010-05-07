@@ -115,6 +115,23 @@ bool type_spec::dereference()
 	return true;
 }
 
+bool type_spec::dereference(type_spec& dest) const
+{
+#ifndef ZAIMONI_FORCE_ISO
+	assert(syntax_ok());
+#endif
+	if (0==pointer_power) return false;
+	assert(lvalue & q_vector.data()[pointer_power-1]);	// result of dereference is a C/C++ lvalue; problem is elsewhere if this triggers
+	dest.base_type_index = base_type_index; 
+	dest.set_pointer_power(pointer_power-1); // lost a level of indirection
+	memmove(dest.q_vector.c_array(),q_vector.data(),dest.q_vector.size());
+	if (0<dest.pointer_power) memmove(dest.extent_vector,extent_vector,dest.pointer_power*sizeof(*extent_vector));
+#ifndef ZAIMONI_FORCE_ISO
+	assert(syntax_ok());
+#endif
+	return true;
+}
+
 void type_spec::clear()
 {
 	base_type_index = 0;
