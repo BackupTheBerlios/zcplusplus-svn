@@ -9418,6 +9418,7 @@ static bool eval_conditional_op(parse_tree& src, literal_converts_to_bool_func& 
 	return false;
 }
 
+//! \throws std::bad_alloc
 static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_conditional_operator_expression(src));
@@ -9505,6 +9506,7 @@ static void C_conditional_op_easy_syntax_check(parse_tree& src,const type_system
 	if (eval_conditional_op(src,C99_literal_converts_to_bool ARG_TYPES)) return;
 }
 
+//! \throws std::bad_alloc
 static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_conditional_operator_expression(src));
@@ -9594,6 +9596,7 @@ static void CPP_conditional_op_easy_syntax_check(parse_tree& src,const type_syst
 	if (eval_conditional_op(src,CPP_literal_converts_to_bool ARG_TYPES)) return;
 }
 
+//! \throws std::bad_alloc
 static void locate_C99_conditional_op(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -9606,6 +9609,7 @@ static void locate_C99_conditional_op(parse_tree& src, size_t& i, const type_sys
 		C_conditional_op_easy_syntax_check(src.c_array<0>()[i],types);
 }
 
+//! \throws std::bad_alloc
 static void locate_CPP_conditional_op(parse_tree& src, size_t& i, const type_system& types)
 {
 	assert(!src.empty<0>());
@@ -9649,16 +9653,53 @@ static void parse_backward(parse_tree& src,const type_system& types, T parse_han
 }
 
 // top-level has SIZE_MAX for parent_identifier_count
+//! \throws std::bad_alloc
 static void C99_locate_expressions(parse_tree& src,const size_t parent_identifier_count,const type_system& types)
 {
 	if (PARSE_OBVIOUS & src.flags) return;
 	size_t identifier_count = (0==parent_identifier_count) ? 0 : _count_identifiers(src);
-	size_t i = src.size<0>();
-	while(0<i) C99_locate_expressions(src.c_array<0>()[--i],identifier_count,types);
-	i = src.size<1>();
-	while(0<i) C99_locate_expressions(src.c_array<1>()[--i],identifier_count,types);
-	i = src.size<2>();
-	while(0<i) C99_locate_expressions(src.c_array<2>()[--i],identifier_count,types);
+	{
+	size_t i[3] = {src.size<0>(), src.size<1>(), src.size<2>()};
+	size_t initial_i[3];
+full_restart:
+	memmove(initial_i,i,3*sizeof(size_t));
+	size_t stalled[3] = {SIZE_MAX,SIZE_MAX,SIZE_MAX};
+	try {
+		while(0<i[0]) C99_locate_expressions(src.c_array<0>()[--i[0]],identifier_count,types);
+		}
+	catch(std::bad_alloc&)
+		{
+		stalled[0] = i[0]++;
+		goto restart_1;
+		}
+restart_1:
+	try {
+		while(0<i[1]) C99_locate_expressions(src.c_array<1>()[--i[1]],identifier_count,types);
+		}
+	catch(std::bad_alloc&)
+		{
+		stalled[1] = i[1]++;
+		goto restart_2;
+		}
+restart_2:
+	try {
+		while(0<i[2]) C99_locate_expressions(src.c_array<2>()[--i[2]],identifier_count,types);
+		}
+	catch(std::bad_alloc&)
+		{
+		stalled[2] = i[2]++;
+		goto restart_3;
+		}
+restart_3:
+	if (SIZE_MAX>stalled[0] || SIZE_MAX>stalled[1] || SIZE_MAX>stalled[2])
+		{	// had a memory management problem
+		if (i[0]<initial_i[0] || i[1]<initial_i[1] || i[2]<initial_i[2])
+			// if we made some progress, restart
+			goto full_restart;
+		// otherwise give up
+		throw std::bad_alloc();
+		}
+	}
 
 	const bool top_level = SIZE_MAX==parent_identifier_count;
 	const bool parens_are_expressions = 0==parent_identifier_count	// no identifiers from outside
@@ -9716,17 +9757,54 @@ expression:
 }
 
 // top-level has SIZE_MAX for parent_identifier_count
+//! \throws std::bad_alloc
 static void CPP_locate_expressions(parse_tree& src,const size_t parent_identifier_count,const type_system& types)
 {
 	if (PARSE_OBVIOUS & src.flags) return;
 	const size_t identifier_count = (0==parent_identifier_count) ? 0 : _count_identifiers(src);
-	size_t i = src.size<0>();
-	while(0<i) CPP_locate_expressions(src.c_array<0>()[--i],identifier_count,types);
-	i = src.size<1>();
-	while(0<i) CPP_locate_expressions(src.c_array<1>()[--i],identifier_count,types);
-	i = src.size<2>();
-	while(0<i) CPP_locate_expressions(src.c_array<2>()[--i],identifier_count,types);
-
+	{
+	size_t i[3] = {src.size<0>(), src.size<1>(), src.size<2>()};
+	size_t initial_i[3];
+full_restart:
+	memmove(initial_i,i,3*sizeof(size_t));
+	size_t stalled[3] = {SIZE_MAX,SIZE_MAX,SIZE_MAX};
+	try {
+		while(0<i[0]) CPP_locate_expressions(src.c_array<0>()[--i[0]],identifier_count,types);
+		}
+	catch(std::bad_alloc&)
+		{
+		stalled[0] = i[0]++;
+		goto restart_1;
+		}
+restart_1:
+	try {
+		while(0<i[1]) CPP_locate_expressions(src.c_array<1>()[--i[1]],identifier_count,types);
+		}
+	catch(std::bad_alloc&)
+		{
+		stalled[1] = i[1]++;
+		goto restart_2;
+		}
+restart_2:
+	try {
+		while(0<i[2]) CPP_locate_expressions(src.c_array<2>()[--i[2]],identifier_count,types);
+		}
+	catch(std::bad_alloc&)
+		{
+		stalled[2] = i[2]++;
+		goto restart_3;
+		}
+restart_3:
+	if (SIZE_MAX>stalled[0] || SIZE_MAX>stalled[1] || SIZE_MAX>stalled[2])
+		{	// had a memory management problem
+		if (i[0]<initial_i[0] || i[1]<initial_i[1] || i[2]<initial_i[2])
+			// if we made some progress, restart
+			goto full_restart;
+		// otherwise give up
+		throw std::bad_alloc();
+		}
+	}
+	
 	const bool top_level = SIZE_MAX==parent_identifier_count;
 	const bool parens_are_expressions = 0==parent_identifier_count	// no identifiers from outside
 									|| (top_level && 0==identifier_count);	// top-level, no identifiers
@@ -9814,6 +9892,7 @@ static void _label_CPP_literal(parse_tree& src)
 		}
 }
 
+//! \throw std::bad_alloc
 static bool C99_CondenseParseTree(parse_tree& src,const type_system& types)
 {
 	assert(src.is_raw_list());
@@ -9821,12 +9900,20 @@ static bool C99_CondenseParseTree(parse_tree& src,const type_system& types)
 	const size_t starting_errors = zcc_errors.err_count();
 	_label_literals(src,types);
 	if (!_match_pairs(src)) return false;
-	C99_locate_expressions(src,SIZE_MAX,types);
+	try {
+		C99_locate_expressions(src,SIZE_MAX,types);
+		}
+	catch(std::bad_alloc&)
+		{	// error count change is already false
+		if (starting_errors<zcc_errors.err_count()) return false;
+		throw;
+		}
 	if (starting_errors<zcc_errors.err_count()) return false;
 	while(src.is_raw_list() && 1==src.size<0>()) src.eval_to_arg<0>(0);
 	return true;
 }
 
+//! \throw std::bad_alloc
 static bool CPP_CondenseParseTree(parse_tree& src,const type_system& types)
 {
 	assert(src.is_raw_list());
@@ -9839,7 +9926,14 @@ static bool CPP_CondenseParseTree(parse_tree& src,const type_system& types)
 	// check that this is at least within a brace pair or a parentheses pair (it is actually required to be in a non-static member function, or constructor mem-initializer
 	if (!_this_vaguely_where_it_could_be_cplusplus(src)) return false;
 #/*cut-cpp*/	
-	CPP_locate_expressions(src,SIZE_MAX,types);
+	try {
+		CPP_locate_expressions(src,SIZE_MAX,types);
+		}
+	catch(std::bad_alloc&)
+		{	// error count change is already false
+		if (starting_errors<zcc_errors.err_count()) return false;
+		throw;
+		}
 	if (starting_errors<zcc_errors.err_count()) return false;
 	while(src.is_raw_list() && 1==src.size<0>()) src.eval_to_arg<0>(0);
 	return true;
@@ -9868,6 +9962,7 @@ static bool CPP_ok_for_toplevel_qualified_name(const parse_tree& x)
 	return false;
 }
 
+//! \throw std::bad_alloc
 static void CPP_notice_scope_glue(parse_tree& src)
 {
 	assert(!src.empty<0>());
@@ -9961,30 +10056,18 @@ static void CPP_notice_scope_glue(parse_tree& src)
 	i = 0;
 	while(i<src.size<0>())
 		{
-		parse_tree& tmp = src.c_array<0>()[i];
-		if (is_naked_parentheses_pair(tmp))
-			{
-			if (!tmp.empty<0>())
-				// recurse into (...)
-				CPP_notice_scope_glue(tmp);
-			}
-		else if (is_naked_brace_pair(tmp))
-			{
-			if (!tmp.empty<0>())
-				// recurse into {...}
-				CPP_notice_scope_glue(tmp);
-			}
-		else if (is_naked_bracket_pair(tmp))
-			{
-			if (!tmp.empty<0>())
-				// recurse into [...]
-				CPP_notice_scope_glue(tmp);
-			}
-		++i;
+		parse_tree& tmp = src.c_array<0>()[i++];
+		if (tmp.empty<0>()) continue;
+		// recurse into ...
+		if (   is_naked_parentheses_pair(tmp) // (...)
+			|| is_naked_brace_pair(tmp) // {...}
+			|| is_naked_bracket_pair(tmp)) // [...]
+			CPP_notice_scope_glue(tmp);
 		};
 }
 
 //! \todo check that the fact all literals are already legal-form is used
+//! \throw std::bad_alloc
 static void CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 {
 	assert(src.is_raw_list());
@@ -10003,7 +10086,7 @@ static void CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 //! \test if.C99/Pass_zero.hpp, if.C99/Pass_zero.h
 bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const lex_flags flags)
 {
-	assert(NULL!=x);
+	assert(x && *x);
 	assert(0<x_len);
 	assert(C_TESTFLAG_PP_NUMERAL & flags);
 	assert(!(C_TESTFLAG_FLOAT & flags));
@@ -10089,12 +10172,31 @@ static void eval_string_literal_deref(parse_tree& src,const type_system& types,c
 	char* tmp2 = NULL;
 	assert(tmp.representable_as_uint());
 	GetCCharacterLiteralAt(str_lit.first,str_lit.second,tmp.to_uint(),tmp2);
-	assert(NULL!=tmp2);
+	assert(tmp2);
 	src.destroy();	// str_lit goes invalid here, don't use again
 	src.grab_index_token_from<0>(tmp2,C_TESTFLAG_CHAR_LITERAL);
 	_label_one_literal(src,types);
 }
 
+#define ZCC_EVALPARSETREE_PAIR_EVAL(A,B)	\
+	{	\
+	bool RAM_err = false;	\
+	try {	\
+		EvalParseTree(*src.c_array<A>(),types);	\
+		}	\
+	catch(std::bad_alloc&)	\
+		{	\
+		RAM_err = true;	\
+		goto restart_1;	\
+		}	\
+restart_1:	\
+	/* can't recover locally if this throws std::bad_alloc */	\
+	EvalParseTree(*src.c_array<B>(),types);	\
+	if (RAM_err) EvalParseTree(*src.c_array<A>(),types);	\
+	}
+
+
+//! \throw std::bad_alloc
 static bool
 eval_array_deref(parse_tree& src,const type_system& types,
 				 func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
@@ -10104,8 +10206,7 @@ eval_array_deref(parse_tree& src,const type_system& types,
 	if (!is_array_deref(src)) return false;
 	// crunch __[...]
 	// canonical definition: *((__)+(...))
-	EvalParseTree(*src.c_array<0>(),types);
-	EvalParseTree(*src.c_array<1>(),types);
+	ZCC_EVALPARSETREE_PAIR_EVAL(0,1);
 	if (parse_tree::CONSTANT_EXPRESSION & src.flags)
 		{
 		const unsigned int str_index = 	(C_TESTFLAG_STRING_LITERAL==src.data<0>()->index_tokens[0].flags) ? 0 :
@@ -10123,6 +10224,7 @@ eval_array_deref(parse_tree& src,const type_system& types,
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_deref(	parse_tree& src, const type_system& types,
 						func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree)
 {
@@ -10144,6 +10246,7 @@ static bool eval_deref(	parse_tree& src, const type_system& types,
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_logical_NOT(parse_tree& src, const type_system& types,
 							 func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							 func_traits<bool (*)(const parse_tree&)>::function_ref_type is_logical_NOT_expression,
@@ -10157,6 +10260,7 @@ static bool eval_logical_NOT(parse_tree& src, const type_system& types,
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_bitwise_compl(	parse_tree& src, const type_system& types,
 								func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 								func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_complement_expression,
@@ -10170,6 +10274,7 @@ static bool eval_bitwise_compl(	parse_tree& src, const type_system& types,
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_unary_plus(parse_tree& src, const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree)
 {
@@ -10181,6 +10286,7 @@ static bool eval_unary_plus(parse_tree& src, const type_system& types,
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_unary_minus(parse_tree& src, const type_system& types,
 							 func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							 literal_converts_to_bool_func& literal_converts_to_bool,
@@ -10194,6 +10300,7 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_mult_expression(parse_tree& src,const type_system& types,
 								func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 								literal_converts_to_bool_func& literal_converts_to_bool,
@@ -10201,13 +10308,13 @@ static bool eval_mult_expression(parse_tree& src,const type_system& types,
 {
 	if (is_C99_mult_operator_expression<'*'>(src))
 		{
-		EvalParseTree(*src.c_array<1>(),types);
-		EvalParseTree(*src.c_array<2>(),types);
+		ZCC_EVALPARSETREE_PAIR_EVAL(1,2);
 		if (eval_mult_expression(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_div_expression(parse_tree& src,const type_system& types,
 								func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 								literal_converts_to_bool_func& literal_converts_to_bool,
@@ -10215,13 +10322,13 @@ static bool eval_div_expression(parse_tree& src,const type_system& types,
 {
 	if (is_C99_mult_operator_expression<'/'>(src))
 		{
-		EvalParseTree(*src.c_array<1>(),types);
-		EvalParseTree(*src.c_array<2>(),types);
+		ZCC_EVALPARSETREE_PAIR_EVAL(1,2);
 		if (eval_div_expression(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_mod_expression(parse_tree& src,const type_system& types,
 								func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 								literal_converts_to_bool_func& literal_converts_to_bool,
@@ -10229,14 +10336,13 @@ static bool eval_mod_expression(parse_tree& src,const type_system& types,
 {
 	if (is_C99_mult_operator_expression<'%'>(src))
 		{
-		EvalParseTree(*src.c_array<1>(),types);
-		EvalParseTree(*src.c_array<2>(),types);
+		ZCC_EVALPARSETREE_PAIR_EVAL(1,2);
 		if (eval_mod_expression(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
 
-
+//! \throw std::bad_alloc
 static bool eval_add_expression(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							literal_converts_to_bool_func& literal_converts_to_bool,
@@ -10244,13 +10350,13 @@ static bool eval_add_expression(parse_tree& src,const type_system& types,
 {
 	if (is_C99_add_operator_expression<'+'>(src))
 		{
-		EvalParseTree(*src.c_array<1>(),types);
-		EvalParseTree(*src.c_array<2>(),types);
+		ZCC_EVALPARSETREE_PAIR_EVAL(1,2);
 		if (eval_add_expression(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_sub_expression(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							literal_converts_to_bool_func& literal_converts_to_bool,
@@ -10258,13 +10364,13 @@ static bool eval_sub_expression(parse_tree& src,const type_system& types,
 {
 	if (is_C99_add_operator_expression<'-'>(src))
 		{
-		EvalParseTree(*src.c_array<1>(),types);
-		EvalParseTree(*src.c_array<2>(),types);
+		ZCC_EVALPARSETREE_PAIR_EVAL(1,2);
 		if (eval_sub_expression(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_shift(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							literal_converts_to_bool_func& literal_converts_to_bool,
@@ -10272,26 +10378,26 @@ static bool eval_shift(parse_tree& src,const type_system& types,
 {
 	if (is_C99_shift_expression(src))
 		{
-		EvalParseTree(*src.c_array<1>(),types);
-		EvalParseTree(*src.c_array<2>(),types);
+		ZCC_EVALPARSETREE_PAIR_EVAL(1,2);
 		if (eval_shift(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_relation_expression(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							intlike_literal_to_VM_func& intlike_literal_to_VM)
 {
 	if (is_C99_relation_expression(src))
 		{
-		EvalParseTree(*src.c_array<1>(),types);
-		EvalParseTree(*src.c_array<2>(),types);
+		ZCC_EVALPARSETREE_PAIR_EVAL(1,2);
 		if (eval_relation_expression(src,types,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_equality_expression(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&)>::function_ref_type is_equality_expression,
@@ -10300,13 +10406,13 @@ static bool eval_equality_expression(parse_tree& src,const type_system& types,
 {
 	if (is_equality_expression(src))
 		{
-		EvalParseTree(*src.c_array<1>(),types);
-		EvalParseTree(*src.c_array<2>(),types);
+		ZCC_EVALPARSETREE_PAIR_EVAL(1,2);
 		if (eval_equality_expression(src,types,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_bitwise_AND(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_AND_expression,
@@ -10315,13 +10421,13 @@ static bool eval_bitwise_AND(parse_tree& src,const type_system& types,
 {
 	if (is_bitwise_AND_expression(src))
 		{
-		EvalParseTree(*src.c_array<1>(),types);
-		EvalParseTree(*src.c_array<2>(),types);
+		ZCC_EVALPARSETREE_PAIR_EVAL(1,2);
 		if (eval_bitwise_AND(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_bitwise_XOR(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_XOR_expression,
@@ -10330,13 +10436,13 @@ static bool eval_bitwise_XOR(parse_tree& src,const type_system& types,
 {
 	if (is_bitwise_XOR_expression(src))
 		{
-		EvalParseTree(*src.c_array<1>(),types);
-		EvalParseTree(*src.c_array<2>(),types);
+		ZCC_EVALPARSETREE_PAIR_EVAL(1,2);
 		if (eval_bitwise_XOR(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_bitwise_OR(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&)>::function_ref_type is_bitwise_OR_expression,
@@ -10345,13 +10451,13 @@ static bool eval_bitwise_OR(parse_tree& src,const type_system& types,
 {
 	if (is_bitwise_OR_expression(src))
 		{
-		EvalParseTree(*src.c_array<1>(),types);
-		EvalParseTree(*src.c_array<2>(),types);
+		ZCC_EVALPARSETREE_PAIR_EVAL(1,2);
 		if (eval_bitwise_OR(src,types,true,literal_converts_to_bool,intlike_literal_to_VM)) return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_logical_AND(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&)>::function_ref_type is_logical_AND_expression,
@@ -10359,13 +10465,13 @@ static bool eval_logical_AND(parse_tree& src,const type_system& types,
 {
 	if (is_logical_AND_expression(src))
 		{
-		EvalParseTree(*src.c_array<1>(),types);
-		EvalParseTree(*src.c_array<2>(),types);
+		ZCC_EVALPARSETREE_PAIR_EVAL(1,2);
 		if (eval_logical_AND(src,types,literal_converts_to_bool)) return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_logical_OR(parse_tree& src,const type_system& types,
 							func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 							func_traits<bool (*)(const parse_tree&)>::function_ref_type is_logical_OR_expression,
@@ -10373,13 +10479,13 @@ static bool eval_logical_OR(parse_tree& src,const type_system& types,
 {
 	if (is_logical_OR_expression(src))
 		{
-		EvalParseTree(*src.c_array<1>(),types);
-		EvalParseTree(*src.c_array<2>(),types);
+		ZCC_EVALPARSETREE_PAIR_EVAL(1,2);
 		if (eval_logical_OR(src,types,literal_converts_to_bool)) return true;
 		}
 	return false;
 }
 
+//! \throw std::bad_alloc
 static bool eval_conditional_operator(parse_tree& src,const type_system& types,
 									  func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree,
 									  literal_converts_to_bool_func& literal_converts_to_bool)
@@ -10400,12 +10506,10 @@ static bool cancel_addressof_deref_operators(parse_tree& src)
 		{	// strip off &*, and remove lvalue-ness of target
 		if (is_C99_unary_operator_expression<'*'>(*src.data<2>()) && 0<src.data<2>()->data<2>()->type_code.pointer_power)
 			{
-			parse_tree tmp = *src.data<2>()->data<2>();
+			parse_tree tmp;
+			src.c_array<2>()->c_array<2>()->OverwriteInto(tmp);
 			tmp.type_code.traits &= ~type_spec::lvalue;
-			src.c_array<2>()->c_array<2>()->clear();
-			src.destroy();
-			src = tmp;
-			return true;
+			tmp.MoveInto(src);
 			}
 #if 0
 		if (is_array_deref(*src.data<2>()))
@@ -10417,6 +10521,7 @@ static bool cancel_addressof_deref_operators(parse_tree& src)
 }
 #endif
 
+//! \throw std::bad_alloc
 static bool C99_EvalParseTree(parse_tree& src,const type_system& types)
 {
 	const size_t starting_errors = zcc_errors.err_count();
@@ -10445,6 +10550,7 @@ RestartEval:
 	return starting_errors==zcc_errors.err_count();
 }
 
+//! \throw std::bad_alloc
 static bool CPP_EvalParseTree(parse_tree& src,const type_system& types)
 {
 	const size_t starting_errors = zcc_errors.err_count();
