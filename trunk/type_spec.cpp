@@ -115,6 +115,7 @@ bool type_spec::dereference()
 	return true;
 }
 
+//! \throw std::bad_alloc only if pointer_power-1>dest.pointer_power
 bool type_spec::dereference(type_spec& dest) const
 {
 #ifndef ZAIMONI_FORCE_ISO
