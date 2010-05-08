@@ -39,7 +39,8 @@ struct type_spec
 		_const = (1<<1),	// C/C++ sense, assume works for other languages
 		_volatile = (1<<2),	// C/C++ sense, assume works for other languages
 		_restrict = (1<<3),	// C99 sense, assume works for other languages
-		_array = (1<<4)		// C99 sense, assume works for other languages
+		_array = (1<<4),	// C99 sense, assume works for other languages
+		_function_return_value = (1<<5)	// type for functions without useful prototype information	
 	};
 
 	bool decays_to_nonnull_pointer() const {return 0<pointer_power && (q_vector.back() & _array);};

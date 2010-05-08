@@ -11148,29 +11148,20 @@ public:
 	void value_copy_type(type_spec& dest) const {value_copy(dest,base_type);};
 };
 
-/*
-C99 6.7.5p1, C1X 6.7.6p1
-pointer:
-* type-qualifier-listopt
-* type-qualifier-listopt pointer
-*/
-static size_t C99_recognize_pointerlike_declarator_section(parse_tree& x, size_t i,type_spec& target_type)
+static size_t C99_cv_qualifier_span(parse_tree& x, size_t i,type_spec& target_type)
 {
-	assert(x.size<0>()>i);
+	unsigned int warn_queue = 0;
 	size_t ub = 0;
-	while(robust_token_is_char<'*'>(x.data<0>()[i+ub]))
+	if (x.size<0>()>i)
 		{
-		unsigned int warn_queue = 0;
-		target_type.make_C_pointer();
-		while(x.size<0>()<=i+ ++ub)
-			{
+		do	{
 			if (robust_token_is_string<5>(x.data<0>()[i+ub],"const"))
 				{	//! \bug need test cases
 				if (target_type.q_vector.back() & type_spec::_const)
-					{
+					{	
 					warn_queue |= type_spec::_const;
 					// optimize source
-					x.DeleteIdx<0>(i + ub--);
+					x.DeleteIdx<0>(i+ub);
 					continue;
 					}
 				target_type.q_vector.back() |= type_spec::_const;
@@ -11181,7 +11172,7 @@ static size_t C99_recognize_pointerlike_declarator_section(parse_tree& x, size_t
 					{
 					warn_queue |= type_spec::_volatile;
 					// optimize source
-					x.DeleteIdx<0>(i + ub--);
+					x.DeleteIdx<0>(i+ub);
 					continue;
 					}
 				target_type.q_vector.back() |= type_spec::_volatile;
@@ -11192,13 +11183,14 @@ static size_t C99_recognize_pointerlike_declarator_section(parse_tree& x, size_t
 					{
 					warn_queue |= type_spec::_restrict;
 					// optimize source
-					x.DeleteIdx<0>(i + ub--);
+					x.DeleteIdx<0>(i+ub);
 					continue;
 					}
 				target_type.q_vector.back() |= type_spec::_restrict;
 				}
 			else break;
 			}
+		while(x.size<0>()>i+ ++ub);
 		//! \todo do not warn for -Wno-OOAO/-Wno-DRY
 		//! \todo should this be a context-free check?
 		if (warn_queue)
@@ -11215,6 +11207,28 @@ static size_t C99_recognize_pointerlike_declarator_section(parse_tree& x, size_t
 
 /*
 C99 6.7.5p1, C1X 6.7.6p1
+pointer:
+* type-qualifier-listopt
+* type-qualifier-listopt pointer
+*/
+static size_t C99_recognize_pointerlike_declarator_section(parse_tree& x, size_t i,type_spec& target_type)
+{
+	assert(x.size<0>()>i);
+	size_t ub = 0;
+	while(robust_token_is_char<'*'>(x.data<0>()[i+ub]))
+		{
+		target_type.make_C_pointer();
+		++ub;
+		ub += C99_cv_qualifier_span(x,i+ub,target_type);
+		}
+	return ub;
+}
+
+// forward-declare for recursive definition
+static size_t C99_init_declarator_scanner(parse_tree& x, size_t i,type_spec& target_type, parse_tree*& initdecl_identifier);
+
+/*
+C99 6.7.5p1, C1X 6.7.6p1
 direct-declarator:
 identifier
 ( declarator )
@@ -11225,15 +11239,44 @@ direct-declarator [ type-qualifier-listopt * ]
 direct-declarator ( parameter-type-list )
 direct-declarator ( identifier-listopt )
 */
-
-static size_t C99_recognize_direct_declaratorlike_section(parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+static size_t C99_recognize_direct_declaratorlike_section(parse_tree& x, size_t i,type_spec& target_type, parse_tree*& initdecl_identifier)
 {
 	assert(x.size<0>()>i);
+	assert(!initdecl_identifier);
 	size_t ub = 0;
-	if (x.data<0>()[i].is_atomic() && (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags))
+	if (	x.data<0>()[i].is_atomic()
+		&& (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags)
+		&& !(PARSE_TYPE & x.data<0>()[i].flags) 	// internal representation could land some types here, especially primary types
+		&& !C99_echo_reserved_keyword(x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second))
 		{	// identifier counts
 		ub = 1;
-		initdecl_identifier_idx = i;
+		initdecl_identifier = x.c_array<0>()+i;
+		}
+	else if (is_naked_parentheses_pair(x.data<0>()[i]))
+		{
+		const size_t content_length = x.size<0>();
+		if (0<content_length && content_length==C99_init_declarator_scanner(x.c_array<0>()[i],0,target_type,initdecl_identifier))
+			ub = 1;
+		}
+	if (0<ub)
+		{
+		while(i+ub<x.size<0>())
+			{
+			if (is_naked_bracket_pair(x.data<0>()[i+ub]))
+				{	// we'll catch the array size, etc. later
+				if (!(target_type.qualifier<0>() & type_spec::_function_return_value))
+					target_type.make_C_array(0);
+				++ub;
+				continue;
+				}
+			else if (is_naked_parentheses_pair(x.data<0>()[i+ub]))
+				{	// handle the prototype later
+				target_type.qualifier<0>() |= type_spec::_function_return_value;
+				++ub;
+				continue;
+				}
+			break;
+			}
 		}
 	return ub;
 }
@@ -11242,14 +11285,91 @@ static size_t C99_recognize_direct_declaratorlike_section(parse_tree& x, size_t 
 declarator:
 pointeropt direct-declarator
 */
-static size_t C99_init_declarator_scanner(parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+static size_t C99_init_declarator_scanner(parse_tree& x, size_t i,type_spec& target_type, parse_tree*& initdecl_identifier)
 {
 	assert(x.size<0>()>i);
+	assert(!initdecl_identifier);
 	const size_t ptr_like = C99_recognize_pointerlike_declarator_section(x,i,target_type);
 	if (x.size<0>()-i <= ptr_like) return 0;
-	const size_t direct_decl_like = C99_recognize_direct_declaratorlike_section(x,i+ptr_like,target_type,initdecl_identifier_idx);
+	const size_t direct_decl_like = C99_recognize_direct_declaratorlike_section(x,i+ptr_like,target_type,initdecl_identifier);
 	if (0<direct_decl_like) return ptr_like+direct_decl_like;
 	return 0;
+}
+
+// very basic syntax check; defer real parsing to later
+static bool is_CPP0X_attribute(const parse_tree& x)
+{
+	if (   is_naked_bracket_pair(x)
+		&& 1==x.size<0>()
+		&& is_naked_bracket_pair(*x.data<0>()))
+		return true;
+	return false;
+}
+
+static bool is_CPP0X_ref_qualifier(const parse_tree& x)
+{
+	if (   robust_token_is_char<'&'>(x)
+		|| robust_token_is_string<2>(x,"&&"))
+		return true;
+	return false;
+}
+
+// very basic syntax check; defer real parsing to later
+static size_t is_CPP0X_exception_specification_here(const parse_tree& x,size_t i)
+{
+	if (x.size<0>()>i)
+		{
+		const bool have_parens = 1<x.size<0>()-i && is_naked_parentheses_pair(x.data<0>()[i+1]);
+		if (robust_token_is_string<8>(x,"noexcept")) return 1+have_parens;
+		if (have_parens && robust_token_is_string<5>(x,"throw")) return 2;
+		}
+	return 0;
+}
+
+static size_t CPP_cv_qualifier_span(parse_tree& x, size_t i,type_spec& target_type)
+{
+	unsigned int warn_queue = 0;
+	size_t ub = 0;
+	if (x.size<0>()>i)
+		{
+		do	{
+			if (robust_token_is_string<5>(x.data<0>()[i+ub],"const"))
+				{	//! \bug need test cases
+				if (target_type.q_vector.back() & type_spec::_const)
+					{	
+					warn_queue |= type_spec::_const;
+					// optimize source
+					x.DeleteIdx<0>(i+ub);
+					continue;
+					}
+				target_type.q_vector.back() |= type_spec::_const;
+				}
+			else if (robust_token_is_string<5>(x.data<0>()[i+ub],"volatile"))
+				{	//! \bug need test cases
+				if (target_type.q_vector.back() & type_spec::_volatile)
+					{
+					warn_queue |= type_spec::_volatile;
+					// optimize source
+					x.DeleteIdx<0>(i+ub);
+					continue;
+					}
+				target_type.q_vector.back() |= type_spec::_volatile;
+				}
+			else break;
+			}
+		while(x.size<0>()>i+ ++ub);
+		//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+		//! \todo should this be a context-free check?
+		if (warn_queue)
+			{	//! \bug need test cases
+			message_header(x.data<0>()[i].index_tokens[0]);
+			INC_INFORM(WARN_STR);
+			INFORM("duplicate type qualifiers have no effect (C++0X 7.1.6.1p1)");
+			if (bool_options[boolopt::warnings_are_errors])
+				zcc_errors.inc_error();
+			}
+		}
+	return ub;
 }
 
 /*
@@ -11266,48 +11386,16 @@ static size_t CPP_recognize_pointerlike_declarator_section(parse_tree& x, size_t
 	// handle C-like case
 	while(robust_token_is_char<'*'>(x.data<0>()[i+ub]))
 		{
-		unsigned int warn_queue = 0;
 		target_type.make_C_pointer();
+		++ub;
 		//! \todo would check for attributes here
-		while(x.size<0>()<=i+ ++ub)
-			{
-			if (robust_token_is_string<5>(x.data<0>()[i+ub],"const"))
-				{	//! \bug need test cases
-				if (target_type.q_vector.back() & type_spec::_const)
-					{
-					warn_queue |= type_spec::_const;
-					// optimize source
-					x.DeleteIdx<0>(i + ub--);
-					continue;
-					}
-				target_type.q_vector.back() |= type_spec::_const;
-				}
-			else if (robust_token_is_string<5>(x.data<0>()[i+ub],"volatile"))
-				{	//! \bug need test cases
-				if (target_type.q_vector.back() & type_spec::_volatile)
-					{
-					warn_queue |= type_spec::_volatile;
-					// optimize source
-					x.DeleteIdx<0>(i + ub--);
-					continue;
-					}
-				target_type.q_vector.back() |= type_spec::_volatile;
-				}
-			else break;
-			}
-		//! \todo do not warn for -Wno-OOAO/-Wno-DRY
-		//! \todo should this be a context-free check?
-		if (warn_queue)
-			{	//! \bug need test cases
-			message_header(x.data<0>()[i].index_tokens[0]);
-			INC_INFORM(WARN_STR);
-			INFORM("duplicate type qualifiers have no effect (C++0X 7.1.6.1p1)");
-			if (bool_options[boolopt::warnings_are_errors])
-				zcc_errors.inc_error();
-			}
+		ub += CPP_cv_qualifier_span(x,i+ub,target_type);
 		}
 	return ub;
 }
+
+// forward-declaration for recursive definition
+static size_t CPP_init_declarator_scanner(parse_tree& x, size_t i,type_spec& target_type, parse_tree*& initdecl_identifier);
 
 /*
 noptr-declarator:
@@ -11316,15 +11404,49 @@ noptr-declarator parameters-and-qualifiers
 noptr-declarator [ constant-expressionopt ] attribute-specifieropt
 ( ptr-declarator )
 */
-static size_t CPP_recognize_noptr_declaratorlike_section(parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+static size_t CPP_recognize_noptr_declaratorlike_section(parse_tree& x, size_t i,type_spec& target_type, parse_tree*& initdecl_identifier)
 {
 	assert(x.size<0>()>i);
 	size_t ub = 0;
-	if (x.data<0>()[i].is_atomic() && (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags))
+	if (	x.data<0>()[i].is_atomic()
+		&& (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags)
+		&& !(PARSE_TYPE & x.data<0>()[i].flags) 	// internal representation could land some types here, especially primary types
+		&& !CPP_echo_reserved_keyword(x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second))
 		{	// identifier counts
 		ub = 1;
-		initdecl_identifier_idx = i;
-		//! \todo check for attributes here
+		initdecl_identifier = x.c_array<0>()+i;
+		if (x.size<0>()-i>ub) ub += is_CPP0X_attribute(x.data<0>()[i+ub]);
+		}
+	else if (is_naked_parentheses_pair(x.data<0>()[i]))
+		{
+		const size_t content_length = x.size<0>();
+		if (0<content_length && content_length==CPP_init_declarator_scanner(x.c_array<0>()[i],0,target_type,initdecl_identifier))
+			ub = 1;
+		}
+	if (0<ub)
+		{
+		while(x.size<0>()-i>ub)
+			{
+			if (is_naked_bracket_pair(x.data<0>()[i+ub]))
+				{	// we'll catch the array size, etc. later
+				if (!(target_type.qualifier<0>() & type_spec::_function_return_value))
+					target_type.make_C_array(0);
+				++ub;
+				if (x.size<0>()-i>ub) ub += is_CPP0X_attribute(x.data<0>()[i+ub]);
+				continue;
+				}
+			else if (is_naked_parentheses_pair(x.data<0>()[i+ub]))
+				{	// handle the prototype later
+				target_type.qualifier<0>() |= type_spec::_function_return_value;
+				++ub;
+				if (x.size<0>()-i>ub) ub += is_CPP0X_attribute(x.data<0>()[i+ub]);
+				if (x.size<0>()-i>ub) ub += CPP_cv_qualifier_span(x,i+ub,target_type);
+				if (x.size<0>()-i>ub) ub += is_CPP0X_ref_qualifier(x.c_array<0>()[i+ub]);
+				if (x.size<0>()-i>ub) ub += is_CPP0X_exception_specification_here(x,i+ub);
+				continue;
+				}
+			break;
+			}
 		}
 	return ub;
 }
@@ -11338,12 +11460,12 @@ ptr-declarator:
 noptr-declarator
 ptr-operator ptr-declarator
 */
-static size_t CPP_init_declarator_scanner(parse_tree& x, size_t i,type_spec& target_type, size_t& initdecl_identifier_idx)
+static size_t CPP_init_declarator_scanner(parse_tree& x, size_t i,type_spec& target_type, parse_tree*& initdecl_identifier)
 {
 	assert(x.size<0>()>i);
 	const size_t ptr_like = CPP_recognize_pointerlike_declarator_section(x,i,target_type);
 	if (x.size<0>()-i <= ptr_like) return 0;
-	const size_t noptr_like = CPP_recognize_noptr_declaratorlike_section(x,i+ptr_like,target_type,initdecl_identifier_idx);
+	const size_t noptr_like = CPP_recognize_noptr_declaratorlike_section(x,i+ptr_like,target_type,initdecl_identifier);
 	if (0<noptr_like)
 		{
 		if (0<ptr_like) return ptr_like+noptr_like;
@@ -12384,12 +12506,11 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				type_spec bootstrap;
 				bootstrap.clear();
 				declFind.value_copy_type(bootstrap);
-				size_t initdecl_identifier_idx = 0;
-				size_t initdecl_span = C99_init_declarator_scanner(src,i+decl_count+decl_offset,bootstrap,initdecl_identifier_idx);
-				assert(0<initdecl_span || 0==initdecl_identifier_idx);
+				parse_tree* initdecl_identifier = NULL;
+				size_t initdecl_span = C99_init_declarator_scanner(src,i+decl_count+decl_offset,bootstrap,initdecl_identifier);
+				assert(0<initdecl_span || !initdecl_identifier);
 				if (0==initdecl_span)
 					{	// no declarator where expected
-						// a botched function-declarator will have non-zero length
 					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("declarator missing (C99 6.7p1)");
@@ -12402,7 +12523,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 						src.DeleteNSlotsAt<0>((j-i)+(src.size<0>()>j),i);
 					break;
 					};
-				if (!initdecl_identifier_idx)
+				if (!initdecl_identifier)
 					{	// didn't find identifier when needed
 					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -12431,19 +12552,19 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					{
 					if (C99_CPP0X_DECLSPEC_TYPEDEF & declFind.get_flags())
 						{	// typedef
-						register_token<0>(src.c_array<0>()[initdecl_identifier_idx]);
+						register_token<0>(*initdecl_identifier);
 						// verify that there is no prior definition
-						const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
-						if (NULL!=tmp)
+						const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(initdecl_identifier->index_tokens[0].token.first);
+						if (tmp)
 							{
 							if (bootstrap==tmp->first)
 								{	// warn if there is a prior, consistent definition
 									//! \test zcc/decl.C99/Warn_redeclare_typedef.h
 									//! \todo control this warning with an option --no-OAOO or --no-DRY
-								message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
+								message_header(initdecl_identifier->index_tokens[0]);
 								INC_INFORM(WARN_STR);
 								INC_INFORM("redeclaring typedef ");
-								INFORM(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
+								INFORM(initdecl_identifier->index_tokens[0].token.first);
 								INC_INFORM(tmp->second);
 								INC_INFORM(':');
 								INC_INFORM(tmp->third);
@@ -12453,10 +12574,10 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 								}
 							else{	// error if there is a prior, inconsistent definition
 									//! \test zcc/decl.C99/Error_redeclare_typedef.h
-								message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
+								message_header(initdecl_identifier->index_tokens[0]);
 								INC_INFORM(ERR_STR);
 								INC_INFORM("redeclaring typedef ");
-								INFORM(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
+								INFORM(initdecl_identifier->index_tokens[0].token.first);
 								INC_INFORM(tmp->second);
 								INC_INFORM(':');
 								INC_INFORM(tmp->third);
@@ -12466,7 +12587,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 							// do not re-register if there is a prior definition
 							}
 						else{	// prepare to register this with types object
-							const type_system::enumerator_info* tmp2 = types.get_enumerator(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first);
+							const type_system::enumerator_info* tmp2 = types.get_enumerator(initdecl_identifier->index_tokens[0].token.first);
 							if (tmp2)
 								{	//! \test zcc/decl.C99/Error_typedef_enum.h
 								message_header(src.data<0>()[i].index_tokens[0]);
@@ -12479,7 +12600,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 								zcc_errors.inc_error();
 								return;
 								}
-							types.set_typedef(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first,src.data<0>()[initdecl_identifier_idx].index_tokens[0].src_filename,src.data<0>()[initdecl_identifier_idx].index_tokens[0].logical_line.first,bootstrap);
+							types.set_typedef(initdecl_identifier->index_tokens[0].token.first,initdecl_identifier->index_tokens[0].src_filename,initdecl_identifier->index_tokens[0].logical_line.first,bootstrap);
 							}
 						}
 #if 0
@@ -13122,12 +13243,11 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				type_spec bootstrap;
 				bootstrap.clear();
 				declFind.value_copy_type(bootstrap);
-				size_t initdecl_identifier_idx = 0;
-				size_t initdecl_span = CPP_init_declarator_scanner(src,i+decl_count+decl_offset,bootstrap,initdecl_identifier_idx);
-				assert(0<initdecl_span || 0==initdecl_identifier_idx);
+				parse_tree* initdecl_identifier = NULL;
+				size_t initdecl_span = CPP_init_declarator_scanner(src,i+decl_count+decl_offset,bootstrap,initdecl_identifier);
+				assert(0<initdecl_span || !initdecl_identifier);
 				if (0==initdecl_span)
 					{	// no declarator where expected
-						// a botched function-declarator will have non-zero length
 					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("declarator missing (C++98 7p1)");
@@ -13140,7 +13260,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 						src.DeleteNSlotsAt<0>((j-i)+(src.size<0>()>j),i);
 					break;
 					};
-				if (!initdecl_identifier_idx)
+				if (!initdecl_identifier)
 					{	// didn't find identifier when needed
 					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -13169,22 +13289,22 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					{
 					if (C99_CPP0X_DECLSPEC_TYPEDEF & declFind.get_flags())
 						{	// typedef
-						register_token<0>(src.c_array<0>()[initdecl_identifier_idx]);
-						char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.c_array<0>()[initdecl_identifier_idx].index_tokens[0].token.first,active_namespace,"::") : NULL;
-						const char* fullname = namespace_name ? namespace_name : src.c_array<0>()[initdecl_identifier_idx].index_tokens[0].token.first;
+						register_token<0>(*initdecl_identifier);
+						char* namespace_name = active_namespace ? type_system::namespace_concatenate(initdecl_identifier->index_tokens[0].token.first,active_namespace,"::") : NULL;
+						const char* fullname = namespace_name ? namespace_name : initdecl_identifier->index_tokens[0].token.first;
 						// We could run an is_string_registered check to try to conserve RAM, but in this case conserving RAM 
 						// doesn't actually reduce maximum RAM loading before the types.set_typedef_CPP call.
 
 						// verify that there is no prior definition
 						// we're fine redeclaring at a different level, so do not use full C++ typedef lookup
 						const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(fullname);					
-						if (NULL!=tmp)
+						if (tmp)
 							{
 							if (bootstrap==tmp->first)
 								{	// warn if there is a prior, consistent definition
 									//! \test zcc/decl.C99/Warn_redeclare_typedef.hpp
 									//! \todo control this warning with an option --no-OAOO or --no-DRY
-								message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
+								message_header(initdecl_identifier->index_tokens[0]);
 								INC_INFORM(WARN_STR);
 								INC_INFORM("redeclaring typedef ");
 								INFORM(fullname);
@@ -13197,7 +13317,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 								}
 							else{	// error if there is a prior, inconsistent definition
 									//! \test zcc/decl.C99/Error_redeclare_typedef.hpp
-								message_header(src.data<0>()[initdecl_identifier_idx].index_tokens[0]);
+								message_header(initdecl_identifier->index_tokens[0]);
 								INC_INFORM(ERR_STR);
 								INC_INFORM("redeclaring typedef ");
 								INFORM(fullname);
@@ -13212,7 +13332,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 							}
 						else{	// register this with types object
 							free(namespace_name);
-							const type_system::enumerator_info* tmp2 = types.get_enumerator_CPP(src.data<0>()[initdecl_identifier_idx].index_tokens[0].token.first,active_namespace);
+							const type_system::enumerator_info* tmp2 = types.get_enumerator_CPP(initdecl_identifier->index_tokens[0].token.first,active_namespace);
 							if (tmp2)
 								{	//! \test zcc/decl.C99/Error_typedef_enum.hpp
 									//! \test zcc/decl.C99/Error_typedef_enum2.hpp
@@ -13226,7 +13346,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 								zcc_errors.inc_error();
 								return;
 								}							
-							types.set_typedef_CPP(src.c_array<0>()[initdecl_identifier_idx].index_tokens[0].token.first,active_namespace,src.data<0>()[initdecl_identifier_idx].index_tokens[0].src_filename,src.data<0>()[initdecl_identifier_idx].index_tokens[0].logical_line.first,bootstrap);
+							types.set_typedef_CPP(initdecl_identifier->index_tokens[0].token.first,active_namespace,initdecl_identifier->index_tokens[0].src_filename,initdecl_identifier->index_tokens[0].logical_line.first,bootstrap);
 							}
 						}
 #if 0
