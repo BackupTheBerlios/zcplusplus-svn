@@ -11407,6 +11407,7 @@ noptr-declarator [ constant-expressionopt ] attribute-specifieropt
 static size_t CPP_recognize_noptr_declaratorlike_section(parse_tree& x, size_t i,type_spec& target_type, parse_tree*& initdecl_identifier)
 {
 	assert(x.size<0>()>i);
+	bool local_identifier = false;
 	size_t ub = 0;
 	if (	x.data<0>()[i].is_atomic()
 		&& (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags)
@@ -11416,6 +11417,7 @@ static size_t CPP_recognize_noptr_declaratorlike_section(parse_tree& x, size_t i
 		ub = 1;
 		initdecl_identifier = x.c_array<0>()+i;
 		if (x.size<0>()-i>ub) ub += is_CPP0X_attribute(x.data<0>()[i+ub]);
+		local_identifier = true;
 		}
 	else if (is_naked_parentheses_pair(x.data<0>()[i]))
 		{
@@ -11443,6 +11445,8 @@ static size_t CPP_recognize_noptr_declaratorlike_section(parse_tree& x, size_t i
 				if (x.size<0>()-i>ub) ub += CPP_cv_qualifier_span(x,i+ub,target_type);
 				if (x.size<0>()-i>ub) ub += is_CPP0X_ref_qualifier(x.c_array<0>()[i+ub]);
 				if (x.size<0>()-i>ub) ub += is_CPP0X_exception_specification_here(x,i+ub);
+				// regenerate the initdecl_identifier if we have it
+				if (local_identifier) initdecl_identifier = x.c_array<0>()+i; 
 				continue;
 				}
 			break;
