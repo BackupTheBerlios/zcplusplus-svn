@@ -434,6 +434,7 @@ void parse_tree::_eval_to_arg(size_t arg_idx, size_t i)
 #endif
 }
 
+//! the new slots have no content, OverwriteInto won't leak memory
 bool parse_tree::_resize(const size_t arg_idx,size_t n)
 {
 	assert(STATIC_SIZE(args)>arg_idx);

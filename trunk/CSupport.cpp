@@ -4777,6 +4777,7 @@ static bool CPP_literal_converts_to_integer(const parse_tree& src)
 	//! \todo --do-what-i-mean should try to identify floats that are really integers
 }
 
+//! the returned parse_tree struct has no content; safe to use OvewriteInto on
 //! \throw std::bad_alloc()
 static zaimoni::Loki::CheckReturnDisallow<NULL,parse_tree*>::value_type repurpose_inner_parentheses(parse_tree& src)
 {
@@ -5306,7 +5307,6 @@ static void VM_to_token(const umaxint& src_int,const size_t base_type_index,POD_
 	dest.first = REALLOC(buf,ZAIMONI_LEN_WITH_NULL(strlen(buf)));
 }
 
-// return code is true for success, false for memory failure
 //! \throw std::bad_alloc()
 static void VM_to_literal(parse_tree& dest, const umaxint& src_int,const parse_tree& src,const type_system& types)
 {
@@ -5319,6 +5319,39 @@ static void VM_to_literal(parse_tree& dest, const umaxint& src_int,const parse_t
 	_label_one_literal(dest,types);
 	assert(PARSE_EXPRESSION & dest.flags);
 }
+
+// can't do much syntax-checking or immediate-evaluation here because of binary +/-
+// unary +/- syntax checking out out of place as it's needed by all of the unary operators
+//! \throw std::bad_alloc()
+static void uint_to_token(uintmax_t src_int,const size_t base_type_index,POD_pair<char*,lex_flags>& dest)
+{
+	assert(C_TYPE::INT<=base_type_index && C_TYPE::ULLONG>=base_type_index);
+	const char* const suffix = literal_suffix(base_type_index);
+	char* buf = _new_buffer_nonNULL_throws<char>((VM_MAX_BIT_PLATFORM/3)+4);
+	dest.second = literal_flags(base_type_index);
+	dest.second |= C_TESTFLAG_DECIMAL;
+	z_umaxtoa(src_int,buf,10);
+	assert(!suffix || 3>=strlen(suffix));
+	assert(dest.second);
+	if (suffix) strcat(buf,suffix);
+
+	// shrinking realloc should be no-fail
+	dest.first = REALLOC(buf,ZAIMONI_LEN_WITH_NULL(strlen(buf)));
+}
+
+//! \throw std::bad_alloc()
+static void uint_to_literal(parse_tree& dest, uintmax_t src_int,const parse_tree& src,const type_system& types)
+{
+	POD_pair<char*,lex_flags> new_token;
+	uint_to_token(src_int,src.type_code.base_type_index,new_token);
+	dest.clear();
+	dest.grab_index_token_from<0>(new_token.first,new_token.second);
+	dest.grab_index_token_location_from<0,0>(src);
+	assert((C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_PP_NUMERAL) & dest.index_tokens[0].flags);
+	_label_one_literal(dest,types);
+	assert(PARSE_EXPRESSION & dest.flags);
+}
+
 
 static void force_decimal_literal(parse_tree& dest,const char* src,const type_system& types)
 {
@@ -6205,7 +6238,7 @@ static bool eval_sizeof_core_type(parse_tree& src,const size_t base_type_index,c
 	case C_TYPE::USHRT:
 		{
 		src.type_code.set_type(size_t_type);
-		VM_to_literal(tmp,umaxint(target_machine->C_sizeof_short()),src,types);
+		uint_to_literal(tmp,target_machine->C_sizeof_short(),src,types);
 		tmp.MoveInto(src);
 		break;
 		}
@@ -6213,7 +6246,7 @@ static bool eval_sizeof_core_type(parse_tree& src,const size_t base_type_index,c
 	case C_TYPE::UINT:
 		{
 		src.type_code.set_type(size_t_type);
-		VM_to_literal(tmp,umaxint(target_machine->C_sizeof_int()),src,types);
+		uint_to_literal(tmp,target_machine->C_sizeof_int(),src,types);
 		tmp.MoveInto(src);
 		break;
 		}
@@ -6221,7 +6254,7 @@ static bool eval_sizeof_core_type(parse_tree& src,const size_t base_type_index,c
 	case C_TYPE::ULONG:
 		{
 		src.type_code.set_type(size_t_type);
-		VM_to_literal(tmp,umaxint(target_machine->C_sizeof_long()),src,types);
+		uint_to_literal(tmp,target_machine->C_sizeof_long(),src,types);
 		tmp.MoveInto(src);
 		break;
 		}
@@ -6229,7 +6262,7 @@ static bool eval_sizeof_core_type(parse_tree& src,const size_t base_type_index,c
 	case C_TYPE::ULLONG:
 		{
 		src.type_code.set_type(size_t_type);
-		VM_to_literal(tmp,umaxint(target_machine->C_sizeof_long_long()),src,types);
+		uint_to_literal(tmp,target_machine->C_sizeof_long_long(),src,types);
 		tmp.MoveInto(src);
 //		break;
 		}
@@ -6261,7 +6294,7 @@ static bool eval_C99_CPP_sizeof(parse_tree& src,const type_system& types)
 		parse_tree tmp;
 		src.type_code.set_type(size_t_type);
 		//! \todo eventually, need to check for data vs function pointer when pointer_power is 1
-		VM_to_literal(tmp,umaxint(target_machine->C_sizeof_data_ptr()),src,types);
+		uint_to_literal(tmp,target_machine->C_sizeof_data_ptr(),src,types);
 		tmp.MoveInto(src);
 		assert(size_t_type==src.type_code.base_type_index);
 		return true;
@@ -6542,7 +6575,7 @@ static void merge_binary_infix_argument(parse_tree& src, size_t& i, const lex_fl
  	{
 	parse_tree* const tmp_c_array = src.c_array<0>()+(i-1);
 	parse_tree* const tmp = repurpose_inner_parentheses(tmp_c_array[0]);	// RAM conservation
-	tmp_c_array[0].MoveInto(*tmp);
+	tmp_c_array[0].OverwriteInto(*tmp);
 
 	tmp_c_array[1].fast_set_arg<1>(tmp);
 	tmp_c_array[1].core_flag_update();
@@ -9376,7 +9409,6 @@ static bool terse_locate_conditional_op(parse_tree& src, size_t& i)
 				tmp_c_array[1].fast_set_arg<2>(tmp3);
 				tmp_c_array[1].core_flag_update();
 				tmp_c_array[1].flags |= PARSE_STRICT_CONDITIONAL_EXPRESSION;
-				tmp_c_array[3].destroy();
 				src.DeleteNSlotsAt<0>(3,i+1);	// tmp_c_array becomes invalid here
 				src.DeleteIdx<0>(--i);
 				assert(is_C99_conditional_operator_expression_strict(src.data<0>()[i]));
@@ -10579,6 +10611,7 @@ RestartEval:
 	return starting_errors==zcc_errors.err_count();
 }
 
+//! \throw std::bad_alloc
 void C99_PPHackTree(parse_tree& src,const type_system& types)
 {
 	if (parse_tree::INVALID & src.flags) return;
@@ -10655,6 +10688,7 @@ void C99_PPHackTree(parse_tree& src,const type_system& types)
 #/*cut-cpp*/
 }
 
+//! \throw std::bad_alloc
 void CPP_PPHackTree(parse_tree& src,const type_system& types)
 {
 	if (parse_tree::INVALID & src.flags) return;
@@ -10762,8 +10796,8 @@ static void conserve_tokens(parse_tree& x)
 //! \todo really should be somewhere in natural-language output
 void INFORM_separated_list(const char* const* x,size_t x_len, const char* const sep)
 {
-	assert(NULL!=sep && *sep);
-	assert(NULL!=x);
+	assert(sep && *sep);
+	assert(x);
 	if (0<x_len)
 		{
 		INC_INFORM(*x);
@@ -10777,10 +10811,11 @@ void INFORM_separated_list(const char* const* x,size_t x_len, const char* const 
 #/*cut-cpp*/
 
 //! \todo should this be a type_system member?
+//! \throw std::bad_alloc
 static bool check_for_typedef(type_spec& dest,const char* const src,const type_system& types)
 {
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(src);
-	if (NULL!=tmp)
+	if (tmp)
 		{	//! \todo C++: check for access control if source ends up being a class or struct
 		value_copy(dest,tmp->first);
 		return true;
@@ -10789,10 +10824,11 @@ static bool check_for_typedef(type_spec& dest,const char* const src,const type_s
 }
 
 //! \todo should this be a type_system member?
+//! \throw std::bad_alloc
 static bool check_for_typedef(type_spec& dest,const char* const src,const char* const active_namespace,const type_system& types)
 {
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef_CPP(src,active_namespace);
-	if (NULL!=tmp)
+	if (tmp)
 		{	//! \todo C++: check for access control if source ends up being a class or struct
 		value_copy(dest,tmp->first);
 		return true;
@@ -10836,6 +10872,7 @@ public:
 		base_type.clear();
 		};
 	// trivial destructor, copy constructor, assignment fine
+	//! \throw std::bad_alloc
 	bool operator()(const parse_tree& x)
 		{
 		BOOST_STATIC_ASSERT(CHAR_BIT*sizeof(uintmax_t)>=STATIC_SIZE(C99_decl_specifiers));
@@ -10934,6 +10971,7 @@ public:
 		}
 	void fixup_type() { base_type.qualifier<0>() |= ((C99_CPP0X_DECLSPEC_CONST | C99_CPP0X_DECLSPEC_VOLATILE) & flags); };
 	uintmax_t get_flags() const {return flags;};
+	//! \throw std::bad_alloc
 	void value_copy_type(type_spec& dest) const {value_copy(dest,base_type);};
 };
 
@@ -10953,6 +10991,7 @@ public:
 		base_type.clear();
 		}
 	// trivial destructor, copy constructor, assignment fine
+	//! \throw std::bad_alloc
 	bool operator()(parse_tree& x,const size_t i)
 		{
 		BOOST_STATIC_ASSERT(CHAR_BIT*sizeof(uintmax_t)>=STATIC_SIZE(CPP0X_decl_specifiers));
@@ -11105,6 +11144,7 @@ public:
 		};
 	void fixup_type() { base_type.qualifier<0>() |= ((C99_CPP0X_DECLSPEC_CONST | C99_CPP0X_DECLSPEC_VOLATILE) & flags); };
 	uintmax_t get_flags() const {return flags;};
+	//! \throw std::bad_alloc
 	void value_copy_type(type_spec& dest) const {value_copy(dest,base_type);};
 };
 
@@ -11433,7 +11473,8 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,type_system& types,P
 	(langinfo.LocateExpression)(parsetree,SIZE_MAX,types);
 	if (starting_errors==zcc_errors.err_count())
 		{
-		while(parsetree.is_raw_list() && 1==parsetree.size<0>()) parsetree.eval_to_arg<0>(0);
+		while(parsetree.is_raw_list() && 1==parsetree.size<0>())
+			parsetree.eval_to_arg<0>(0);
 		// end snip from Condense
 		// snip from CPreproc
 		if (!parsetree.is_atomic() && !(langinfo.EvalParseTree)(parsetree,types))
@@ -11492,7 +11533,7 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,type_system& types,P
 				};
 
 			char* tmp = _new_buffer<char>(tmp_size);
-			if (NULL==tmp)
+			if (!tmp)
 				{
 				INFORM("(static assertion failure)");
 				zcc_errors.inc_error();
@@ -11563,6 +11604,7 @@ cpp_enum_was_retyped:
 	return true;
 }
 
+//! \throw std::bad_alloc
 static bool record_enum_values(parse_tree& src, type_system& types, const type_system::type_index enum_type_index, const char* const active_namespace,bool allow_empty,func_traits<const char* (*)(const char*, size_t)>::function_ref_type echo_reserved_keyword, intlike_literal_to_VM_func& intlike_literal_to_VM, func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type CondenseParseTree, func_traits<bool (*)(parse_tree&,const type_system&)>::function_ref_type EvalParseTree)
 {
 	assert(enum_type_index);
@@ -12024,6 +12066,7 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 // incoming: n typespec records, flag for trailing ...
 // will need: typedef map: identifier |-> typespec record
 //! \todo check that the fact all literals are already legal-form is used
+//! \throw std::bad_alloc
 static void C99_ContextParse(parse_tree& src,type_system& types)
 {
 	//! \todo type-vectorize as part of the lexical-forward loop.  Need to handle in type_spec, which is required to be POD to allow C memory management:
@@ -12502,6 +12545,7 @@ static bool is_CPP_namespace(const parse_tree& src)
 
 // handle namespaces or else
 //! \todo check that the fact all literals are already legal-form is used
+//! \throw std::bad_alloc
 static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* const active_namespace)
 {
 	//! \todo type-vectorize as part of the lexical-forward loop.  Need to handle
@@ -12927,8 +12971,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					// regardless of official linkage, entities in anonymous namespaces aren't very accessible outside of the current translation unit;
 					// any reasonable linker thinks they have static linkage
 				src.c_array<0>()[i].resize<2>(2);
-				src.c_array<0>()[i].c_array<2>()[1] = src.data<0>()[i+1];
-				src.c_array<0>()[i+1].clear();
+				src.c_array<0>()[i+1].OverwriteInto(src.c_array<0>()[i].c_array<2>()[1]);
 				src.DeleteIdx<0>(i+1);
 
 				// anonymous namespace names are technically illegal
@@ -12990,10 +13033,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			// the namespace name is likely to be reused: atomic string target
 			register_token<0>(src.c_array<0>()[i+1]);
 			src.c_array<0>()[i].resize<2>(2);
-			src.c_array<0>()[i].c_array<2>()[0] = src.data<0>()[i+1];
-			src.c_array<0>()[i].c_array<2>()[1] = src.data<0>()[i+2];
-			src.c_array<0>()[i+1].clear();
-			src.c_array<0>()[i+2].clear();
+			src.c_array<0>()[i+1].OverwriteInto(src.c_array<0>()[i].c_array<2>()[0]);
+			src.c_array<0>()[i+2].OverwriteInto(src.c_array<0>()[i].c_array<2>()[1]);
 			src.DeleteNSlotsAt<0>(2,i+1);
 			src.c_array<0>()[i].flags |= parse_tree::GOOD_LINE_BREAK;
 			assert(is_CPP_namespace(src.data<0>()[i]));
@@ -13234,6 +13275,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		}
 }
 
+//! \throw std::bad_alloc
 static void CPP_ContextParse(parse_tree& src,type_system& types)
 {
 	CPP_ParseNamespace(src,types,NULL);

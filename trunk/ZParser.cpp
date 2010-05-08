@@ -47,11 +47,6 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 #endif
 				};
 			if (!ParsedList[0]->resize<0>(old_parsed_size+append_tokens)) throw std::bad_alloc();
-#ifndef ZAIMONI_NULL_REALLY_IS_ZERO
-			i = append_tokens;
-			do	ParsedList[0]->c_array<0>()[old_parsed_size+ --i].clear();
-			while(0<i);
-#endif
 			// error the illegal preprocessing tokens here, not in CPreprocessor
 			i = pretokenized.size();
 			do	{
