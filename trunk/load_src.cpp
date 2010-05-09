@@ -1,5 +1,5 @@
 // load_src.cpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #include "Zaimoni.STL/cstdio"
 #include "Zaimoni.STL/LexParse/Token.hpp"
@@ -100,7 +100,11 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 #endif
 		}
 	if (!lang.ApplyGlobalFilters(Buffer)) exit(EXIT_FAILURE);
+#ifndef ZAIMONI_FORCE_ISO
 	lang.FlattenComments(Buffer);
+#else
+	lang.FlattenComments(Buffer,Buffer_size);
+#endif
 
 	SUCCEED_OR_DIE(TokenList.InsertNSlotsAt(1,0));
 #ifndef ZAIMONI_FORCE_ISO

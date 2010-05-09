@@ -1,6 +1,6 @@
 // LangConf.cpp
 // configuration class for lexing programming languages
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 using namespace std;
 #include <memory.h>
@@ -326,12 +326,14 @@ static bool check_newline(char Test, _error_location& _loc)
 	return false;
 }
 
+#ifndef ZAIMONI_FORCE_ISO
 void LangConf::_flattenComments(char*& Text)
-{	// note: have to be able to lex
-#ifdef ZAIMONI_FORCE_ISO
-	const size_t TextLength = strlen(Text);
 #else
-	const size_t TextLength = ArraySize(Text);
+void LangConf::_flattenComments(char*& Text, size_t& TextLength)
+#endif
+{	// note: have to be able to lex
+#ifndef ZAIMONI_FORCE_ISO
+	size_t TextLength = ArraySize(Text);
 #endif
 	if (2>=TextLength) return;
 
@@ -383,8 +385,8 @@ void LangConf::_flattenComments(char*& Text)
 	while(TextLength-deduct>++Idx);
 	if (0<deduct)
 		{
-		Text = REALLOC(Text,ZAIMONI_LEN_WITH_NULL(TextLength-deduct));
-		ZAIMONI_NULL_TERMINATE(Text[TextLength-deduct]);
+		Text = REALLOC(Text,ZAIMONI_LEN_WITH_NULL(TextLength-=deduct));
+		ZAIMONI_NULL_TERMINATE(Text[TextLength]);
 		}
 	return;
 }

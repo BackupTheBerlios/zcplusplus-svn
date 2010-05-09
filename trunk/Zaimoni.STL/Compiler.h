@@ -1,6 +1,6 @@
 /* Compiler.h */
 /* cross-compiler compatiblity header */
-/* (C)2009 Kenneth Boyd, license: MIT.txt */
+/* (C)2009,2010 Kenneth Boyd, license: MIT.txt */
 
 #ifndef ZAIMONI_COMPILER_H
 #define ZAIMONI_COMPILER_H 1
@@ -13,7 +13,7 @@
 
 /* This macro turns on trying to compile as ISO, rather than with the memory manager extensions */
 #ifdef ZAIMONI_FORCE_ISO
-#define ZAIMONI_LEN_WITH_NULL(A) (A+1)
+#define ZAIMONI_LEN_WITH_NULL(A) ((A)+1)
 #define ZAIMONI_NULL_TERMINATE(A) A = '\0'
 #endif
 

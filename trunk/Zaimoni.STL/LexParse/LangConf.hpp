@@ -1,6 +1,6 @@
-// LangConf.hxx
+// LangConf.hpp
 // configuration class for lexing programming languages
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #ifndef ZAIMONI_STL_LEXPARSE_LANGCONF_HPP
 #define ZAIMONI_STL_LEXPARSE_LANGCONF_HPP 1
@@ -204,12 +204,21 @@ public:
 		assert(0!=len_MultiLineCommentEnd);	
 		return _len_MultiLineComment(Test);
 		};
-	void FlattenComments(char*& Text)
+#ifndef ZAIMONI_FORCE_ISO
+	void FlattenComments(char*& x)
+#else
+	void FlattenComments(char*& x, size_t& x_len)
+#endif
 		{
-		assert(NULL!=Text);
-		assert('\x00'!=Text[0]);
-		assert('\n'!=Text[strlen(Text)-1]);	// end-of-file check should have intercepted trailing \n
-		_flattenComments(Text);
+		assert(x && *x);
+		// end-of-file check should have intercepted trailing \n
+#ifndef ZAIMONI_FORCE_ISO
+		assert('\n'!=x[ArraySize(x)-1]);	
+		_flattenComments(x);
+#else
+		assert('\n'!=x[x_len-1]);
+		_flattenComments(x,x_len);
+#endif
 		};
 
 	bool ApplyGlobalFilters(char*& Target) const;
@@ -227,36 +236,28 @@ public:
 
 	size_t lex_find(const char* const x, const char* const target) const
 		{
-		assert(NULL!=x);
-		assert('\x00'!=x[0]);
-		assert(NULL!=target);
-		assert('\x00'!=target[0]);
+		assert(x && *x);
+		assert(target && *target);
 		return _lex_find(x,strlen(x),target,strlen(target));
 		};
 	size_t lex_find(const char* const x, const char* const target, size_t target_len) const
 		{
-		assert(NULL!=x);
-		assert('\x00'!=x[0]);
-		assert(NULL!=target);
-		assert('\x00'!=target[0]);
+		assert(x && *x);
+		assert(target && *target);
 		assert(target_len<=strlen(target));
 		return _lex_find(x,strlen(x),target,target_len);
 		};
 	size_t lex_find(const char* const x, size_t x_len, const char* const target) const
 		{
-		assert(NULL!=x);
-		assert('\x00'!=x[0]);
-		assert(NULL!=target);
-		assert('\x00'!=target[0]);
+		assert(x && *x);
+		assert(target && *target);
 		assert(x_len==strlen(x));
 		return _lex_find(x,x_len,target,strlen(target));
 		};
 	size_t lex_find(const char* const x, size_t x_len, const char* const target, size_t target_len) const
 		{
-		assert(NULL!=x);
-		assert('\x00'!=x[0]);
-		assert(NULL!=target);
-		assert('\x00'!=target[0]);
+		assert(x && *x);
+		assert(target && *target);
 		assert(x_len==strlen(x));
 		assert(target_len<=strlen(target));
 		return _lex_find(x,x_len,target,target_len);
@@ -264,44 +265,35 @@ public:
 	// usage of POD_triple: offset, token_len, flags
 	void line_lex(const char* const x, const size_t x_len, autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized) const
 		{
-		assert(NULL!=x);
-		assert('\x00'!=x[0]);
+		assert(x && *x);
 		assert(x_len==strlen(x));
 		_line_lex(x,x_len,pretokenized);
 		};
 
 	bool line_lex_find(const char* const x, const char* const target, autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized) const
 		{
-		assert(NULL!=x);
-		assert('\x00'!=x[0]);
-		assert(NULL!=target);
-		assert('\x00'!=target[0]);
+		assert(x && *x);
+		assert(target && *target);
 		return _line_lex_find(x,strlen(x),target,strlen(target),pretokenized);
 		};
 	bool line_lex_find(const char* const x, const char* const target, size_t target_len, autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized) const
 		{
-		assert(NULL!=x);
-		assert('\x00'!=x[0]);
-		assert(NULL!=target);
-		assert('\x00'!=target[0]);
+		assert(x && *x);
+		assert(target && *target);
 		assert(target_len<=strlen(target));
 		return _line_lex_find(x,strlen(x),target,target_len,pretokenized);
 		};
 	bool line_lex_find(const char* const x, const size_t x_len, const char* const target, autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized) const
 		{
-		assert(NULL!=x);
-		assert('\x00'!=x[0]);
-		assert(NULL!=target);
-		assert('\x00'!=target[0]);
+		assert(x && *x);
+		assert(target && *target);
 		assert(x_len==strlen(x));
 		return _line_lex_find(x,x_len,target,strlen(target),pretokenized);
 		};
 	bool line_lex_find(const char* const x, const size_t x_len, const char* const target, size_t target_len, autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized) const
 		{
-		assert(NULL!=x);
-		assert('\x00'!=x[0]);
-		assert(NULL!=target);
-		assert('\x00'!=target[0]);
+		assert(x && *x);
+		assert(target && *target);
 		assert(x_len==strlen(x));
 		assert(target_len<=strlen(target));
 		return _line_lex_find(x,x_len,target,target_len,pretokenized);
@@ -338,7 +330,11 @@ private:
 	// returns SIZE_MAX on failure, as 0 is a valid offset
 	size_t _lex_find(const char* const x, size_t x_len, const char* const target, size_t target_len) const;
 	void _compactWSAtIdx(char*& Text,size_t Idx) const;
+#ifndef ZAIMONI_FORCE_ISO
 	void _flattenComments(char*& Text);
+#else
+	void _flattenComments(char*& Text, size_t& TextLength);
+#endif
 	void _line_lex(const char* const x, const size_t x_len, autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized) const;
 	bool _line_lex_find(const char* const x, const size_t x_len, const char* const target, size_t target_len, autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized) const;
 };
