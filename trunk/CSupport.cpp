@@ -18,6 +18,7 @@
 #include "str_aux.h"
 #include "Trigraph.hpp"
 #include "Flat_UNI.hpp"
+#include "end_lc.hpp"
 #include "errors.hpp"
 #include "errcount.hpp"
 #include "CPUInfo.hpp"
@@ -13521,6 +13522,7 @@ void InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
 									0,2,
 									'\\','\\',true,true);
 
+	CLexer->InstallGlobalFilter(&TerminalLineContinue);
 	CLexer->InstallGlobalFilter(&EnforceCTrigraphs);
 	CLexer->InstallGlobalFilter(&FlattenUNICODE);
 
@@ -13530,6 +13532,7 @@ void InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
 	CLexer->InstallTokenizer(&LengthOfCIdentifier,CPP_FLAG_IDENTIFIER);
 	CLexer->InstallTokenizer(&LengthOfCPreprocessingNumber,CPP_FLAG_PP_NUMERAL);
 
+	CPlusPlusLexer->InstallGlobalFilter(&TerminalLineContinue);
 	CPlusPlusLexer->InstallGlobalFilter(&EnforceCTrigraphs);
 	CPlusPlusLexer->InstallGlobalFilter(&FlattenUNICODE);
 

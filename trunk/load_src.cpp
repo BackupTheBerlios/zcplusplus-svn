@@ -88,17 +88,6 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 		}
 	}
 
-	if ('\\'==Buffer[Buffer_size-1])	// works for C/C++ and other line-continue languages
-		{
-		INC_INFORM(filename);
-		INFORM(": warning: line continue \\ without a subsequent line, undefined behavior.  Proceeding as if subsequent line was empty.");
-		if (1==Buffer_size) return free(Buffer),true;
-#ifndef ZAIMONI_FORCE_ISO
-		Buffer = REALLOC(Buffer,ArraySize(Buffer)-1);
-#else
-		Buffer = REALLOC(Buffer,--Buffer_size);
-#endif
-		}
 #ifndef ZAIMONI_FORCE_ISO
 	if (!lang.ApplyGlobalFilters(Buffer,filename)) exit(EXIT_FAILURE);
 	lang.FlattenComments(Buffer);
