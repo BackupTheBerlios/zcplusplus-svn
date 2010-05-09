@@ -205,11 +205,14 @@ def MakeMakefile():
 	LineList.append('\n')
 
 	LineList.append('clean:\n')
-	LineList.append('\trm -f *.o *.exe\n')
+	LineList.append('\trm -f *.o *.exe'+extra_clean+'\n')
 	LineList.append('\n')
 
 	LineList.append('# dependencies\n')
 	LineList.append('include POSIX.dep\n\n')
+
+	if extra_targets:
+		LineList.append(extra_targets)
 
 	# target spec (must attempt to make most recently altered files first)
 	for ProgName in ProgObjects.keys():
@@ -217,7 +220,7 @@ def MakeMakefile():
 		ObjfileListBase = map(lambda x: (x,stat(x+(CPP_suffix if isfile(x+CPP_suffix) else '.c'))[8]),ProgObjects[ProgName])
 		ObjfileListBase.sort(lambda x,y : -cmp(x[1],y[1]))
 		LineList2.append('OBJECTS_'+ProgName.upper()+'_LINK_PRIORITY = ' + join(map(lambda x: x[0] + '.o',ObjfileListBase),' ') + '\n\n')
-		LineList.append(ProgName+'.exe : $(OBJECTS_'+ProgName.upper()+'_LINK_PRIORITY)\n')
+		LineList.append(ProgName+'.exe :'+extra_prereqs+' $(OBJECTS_'+ProgName.upper()+'_LINK_PRIORITY)\n')
 		if ProgName in CPP_override_libraries:
 			LineList.append('\t'+CPP_compiler+' $(LINK_FLAGS) -o'+ProgName+'.exe $(OBJECTS_'+ProgName.upper()+') ' + CPP_override_libraries[ProgName] + '\n')
 		else:
