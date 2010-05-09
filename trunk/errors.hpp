@@ -148,6 +148,13 @@ extern string_opt_handler* option_handler_int[MAX_OPT_INT];
 
 extern zaimoni::OS::mutex errno_mutex;
 
+// following are for use by zaimoni::simple_lock
+/*
+ * some errors are only problems at runtime, and shouldn't be noticed if
+ * the expression is unevaluated
+ */ 
+extern unsigned int no_runtime_errors;
+
 #ifndef NDEBUG
 extern bool debug_tracer;
 #endif

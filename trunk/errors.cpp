@@ -149,6 +149,7 @@ string_opt_handler* option_handler_int[MAX_OPT_INT]
 // unsigned short _char_bit, unsigned short _sizeof_short, unsigned short _sizeof_int, unsigned short _sizeof_long, unsigned short _sizeof_long_long
 
 zaimoni::OS::mutex errno_mutex;
+unsigned int no_runtime_errors = 0;
 
 #ifndef NDEBUG
 bool debug_tracer = false;
