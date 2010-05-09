@@ -99,10 +99,11 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 		Buffer = REALLOC(Buffer,--Buffer_size);
 #endif
 		}
-	if (!lang.ApplyGlobalFilters(Buffer)) exit(EXIT_FAILURE);
 #ifndef ZAIMONI_FORCE_ISO
+	if (!lang.ApplyGlobalFilters(Buffer,filename)) exit(EXIT_FAILURE);
 	lang.FlattenComments(Buffer);
 #else
+	if (!lang.ApplyGlobalFilters(Buffer,Buffer_size,filename)) exit(EXIT_FAILURE);
 	lang.FlattenComments(Buffer,Buffer_size);
 #endif
 

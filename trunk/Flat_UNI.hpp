@@ -1,5 +1,5 @@
 // Flat_UNI.hpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #ifndef Z_CPLUSPLUS_FLAT_UNI_HPP
 #define Z_CPLUSPLUS_FLAT_UNI_HPP 1
@@ -11,7 +11,7 @@
  *
  * \return true, return value is only to glue into LangConf
  */
-bool FlattenUNICODE(char*& Text);
+bool FlattenUNICODE(char*& Text, const char* filename);
 
 #endif
 

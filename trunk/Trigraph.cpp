@@ -1,5 +1,5 @@
 // Trigraph.cpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #include "Trigraph.hpp"
 
@@ -49,8 +49,7 @@ are never part of a subsequent trigraph.  [Example: The sequence
 /* Aside: ??? is not supported in C99 or C++0x; example in 4 may be a doc. error for C++97.  Given table row was in HTML version but not PDF version. */
 /* C89 rationale suggest to omit ??? */
 
-static size_t
-EnforceTrigraphsAux(size_t& Offset, char* const Text)
+static size_t EnforceTrigraphsAux(size_t& Offset, char* const Text)
 {	// FORMALLY CORRECT: Kenneth Boyd, 10/17/2004
 	// this returns how much to increment i by (not directly passed)
 	if ('?'!=Text[1]) return 2;	// total miss: increment by 2
@@ -173,7 +172,7 @@ EnforceTrigraphsAuxV2(size_t& Offset, char* const Text, char* const Target)
 	return 3;
 }
 
-bool EnforceCTrigraphs(char*& Text)
+bool EnforceCTrigraphs(char*& Text, const char* filename)
 {	// FORMALLY CORRECT: Kenneth Boyd, 8/1/2002
 	// there are 10 C trigraphs of interest (?)
 	// We use a modified Boyer-Moore algorithm, and compact after 

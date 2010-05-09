@@ -89,7 +89,11 @@ struct _error_location
 class LangConf
 {
 public:
-	typedef bool Filter(char*& Target);
+#ifndef ZAIMONI_FORCE_ISO
+	typedef bool Filter(char*& x, const char* filename);
+#else
+	typedef bool Filter(char*& x, size_t& x_len, const char* filename);
+#endif
 	typedef size_t Tokenizer(const char* Target);
 	typedef size_t PredictTransform(const char* Target, size_t src_len);
 	typedef void Transform(char* dest, const char* src, size_t src_len);
@@ -221,18 +225,27 @@ public:
 #endif
 		};
 
-	bool ApplyGlobalFilters(char*& Target) const;
-	bool ApplyTokenizingFilters(char*& Target) const;
+#ifndef ZAIMONI_FORCE_ISO
+	bool ApplyGlobalFilters(char*& x, const char* filename) const;
+	bool ApplyTokenizingFilters(char*& x) const;
+#else
+	bool ApplyGlobalFilters(char*& x, size_t& x_len, const char* filename) const;
+	bool ApplyTokenizingFilters(char*& x, size_t& x_len) const;
+#endif
 private:
 	size_t TokenizeCore(const char* Target, lex_flags& Flags) const;
 	size_t UnfilteredCommentHidingNextToken(const char* Target, lex_flags& Flags) const;	// internal
 public:
 	size_t UnfilteredNextToken(const char* Target, lex_flags& Flags) const;
-	size_t NextToken(char*& Target, lex_flags& Flags) const;
-
-	bool InstallGlobalFilter(Filter* Source) { return GlobalFilters.InsertSlotAt(GlobalFilters.size(),Source);	};
-	bool InstallTokenizingFilter(Filter* Source)	{	return TokenizingFilters.InsertSlotAt(TokenizingFilters.size(),Source);	};
-	bool InstallTokenizer(Tokenizer* Source,lex_flags SourceFlags);
+#ifndef ZAIMONI_FORCE_ISO
+	size_t NextToken(char*& x, lex_flags& Flags) const;
+#else
+	size_t NextToken(char*& x, size_t& x_len, lex_flags& Flags) const;
+#endif
+	
+	bool InstallGlobalFilter(Filter* src) { return GlobalFilters.InsertSlotAt(GlobalFilters.size(),src);	};
+	bool InstallTokenizingFilter(Filter* src)	{	return TokenizingFilters.InsertSlotAt(TokenizingFilters.size(),src);	};
+	bool InstallTokenizer(Tokenizer* src,lex_flags src_flags);
 
 	size_t lex_find(const char* const x, const char* const target) const
 		{

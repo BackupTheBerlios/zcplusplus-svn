@@ -1,5 +1,5 @@
 // Flat_UNI.cpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #include "Flat_UNI.hpp"
 
@@ -27,7 +27,7 @@ ISO/IEC 10646 is the hexadecimal value 0000NNNN.
 [also see Appendix E for a validation list...probably should update against latest UNICODE references]
 */
 
-bool FlattenUNICODE(char*& Text)
+bool FlattenUNICODE(char*& Text, const char* filename)
 {
 	if (NULL==Text) return true;
 

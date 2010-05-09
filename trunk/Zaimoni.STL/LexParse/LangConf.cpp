@@ -26,11 +26,19 @@ using namespace zaimoni;
 //! <br>NOTE: we can pre-emptively break on newline outside of strings no matter what.
 //! <br>NOTE: we can discard pure-whitespace lines no matter what
 
-static bool _applyFilters(LangConf::Filter** FilterList, const size_t FilterSize, char*& Target)
+#ifndef ZAIMONI_FORCE_ISO
+static bool _applyFilters(LangConf::Filter** FilterList, const size_t FilterSize, char*& x, const char* filename)
+#else
+static bool _applyFilters(LangConf::Filter** FilterList, const size_t FilterSize, char*& x, size_t& x_len, const char* filename)
+#endif
 {	//! \pre FilterList!=NULL
-	//! \pre Target!=NULL
+	//! \pre x!=NULL
 	size_t i = 0;
-	do	if (!FilterList[i](Target) || NULL==Target) return false;
+#ifndef ZAIMONI_FORCE_ISO
+	do	if (!FilterList[i](x,filename) || !x) return false;
+#else
+	do	if (!FilterList[i](x,x_len,filename) || !x) return false;
+#endif
 	while(FilterSize> ++i);
 	return true;
 }
@@ -131,20 +139,36 @@ void LangConf::ExtractLineFromTextBuffer(char*& Buffer, char*& NewLine) const
 		}	
 }
 
-bool LangConf::ApplyGlobalFilters(char*& Target) const
+#ifndef ZAIMONI_FORCE_ISO
+bool LangConf::ApplyGlobalFilters(char*& x, const char* filename) const
+#else
+bool LangConf::ApplyGlobalFilters(char*& x, size_t& x_len, const char* filename) const
+#endif
 {
-	if (NULL!=Target)
+	if (x)
 		{	// legal char set is a global filter, but should be fairly late (after comment-stripping)
-		if (NULL!=GlobalFilters && !_applyFilters(GlobalFilters,GlobalFilters.size(),Target))
-			return NULL==Target;
+#ifndef ZAIMONI_FORCE_ISO
+		if (!GlobalFilters.empty() && !_applyFilters(GlobalFilters,GlobalFilters.size(),x,filename))
+#else
+		if (!GlobalFilters.empty() && !_applyFilters(GlobalFilters,GlobalFilters.size(),x,x_len,filename))
+#endif
+			return !x;
 		}
 	return true;
 }
 
-bool LangConf::ApplyTokenizingFilters(char*& Target) const
+#ifndef ZAIMONI_FORCE_ISO
+bool LangConf::ApplyTokenizingFilters(char*& x) const
+#else
+bool LangConf::ApplyTokenizingFilters(char*& x, size_t& x_len) const
+#endif
 {
-	if (NULL==TokenizingFilters || NULL==Target) return true;
-	return _applyFilters(TokenizingFilters,TokenizingFilters.size(),Target);
+	if (TokenizingFilters.empty() || !x) return true;
+#ifndef ZAIMONI_FORCE_ISO
+	return _applyFilters(TokenizingFilters,TokenizingFilters.size(),x,NULL);
+#else
+	return _applyFilters(TokenizingFilters,TokenizingFilters.size(),x,x_len,NULL);
+#endif
 }
 
 size_t LangConf::TokenizeCore(const char* Target, lex_flags& Flags) const
@@ -189,20 +213,28 @@ LangConf::UnfilteredNextToken(const char* Target, lex_flags& Flags) const
 	return TokenizeCore(Target,Flags);
 }
 
-size_t LangConf::NextToken(char*& Target, lex_flags& Flags) const
+#ifndef ZAIMONI_FORCE_ISO
+size_t LangConf::NextToken(char*& x, lex_flags& Flags) const
+#else
+size_t LangConf::NextToken(char*& x, size_t& x_len, lex_flags& Flags) const
+#endif
 {
-	if (NULL==Target) return 0;
-	if (NULL!=TokenizingFilters && !_applyFilters(TokenizingFilters,TokenizingFilters.size(),Target))
+	if (!x) return 0;
+#ifndef ZAIMONI_FORCE_ISO
+	if (!TokenizingFilters.empty() && !_applyFilters(TokenizingFilters,TokenizingFilters.size(),x,NULL))
+#else
+	if (!TokenizingFilters.empty() && !_applyFilters(TokenizingFilters,TokenizingFilters.size(),x,x_len,NULL))
+#endif
 		return 0;
 
-	return TokenizeCore(Target,Flags);
+	return TokenizeCore(x,Flags);
 }
 
-bool LangConf::InstallTokenizer(Tokenizer* Source,lex_flags SourceFlags)
+bool LangConf::InstallTokenizer(Tokenizer* src,lex_flags src_flags)
 {
 	const size_t StackSize = Tokenizers.size();
-	if (!Tokenizers.InsertSlotAt(StackSize,Source)) return false;
-	if (!TokenizerFlags.InsertSlotAt(StackSize,SourceFlags))
+	if (!Tokenizers.InsertSlotAt(StackSize,src)) return false;
+	if (!TokenizerFlags.InsertSlotAt(StackSize,src_flags))
 		{
 		Tokenizers.DeleteIdx(StackSize);
 		return false;

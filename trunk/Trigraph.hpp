@@ -1,5 +1,5 @@
 // Trigraph.hpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #ifndef Z_CPLUSPLUS_TRIGRAPH_HPP
 #define Z_CPLUSPLUS_TRIGRAPH_HPP 1
@@ -11,6 +11,6 @@
  *
  * \return true, return value is only to glue into LangConf
  */
-bool EnforceCTrigraphs(char*& Text);
+bool EnforceCTrigraphs(char*& Text, const char* filename);
 
 #endif
