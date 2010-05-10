@@ -60,38 +60,11 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 #ifndef ZAIMONI_FORCE_ISO
 	if (!GetBinaryFileImage(filename,Buffer)) return false;
 	ConvertBinaryModeToTextMode(Buffer);
-#else
-	if (!GetBinaryFileImage(filename,Buffer,Buffer_size)) return false;
-	ConvertBinaryModeToTextMode(Buffer,Buffer_size);
-#endif
-
-	// if target language needs a warning for not ending in \n, emit one here
-	// but we normalize to that
-	{
-	size_t newline_count = 0;
-	const size_t BufferSizeSub1 = Buffer_size-1;
-	while(newline_count<BufferSizeSub1 && '\n'==Buffer[BufferSizeSub1-newline_count]) ++newline_count;
-	if (0<newline_count)
-		{
-		if (Buffer_size<=newline_count) return free(Buffer),true;
-#ifndef ZAIMONI_FORCE_ISO
-		Buffer = REALLOC(Buffer,(ArraySize(Buffer)-newline_count));
-#else
-		Buffer = REALLOC(Buffer,(Buffer_size -= newline_count));
-#endif
-		}
-	else{	// works for C/C++
-		INC_INFORM(filename);
-		INFORM(": warning: did not end in \\n, undefined behavior.  Proceeding as if it was there.");
-		if (bool_options[boolopt::warnings_are_errors])
-			zcc_errors.inc_error();
-		}
-	}
-
-#ifndef ZAIMONI_FORCE_ISO
 	if (!lang.ApplyGlobalFilters(Buffer,filename)) exit(EXIT_FAILURE);
 	lang.FlattenComments(Buffer);
 #else
+	if (!GetBinaryFileImage(filename,Buffer,Buffer_size)) return false;
+	ConvertBinaryModeToTextMode(Buffer,Buffer_size);
 	if (!lang.ApplyGlobalFilters(Buffer,Buffer_size,filename)) exit(EXIT_FAILURE);
 	lang.FlattenComments(Buffer,Buffer_size);
 #endif
