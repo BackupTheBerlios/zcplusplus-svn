@@ -513,8 +513,7 @@ _meta_weakautoarray_ptr<T>::value_copy_of(const U& src)
 {
 	const size_t ub = src.size();
 	if (!Resize(ub)) return false;
-	if (0<ub)
-		_copy_buffer(this->c_array(),src.data(),ub);
+	if (0<ub) _copy_buffer(this->c_array(),src.data(),ub);
 	return true;
 }
 
@@ -524,31 +523,21 @@ template<typename U,typename op>
 bool
 _meta_weakautoarray_ptr<T>::grep(const U& src,op Predicate)
 {
-	if (src.empty())
-		{
-		reset();
-		return true;
-		}
+	if (src.empty()) return reset(),true;
 	size_t NonStrictLB = 0;
 	size_t StrictUB = src.size();
 	while(!Predicate(src.data()[NonStrictLB]) && StrictUB>++NonStrictLB);
-	if (StrictUB==NonStrictLB)
-		{
-		reset();
-		return true;
-		}
+	if (StrictUB==NonStrictLB) return reset(),true;
 	while(!Predicate(src[--StrictUB]));
 	++StrictUB;
-	if (!Resize(StrictUB-NonStrictLB))
-		return false;
+	if (!Resize(StrictUB-NonStrictLB)) return false;
 	size_t Offset = 0;
 	_ptr[Offset++] = src.data()[NonStrictLB++];
 	while(NonStrictLB<StrictUB-1)
 		if (Predicate(src.data()[NonStrictLB++]))
 			_ptr[Offset++] = src[NonStrictLB-1];
 	_ptr[Offset++] = src.data()[NonStrictLB++];
-	Resize(Offset);
-	return true;
+	return Resize(Offset),true;
 }
 
 template<typename T>
@@ -556,31 +545,21 @@ template<typename U,typename op>
 bool
 _meta_weakautoarray_ptr<T>::invgrep(const U& src,op Predicate)
 {
-	if (src.empty())
-		{
-		reset();
-		return true;
-		}
+	if (src.empty()) return reset(),true;
 	size_t NonStrictLB = 0;
 	size_t StrictUB = src.size();
 	while(Predicate(src.data()[NonStrictLB]) && StrictUB>++NonStrictLB);
-	if (StrictUB==NonStrictLB)
-		{
-		reset();
-		return true;
-		}
+	if (StrictUB==NonStrictLB) return reset(),true;
 	while(Predicate(src[--StrictUB]));
 	++StrictUB;
-	if (!Resize(StrictUB-NonStrictLB))
-		return false;
+	if (!Resize(StrictUB-NonStrictLB)) return false;
 	size_t Offset = 0;
 	_ptr[Offset++] = src.data()[NonStrictLB++];
 	while(NonStrictLB<StrictUB-1)
 		if (!Predicate(src.data()[NonStrictLB++]))
 			_ptr[Offset++] = src[NonStrictLB-1];
 	_ptr[Offset++] = src.data()[NonStrictLB++];
-	Resize(Offset);
-	return true;
+	return Resize(Offset),true;
 }
 
 template<class Derived,class T>
@@ -671,75 +650,65 @@ _meta_weakautoarray_ptr<T>::reset(T*& src)
 template<typename T>
 template<typename U>
 bool
-_meta_autoarray_ptr<T>::grep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*>& Target) const
+_meta_autoarray_ptr<T>::grep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*>& dest) const
 {
-	Target.reset();
-	if (this->empty())
-		return true;
+	dest.reset();
+	if (this->empty()) return true;
 
 	size_t NonStrictLB = 0;
 	size_t StrictUB = this->ArraySize();
 	while(!Predicate(*_ptr[NonStrictLB]) && StrictUB>++NonStrictLB);
-	if (StrictUB==NonStrictLB)
-		return true;
+	if (StrictUB==NonStrictLB) return true;
 
 	while(!Predicate(*_ptr[--StrictUB]));
 	++StrictUB;
-	if (!Target.Resize(StrictUB-NonStrictLB))
-		return false;
+	if (!dest.Resize(StrictUB-NonStrictLB)) return false;
 
 	size_t Offset = 0;
 	try	{
-		Target[Offset++] = new U(*_ptr[NonStrictLB++]);
+		dest[Offset++] = new U(*_ptr[NonStrictLB++]);
 		while(NonStrictLB<StrictUB-1)
 			if (Predicate(*_ptr[NonStrictLB++]))
-				Target[Offset++] = new U(*_ptr[NonStrictLB-1]);
-		Target[Offset++] = new U(*_ptr[NonStrictLB++]);
+				dest[Offset++] = new U(*_ptr[NonStrictLB-1]);
+		dest[Offset++] = new U(*_ptr[NonStrictLB++]);
 		}
 	catch(const std::bad_alloc&)
 		{
-		Target.Resize(Offset);
-		return false;	
+		return dest.Resize(Offset),false;	
 		}
-	Target.Resize(Offset);
-	return true;
+	return dest.Resize(Offset),true;
 }
 
 template<typename T>
 template<typename U>
 bool
-_meta_autoarray_ptr<T>::invgrep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*>& Target) const
+_meta_autoarray_ptr<T>::invgrep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*>& dest) const
 {
-	Target.reset();
-	if (this->empty())
-		return true;
+	dest.reset();
+	if (this->empty()) return true;
 
 	size_t NonStrictLB = 0;
 	size_t StrictUB = this->ArraySize();
 	while(Predicate(*_ptr[NonStrictLB]) && StrictUB>++NonStrictLB);
-	if (StrictUB==NonStrictLB)
-		return true;
+	if (StrictUB==NonStrictLB) return true;
 
 	while(Predicate(*_ptr[--StrictUB]));
 	++StrictUB;
-	if (!Target.Resize(StrictUB-NonStrictLB))
-		return false;
+	if (!dest.Resize(StrictUB-NonStrictLB)) return false;
 
 	size_t Offset = 0;
 	try	{
-		Target[Offset++] = new U(*_ptr[NonStrictLB++]);
+		dest[Offset++] = new U(*_ptr[NonStrictLB++]);
 		while(NonStrictLB<StrictUB-1)
 			if (!Predicate(*_ptr[NonStrictLB++]))
-				Target[Offset++] = new U(*_ptr[NonStrictLB-1]);
-		Target[Offset++] = new U(*_ptr[NonStrictLB++]);
+				dest[Offset++] = new U(*_ptr[NonStrictLB-1]);
+		dest[Offset++] = new U(*_ptr[NonStrictLB++]);
 		}
 	catch(const std::bad_alloc&)
 		{
-		Target.Resize(Offset);
-		return false;	
+		return dest.Resize(Offset),false;	
 		}
-	Target.Resize(Offset);
-	return true;
+	return dest.Resize(Offset),true;
 }
 
 template<class Derived,class T>

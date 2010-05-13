@@ -254,11 +254,7 @@ template<typename T>
 typename boost::enable_if<boost::type_traits::ice_and<boost::has_trivial_destructor<T>::value, boost::has_trivial_assign<T>::value >, bool>::type
 __resize2(T*& _ptr, size_t n)
 {
-	if (n<=ArraySize(_ptr))
-		{
-		_ptr = REALLOC(_ptr,n*sizeof(T));
-		return true;
-		};
+	if (n<=ArraySize(_ptr)) return _ptr = REALLOC(_ptr,n*sizeof(T)),true;
 	return false;
 }
 
