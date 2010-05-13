@@ -1,6 +1,6 @@
 // AutoPtr.hpp
 // a family of pointers that automatically delete themselves when going out of scope
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 // autodel_ptr: single pointer
 // weakautoarray_ptr: array of weak pointers
@@ -108,12 +108,14 @@ struct c_var_array_CRTP : public c_array_CRTP<c_var_array_CRTP<Derived,T>, T>
 	void NULLPtr() {static_cast<Derived*>(this)->_ptr = NULL;};
 	size_t ArraySize() const {return zaimoni::ArraySize(static_cast<const Derived*>(this)->_ptr);};
 	template<typename U> bool InsertSlotAt(size_t Idx, U _default) {return _insert_slot_at(static_cast<Derived*>(this)->_ptr,Idx,_default);}
-	bool InsertNSlotsAt(size_t n,size_t Idx) {return _insert_n_slots_at(static_cast<Derived*>(this)->_ptr,n,Idx);};
+	bool InsertNSlotsAt(size_t n,size_t i) {return _insert_n_slots_at(static_cast<Derived*>(this)->_ptr,n,i);};
+	void insertNSlotsAt(size_t n,size_t i) {if (!_insert_n_slots_at(static_cast<Derived*>(this)->_ptr,n,i)) throw std::bad_alloc();};
 #else
 	void NULLPtr() {static_cast<Derived*>(this)->_ptr = NULL; static_cast<Derived*>(this)->_size = 0;};
 	size_t ArraySize() const {return static_cast<const Derived*>(this)->_size;};
 	template<typename U> bool InsertSlotAt(size_t Idx, U _default) {return _insert_slot_at(static_cast<Derived*>(this)->_ptr,static_cast<Derived*>(this)->_size,Idx,_default);}
-	bool InsertNSlotsAt(size_t n,size_t Idx) {return _insert_n_slots_at(static_cast<Derived*>(this)->_ptr,static_cast<Derived*>(this)->_size,n,Idx);};
+	bool InsertNSlotsAt(size_t n,size_t i) {return _insert_n_slots_at(static_cast<Derived*>(this)->_ptr,static_cast<Derived*>(this)->_size,n,i);};
+	void insertNSlotsAt(size_t n,size_t i) {if (!_insert_n_slots_at(static_cast<Derived*>(this)->_ptr,static_cast<Derived*>(this)->_size,n,i)) throw std::bad_alloc();};
 #endif
 
 	// typecasts
@@ -144,7 +146,7 @@ struct c_var_array_CRTP : public c_array_CRTP<c_var_array_CRTP<Derived,T>, T>
 #else
 	T* release() {T* tmp = static_cast<Derived*>(this)->_ptr; static_cast<Derived*>(this)->_ptr = NULL; static_cast<Derived*>(this)->_size = 0; return tmp;};
 #endif
-	
+
 	// Perl grep
 	template<typename U> void destructive_grep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));
 	template<typename U> void destructive_invgrep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));

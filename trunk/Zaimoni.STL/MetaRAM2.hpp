@@ -1,7 +1,7 @@
 // MetaRAM2.hpp
 // more C++ memory interface functions
 // these require the Iskandria memory manager
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #ifndef ZAIMONI_METARAM2_HPP
 #define ZAIMONI_METARAM2_HPP 1
@@ -244,7 +244,7 @@ __resize2(T*& _ptr, size_t n)
 }
 #else
 inline typename boost::disable_if<boost::type_traits::ice_and<boost::has_trivial_destructor<T>::value, boost::has_trivial_assign<T>::value >, bool>::type
-__resize2(T*& _ptr, size_t& _ptr_size, size_t n)
+__resize2(size_t _ptr_size, size_t n)
 {
 	return n==_ptr_size;
 }
@@ -297,7 +297,7 @@ _resize(T*& _ptr, size_t& _ptr_size, size_t n)
 #ifndef ZAIMONI_FORCE_ISO
 	if (__resize2(_ptr,n)) return true;
 #else
-	if (__resize2(_ptr,_ptr_size,n)) return true;
+	if (__resize2<T>(_ptr_size,n)) return true;
 #endif
 
 	T* Tmp = _new_buffer<T>(n);
