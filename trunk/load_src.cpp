@@ -7,6 +7,7 @@
 #include "AtomicString.h"
 #include "errors.hpp"
 #include "errcount.hpp"
+#include "end_nl.hpp"
 
 using namespace zaimoni;
 
@@ -43,7 +44,7 @@ clean_linesplice_whitespace(autovalarray_ptr<Token<char>* >& TokenList, size_t v
 	if (want_to_zap_line) clean_whitespace(TokenList,v_idx,lang);
 }
 
-// can throw std::bad_alloc.
+//! \throw std::bad_alloc
 bool
 load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const filename, LangConf& lang)
 {
@@ -144,7 +145,7 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 	return true;
 }
 
-// can throw std::bad_alloc.
+//! \throw std::bad_alloc
 bool load_raw_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const char* const filename)
 {
 	char* Buffer = NULL;
@@ -167,26 +168,12 @@ bool load_raw_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& Toke
 
 	// if target language needs a warning for not ending in \n, emit one here
 	// but we normalize to that
-	{
-	size_t newline_count = 0;
-	const size_t BufferSizeSub1 = Buffer_size-1;
-	while(newline_count<BufferSizeSub1 && '\n'==Buffer[BufferSizeSub1-newline_count]) ++newline_count;
-	if (0<newline_count)
-		{
-		if (Buffer_size<=newline_count) return free(Buffer),true;
 #ifndef ZAIMONI_FORCE_ISO
-		Buffer = REALLOC(Buffer,(ArraySize(Buffer)-newline_count));
+	TrimMandatoryTerminalNewline(Buffer,filename);
 #else
-		Buffer = REALLOC(Buffer,(Buffer_size -= newline_count));
+	TrimMandatoryTerminalNewline(Buffer,Buffer_size,filename);
 #endif
-		}
-	else{	// works for C/C++
-		INC_INFORM(filename);
-		INFORM(": warning: did not end in \\n, undefined behavior.  Proceeding as if it was there.");
-		if (bool_options[boolopt::warnings_are_errors]) zcc_errors.inc_error();
-		}
-	}
-
+	
 	SUCCEED_OR_DIE(TokenList.InsertNSlotsAt(1,0));
 #ifndef ZAIMONI_FORCE_ISO
 	TokenList[0] = new(std::nothrow) Token<char>(Buffer,filename);
