@@ -48,6 +48,8 @@ clean_linesplice_whitespace(autovalarray_ptr<Token<char>* >& TokenList, size_t v
 bool
 load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const filename, LangConf& lang)
 {
+	{
+	autovalarray_ptr<Token<char>* > tmpTokenList(1);
 	char* Buffer = NULL;
 #ifndef ZAIMONI_FORCE_ISO
 #	define Buffer_size ArraySize(Buffer)
@@ -70,66 +72,74 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 	lang.FlattenComments(Buffer,Buffer_size);
 #endif
 
-	SUCCEED_OR_DIE(TokenList.InsertNSlotsAt(1,0));
+	try {
 #ifndef ZAIMONI_FORCE_ISO
-	TokenList[0] = new Token<char>(Buffer,filename);
+		tmpTokenList[0] = new Token<char>(Buffer,filename);
 #else
-	TokenList[0] = new Token<char>(Buffer,Buffer_size,filename);
-	Buffer_size = 0;
+		tmpTokenList[0] = new Token<char>(Buffer,Buffer_size,filename);
+//		Buffer_size = 0;	// dead code
 #endif
+		}
+	catch(...)
+		{
+		free(Buffer);
+		throw;
+		}
 
 	// next: split on newline, to simplify spotting preprocessing-directives vs file to be preprocessed
-	TokenList[0]->ltrim(strspn(TokenList[0]->data(),"\n"));
-	if (TokenList[0]->empty()) return TokenList.reset(),true;
+	tmpTokenList[0]->ltrim(strspn(tmpTokenList[0]->data(),"\n"));
+	if (tmpTokenList[0]->empty()) return TokenList.reset(),true;
 
 	if (lang.BreakTokenOnNewline)
 		{
-		char* newline_where = strchr(TokenList.back()->data(),'\n');
+		char* newline_where = strchr(tmpTokenList.back()->data(),'\n');
 		while(newline_where)
 			{
-			const size_t offset = newline_where-TokenList.back()->data();
-			if (!TokenList.InsertNSlotsAt(1,TokenList.size()-1)) throw std::bad_alloc();
-			TokenList[TokenList.size()-2] = new Token<char>(*TokenList.back(),offset,0);
-			assert('\n'==TokenList.back()->data()[0]);
-			if (3<=TokenList.size()) clean_linesplice_whitespace(TokenList,TokenList.size()-3,lang);
-			TokenList.back()->ltrim(strspn(TokenList.back()->data(),"\n"));
-			if (TokenList.back()->empty())
+			const size_t offset = newline_where-tmpTokenList.back()->data();
+			tmpTokenList.insertNSlotsAt(1,tmpTokenList.size()-1);
+			tmpTokenList[tmpTokenList.size()-2] = new Token<char>(*tmpTokenList.back(),offset,0);
+			assert('\n'==tmpTokenList.back()->data()[0]);
+			if (3<=tmpTokenList.size()) clean_linesplice_whitespace(tmpTokenList,tmpTokenList.size()-3,lang);
+			tmpTokenList.back()->ltrim(strspn(tmpTokenList.back()->data(),"\n"));
+			if (tmpTokenList.back()->empty())
 				{
-				TokenList.DeleteIdx(TokenList.size()-1);
+				tmpTokenList.DeleteIdx(tmpTokenList.size()-1);
 				break;
 				}
-			newline_where = strchr(TokenList.back()->data(),'\n');
+			newline_where = strchr(tmpTokenList.back()->data(),'\n');
 			}
 
 		// final cleanup: works for line-continue languages that consider pure whitespace lines meaningless
-		if (2<=TokenList.size()) clean_linesplice_whitespace(TokenList,TokenList.size()-2,lang);
-		if (!TokenList.empty()) clean_whitespace(TokenList,TokenList.size()-1,lang);
+		if (2<=tmpTokenList.size()) clean_linesplice_whitespace(tmpTokenList,tmpTokenList.size()-2,lang);
+		if (!tmpTokenList.empty()) clean_whitespace(tmpTokenList,tmpTokenList.size()-1,lang);
 		}
 
 	// if the language approves, flush leading whitespace
 	// do not trim trailing whitespace at this time: this breaks error reporting for incomplete C [wide/narrow] character/string literals
 	//! \todo work out how to handle tab stops cleanly
 	{
-	size_t i = TokenList.size();
+	size_t i = tmpTokenList.size();
 	while(0<i)
 		{
-		assert(NULL!=TokenList[i-1]);
-		size_t LeadingWS = strspn(TokenList[--i]->data(),lang.WhiteSpace+1);
-		TokenList[i]->ltrim(LeadingWS);
-		assert(!TokenList[i]->empty());
+		assert(tmpTokenList[i-1]);
+		size_t LeadingWS = strspn(tmpTokenList[--i]->data(),lang.WhiteSpace+1);
+		tmpTokenList[i]->ltrim(LeadingWS);
+		assert(!tmpTokenList[i]->empty());
 		}
 	}
 
 	// correct parent_dir
-	if (!TokenList.empty())
+	if (!tmpTokenList.empty())
 		{
 		char workspace[FILENAME_MAX];
 		z_realpath(workspace,filename);
-		size_t j = TokenList.size();
-		do	TokenList[--j]->parent_dir = register_string(workspace);
+		size_t j = tmpTokenList.size();
+		do	tmpTokenList[--j]->parent_dir = register_string(workspace);
 		while(0<j);
 		};
-
+	swap(tmpTokenList,TokenList);
+	}
+	
 #ifndef NDEBUG
 	// post-condition testing
 	{
@@ -146,8 +156,9 @@ load_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const fi
 }
 
 //! \throw std::bad_alloc
-bool load_raw_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList, const char* const filename)
+bool load_raw_sourcefile(autovalarray_ptr<Token<char>* >& TokenList, const char* const filename)
 {
+	autovalarray_ptr<Token<char>* > tmpTokenList(1);
 	char* Buffer = NULL;
 #ifndef ZAIMONI_FORCE_ISO
 #	define Buffer_size ArraySize(Buffer)
@@ -173,35 +184,35 @@ bool load_raw_sourcefile(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& Toke
 #else
 	TrimMandatoryTerminalNewline(Buffer,Buffer_size,filename);
 #endif
-	
-	SUCCEED_OR_DIE(TokenList.InsertNSlotsAt(1,0));
+
+	try	{
 #ifndef ZAIMONI_FORCE_ISO
-	TokenList[0] = new(std::nothrow) Token<char>(Buffer,filename);
+		tmpTokenList[0] = new Token<char>(Buffer,filename);
 #else
-	TokenList[0] = new(std::nothrow) Token<char>(Buffer,Buffer_size,filename);
-	Buffer_size = 0;
+		tmpTokenList[0] = new Token<char>(Buffer,Buffer_size,filename);
+//		Buffer_size = 0;	// dead code
 #endif
-	if (NULL==TokenList[0])
+		}
+	catch(...)
 		{
 		free(Buffer);
-		TokenList.clear();
-		return false;
-		}
+		throw;
+		};
 
-	char* newline_where = strchr(TokenList.back()->data(),'\n');
+	char* newline_where = strchr(tmpTokenList.back()->data(),'\n');
 	while(newline_where)
 		{
-		const size_t offset = newline_where-TokenList.back()->data();
-		if (!TokenList.InsertNSlotsAt(1,TokenList.size()-1)) throw std::bad_alloc();
-		TokenList[TokenList.size()-2] = new Token<char>(*TokenList.back(),offset,0);
-		assert('\n'==TokenList.back()->data()[0]);
-		TokenList.back()->ltrim(strspn(TokenList.back()->data(),"\n"));
-		if (TokenList.back()->empty())
+		const size_t offset = newline_where-tmpTokenList.back()->data();
+		tmpTokenList.insertNSlotsAt(1,tmpTokenList.size()-1);
+		tmpTokenList[tmpTokenList.size()-2] = new Token<char>(*tmpTokenList.back(),offset,0);
+		assert('\n'==tmpTokenList.back()->data()[0]);
+		tmpTokenList.back()->ltrim(strspn(tmpTokenList.back()->data(),"\n"));
+		if (tmpTokenList.back()->empty())
 			{
-			TokenList.DeleteIdx(TokenList.size()-1);
+			tmpTokenList.DeleteIdx(tmpTokenList.size()-1);
 			break;
 			}
-		newline_where = strchr(TokenList.back()->data(),'\n');
+		newline_where = strchr(tmpTokenList.back()->data(),'\n');
 		}
-	return true;
+	return swap(tmpTokenList,TokenList),true;
 }

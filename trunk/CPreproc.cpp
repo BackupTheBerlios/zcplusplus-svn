@@ -1,5 +1,5 @@
 // CPreproc.cpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #/*cut-cpp*/
 #include "CPreproc.hpp"
@@ -1181,10 +1181,9 @@ ObjectLikeMacroEmptyString:
 								continue;
 								};
 							const size_t object_macro_insertion_index = BINARY_SEARCH_DECODE_INSERTION_POINT(object_macro_index);
-							if (   !macros_object.InsertNSlotsAt(1,object_macro_insertion_index)
-								|| !macros_object_expansion.InsertNSlotsAt(1,object_macro_insertion_index)
-								|| !macros_object_expansion_pre_eval.InsertNSlotsAt(1,object_macro_insertion_index))
-								throw std::bad_alloc();
+							macros_object.insertNSlotsAt(1,object_macro_insertion_index);
+							macros_object_expansion.insertNSlotsAt(1,object_macro_insertion_index);
+							macros_object_expansion_pre_eval.insertNSlotsAt(1,object_macro_insertion_index);
 							macros_object[object_macro_insertion_index] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
 							strncpy(macros_object[object_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
 							ZAIMONI_NULL_TERMINATE(macros_object[object_macro_insertion_index][first_token_len]);
@@ -1231,10 +1230,9 @@ ObjectLikeMacroEmptyString:
 
 							// DO NOT check for context free errors here; could legitimately want to deep-stringize every invocation of the macro
 							const size_t object_macro_insertion_index = BINARY_SEARCH_DECODE_INSERTION_POINT(object_macro_index);
-							if (   !macros_object.InsertNSlotsAt(1,object_macro_insertion_index)
-								|| !macros_object_expansion.InsertNSlotsAt(1,object_macro_insertion_index)
-								|| !macros_object_expansion_pre_eval.InsertNSlotsAt(1,object_macro_insertion_index))
-								throw std::bad_alloc();
+							macros_object.insertNSlotsAt(1,object_macro_insertion_index);
+							macros_object_expansion.insertNSlotsAt(1,object_macro_insertion_index);
+							macros_object_expansion_pre_eval.insertNSlotsAt(1,object_macro_insertion_index);
 							macros_object[object_macro_insertion_index] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
 
 							strncpy(macros_object[object_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
@@ -1308,11 +1306,10 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 									continue;
 									}
 								const size_t function_macro_insertion_index = BINARY_SEARCH_DECODE_INSERTION_POINT(function_macro_index);
-								if (   !macros_function.InsertNSlotsAt(1,function_macro_insertion_index)
-									|| !macros_function_arglist.InsertNSlotsAt(1,function_macro_insertion_index)
-									|| !macros_function_expansion.InsertNSlotsAt(1,function_macro_insertion_index)
-									|| !macros_function_expansion_pre_eval.InsertNSlotsAt(1,function_macro_insertion_index))
-									throw std::bad_alloc();
+								macros_function.insertNSlotsAt(1,function_macro_insertion_index);
+								macros_function_arglist.insertNSlotsAt(1,function_macro_insertion_index);
+								macros_function_expansion.insertNSlotsAt(1,function_macro_insertion_index);
+								macros_function_expansion_pre_eval.insertNSlotsAt(1,function_macro_insertion_index);
 								macros_function[function_macro_insertion_index] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
 
 								strncpy(macros_function[function_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
@@ -1354,11 +1351,10 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 
 							// DO NOT check for context free errors here; could legitimately want to deep-stringize every invocation of the macro
 							const size_t function_macro_insertion_index = BINARY_SEARCH_DECODE_INSERTION_POINT(function_macro_index);
-							if (   !macros_function.InsertNSlotsAt(1,function_macro_insertion_index)
-								|| !macros_function_arglist.InsertNSlotsAt(1,function_macro_insertion_index)
-								|| !macros_function_expansion.InsertNSlotsAt(1,function_macro_insertion_index)
-								|| !macros_function_expansion_pre_eval.InsertNSlotsAt(1,function_macro_insertion_index))
-								throw std::bad_alloc();
+							macros_function.insertNSlotsAt(1,function_macro_insertion_index);
+							macros_function_arglist.insertNSlotsAt(1,function_macro_insertion_index);
+							macros_function_expansion.insertNSlotsAt(1,function_macro_insertion_index);
+							macros_function_expansion_pre_eval.insertNSlotsAt(1,function_macro_insertion_index);
 							macros_function[function_macro_insertion_index] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
 
 							strncpy(macros_function[function_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
@@ -1981,9 +1977,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					const size_t include_file_index_target = BINARY_SEARCH_DECODE_INSERTION_POINT(have_file_index);
 					const errr cache_index = binary_find(main_index_name,strlen(main_index_name),include_file_cache);
 					const size_t include_file_cache_target = BINARY_SEARCH_DECODE_INSERTION_POINT(cache_index);
-					if (   !include_file_index.InsertNSlotsAt(1,include_file_index_target)
-						|| !include_file_cache.InsertNSlotsAt(1,include_file_cache_target))
-						throw std::bad_alloc();
+					include_file_index.insertNSlotsAt(1,include_file_index_target);
+					include_file_cache.insertNSlotsAt(1,include_file_cache_target);
 					include_file_cache[include_file_cache_target].second = new autovalarray_ptr<Token<char>* >(IncludeTokenList);
 					include_file_cache[include_file_cache_target].first = main_index_name;
 					include_file_index[include_file_index_target].first = main_index_name;
@@ -2055,9 +2050,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					const size_t include_file_index_target = BINARY_SEARCH_DECODE_INSERTION_POINT(tmp);
 					tmp = binary_find(main_index_name,strlen(main_index_name),include_file_cache);
 					const size_t include_file_cache_target = BINARY_SEARCH_DECODE_INSERTION_POINT(tmp);
-					if (   !include_file_index.InsertNSlotsAt(1,include_file_index_target)
-						|| !include_file_cache.InsertNSlotsAt(1,include_file_cache_target))
-						throw std::bad_alloc();
+					include_file_index.insertNSlotsAt(1,include_file_index_target);
+					include_file_cache.insertNSlotsAt(1,include_file_cache_target);
 					include_file_cache[include_file_cache_target].second = new autovalarray_ptr<Token<char>* >(IncludeTokenList);
 					include_file_cache[include_file_cache_target].first = main_index_name;
 					include_file_index[include_file_index_target].first = look_for;
@@ -2069,8 +2063,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					// set up include_file_index
 					tmp = binary_find(look_for,filename_len,include_file_index);
 					const size_t include_file_index_target = BINARY_SEARCH_DECODE_INSERTION_POINT(tmp);
-					if (!include_file_index.InsertNSlotsAt(1,include_file_index_target))
-						throw std::bad_alloc();
+					include_file_index.insertNSlotsAt(1,include_file_index_target);
 					include_file_index[include_file_index_target].first = look_for;
 					include_file_index[include_file_index_target].second = NULL;
 					include_file_index[include_file_index_target].third = CPP_INCLUDE_NOT_FOUND;
@@ -2100,7 +2093,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 			if (!IncludeTokenList.empty())
 				{
 				size_t j = IncludeTokenList.size();
-				if (!TokenList.InsertNSlotsAt(j,include_where+1)) throw std::bad_alloc();
+				TokenList.insertNSlotsAt(j,include_where+1);
 				memmove(TokenList.c_array()+include_where+1,IncludeTokenList.data(),j*sizeof(Token<char*>*));
 #ifdef ZAIMONI_NULL_REALLY_IS_ZERO
 				memset(IncludeTokenList.c_array(),0,j*sizeof(Token<char*>*));
@@ -2320,7 +2313,7 @@ CPreprocessor::tokenize_line(autovalarray_ptr<Token<char>* >& TokenList, size_t 
 	else{
 		size_t lb = 0;
 		autovalarray_ptr_throws<Token<char>* > TokenListAlt(ub+1);
-		if (!TokenList.InsertNSlotsAt(ub,i+1)) throw std::bad_alloc();
+		TokenList.insertNSlotsAt(ub,i+1);
 		{
 		const Token<char>& tmp = *TokenList[i];
 		while(lb<ub)
@@ -3541,7 +3534,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 			intradirective_preprocess(Test,0,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion,&macro_stack);
 			}
 		else{
-			if (!used_macro_stack->InsertNSlotsAt(1,used_macro_stack->size())) throw std::bad_alloc();
+			used_macro_stack->insertNSlotsAt(1,used_macro_stack->size());
 			used_macro_stack->back() = _new_buffer_nonNULL_throws<char>(token_len);
 			memmove(used_macro_stack->back(),x.data()+critical_offset,token_len);
 			intradirective_preprocess(Test,0,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion,used_macro_stack);
@@ -3641,7 +3634,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 			dynamic_function_macro_prereplace_once(macros_object, macros_object_expansion, macros_function, macros_function_arglist, macros_function_expansion, &macro_stack, formal_arguments, actual_arguments, Test);
 			}
 		else{
-			if (!used_macro_stack->InsertNSlotsAt(1,used_macro_stack->size())) throw std::bad_alloc();
+			used_macro_stack->insertNSlotsAt(1,used_macro_stack->size());
 			used_macro_stack->back() = _new_buffer_nonNULL_throws<char>(token_len);
 			memmove(used_macro_stack->back(),x.data()+critical_offset,token_len);
 

@@ -276,6 +276,7 @@ static const zaimoni::POD_pair<const char*,size_t> stdint_h_core[]
 #define STDINT_CPP_LEAST_FAST_INJECT_LINE 61
 
 // inject preprocessor block of preexisting definitions
+//! \throw std::bad_alloc
 static void
 disallow_prior_definitions(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,size_t i,const char* const * identifiers,size_t identifiers_len)
 {
@@ -289,7 +290,7 @@ disallow_prior_definitions(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& To
 #undef __bool_true_false_are_defined
 #endif
 */
-	if (!TokenList.InsertNSlotsAt(4*identifiers_len,i)) throw std::bad_alloc();
+	TokenList.insertNSlotsAt(4*identifiers_len,i);
 	while(0<identifiers_len)
 		{
 		assert(*identifiers && **identifiers);
@@ -297,48 +298,33 @@ disallow_prior_definitions(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& To
 		tmp[i+3] = new zaimoni::Token<char>("#endif",0,sizeof("#endif")-1,0);
 
 		const size_t identifier_len = strlen(*identifiers);
-		char* tmp2 = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(sizeof("#ifdef ")-1+identifier_len));
+		zaimoni::autovalarray_ptr_throws<char> tmp2(ZAIMONI_LEN_WITH_NULL(sizeof("#ifdef ")-1+identifier_len));
 		strcpy(tmp2,"#ifdef ");
 		strcpy(tmp2+sizeof("#ifdef ")-1,*identifiers);
 #ifndef ZAIMONI_FORCE_ISO
-		tmp[i] = new(std::nothrow) zaimoni::Token<char>(tmp2,NULL);
+		tmp[i] = new zaimoni::Token<char>(tmp2,NULL);
 #else
-		tmp[i] = new(std::nothrow) zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#ifdef ")-1+identifier_len),NULL);
+		tmp[i] = new zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#ifdef ")-1+identifier_len),NULL);
 #endif
-		if (NULL==tmp[i])
-			{
-			free(tmp2);
-			throw std::bad_alloc();
-			}
 
-		tmp2 = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(sizeof("#undef ")-1+identifier_len));
+		tmp2.resize(ZAIMONI_LEN_WITH_NULL(sizeof("#undef ")-1+identifier_len));
 		strcpy(tmp2,"#undef ");
 		strcpy(tmp2+sizeof("#undef ")-1,*identifiers);
 #ifndef ZAIMONI_FORCE_ISO
-		tmp[i+2] = new(std::nothrow) zaimoni::Token<char>(tmp2,NULL);
+		tmp[i+2] = new zaimoni::Token<char>(tmp2,NULL);
 #else
-		tmp[i+2] = new(std::nothrow) zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#undef ")-1+identifier_len),NULL);
+		tmp[i+2] = new zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#undef ")-1+identifier_len),NULL);
 #endif
-		if (NULL==tmp[i+2])
-			{
-			free(tmp2);
-			throw std::bad_alloc();
-			}
 
-		tmp2 = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(sizeof("#error Undefined Behavior: reserved identifier '")-1+identifier_len+sizeof("' defined as macro")-1));
+		tmp2.resize(ZAIMONI_LEN_WITH_NULL(sizeof("#error Undefined Behavior: reserved identifier '")-1+identifier_len+sizeof("' defined as macro")-1));
 		strcpy(tmp2,"#error Undefined Behavior: reserved identifier '");
 		strcpy(tmp2+sizeof("#error Undefined Behavior: reserved identifier '")-1,*identifiers);
 		strcpy(tmp2+sizeof("#error Undefined Behavior: reserved identifier '")-1+identifier_len,"' defined as macro");
 #ifndef ZAIMONI_FORCE_ISO
-		tmp[i+1] = new(std::nothrow) zaimoni::Token<char>(tmp2,NULL);
+		tmp[i+1] = new zaimoni::Token<char>(tmp2,NULL);
 #else
-		tmp[i+1] = new(std::nothrow) zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#error Undefined Behavior: reserved identifier '")-1+identifier_len+sizeof("' defined as macro")-1),NULL);
+		tmp[i+1] = new zaimoni::Token<char>(tmp2,ZAIMONI_LEN_WITH_NULL(sizeof("#error Undefined Behavior: reserved identifier '")-1+identifier_len+sizeof("' defined as macro")-1),NULL);
 #endif
-		if (NULL==tmp[i+1])
-			{
-			free(tmp2);
-			throw std::bad_alloc();
-			}
 
 		i += 4;
 		--identifiers_len;
@@ -347,6 +333,7 @@ disallow_prior_definitions(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& To
 }
 
 // inject preprocessor lockdown for a reserved identifier
+//! \throw std::bad_alloc
 static void
 lockdown_reserved_identifiers(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const size_t i,const char* const * identifiers,size_t identifiers_len)
 {
@@ -360,8 +347,9 @@ lockdown_reserved_identifiers(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >&
 		target_len += strlen(identifiers[j])+1;
 		}
 	while(identifiers_len> ++j);
-	char* tmp = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(target_len));
-	char* tmp2 = tmp;
+	zaimoni::autovalarray_ptr_throws<char> tmp(ZAIMONI_LEN_WITH_NULL(target_len));
+	{
+	char* tmp2 = tmp.c_array();
 	strcpy(tmp2,"#pragma ZCC lock");
 	tmp2 += sizeof("#pragma ZCC lock")-1;
 	while(0<identifiers_len)
@@ -372,16 +360,12 @@ lockdown_reserved_identifiers(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >&
 		++identifiers;
 		--identifiers_len;
 		};
+	}
 #ifndef ZAIMONI_FORCE_ISO
-	zaimoni::Token<char>* relay = new(std::nothrow) zaimoni::Token<char>(tmp,NULL);
+	zaimoni::Token<char>* relay = new zaimoni::Token<char>(tmp,NULL);
 #else
-	zaimoni::Token<char>* relay = new(std::nothrow) zaimoni::Token<char>(tmp,ZAIMONI_LEN_WITH_NULL(target_len),NULL);
+	zaimoni::Token<char>* relay = new zaimoni::Token<char>(tmp,ZAIMONI_LEN_WITH_NULL(target_len),NULL);
 #endif
-	if (NULL==relay)
-		{
-		free(tmp);
-		throw std::bad_alloc();
-		};
 	if (!TokenList.InsertSlotAt(i,relay))
 		{
 		delete relay;
@@ -411,6 +395,7 @@ static void final_init_tokenlist(zaimoni::Token<char>* const * x, size_t x_len, 
  * \param TokenList : where to improvise to
  * \param header_name : what header we were requesting.
  */
+//! \throw std::bad_alloc
 void
 CPreprocessor::create_limits_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const
 {
@@ -595,6 +580,7 @@ static const char* NULL_constant_from_machine(const virtual_machine::std_int_enu
  * \param TokenList : where to improvise to
  * \param header_name : what header we were requesting.
  */
+//! \throw std::bad_alloc
 void
 CPreprocessor::create_stddef_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const
 {
@@ -679,6 +665,7 @@ static void memset_strcpy(char* dest,const char* src,size_t buf_size)
  * \param TokenList : where to improvise to
  * \param header_name : what header we were requesting.
  */
+//! \throw std::bad_alloc
 void
 CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const char* const header_name) const
 {
@@ -1186,7 +1173,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	const unsigned short bitspan_types = type_bits[virtual_machine::std_int_long_long-1]-7;
 	assert(USHRT_MAX/13>=bitspan_types);
 	i = 4*bitspan_types;
-	TmpTokenList.InsertNSlotsAt(i,inject_CPP_index);
+	TmpTokenList.insertNSlotsAt(i,inject_CPP_index);
 	tmp = TmpTokenList.c_array()+inject_CPP_index;
 	do	{
 		const int target_bits = --i/4+8;
@@ -1229,7 +1216,7 @@ CPreprocessor::create_stdint_header(zaimoni::autovalarray_ptr<zaimoni::Token<cha
 	zaimoni::autovalarray_ptr_throws<char> define_buf(sizeof("#define UINT_LEAST_MAX")+2+VM_MAX_BIT_PLATFORM/3+5);
 	strcpy(define_buf,"#define ");
 	i = 13*bitspan_types;
-	TmpTokenList.InsertNSlotsAt(i,inject_C_index);
+	TmpTokenList.insertNSlotsAt(i,inject_C_index);
 	tmp = TmpTokenList.c_array()+inject_C_index;
 	do	{
 		const int target_bits = --i/13+8;
