@@ -1567,245 +1567,235 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					else_where = i+1;
 				}
 			}
-		else{	// non-directive; lex, and check for macros and _Pragma operators
-				// remember to convert whitespace to single-space tokens, and flush those later
-				// we do not error illegal preprocessing tokens here; that's handled in ZParser
-			if (0==include_where && 0==restart_full_scan)
+		// non-directive; lex, and check for macros and _Pragma operators
+		// remember to convert whitespace to single-space tokens, and flush those later
+		else if (0==include_where && 0==restart_full_scan)
+			{
+			if (!tokenize_line(TokenList,i))
 				{
-				if (!tokenize_line(TokenList,i))
-					{
+				if (0==i) goto Restart;
+				--i;
+				continue;
+				};
+			if (C_TESTFLAG_PP_OP_PUNC & TokenList[i]->flags)
+				{	// check for categorically illegal tokens
+				const signed int old_pp_code = C_PP_DECODE(TokenList[i]->flags);
+				const signed int pp_code = (old_pp_code) ? old_pp_code : lang.pp_support->EncodePPOpPunc(TokenList[i]->data(),TokenList[i]->size());
+				assert(0<pp_code);
+				if (C_DISALLOW_POSTPROCESSED_SOURCE & lang.pp_support->GetPPOpPuncFlags(pp_code))
+					{	//! \todo need test cases
+						// actually, this might need to be language-sensitive (e.g., Perl)
+					message_header(*TokenList[i]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("Forbidden token '");
+					INC_INFORM(TokenList[i]->data(),TokenList[i]->size());
+					INFORM("' in postprocessed source.  Discarding.");
+					zcc_errors.inc_error();
+					TokenList.DeleteIdx(i);
 					if (0==i) goto Restart;
-					if (restart_full_scan>=i+1) restart_full_scan = 0;	// very possible
-					if (include_where>=i+1) include_where = 0;			// failsafing
 					--i;
 					continue;
-					};
-				if (C_TESTFLAG_PP_OP_PUNC & TokenList[i]->flags)
-					{	// check for categorically illegal tokens
-					const signed int old_pp_code = C_PP_DECODE(TokenList[i]->flags);
-					const signed int pp_code = (old_pp_code) ? old_pp_code : lang.pp_support->EncodePPOpPunc(TokenList[i]->data(),TokenList[i]->size());
-					assert(0<pp_code);
-					if (C_DISALLOW_POSTPROCESSED_SOURCE & lang.pp_support->GetPPOpPuncFlags(pp_code))
-						{	//! \todo need test cases
-							// actually, this might need to be language-sensitive (e.g., Perl)
-						message_header(*TokenList[i]);
+					}
+				C_PP_ENCODE(TokenList[i]->flags,pp_code);
+				}
+			else if (C_TESTFLAG_IDENTIFIER==TokenList[i]->flags)
+				{
+				if (!strcmp(TokenList[i]->data(),"_Pragma"))
+					{	// could be pragma operator; syntax _Pragma ( C-string )
+					while(TokenList.size()>i+1 && !tokenize_line(TokenList,i+1));
+					if (        TokenList.size()<=i+1
+						||   1!=TokenList[i+1]->size()
+						|| '('!=TokenList[i+1]->front())
+						{	//! \test cpp/Pragma.C99/Error_op1.hpp, cpp/Pragma.C99/Error_op1.h
+							//! \test cpp/Pragma.C99/Error_op2.hpp, cpp/Pragma.C99/Error_op2.h
+						message_header2(*TokenList[i],TokenList[i]->logical_line.second);
 						INC_INFORM(ERR_STR);
-						INC_INFORM("Forbidden token '");
-						INC_INFORM(TokenList[i]->data(),TokenList[i]->size());
-						INFORM("' in postprocessed source.  Discarding.");
+						INFORM("Invalid _Pragma operator.  Discarding. (C99 6.10.9p1/C++0x 16.9)");
 						zcc_errors.inc_error();
 						TokenList.DeleteIdx(i);
 						if (0==i) goto Restart;
 						--i;
 						continue;
-						}
-					C_PP_ENCODE(TokenList[i]->flags,pp_code);
+						};
+					while(TokenList.size()>i+2 && !tokenize_line(TokenList,i+2));
+					if (   TokenList.size()<=i+2
+						|| C_TESTFLAG_STRING_LITERAL!=TokenList[i+2]->flags)
+						{	//! \test cpp/Pragma.C99/Error_op3.hpp, cpp/Pragma.C99/Error_op3.h
+							//! \test cpp/Pragma.C99/Error_op4.hpp, cpp/Pragma.C99/Error_op4.h
+						message_header2(*TokenList[i],TokenList[i]->logical_line.second);
+						INC_INFORM(ERR_STR);
+						INFORM("Invalid _Pragma operator.  Discarding. (C99 6.10.9p1/C++0x 16.9)");
+						zcc_errors.inc_error();
+						TokenList.DeleteNSlotsAt(2,i);
+						if (0==i) goto Restart;
+						--i;
+						continue;
+						};
+					while(TokenList.size()>i+3 && !tokenize_line(TokenList,i+3));
+					if (        TokenList.size()<=i+3
+						||   1!=TokenList[i+3]->size()
+						|| ')'!=TokenList[i+3]->front())
+						{	//! \test cpp/Pragma.C99/Error_op5.hpp, cpp/Pragma.C99/Error_op5.h
+							//! \test cpp/Pragma.C99/Error_op6.hpp, cpp/Pragma.C99/Error_op6.h
+						message_header2(*TokenList[i],TokenList[i]->logical_line.second);
+						INC_INFORM(ERR_STR);
+						INFORM("Invalid _Pragma operator.  Discarding. (C99 6.10.9p1/C++0x 16.9)");
+						zcc_errors.inc_error();
+						TokenList.DeleteNSlotsAt(3,i);
+						if (0==i) goto Restart;
+						--i;
+						continue;
+						};
+					if ('L'==TokenList[i+2]->front())
+						TokenList[i+2]->ltrim(1);
+					if (2<TokenList[i+2]->size())
+						{	//! \test Pass_pragma_STDC.hpp
+						autovalarray_ptr_throws<char> pragma_string(lang.UnescapeStringLength(TokenList[i+2]->data()+1,TokenList[i+2]->size()-2));
+						lang.UnescapeString(pragma_string.c_array(),TokenList[i+2]->data()+1,TokenList[i+2]->size()-2);
+						interpret_pragma(pragma_string.data(),pragma_string.size(),locked_macros);
+						};
+					TokenList.DeleteNSlotsAt(4,i);						//! \todo fix once we have code-generation affecting pragmas
+					if (0==i) goto Restart;
+					--i;
+					continue;
 					}
-				else if (C_TESTFLAG_IDENTIFIER==TokenList[i]->flags)
-					{
-					if (!strcmp(TokenList[i]->data(),"_Pragma"))
-						{	// could be pragma operator; syntax _Pragma ( C-string )
-						while(TokenList.size()>i+1 && !tokenize_line(TokenList,i+1));
-						if (        TokenList.size()<=i+1
-							||   1!=TokenList[i+1]->size()
-							|| '('!=TokenList[i+1]->front())
-							{	//! \test cpp/Pragma.C99/Error_op1.hpp, cpp/Pragma.C99/Error_op1.h
-								//! \test cpp/Pragma.C99/Error_op2.hpp, cpp/Pragma.C99/Error_op2.h
-							message_header2(*TokenList[i],TokenList[i]->logical_line.second);
-							INC_INFORM(ERR_STR);
-							INFORM("Invalid _Pragma operator.  Discarding. (C99 6.10.9p1/C++0x 16.9)");
-							zcc_errors.inc_error();
-							TokenList.DeleteIdx(i);
-							if (0==i) goto Restart;
-							--i;
-							continue;
-							};
-						while(TokenList.size()>i+2 && !tokenize_line(TokenList,i+2));
-						if (   TokenList.size()<=i+2
-							|| C_TESTFLAG_STRING_LITERAL!=TokenList[i+2]->flags)
-							{	//! \test cpp/Pragma.C99/Error_op3.hpp, cpp/Pragma.C99/Error_op3.h
-								//! \test cpp/Pragma.C99/Error_op4.hpp, cpp/Pragma.C99/Error_op4.h
-							message_header2(*TokenList[i],TokenList[i]->logical_line.second);
-							INC_INFORM(ERR_STR);
-							INFORM("Invalid _Pragma operator.  Discarding. (C99 6.10.9p1/C++0x 16.9)");
-							zcc_errors.inc_error();
-							TokenList.DeleteNSlotsAt(2,i);
-							if (0==i) goto Restart;
-							--i;
-							continue;
-							};
-						while(TokenList.size()>i+3 && !tokenize_line(TokenList,i+3));
-						if (        TokenList.size()<=i+3
-							||   1!=TokenList[i+3]->size()
-							|| ')'!=TokenList[i+3]->front())
-							{	//! \test cpp/Pragma.C99/Error_op5.hpp, cpp/Pragma.C99/Error_op5.h
-								//! \test cpp/Pragma.C99/Error_op6.hpp, cpp/Pragma.C99/Error_op6.h
-							message_header2(*TokenList[i],TokenList[i]->logical_line.second);
-							INC_INFORM(ERR_STR);
-							INFORM("Invalid _Pragma operator.  Discarding. (C99 6.10.9p1/C++0x 16.9)");
-							zcc_errors.inc_error();
-							TokenList.DeleteNSlotsAt(3,i);
-							if (0==i) goto Restart;
-							--i;
-							continue;
-							};
-						if ('L'==TokenList[i+2]->front())
-							TokenList[i+2]->ltrim(1);
-						if (2<TokenList[i+2]->size())
-							{	//! \test Pass_pragma_STDC.hpp
-							autovalarray_ptr_throws<char> pragma_string(lang.UnescapeStringLength(TokenList[i+2]->data()+1,TokenList[i+2]->size()-2));
-							lang.UnescapeString(pragma_string.c_array(),TokenList[i+2]->data()+1,TokenList[i+2]->size()-2);
-							interpret_pragma(pragma_string.data(),pragma_string.size(),locked_macros);
-							};
-						TokenList.DeleteNSlotsAt(4,i);						//! \todo fix once we have code-generation affecting pragmas
+
+				const errr object_macro_index = binary_find(TokenList[i]->data(),TokenList[i]->size(),macros_object);
+				const errr function_macro_index = binary_find(TokenList[i]->data(),TokenList[i]->size(),macros_function);
+				assert(0>object_macro_index || 0>function_macro_index);
+				if (0<=object_macro_index)
+					{	// object-like macro
+					if (!macros_object_expansion_pre_eval[object_macro_index])
+						{	// expands to nothing
+							//! \test cpp/default/Preprocess_empty_macros.hpp, cpp/default/Preprocess_empty_macros.h
+						TokenList.DeleteIdx(i);
 						if (0==i) goto Restart;
 						--i;
 						continue;
 						}
-
-					const errr object_macro_index = binary_find(TokenList[i]->data(),TokenList[i]->size(),macros_object);
-					const errr function_macro_index = binary_find(TokenList[i]->data(),TokenList[i]->size(),macros_function);
-					assert(0>object_macro_index || 0>function_macro_index);
-					if (0<=object_macro_index)
-						{	// object-like macro
-						if (NULL==macros_object_expansion_pre_eval[object_macro_index])
-							{	// expands to nothing
-								//! \test cpp/default/Preprocess_empty_macros.hpp, cpp/default/Preprocess_empty_macros.h
-							TokenList.DeleteIdx(i);
-							if (0==i) goto Restart;
-							--i;
-							continue;
-							}
-						assert(!macros_object_expansion_pre_eval[object_macro_index]->empty());
-						{	//! \test cpp/default/Preprocess_*.h/hpp
-						size_t discard = 0;
-						dynamic_macro_replace_once(*TokenList[i],discard,TokenList[i]->size(),macros_object,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion_pre_eval,NULL);
-						}
-						size_t actual_tokens = tokenize_line(TokenList,i);
-						assert(0<actual_tokens);
-						i += actual_tokens-1;
-						}
-					else if (0<=function_macro_index)
-						{	// could be function-like macro
-						if (	TokenList.size()>i+1 && TokenList[i]->logical_line.first==TokenList[i+1]->logical_line.first
-							&& 	TokenList[i]->logical_line.second+TokenList[i]->size()==TokenList[i+1]->logical_line.second
-							&&	'('==TokenList[i+1]->front())
-							{
-							size_t paren_depth = 1;
-							size_t comma_count = 0;
-							size_t j = i+1;
-							do	{
-								if (TokenList.size()<=j+1)
-									{	//! \test cpp/Error_macro_arglist4.hpp
-										// error out, incomplete function-like macro
+					assert(!macros_object_expansion_pre_eval[object_macro_index]->empty());
+					{	//! \test cpp/default/Preprocess_*.h/hpp
+					size_t discard = 0;
+					dynamic_macro_replace_once(*TokenList[i],discard,TokenList[i]->size(),macros_object,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion_pre_eval,NULL);
+					}
+					size_t actual_tokens = tokenize_line(TokenList,i);
+					assert(0<actual_tokens);
+					i += actual_tokens-1;
+					}
+				else if (0<=function_macro_index)
+					{	// could be function-like macro
+					if (	TokenList.size()>i+1 && TokenList[i]->logical_line.first==TokenList[i+1]->logical_line.first
+						&& 	TokenList[i]->logical_line.second+TokenList[i]->size()==TokenList[i+1]->logical_line.second
+						&&	'('==TokenList[i+1]->front())
+						{
+						size_t paren_depth = 1;
+						size_t comma_count = 0;
+						size_t j = i+1;
+						do	{
+							if (TokenList.size()<=j+1)
+								{	//! \test cpp/Error_macro_arglist4.hpp
+									// error out, incomplete function-like macro
+								message_header2(*TokenList[i],TokenList[i]->logical_line.second);
+								INC_INFORM(ERR_STR);
+								INC_INFORM("macro ");
+								INC_INFORM(TokenList[i]->data(),TokenList[i]->size());
+								INFORM(" did not close its argument list in time. (C99 6.10p1/C++98 16.1p1)");
+								zcc_errors.inc_error();
+								i = j;
+								break;
+								}
+							if (TokenList[j]->logical_line.first<TokenList[j+1]->logical_line.first)
+								{	// line advance; check for pp-directives (undefined behavior), then tokenize
+								if (line_is_preprocessing_directive(*TokenList[j+1]))
+									{	//! \test cpp/Error_macro_arglist7.hpp
+										// error out, undefined behavior
 									message_header2(*TokenList[i],TokenList[i]->logical_line.second);
 									INC_INFORM(ERR_STR);
-									INC_INFORM("macro ");
-									INC_INFORM(TokenList[i]->data(),TokenList[i]->size());
-									INFORM(" did not close its argument list in time. (C99 6.10p1/C++98 16.1p1)");
+									INFORM("macro invocation contains preprocessing directive.  Defining undefined behavior as ignoring macro invocation. (C99 6.10.3p11/C++98 16.3p10)");
 									zcc_errors.inc_error();
 									i = j;
 									break;
 									}
-								if (TokenList[j]->logical_line.first<TokenList[j+1]->logical_line.first)
-									{	// line advance; check for pp-directives (undefined behavior), then tokenize
-									if (line_is_preprocessing_directive(*TokenList[j+1]))
-										{	//! \test cpp/Error_macro_arglist7.hpp
-											// error out, undefined behavior
-										message_header2(*TokenList[i],TokenList[i]->logical_line.second);
-										INC_INFORM(ERR_STR);
-										INFORM("macro invocation contains preprocessing directive.  Defining undefined behavior as ignoring macro invocation. (C99 6.10.3p11/C++98 16.3p10)");
-										zcc_errors.inc_error();
-										i = j;
-										break;
-										}
-									if (!tokenize_line(TokenList,j+1)) continue;
-									}
-								if (1==TokenList[++j]->size())
-									{
-									switch(TokenList[j]->front())
-									{
-									case '(':	{
-												++paren_depth;
-												break;
-												}
-									case ',':	{
-												++comma_count;
-												break;
-												}
-									case ')':	{
-												--paren_depth;
-												//	break;
-												}
-									};
-									}
+								if (!tokenize_line(TokenList,j+1)) continue;
 								}
-							while(0<paren_depth);
-							if (0==paren_depth)
+							if (1==TokenList[++j]->size())
+								switch(TokenList[j]->front())
 								{
-								assert(NULL!=macros_function_arglist[function_macro_index]);
-								assert('('==macros_function_arglist[function_macro_index]->front());
-								assert(')'==macros_function_arglist[function_macro_index]->back());
-								const size_t formal_arg_span = macros_function_arglist[function_macro_index]->size();
-								const size_t formal_arg_count = (2<formal_arg_span) ? std::count(macros_function_arglist[function_macro_index]->begin(),macros_function_arglist[function_macro_index]->end(),',')+1 : 0;
-								const bool formal_varadic = 5<=formal_arg_span && !strncmp(macros_function_arglist[function_macro_index]->data()+(formal_arg_span-4),"...",sizeof("...")-1);
-								const size_t arg_count = (i+2==j) ? 0 : comma_count+1;
-								if (arg_count<formal_arg_count || (arg_count>formal_arg_count && !formal_varadic))
-									{	//! \test cpp/Error_macro_arglist5.hpp
-										//! \test cpp/Error_macro_arglist6.hpp
-									message_header2(*TokenList[i],TokenList[i]->logical_line.second);
-									INC_INFORM(ERR_STR);
-									INC_INFORM("macro ");
-									INC_INFORM(TokenList[i]->data(),TokenList[i]->size());
-									INC_INFORM(" had ");
-									INC_INFORM(arg_count);
-									INC_INFORM(" argument");
-									INC_INFORM((1==arg_count) ? "" : "s");
-									INC_INFORM(", needed ");
-									if (formal_varadic) INC_INFORM("at least ");
-									INC_INFORM(formal_arg_count);
-									INFORM(". (C99 6.10p1/C++0x 16.1p1)");
-									zcc_errors.inc_error();
-									i = j;
-									continue;
-									}
-								if (NULL==macros_function_expansion_pre_eval[function_macro_index])
-									{	// expands to nothing
-										//! \test cpp/default/Preprocess_empty_macros.hpp, cpp/default/Preprocess_empty_macros.h
-									TokenList.DeleteNSlotsAt(j-i+1,i);
-									if (0==i) goto Restart;
-									--i;
-									continue;
-									}
-								assert(!macros_function_expansion_pre_eval[function_macro_index]->empty());
-								{	//! \test default/Preprocess_*.h/hpp 
-								Token<char>* Tmp = new Token<char>(*macros_function_expansion_pre_eval[function_macro_index]);
-								Tmp->logical_line = TokenList[i]->logical_line;
-								if (!nonrecursive_macro_replacement_list(Tmp->data()))
-									{	// XXX trashes line information to reuse intrapreprocessing stuff
-									size_t discard = i;
-									Token<char>* Tmp2 = new Token<char>(*TokenList[i]);
-									while(++discard <= j) Tmp2->append(TokenList[discard]->data());
-									discard = 0;
-									dynamic_macro_replace_once(*Tmp2,discard,TokenList[i]->size(),macros_object,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion_pre_eval,NULL);
-									delete Tmp;
-									Tmp = Tmp2;
-									}
-								TokenList.DeleteNSlotsAt(j-i,i+1);
-								delete TokenList[i];
-								TokenList[i] = Tmp;
-								}
-								size_t actual_tokens = tokenize_line(TokenList,i);
-								assert(0<actual_tokens);
-								i += actual_tokens-1;
+								case '(':
+									++paren_depth;
+									break;
+								case ',':
+									++comma_count;
+									break;
+								case ')':
+									--paren_depth;
+									//	break;
 								};
 							}
+						while(0<paren_depth);
+						if (0==paren_depth)
+							{
+							assert(macros_function_arglist[function_macro_index]);
+							assert('('==macros_function_arglist[function_macro_index]->front());
+							assert(')'==macros_function_arglist[function_macro_index]->back());
+							const size_t formal_arg_span = macros_function_arglist[function_macro_index]->size();
+							const size_t formal_arg_count = (2<formal_arg_span) ? std::count(macros_function_arglist[function_macro_index]->begin(),macros_function_arglist[function_macro_index]->end(),',')+1 : 0;
+							const bool formal_varadic = 5<=formal_arg_span && !strncmp(macros_function_arglist[function_macro_index]->data()+(formal_arg_span-4),"...",sizeof("...")-1);
+							const size_t arg_count = (i+2==j) ? 0 : comma_count+1;
+							if (arg_count<formal_arg_count || (arg_count>formal_arg_count && !formal_varadic))
+								{	//! \test cpp/Error_macro_arglist5.hpp
+									//! \test cpp/Error_macro_arglist6.hpp
+								message_header2(*TokenList[i],TokenList[i]->logical_line.second);
+								INC_INFORM(ERR_STR);
+								INC_INFORM("macro ");
+								INC_INFORM(TokenList[i]->data(),TokenList[i]->size());
+								INC_INFORM(" had ");
+								INC_INFORM(arg_count);
+								INC_INFORM(" argument");
+								INC_INFORM((1==arg_count) ? "" : "s");
+								INC_INFORM(", needed ");
+								if (formal_varadic) INC_INFORM("at least ");
+								INC_INFORM(formal_arg_count);
+								INFORM(". (C99 6.10p1/C++0x 16.1p1)");
+								zcc_errors.inc_error();
+								i = j;
+								continue;
+								}
+							if (!macros_function_expansion_pre_eval[function_macro_index])
+								{	// expands to nothing
+									//! \test cpp/default/Preprocess_empty_macros.hpp, cpp/default/Preprocess_empty_macros.h
+								TokenList.DeleteNSlotsAt(j-i+1,i);
+								if (0==i) goto Restart;
+								--i;
+								continue;
+								}
+							assert(!macros_function_expansion_pre_eval[function_macro_index]->empty());
+							{	//! \test default/Preprocess_*.h/hpp 
+							Token<char>* Tmp = new Token<char>(*macros_function_expansion_pre_eval[function_macro_index]);
+							Tmp->logical_line = TokenList[i]->logical_line;
+							if (!nonrecursive_macro_replacement_list(Tmp->data()))
+								{	// XXX trashes line information to reuse intrapreprocessing stuff
+								size_t discard = i;
+								Token<char>* Tmp2 = new Token<char>(*TokenList[i]);
+								while(++discard <= j) Tmp2->append(TokenList[discard]->data());
+								discard = 0;
+								dynamic_macro_replace_once(*Tmp2,discard,TokenList[i]->size(),macros_object,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion_pre_eval,NULL);
+								delete Tmp;
+								Tmp = Tmp2;
+								}
+							TokenList.DeleteNSlotsAt(j-i,i+1);
+							delete TokenList[i];
+							TokenList[i] = Tmp;
+							}
+							size_t actual_tokens = tokenize_line(TokenList,i);
+							assert(0<actual_tokens);
+							i += actual_tokens-1;
+							};
 						}
-					else{	// replace predefined macros, if they are here
-							//! \test cpp/default/Preprocess_STDC_defines.hpp, cpp/default/Preprocess_STDC_defines.h
-						size_t discard = 0;
-						predefined_macro_replacement(*TokenList[i],discard);
-						}
+					}
+				else{	// replace predefined macros, if they are here
+						//! \test cpp/default/Preprocess_STDC_defines.hpp, cpp/default/Preprocess_STDC_defines.h
+					predefined_macro_replacement(*TokenList[i],0);
 					}
 				}
 			}
