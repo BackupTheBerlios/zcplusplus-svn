@@ -1,4 +1,4 @@
-// CSupport.cpp
+// CSupport_pp.cpp
 // support for C/C++ parsing
 // (C)2009, 2010 Kenneth Boyd, license: MIT.txt
 
@@ -440,7 +440,8 @@ BOOST_STATIC_ASSERT(NONATOMIC_PREPROC_OP_LB<C_PREPROC_OP_STRICT_UB);
 
 static const POD_pair<const char*,size_t> valid_keyword[]
 	=	{	DICT_STRUCT("__asm"),		// reserved to the implementation, so OK to make a keyword for C only
-			DICT_STRUCT("_Static_Assert"),	// C1X keyword not in C++0X
+			DICT_STRUCT("_Static_Assert"),	// C1X keywords not in C++0X
+			DICT_STRUCT("_Thread_Local"),
 			DICT_STRUCT("restrict"),	// C99 keywords not in C++98
 			DICT_STRUCT("_Bool"),
 			DICT_STRUCT("_Complex"),
@@ -524,12 +525,10 @@ static const POD_pair<const char*,size_t> valid_keyword[]
 			DICT_STRUCT("thread_local")
 		};
 
-//! \todo some way to test that constexpr, thread_local are locked only for C++0X mode
-
 // think about C++0x keywords later.
 #define C_KEYWORD_NONSTRICT_LB 0
-#define CPP_KEYWORD_NONSTRICT_LB 6
-#define C_KEYWORD_STRICT_UB 39
+#define CPP_KEYWORD_NONSTRICT_LB 7
+#define C_KEYWORD_STRICT_UB 40
 #define CPP_KEYWORD_STRICT_UB STATIC_SIZE(valid_keyword)
 
 BOOST_STATIC_ASSERT(C_KEYWORD_NONSTRICT_LB<C_KEYWORD_STRICT_UB);
