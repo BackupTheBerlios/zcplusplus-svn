@@ -11,6 +11,7 @@ STATIC_ASSERT(+"A"[0],"automatic success has failed");
 STATIC_ASSERT(-"A"[0],"automatic success has failed");
 STATIC_ASSERT(!"A"[1],"automatic success has failed");
 STATIC_ASSERT(*"A","automatic success has failed");
+STATIC_ASSERT(!*"","automatic success has failed");
 
 STATIC_ASSERT("A"+0,"automatic success has failed");
 STATIC_ASSERT(0+"A","automatic success has failed");
@@ -28,3 +29,9 @@ STATIC_ASSERT(1==sizeof "","automatic success has failed");
 STATIC_ASSERT(sizeof ""==1,"automatic success has failed");
 STATIC_ASSERT(2==sizeof "A","automatic success has failed");
 STATIC_ASSERT(sizeof "A"==2,"automatic success has failed");
+
+STATIC_ASSERT(1==sizeof *"A","automatic success has failed");
+STATIC_ASSERT(sizeof *"A"==1,"automatic success has failed");
+STATIC_ASSERT(1==sizeof *"","automatic success has failed");
+STATIC_ASSERT(sizeof *""==1,"automatic success has failed");
+

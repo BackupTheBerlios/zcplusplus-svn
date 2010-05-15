@@ -10,6 +10,7 @@ static_assert(+"A"[0],"automatic success has failed");
 static_assert(-"A"[0],"automatic success has failed");
 static_assert(!"A"[1],"automatic success has failed");
 static_assert(*"A","automatic success has failed");
+static_assert(!*"","automatic success has failed");
 
 static_assert("A"+0,"automatic success has failed");
 static_assert(0+"A","automatic success has failed");
@@ -27,3 +28,9 @@ static_assert(1==sizeof "","automatic success has failed");
 static_assert(sizeof ""==1,"automatic success has failed");
 static_assert(2==sizeof "A","automatic success has failed");
 static_assert(sizeof "A"==2,"automatic success has failed");
+
+static_assert(1==sizeof *"A","automatic success has failed");
+static_assert(sizeof *"A"==1,"automatic success has failed");
+static_assert(1==sizeof *"","automatic success has failed");
+static_assert(sizeof *""==1,"automatic success has failed");
+

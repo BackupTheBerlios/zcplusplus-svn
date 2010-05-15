@@ -5120,6 +5120,22 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 		}
 }
 
+// this is going to have to be forked eventually; the CPP variant has to be more
+// careful with the *& identity as both deference * and reference & are 
+// overloadable operators
+//! \throw std::bad_alloc()
+static void C_deref_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	assert(is_C99_unary_operator_expression<'*'>(src));
+	//! \todo: handle *& identity when we have &
+	// multi-dimensional arrays and cv-qualified pointers should be automatically handled
+	value_copy(src.type_code,src.data<2>()->type_code);
+	// handle lvalueness in indirection type building and/or the dereference stage
+	if (!src.type_code.dereference())
+		//! \test default/Error_if_control24.hpp, default/Error_if_control24.h
+		simple_error(src," is not dereferencing a pointer (C99 6.5.3.2p2; C++98 5.3.1p1)");
+}
+
 // no eval_deref because of &* cancellation
 // defer syntax check to after resolution of multiply-*, so no C/C++ fork
 //! \throw std::bad_alloc()
@@ -5136,6 +5152,8 @@ static bool terse_locate_C99_deref(parse_tree& src, size_t& i,const type_system&
 		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
 		if (is_C99_unary_operator_expression<'+'>(src.data<0>()[i+1]) || is_C99_unary_operator_expression<'-'>(src.data<0>()[i+1]))
 			C_unary_plusminus_easy_syntax_check(src.c_array<0>()[i+1],types);
+		else if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i+1]))
+			C_deref_easy_syntax_check(src.c_array<0>()[i+1],types);
 		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
 			{
 			assemble_unary_postfix_arguments(src,i,C99_UNARY_SUBTYPE_DEREF);
@@ -5160,6 +5178,8 @@ static bool terse_locate_CPP_deref(parse_tree& src, size_t& i,const type_system&
 		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
 		if (is_C99_unary_operator_expression<'+'>(src.data<0>()[i+1]) || is_C99_unary_operator_expression<'-'>(src.data<0>()[i+1]))
 			CPP_unary_plusminus_easy_syntax_check(src.c_array<0>()[i+1],types);
+		else if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i+1]))
+			C_deref_easy_syntax_check(src.c_array<0>()[i+1],types);
 		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
 			{
 			assemble_unary_postfix_arguments(src,i,C99_UNARY_SUBTYPE_DEREF);
@@ -5168,19 +5188,6 @@ static bool terse_locate_CPP_deref(parse_tree& src, size_t& i,const type_system&
 			};
 		}
 	return false;
-}
-
-//! \throw std::bad_alloc()
-static void C_deref_easy_syntax_check(parse_tree& src,const type_system& types)
-{
-	assert(is_C99_unary_operator_expression<'*'>(src));
-	//! \todo: handle *& identity when we have &
-	// multi-dimensional arrays and cv-qualified pointers should be automatically handled
-	value_copy(src.type_code,src.data<2>()->type_code);
-	// handle lvalueness in indirection type building and/or the dereference stage
-	if (!src.type_code.dereference())
-		//! \test default/Error_if_control24.hpp, default/Error_if_control24.h
-		simple_error(src," is not dereferencing a pointer (C99 6.5.3.2p2; C++98 5.3.1p1)");
 }
 
 //! \throw std::bad_alloc()
@@ -5197,6 +5204,8 @@ static bool terse_locate_C_logical_NOT(parse_tree& src, size_t& i,const type_sys
 		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
 		if (is_C99_unary_operator_expression<'+'>(src.data<0>()[i+1]) || is_C99_unary_operator_expression<'-'>(src.data<0>()[i+1]))
 			C_unary_plusminus_easy_syntax_check(src.c_array<0>()[i+1],types);
+		else if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i+1]))
+			C_deref_easy_syntax_check(src.c_array<0>()[i+1],types);
 		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
 			{
 			assemble_unary_postfix_arguments(src,i,C99_UNARY_SUBTYPE_NOT);
@@ -5221,6 +5230,8 @@ static bool terse_locate_CPP_logical_NOT(parse_tree& src, size_t& i,const type_s
 		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
 		if (is_C99_unary_operator_expression<'+'>(src.data<0>()[i+1]) || is_C99_unary_operator_expression<'-'>(src.data<0>()[i+1]))
 			CPP_unary_plusminus_easy_syntax_check(src.c_array<0>()[i+1],types);
+		else if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i+1]))
+			C_deref_easy_syntax_check(src.c_array<0>()[i+1],types);
 		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
 			{
 			assemble_unary_postfix_arguments(src,i,C99_UNARY_SUBTYPE_NOT);
@@ -5363,6 +5374,8 @@ static bool terse_locate_C99_bitwise_complement(parse_tree& src, size_t& i, cons
 		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
 		if (is_C99_unary_operator_expression<'+'>(src.data<0>()[i+1]) || is_C99_unary_operator_expression<'-'>(src.data<0>()[i+1]))
 			C_unary_plusminus_easy_syntax_check(src.c_array<0>()[i+1],types);
+		else if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i+1]))
+			C_deref_easy_syntax_check(src.c_array<0>()[i+1],types);
 		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
 			{
 			assemble_unary_postfix_arguments(src,i,C99_UNARY_SUBTYPE_COMPL);
@@ -5387,6 +5400,8 @@ static bool terse_locate_CPP_bitwise_complement(parse_tree& src, size_t& i, cons
 		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
 		if (is_C99_unary_operator_expression<'+'>(src.data<0>()[i+1]) || is_C99_unary_operator_expression<'-'>(src.data<0>()[i+1]))
 			CPP_unary_plusminus_easy_syntax_check(src.c_array<0>()[i+1],types);
+		else if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i+1]))
+			C_deref_easy_syntax_check(src.c_array<0>()[i+1],types);
 		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
 			{
 			assemble_unary_postfix_arguments(src,i,C99_UNARY_SUBTYPE_COMPL);
@@ -5568,6 +5583,8 @@ static bool terse_locate_C99_unary_plusminus(parse_tree& src, size_t& i, const t
 		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
 		if (is_C99_unary_operator_expression<'+'>(src.data<0>()[i+1]) || is_C99_unary_operator_expression<'-'>(src.data<0>()[i+1]))
 			C_unary_plusminus_easy_syntax_check(src.c_array<0>()[i+1],types);
+		else if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i+1]))
+			C_deref_easy_syntax_check(src.c_array<0>()[i+1],types);
 		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
 			{
 			assemble_unary_postfix_arguments(src,i,unary_subtype);
@@ -5597,6 +5614,8 @@ static bool terse_locate_CPP_unary_plusminus(parse_tree& src, size_t& i, const t
 		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
 		if (is_C99_unary_operator_expression<'+'>(src.data<0>()[i+1]) || is_C99_unary_operator_expression<'-'>(src.data<0>()[i+1]))
 			CPP_unary_plusminus_easy_syntax_check(src.c_array<0>()[i+1],types);
+		else if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i+1]))
+			C_deref_easy_syntax_check(src.c_array<0>()[i+1],types);
 		if (PARSE_CAST_EXPRESSION & src.data<0>()[i+1].flags)
 			{
 			assemble_unary_postfix_arguments(src,i,unary_subtype);
