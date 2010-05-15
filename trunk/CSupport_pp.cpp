@@ -3020,8 +3020,7 @@ BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>
 /* XXX this may belong with parse_tree XXX */
 static void simple_error(parse_tree& src, const char* const err_str)
 {
-	assert(NULL!=err_str);
-	assert('\0'!=err_str[0]);
+	assert(err_str && *err_str);
 	if (!(parse_tree::INVALID & src.flags))
 		{
 		src.flags |= parse_tree::INVALID;

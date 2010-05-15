@@ -3112,8 +3112,7 @@ BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>
 /* XXX this may belong with parse_tree XXX */
 static void simple_error(parse_tree& src, const char* const err_str)
 {
-	assert(NULL!=err_str);
-	assert('\0'!=err_str[0]);
+	assert(err_str && *err_str);
 	if (!(parse_tree::INVALID & src.flags))
 		{
 		src.flags |= parse_tree::INVALID;
@@ -6215,61 +6214,30 @@ static bool terse_locate_C99_CPP_sizeof(parse_tree& src, size_t& i, const type_s
 	return false;
 }
 
-//! \throw std::bad_alloc()
-static bool eval_sizeof_core_type(parse_tree& src,const size_t base_type_index,const type_system& types)
+static size_t _eval_sizeof_core_type(const size_t base_type_index)
 {	//! \todo eventually handle the floating and complex types here as well
-	//! \todo types parameter is close to redundant
 	// floating is just a matter of modeling
 	// complex may also involve ABI issues (cf. Intel)
-	const size_t size_t_type = unsigned_type_from_machine_type(target_machine->size_t_type());
-	parse_tree tmp;
 	switch(base_type_index)
 	{
-	default: return false;
+	default: return 0;
 	case C_TYPE::CHAR:
 	case C_TYPE::SCHAR:
 	case C_TYPE::UCHAR:
-		{	// defined to be 1: C99 6.5.3.4p3, C++98 5.3.3p1, same paragraphs in C1X and C++0X 
-		src.destroy();
-		src.index_tokens[0].token.first = "1U";
-		src.index_tokens[0].token.second = 2;
-		src.index_tokens[0].flags = (C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_INTEGER | C_TESTFLAG_DECIMAL);
-		src.type_code.set_type(size_t_type);
-		src.flags |= (PARSE_PRIMARY_EXPRESSION | parse_tree::CONSTANT_EXPRESSION);
-		break;
-		}
+		// defined to be 1: C99 6.5.3.4p3, C++98 5.3.3p1, same paragraphs in C1X and C++0X
+		return 1;
 	case C_TYPE::SHRT:
 	case C_TYPE::USHRT:
-		{
-		src.type_code.set_type(size_t_type);
-		uint_to_literal(tmp,target_machine->C_sizeof_short(),src,types);
-		tmp.MoveInto(src);
-		break;
-		}
+		return target_machine->C_sizeof_short();
 	case C_TYPE::INT:
 	case C_TYPE::UINT:
-		{
-		src.type_code.set_type(size_t_type);
-		uint_to_literal(tmp,target_machine->C_sizeof_int(),src,types);
-		tmp.MoveInto(src);
-		break;
-		}
+		return target_machine->C_sizeof_int();
 	case C_TYPE::LONG:
 	case C_TYPE::ULONG:
-		{
-		src.type_code.set_type(size_t_type);
-		uint_to_literal(tmp,target_machine->C_sizeof_long(),src,types);
-		tmp.MoveInto(src);
-		break;
-		}
+		return target_machine->C_sizeof_long();
 	case C_TYPE::LLONG:
 	case C_TYPE::ULLONG:
-		{
-		src.type_code.set_type(size_t_type);
-		uint_to_literal(tmp,target_machine->C_sizeof_long_long(),src,types);
-		tmp.MoveInto(src);
-//		break;
-		}
+		return target_machine->C_sizeof_long_long();
 	}
 #if 0
 	FLOAT,
@@ -6279,90 +6247,157 @@ static bool eval_sizeof_core_type(parse_tree& src,const size_t base_type_index,c
 	DOUBLE__COMPLEX,
 	LDOUBLE__COMPLEX,
 #endif
-	assert(size_t_type==src.type_code.base_type_index);
-	return true;
 }
 
 //! \throw std::bad_alloc()
-static bool eval_C99_CPP_sizeof(parse_tree& src,const type_system& types)
-{
-	assert(is_C99_CPP_sizeof_expression(src));
-	if (0==src.data<2>()->type_code.pointer_power)
+static bool eval_sizeof_core_type(parse_tree& src,const size_t base_type_index,const type_system& types)
+{	//! \todo eventually handle the floating and complex types here as well
+	//! \todo types parameter is close to redundant
+	// floating is just a matter of modeling
+	// complex may also involve ABI issues (cf. Intel)
+	const size_t fundamental_size = _eval_sizeof_core_type(base_type_index);
+	if (0<fundamental_size)
 		{
-		if (eval_sizeof_core_type(src,src.data<2>()->type_code.base_type_index,types)) return true;
-		}
-	else if (!(type_spec::_array & src.type_code.qualifier<0>()))
-		{	// data or function pointer...fine
-			//! \bug need test cases
-		const size_t size_t_type = unsigned_type_from_machine_type(target_machine->size_t_type());
 		parse_tree tmp;
+		const size_t size_t_type = unsigned_type_from_machine_type(target_machine->size_t_type());
 		src.type_code.set_type(size_t_type);
-		//! \todo eventually, need to check for data vs function pointer when pointer_power is 1
-		uint_to_literal(tmp,target_machine->C_sizeof_data_ptr(),src,types);
+		uint_to_literal(tmp,fundamental_size,src,types);
 		tmp.MoveInto(src);
 		assert(size_t_type==src.type_code.base_type_index);
 		return true;
 		}
-	// actual array of something
 	return false;
+}
+
+//! \throw std::bad_alloc()
+static bool eval_C99_CPP_sizeof(parse_tree& src,const type_system& types, func_traits<size_t (*)(parse_tree&,const type_system&)>::function_ref_type failover_sizeof)
+{
+	assert(is_C99_CPP_sizeof_expression(src));
+	//! \todo error if given a function type
+	//! \todo handle function pointers distinctly from data pointers
+	const size_t size_t_type = unsigned_type_from_machine_type(target_machine->size_t_type());
+	size_t i = src.data<2>()->type_code.pointer_power;
+	if (0==i) return eval_sizeof_core_type(src,src.data<2>()->type_code.base_type_index,types);
+	{
+	umaxint scaling(1,target_machine->unsigned_max(target_machine->size_t_type()).size());
+	{
+	umaxint tmp2(target_machine->unsigned_max(target_machine->size_t_type()));
+	const umaxint target_size_max(tmp2);
+	umaxint tmp;
+	bool want_fundamental = true;
+	do  {
+		--i;
+		if (type_spec::_array & src.type_code.qualifier(i))
+			{
+			if (0>=src.type_code.extent_vector[i])
+				// C99 variable-length array: can't sizeof it at compile time
+				return false;
+			tmp = src.type_code.extent_vector[i];
+			}
+		else{	// data pointer (for now); 0==i actually could be function pointer
+			tmp = _eval_sizeof_core_type(unsigned_type_from_machine_type(target_machine->size_t_type()));
+			assert(0<tmp);
+			want_fundamental = false;
+			}
+		if (1<tmp)
+			{
+			tmp2 /= scaling;
+			if (tmp2<tmp)
+				{
+				simple_error(src," sizeof operator evaluation failed: object is larger than target SIZE_MAX bytes.");
+				return false;
+				}
+			tmp2 = target_size_max;
+			scaling *= tmp;
+			}
+		}
+	while(0<i && want_fundamental);
+	if (want_fundamental)
+		{
+		tmp = _eval_sizeof_core_type(src.data<2>()->type_code.base_type_index);
+		if (0==tmp) tmp = failover_sizeof(src,types);
+		if (0==tmp) return false;
+		else if (1<tmp)
+			{
+			tmp2 /= scaling;
+			if (tmp2<tmp)
+				{
+				simple_error(src," sizeof operator evaluation failed: object is larger than target SIZE_MAX bytes.");
+				return false;
+				}
+			scaling *= tmp;
+			}
+		//! \todo handle struct, union, class here (or maybe as part of core type wrapper)
+		// enum is post-processed due to differences between C, C++
+		}
+	}
+	parse_tree tmp3;
+	src.type_code.set_type(size_t_type);
+	VM_to_literal(tmp3,scaling,src,types);
+	tmp3.MoveInto(src);
+	}
+	assert(size_t_type==src.type_code.base_type_index);
+	return true;
+}
+
+static size_t _C99_failover_sizeof(parse_tree& src,const type_system& types)
+{
+	const enum_def* const tmp = types.get_enum_def(src.data<2>()->type_code.base_type_index);
+	if (tmp)
+		{
+		if (0==src.data<2>()->type_code.pointer_power && is_noticed_enumerator(src,types))
+			return _eval_sizeof_core_type(C_TYPE::INT); // type is int per C99 6.7.2.2p3
+		if (!tmp->represent_as)
+			{
+			simple_error(src," applies sizeof to incomplete enumeration (C99 6.5.3.4p1)");
+			return false;
+			}
+		// process tmp->represent_as as a core type
+		// C99 6.7.2.2p4 merely requires the underlying type to be able to represent all values
+		assert(C_TYPE::CHAR<=tmp->represent_as && C_TYPE::INT>=tmp->represent_as);
+		return _eval_sizeof_core_type(tmp->represent_as);
+		}
+	return 0;
 }
 
 //! \throw std::bad_alloc()
 static bool eval_C99_sizeof(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_CPP_sizeof_expression(src));
-	if (eval_C99_CPP_sizeof(src,types)) return true;
-	if (0==src.data<2>()->type_code.pointer_power)
+	return eval_C99_CPP_sizeof(src,types,_C99_failover_sizeof);
+}
+
+static size_t _CPP_failover_sizeof(parse_tree& src,const type_system& types)
+{
+	if (C_TYPE::WCHAR_T==src.data<2>()->type_code.base_type_index)
+		return _eval_sizeof_core_type(unsigned_type_from_machine_type(target_machine->UNICODE_wchar_t()));
+	const enum_def* const tmp = types.get_enum_def(src.data<2>()->type_code.base_type_index);
+	if (tmp)
 		{
-		const enum_def* const tmp = types.get_enum_def(src.data<2>()->type_code.base_type_index);
-		if (tmp)
+		if (0==src.data<2>()->type_code.pointer_power && is_noticed_enumerator(*src.data<2>(),types))
 			{
-			if (is_noticed_enumerator(src,types))
-				return eval_sizeof_core_type(src,C_TYPE::INT,types); // type is int per C99 6.7.2.2p3
-			if (!tmp->represent_as)
-				{
-				simple_error(src," applies sizeof to incomplete enumeration (C99 6.5.3.4p1)");
-				return false;
-				}
-			// process tmp->represent_as as a core type
-			// C99 6.7.2.2p4 merely requires the underlying type to be able to represent all values
-			assert(C_TYPE::CHAR<=tmp->represent_as && C_TYPE::INT>=tmp->represent_as);
-			return eval_sizeof_core_type(src,tmp->represent_as,types);
+			const type_system::enumerator_info* const tmp2 = types.get_enumerator(src.data<2>()->index_tokens[0].token.first);
+			assert(tmp2);
+			assert(C_TYPE::INT<=tmp2->second.first.second && C_TYPE::ULLONG>=tmp2->second.first.second);
+			return _eval_sizeof_core_type(tmp2->second.first.second);
 			}
+		if (!tmp->represent_as)
+			{
+			simple_error(src," applies sizeof to incomplete enumeration (C++98 5.3.3p1)");
+			return false;
+			}
+		// C++0X 7.2p6 merely requires the underlying type to be able to represent all values
+		assert(C_TYPE::CHAR<=tmp->represent_as && C_TYPE::ULLONG>=tmp->represent_as);
+		return _eval_sizeof_core_type(tmp->represent_as);
 		}
-	return false;
+	return 0;
 }
 
 //! \throw std::bad_alloc()
 static bool eval_CPP_sizeof(parse_tree& src,const type_system& types)
 {
 	assert(is_C99_CPP_sizeof_expression(src));
-	if (eval_C99_CPP_sizeof(src,types)) return true;
-	if (0==src.data<2>()->type_code.pointer_power)
-		{
-		if (C_TYPE::WCHAR_T==src.data<2>()->type_code.base_type_index)
-			return eval_sizeof_core_type(src,unsigned_type_from_machine_type(target_machine->UNICODE_wchar_t()),types);
-		const enum_def* const tmp = types.get_enum_def(src.data<2>()->type_code.base_type_index);
-		if (tmp)
-			{
-			if (is_noticed_enumerator(*src.data<2>(),types))
-				{
-				const type_system::enumerator_info* const tmp2 = types.get_enumerator(src.data<2>()->index_tokens[0].token.first);
-				assert(tmp2);
-				assert(C_TYPE::INT<=tmp2->second.first.second && C_TYPE::ULLONG>=tmp2->second.first.second);
-				return eval_sizeof_core_type(src,tmp2->second.first.second,types);
-				}
-			if (!tmp->represent_as)
-				{
-				simple_error(src," applies sizeof to incomplete enumeration (C++98 5.3.3p1)");
-				return false;
-				}
-			// C++0X 7.2p6 merely requires the underlying type to be able to represent all values
-			assert(C_TYPE::CHAR<=tmp->represent_as && C_TYPE::ULLONG>=tmp->represent_as);
-			return eval_sizeof_core_type(src,tmp->represent_as,types);
-			}
-		}
-	return false;
+	return eval_C99_CPP_sizeof(src,types,_CPP_failover_sizeof);
 }
 
 //! \throw std::bad_alloc()

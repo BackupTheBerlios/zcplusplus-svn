@@ -52,7 +52,9 @@ struct type_spec
 	bool dereference();
 	bool dereference(type_spec& dest) const;
 	unsigned char& qualifier(size_t i) {return q_vector.c_array()[i];};
+	unsigned char qualifier(size_t i) const {return q_vector.data()[i];};
 	template<size_t i> unsigned char& qualifier() {return q_vector.c_array()[i];}
+	template<size_t i> unsigned char qualifier() const {return q_vector.data()[i];}
 
 	void clear();	// XXX should be constructor; good way to leak memory in other contexts
 	void destroy();	// XXX should be destructor
