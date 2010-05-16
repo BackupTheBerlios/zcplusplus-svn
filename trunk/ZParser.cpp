@@ -116,15 +116,15 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 					const char* tmp = (C_TESTFLAG_IDENTIFIER==pretokenized[0].third ? lang.pp_support->EchoReservedKeyword(TokenList.front()->data()+pretokenized[i].first,pretokenized[0].second) : NULL);
 					if (tmp)
 						{
-						ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].token.first = tmp;
-						ParsedList[0]->c_array<0>()[old_parsed_size].control_index_token<0>(false);
+						ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].token.first = tmp;
+						ParsedList[0]->c_array<0>()[old_parsed_size+i].control_index_token<0>(false);
 						}
 					else{
 						tmp = (C_TESTFLAG_PP_OP_PUNC & pretokenized[0].third ? lang.pp_support->EchoReservedSymbol(TokenList.front()->data()+pretokenized[i].first,pretokenized[0].second) : NULL);
 						if (tmp)
 							{
-							ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].token.first = tmp;
-							ParsedList[0]->c_array<0>()[old_parsed_size].control_index_token<0>(false);
+							ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].token.first = tmp;
+							ParsedList[0]->c_array<0>()[old_parsed_size+i].control_index_token<0>(false);
 							}
 						else{
 							char* tmp2 = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[i].second));
