@@ -26,13 +26,39 @@ ZParser::ZParser(const virtual_machine::CPUInfo& _target_machine, const char* co
 {
 }
 
+/**
+ * As the memory management situation varies when 
+ * dest.index_tokens[0].token.first is to be owned...
+ *
+ * \return false iff caller needs to handle memory management for an owned token 
+ */
+static bool init_parse_tree_from_token(parse_tree& dest, const Token<char>& tmp_front, const POD_triple<size_t,size_t,lex_flags>& src2, const zaimoni::LangConf& lang)
+{
+	dest.index_tokens[0].token.second = src2.second;
+	dest.index_tokens[0].logical_line.first = tmp_front.original_line.first;
+	dest.index_tokens[0].logical_line.second = tmp_front.original_line.second;
+	dest.index_tokens[0].flags = src2.third;
+	dest.index_tokens[0].src_filename = tmp_front.src_filename;
+	const char* const tmp = C_TESTFLAG_IDENTIFIER==src2.third ? lang.pp_support->EchoReservedKeyword(tmp_front.data(),src2.second) 
+						: C_TESTFLAG_PP_OP_PUNC & src2.third ? lang.pp_support->EchoReservedSymbol(tmp_front.data(),src2.second) : NULL;
+	if (tmp)
+		{
+		dest.index_tokens[0].token.first = tmp;
+		dest.control_index_token<0>(false);
+		}
+	return tmp;
+}
+
 bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<parse_tree*>& ParsedList)
 {
 	// first stage: rearrange to be suitable for LangConf
 	if (TokenList.empty()) return false;	// no-op, nothing to export to object file
+	{
 	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	do	{
-		lang.line_lex(TokenList.front()->data(), TokenList.front()->size(), pretokenized);
+		assert(TokenList.front());
+		Token<char>& tmp_front = *TokenList.front();
+		lang.line_lex(tmp_front.data(), tmp_front.size(), pretokenized);
 		if (!pretokenized.empty())
 			{	// ...
 			const size_t append_tokens = pretokenized.size();
@@ -55,18 +81,18 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 				// disable pedantic warnings to avoid fake warnings about string literals
 				const bool pedantic_backup = bool_options[boolopt::pedantic];
 				bool_options[boolopt::pedantic] = false;
-				lang.pp_support->AddPostLexFlags(TokenList.front()->data()+pretokenized[i].first, pretokenized[i].second, pretokenized[i].third, TokenList.front()->src_filename, TokenList.front()->original_line.first);
+				lang.pp_support->AddPostLexFlags(tmp_front.data()+pretokenized[i].first, pretokenized[i].second, pretokenized[i].third, tmp_front.src_filename, tmp_front.original_line.first);
 				bool_options[boolopt::pedantic] = pedantic_backup;
 				if (	(C_TESTFLAG_PP_OP_PUNC & pretokenized[i].third)
 					&& 	(C_DISALLOW_POSTPROCESSED_SOURCE & lang.pp_support->GetPPOpPuncFlags(C_PP_DECODE(pretokenized[i].third))))
 					{
-					INC_INFORM(TokenList.front()->src_filename);
+					INC_INFORM(tmp_front.src_filename);
 					INC_INFORM(':');
-					INC_INFORM(TokenList.front()->original_line.first);
+					INC_INFORM(tmp_front.original_line.first);
 					INC_INFORM(": ");
 					INC_INFORM(ERR_STR);
 					INC_INFORM("Forbidden token ");
-					INC_INFORM(TokenList.front()->data()+pretokenized[i].first, pretokenized[i].second);
+					INC_INFORM(tmp_front.data()+pretokenized[i].first, pretokenized[i].second);
 					INFORM(" in postprocessed source.");
 					zcc_errors.inc_error();
 					};
@@ -75,63 +101,28 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 
 			if (1==append_tokens)
 				{	// only one token: grab the memory from Token and just do it
-				TokenList.front()->ltrim(pretokenized[0].first);
-				TokenList.front()->lslice(pretokenized[0].second);
-				ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].token.second = pretokenized[0].second;
-				ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].logical_line.first = TokenList.front()->original_line.first;
-				ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].logical_line.second = TokenList.front()->original_line.second;
-				ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].flags = pretokenized[0].third;
-				ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].src_filename = TokenList.front()->src_filename;
-				const char* tmp = (C_TESTFLAG_IDENTIFIER==pretokenized[0].third ? lang.pp_support->EchoReservedKeyword(TokenList.front()->data(),pretokenized[0].second) : NULL);
-				if (tmp)
+				tmp_front.ltrim(pretokenized[0].first);
+				tmp_front.lslice(pretokenized[0].second);
+				parse_tree& tmp = ParsedList[0]->c_array<0>()[old_parsed_size];
+				if (!init_parse_tree_from_token(tmp,tmp_front,pretokenized[0],lang))
 					{
-					ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].token.first = tmp;
-					ParsedList[0]->c_array<0>()[old_parsed_size].control_index_token<0>(false);
-					}
-				else{
-					tmp = (C_TESTFLAG_PP_OP_PUNC & pretokenized[0].third ? lang.pp_support->EchoReservedSymbol(TokenList.front()->data(),pretokenized[0].second) : NULL);
-					if (tmp)
-						{
-						ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].token.first = tmp;
-						ParsedList[0]->c_array<0>()[old_parsed_size].control_index_token<0>(false);
-						}
-					else{
-						char* tmp2 = NULL; //! \bug adjust API, should be able to add qualifications safely
-						TokenList.front()->TransferOutAndNULL(tmp2);
-						ParsedList[0]->c_array<0>()[old_parsed_size].index_tokens[0].token.first = tmp2;
-						ParsedList[0]->c_array<0>()[old_parsed_size].control_index_token<0>(true);
-						}
+					char* tmp2 = NULL; //! \bug adjust API, should be able to add qualifications safely
+					tmp_front.TransferOutAndNULL(tmp2);
+					tmp.index_tokens[0].token.first = tmp2;
+					tmp.control_index_token<0>(true);
 					}
 				}
 			else{
 				i = append_tokens;
 				do	{	// copy it
-					--i;
-					ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].token.second = pretokenized[i].second;
-					ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].logical_line.first = TokenList.front()->original_line.first;
-					ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].logical_line.second = TokenList.front()->original_line.second;
-					ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].logical_line.second += pretokenized[i].first;
-					ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].flags = pretokenized[i].third;
-					ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].src_filename = TokenList.front()->src_filename;
-					const char* tmp = (C_TESTFLAG_IDENTIFIER==pretokenized[0].third ? lang.pp_support->EchoReservedKeyword(TokenList.front()->data()+pretokenized[i].first,pretokenized[0].second) : NULL);
-					if (tmp)
-						{
-						ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].token.first = tmp;
-						ParsedList[0]->c_array<0>()[old_parsed_size+i].control_index_token<0>(false);
-						}
-					else{
-						tmp = (C_TESTFLAG_PP_OP_PUNC & pretokenized[0].third ? lang.pp_support->EchoReservedSymbol(TokenList.front()->data()+pretokenized[i].first,pretokenized[0].second) : NULL);
-						if (tmp)
-							{
-							ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].token.first = tmp;
-							ParsedList[0]->c_array<0>()[old_parsed_size+i].control_index_token<0>(false);
-							}
-						else{
-							char* tmp2 = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[i].second));
-							memmove(tmp2,TokenList.front()->data()+pretokenized[i].first,pretokenized[i].second);
-							ParsedList[0]->c_array<0>()[old_parsed_size+i].index_tokens[0].token.first = tmp2;
-							ParsedList[0]->c_array<0>()[old_parsed_size+i].control_index_token<0>(true);
-							}
+					parse_tree& tmp = ParsedList[0]->c_array<0>()[old_parsed_size+ --i];
+					POD_triple<size_t,size_t,lex_flags>& tmp3 = pretokenized[i];
+					if (!init_parse_tree_from_token(tmp,tmp_front,tmp3,lang))
+					    {
+						char* tmp2 = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(tmp3.second));
+						memmove(tmp2,tmp_front.data()+tmp3.first,tmp3.second);
+						tmp.index_tokens[0].token.first = tmp2;
+						tmp.control_index_token<0>(true);
 						}
 					}
 				while(0<i);
@@ -141,6 +132,7 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 		TokenList.DeleteIdx(0);
 		}
 	while(!TokenList.empty());
+	}
 	die_on_parse_errors();
 	if (ParsedList.empty()) return false;	// no-op, nothing to export to object file
 
