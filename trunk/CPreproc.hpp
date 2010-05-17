@@ -105,7 +105,7 @@ private:
 	void function_macro_concatenate_novars(zaimoni::Token<char>& x, const zaimoni::Token<char>& arglist);
 
 	// pragma support
-	void interpret_pragma(const char* const x, size_t x_len, zaimoni::autovalarray_ptr<char*>& locked_macros);
+	unsigned int interpret_pragma(const char* const x, size_t x_len, zaimoni::autovalarray_ptr<char*>& locked_macros);
 };
 
 #endif

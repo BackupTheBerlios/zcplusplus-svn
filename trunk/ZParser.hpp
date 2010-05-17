@@ -1,4 +1,5 @@
 // ZParser.hpp
+// (C)2009, 2010 Kenneth Boyd, license: MIT.txt
 
 #ifndef ZPARSER_HPP
 #define ZPARSER_HPP 1

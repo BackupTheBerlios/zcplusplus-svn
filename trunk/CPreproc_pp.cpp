@@ -342,9 +342,11 @@ static const POD_pair<const char*,size_t> pragma_STDC_keywords[]
 
 static const POD_pair<const char*,size_t> pragma_ZCC_keywords[]
 	=	{	DICT_STRUCT("lock"),
+			DICT_STRUCT("enable_typeid")
 		};
 
 #define PRAGMA_ZCC_LOCK 0
+#define PRAGMA_ZCC_ENABLE_TYPEID 1
 #undef DICT_STRUCT
 
 static void _init_weak_token(weak_token& dest, const Token<char>& x,const POD_triple<size_t,size_t,lex_flags>& pretoken)
@@ -1648,7 +1650,7 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						lang.UnescapeString(pragma_string.c_array(),TokenList[i+2]->data()+1,TokenList[i+2]->size()-2);
 						interpret_pragma(pragma_string.data(),pragma_string.size(),locked_macros);
 						};
-					TokenList.DeleteNSlotsAt(4,i);						//! \todo fix once we have code-generation affecting pragmas
+					TokenList.DeleteNSlotsAt(4,i);
 					if (0==i) goto Restart;
 					--i;
 					continue;
@@ -2123,10 +2125,9 @@ CPreprocessor::raw_system_include(const char* const look_for, autovalarray_ptr<T
 	return false;
 }
 
-void
+unsigned int
 CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_ptr<char*>& locked_macros)
 {
-	//! \todo: fix return value situation when enabling code-generation affecting pragmas
 	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	lang.line_lex(x, x_len, pretokenized);
 
@@ -2155,7 +2156,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 				}
 			}
 			}
-		return;
+		return 0;
 		}
 	else if (PRAGMA_LEADING_STDC==valid_pragma_class)
 		{
@@ -2173,7 +2174,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 					INC_INFORM("unhandled STDC pragma ");
 					INFORM(pragma_STDC_keywords[STDC_pragma].first);
 					zcc_errors.inc_error();
-					return;
+					return 0;
 					};
 #endif
 				case PRAGMA_STDC_FP_CONTRACT:
@@ -2193,13 +2194,15 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 						INC_INFORM("invalid STDC pragma ");
 						INFORM(x,x_len);
 						zcc_errors.inc_error();
-						return;
+						return 0;
 						}
+					// valid STDC pragma: relay encoding out
+					return STATIC_SIZE(pragma_STDC_on_off_switch)*STDC_pragma+on_off_switch+1;
 					};
 				}
 			}
 			}
-		return;
+		return 0;
 		}
 	else if (PRAGMA_MESSAGE==valid_pragma_class)
 		{
@@ -2212,7 +2215,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 			const bool wide_str = 'L'==x[pretokenized[2].first];
 			if (0<std::count(x+pretokenized[2].first,x+pretokenized[2].first+pretokenized[2].second,'\\'))
 				{	// no escapes
-				if (wide_str) return; //! \todo this should do a proper unescape to UNICODE, then use a wrapper library to push the UNICODE to whatever wide-char support there is
+				if (wide_str) return 0; //! \todo this should do a proper unescape to UNICODE, then use a wrapper library to push the UNICODE to whatever wide-char support there is
 
 				//! \todo change target, this only handles target CHAR_BIT<=host CHAR_BIT
 				const size_t tmp_len = lang.UnescapeStringLength(x+pretokenized[2].first,pretokenized[2].second);
@@ -2222,7 +2225,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 					lang.UnescapeString(tmp,x+pretokenized[2].first,pretokenized[2].second);
 					INFORM(tmp,tmp_len);
 					_flush(tmp);
-					return;
+					return 0;
 					}
 				};
 			// no escapes, or formatting failed: do something
@@ -2231,8 +2234,9 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 			else
 				INFORM(x+pretokenized[2].first+1,pretokenized[2].second-2);
 			}
-		return;
+		return 0;
 		}
+	return 0;
 }
 
 static void _complete_string_character_literal(Token<char>& x,const char delim, const char* const end_error)
@@ -4233,7 +4237,7 @@ CPreprocessor::truncate_illegal_tokens(Token<char>& x,const int directive_type,c
 bool
 CPreprocessor::hard_locked_macro(const char* const x,const size_t x_len) const
 {
-	assert(!is_empty_string(x));
+	assert(x && *x);
 	assert(0<x_len);
 // C99: 6.11.9 Predefined macro names
 // Macro names beginning with __STDC_ are reserved for future standardization.

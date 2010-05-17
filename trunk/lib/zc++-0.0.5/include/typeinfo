@@ -1,0 +1,9 @@
+// typeinfo
+// (C)2010 Kenneth Boyd, license: MIT.txt
+
+// C++0X 5.2.8p6 requires using typeid to make the program ill-formed until
+// #include <typeinfo> .  The following pragma tells Z.C++ to turn off the
+// syntax errors.
+#pragma ZCC enable_typeid
+
+//! \todo almost all of this header.

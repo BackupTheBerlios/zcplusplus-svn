@@ -1,8 +1,10 @@
 // ZParser.cpp
+// (C)2009, 2010 Kenneth Boyd, license: MIT.txt
 
 #include "ZParser.hpp"
 
 #include "CSupport.hpp"
+#include "_CSupport3.hpp"
 #include "errors.hpp"
 #include "errcount.hpp"
 #include "langroute.hpp"
@@ -10,6 +12,7 @@
 #include "type_system.hpp"
 
 #include "Zaimoni.STL/AutoPtr.hpp"
+#include "Zaimoni.STL/search.hpp"
 #include "Zaimoni.STL/LexParse/LangConf.hpp"
 #include "Zaimoni.STL/LexParse/Token.hpp"
 
@@ -59,6 +62,27 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 		assert(TokenList.front());
 		Token<char>& tmp_front = *TokenList.front();
 		lang.line_lex(tmp_front.data(), tmp_front.size(), pretokenized);
+
+		// handle unused relay keywords here
+		if (!pretokenized.empty())
+			{
+			size_t i = pretokenized.size();
+			if (Lang::C==lang_code || Lang::CPlusPlus==lang_code)
+				do	{
+					--i;
+					const errr Idx = linear_find(tmp_front.data()+pretokenized[i].first, pretokenized[i].second,pragma_relay_keywords,PRAGMA_RELAY_KEYWORDS_STRICT_UB);
+					if (0<=Idx)
+						{	// permit any relay keywords that actually mean anything here
+						bool blacklist = true;
+						// allow #include <typeinfo> to turn off context-free syntax errors for typeid
+						if (RELAY_ZCC_ENABLE_TYPEID==Idx && Lang::CPlusPlus==lang_code) blacklist = false;
+						if (blacklist) pretokenized.DeleteIdx(i);
+						continue;			
+						}
+					}
+				while(0<i);
+			}
+
 		if (!pretokenized.empty())
 			{	// ...
 			const size_t append_tokens = pretokenized.size();

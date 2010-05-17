@@ -14,6 +14,7 @@
 #include "AtomicString.h"
 #/*cut-cpp*/
 #include "CSupport.hpp"
+#include "_CSupport3.hpp"
 #/*cut-cpp*/
 #include "CSupport_pp.hpp"
 #include "C_PPDecimalInteger.hpp"
@@ -348,9 +349,28 @@ static const POD_pair<const char*,size_t> pragma_STDC_keywords[]
 
 static const POD_pair<const char*,size_t> pragma_ZCC_keywords[]
 	=	{	DICT_STRUCT("lock"),
+			DICT_STRUCT("enable_typeid")
 		};
 
 #define PRAGMA_ZCC_LOCK 0
+#define PRAGMA_ZCC_ENABLE_TYPEID 1
+#/*cut-cpp*/
+
+const POD_pair<const char*,size_t> pragma_relay_keywords[]
+	=	{	DICT_STRUCT("_ZCC_FP_CONTRACT_OFF"),
+			DICT_STRUCT("_ZCC_FP_CONTRACT_DEFAULT"),
+			DICT_STRUCT("_ZCC_FP_CONTRACT_ON"),
+			DICT_STRUCT("_ZCC_FENV_ACCESS_OFF"),
+			DICT_STRUCT("_ZCC_FENV_ACCESS_DEFAULT"),
+			DICT_STRUCT("_ZCC_FENV_ACCESS_ON"),
+			DICT_STRUCT("_ZCC_CX_LIMITED_RANGE_OFF"),
+			DICT_STRUCT("_ZCC_CX_LIMITED_RANGE_DEFAULT"),
+			DICT_STRUCT("_ZCC_CX_LIMITED_RANGE_ON"),
+			DICT_STRUCT("_ZCC_enable_typeid")
+		};
+
+BOOST_STATIC_ASSERT(PRAGMA_RELAY_KEYWORDS_STRICT_UB==STATIC_SIZE(pragma_relay_keywords));		
+#/*cut-cpp*/
 #undef DICT_STRUCT
 
 static void _init_weak_token(weak_token& dest, const Token<char>& x,const POD_triple<size_t,size_t,lex_flags>& pretoken)
@@ -1402,11 +1422,25 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					if (PP::PRAGMA==directive_type)
 						{
 						const size_t critical_offset = valid_directives[directive_type].second+2;
+#/*cut-cpp*/
+						const unsigned int pragma_code =
+#/*cut-cpp*/
 						interpret_pragma(TokenList[i]->data()+critical_offset,TokenList[i]->size()-critical_offset,locked_macros);
+#/*cut-cpp*/
+						switch(pragma_code)
+						{
+						default:
+#/*cut-cpp*/
 						TokenList.DeleteIdx(i);
 						if (0==i) goto Restart;
 						--i;
 						continue;
+#/*cut-cpp*/
+						case RELAY_ZCC_ENABLE_TYPEID:
+							TokenList[i]->replace_once(0,TokenList[i]->size(),pragma_relay_keywords[pragma_code].first,pragma_relay_keywords[pragma_code].second);
+							continue;
+						}
+#/*cut-cpp*/
 						}
 					}
 				}
@@ -1652,9 +1686,21 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						{	//! \test Pass_pragma_STDC.hpp
 						autovalarray_ptr_throws<char> pragma_string(lang.UnescapeStringLength(TokenList[i+2]->data()+1,TokenList[i+2]->size()-2));
 						lang.UnescapeString(pragma_string.c_array(),TokenList[i+2]->data()+1,TokenList[i+2]->size()-2);
+#/*cut-cpp*/
+						const unsigned int pragma_code =
+#/*cut-cpp*/
 						interpret_pragma(pragma_string.data(),pragma_string.size(),locked_macros);
+#/*cut-cpp*/
+						switch(pragma_code)
+						{
+						case RELAY_ZCC_ENABLE_TYPEID:
+							TokenList[i]->replace_once(0,TokenList[i]->size(),pragma_relay_keywords[pragma_code].first,pragma_relay_keywords[pragma_code].second);
+							TokenList.DeleteNSlotsAt(3,i+1);
+							continue;
+						}
+#/*cut-cpp*/
 						};
-					TokenList.DeleteNSlotsAt(4,i);						//! \todo fix once we have code-generation affecting pragmas
+					TokenList.DeleteNSlotsAt(4,i);
 					if (0==i) goto Restart;
 					--i;
 					continue;
@@ -2129,10 +2175,9 @@ CPreprocessor::raw_system_include(const char* const look_for, autovalarray_ptr<T
 	return false;
 }
 
-void
+unsigned int
 CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_ptr<char*>& locked_macros)
 {
-	//! \todo: fix return value situation when enabling code-generation affecting pragmas
 	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	lang.line_lex(x, x_len, pretokenized);
 
@@ -2141,9 +2186,21 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 		{
 		if (1<pretokenized.size())
 			{
+#/*cut-cpp*/
+			BOOST_STATIC_ASSERT(RELAY_ZCC_ENABLE_TYPEID==STATIC_SIZE(pragma_STDC_on_off_switch)*STATIC_SIZE(pragma_STDC_keywords));
+#/*cut-cpp*/
 			const errr ZCC_pragma =  linear_find_lencached(x+pretokenized[1].first, pretokenized[1].second, pragma_ZCC_keywords, STATIC_SIZE(pragma_ZCC_keywords));
 			switch(ZCC_pragma)
 			{
+#/*cut-cpp*/
+			// #pragma ZCC enable_typeid gets rewritten to the 
+			// reserved-to-the-implementation keyword 
+			// _ZCC_pragma_enable_typeid, which in turn turns off the syntax
+			// errors for typeid .  We use this convolution so that we don't
+			// instantly break other compilers inadvertently using our 
+			// #include <typeinfo>
+			case PRAGMA_ZCC_ENABLE_TYPEID: return STATIC_SIZE(pragma_STDC_on_off_switch)*STATIC_SIZE(pragma_STDC_keywords)+1;				
+#/*cut-cpp*/
 			case PRAGMA_ZCC_LOCK:
 				{	//! \test Error_undef_locked_macro.hpp
 				size_t j = pretokenized.size();
@@ -2161,7 +2218,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 				}
 			}
 			}
-		return;
+		return 0;
 		}
 	else if (PRAGMA_LEADING_STDC==valid_pragma_class)
 		{
@@ -2179,7 +2236,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 					INC_INFORM("unhandled STDC pragma ");
 					INFORM(pragma_STDC_keywords[STDC_pragma].first);
 					zcc_errors.inc_error();
-					return;
+					return 0;
 					};
 #endif
 				case PRAGMA_STDC_FP_CONTRACT:
@@ -2199,13 +2256,15 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 						INC_INFORM("invalid STDC pragma ");
 						INFORM(x,x_len);
 						zcc_errors.inc_error();
-						return;
+						return 0;
 						}
+					// valid STDC pragma: relay encoding out
+					return STATIC_SIZE(pragma_STDC_on_off_switch)*STDC_pragma+on_off_switch+1;
 					};
 				}
 			}
 			}
-		return;
+		return 0;
 		}
 	else if (PRAGMA_MESSAGE==valid_pragma_class)
 		{
@@ -2218,7 +2277,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 			const bool wide_str = 'L'==x[pretokenized[2].first];
 			if (0<std::count(x+pretokenized[2].first,x+pretokenized[2].first+pretokenized[2].second,'\\'))
 				{	// no escapes
-				if (wide_str) return; //! \todo this should do a proper unescape to UNICODE, then use a wrapper library to push the UNICODE to whatever wide-char support there is
+				if (wide_str) return 0; //! \todo this should do a proper unescape to UNICODE, then use a wrapper library to push the UNICODE to whatever wide-char support there is
 
 				//! \todo change target, this only handles target CHAR_BIT<=host CHAR_BIT
 				const size_t tmp_len = lang.UnescapeStringLength(x+pretokenized[2].first,pretokenized[2].second);
@@ -2228,7 +2287,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 					lang.UnescapeString(tmp,x+pretokenized[2].first,pretokenized[2].second);
 					INFORM(tmp,tmp_len);
 					_flush(tmp);
-					return;
+					return 0;
 					}
 				};
 			// no escapes, or formatting failed: do something
@@ -2237,8 +2296,9 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 			else
 				INFORM(x+pretokenized[2].first+1,pretokenized[2].second-2);
 			}
-		return;
+		return 0;
 		}
+	return 0;
 }
 
 static void _complete_string_character_literal(Token<char>& x,const char delim, const char* const end_error)
@@ -4239,13 +4299,17 @@ CPreprocessor::truncate_illegal_tokens(Token<char>& x,const int directive_type,c
 bool
 CPreprocessor::hard_locked_macro(const char* const x,const size_t x_len) const
 {
-	assert(!is_empty_string(x));
+	assert(x && *x);
 	assert(0<x_len);
 // C99: 6.11.9 Predefined macro names
 // Macro names beginning with __STDC_ are reserved for future standardization.
 //! \test Error20.hpp : #undef __STDC__
 //! \bug should have positive test suite for named __STDC_ macros
 	if (7<=x_len && !strncmp(x,"__STDC_",sizeof("__STDC_")-1)) return true;
+#/*cut-cpp*/
+// Lock down our relay identifiers. to be safe
+	if (0<=linear_find_lencached(x,x_len,pragma_relay_keywords,STATIC_SIZE(pragma_relay_keywords))) return true;
+#/*cut-cpp*/
 // C++0x 17.4.3.2.2 simply prohibits all keywords as macros; prefer this to C++98.  C99/C0X is handled elsewhere, as it isn't so draconian.
 // follow C++0x when generalizing to non-standard languages, as that's more intuitive.
 //! \bug should have positive test suite for all supported C++ keywords

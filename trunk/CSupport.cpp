@@ -4,6 +4,7 @@
 
 #/*cut-cpp*/
 #include "CSupport.hpp"
+#include "_CSupport3.hpp"
 #/*cut-cpp*/
 #include "CSupport_pp.hpp"
 #include "_CSupport1.hpp"
@@ -10176,11 +10177,37 @@ static void CPP_notice_scope_glue(parse_tree& src)
 		};
 }
 
+static void CPP_handle_pragma_relay(parse_tree& src)
+{
+	assert(src.is_raw_list());
+	if (!src.empty<0>())
+		{
+		bool typeid_is_ok = false;	// has to be enabled in #include <typeinfo>
+		size_t i = 0;
+		do	{
+			if (src.data<0>()[i].is_atomic())
+				{
+				const errr Idx = linear_find(src.data<0>()[i].index_tokens[0].token.first, src.data<0>()[i].index_tokens[0].token.second,pragma_relay_keywords,PRAGMA_RELAY_KEYWORDS_STRICT_UB);
+				if (0<=Idx)
+					{	// react to any relay keywords that actually mean anything here
+					if (RELAY_ZCC_ENABLE_TYPEID==Idx) typeid_is_ok = true;
+					src.DeleteIdx<0>(i);
+					}
+				else if (!typeid_is_ok && token_is_string<7>(src.data<0>()[i].index_tokens[0].token,"type_id"))
+					//! \bug need test case
+					simple_error(src.c_array<0>()[i]," requires #include <typeinfo> first (C++0X 5.2.8p6)");
+				}
+			}
+		while(src.size<0>()> ++i);
+		}
+}
+
 //! \todo check that the fact all literals are already legal-form is used
 //! \throw std::bad_alloc
 static void CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 {
 	assert(src.is_raw_list());
+	CPP_handle_pragma_relay(src);
 	_label_literals(src,types);
 	std::for_each(src.begin<0>(),src.end<0>(),_label_CPP_literal);	// intercepts: true, false, this
 	if (!_match_pairs(src)) return;
