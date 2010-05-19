@@ -1436,8 +1436,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						--i;
 						continue;
 #/*cut-cpp*/
-						case RELAY_ZCC_ENABLE_TYPEID:
-							TokenList[i]->replace_once(0,TokenList[i]->size(),pragma_relay_keywords[pragma_code].first,pragma_relay_keywords[pragma_code].second);
+						case RELAY_ZCC_ENABLE_TYPEID+1:
+							TokenList[i]->replace_once(0,TokenList[i]->size(),pragma_relay_keywords[pragma_code-1].first,pragma_relay_keywords[pragma_code-1].second);
 							continue;
 						}
 #/*cut-cpp*/
@@ -1693,8 +1693,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 #/*cut-cpp*/
 						switch(pragma_code)
 						{
-						case RELAY_ZCC_ENABLE_TYPEID:
-							TokenList[i]->replace_once(0,TokenList[i]->size(),pragma_relay_keywords[pragma_code].first,pragma_relay_keywords[pragma_code].second);
+						case RELAY_ZCC_ENABLE_TYPEID+1:
+							TokenList[i]->replace_once(0,TokenList[i]->size(),pragma_relay_keywords[pragma_code-1].first,pragma_relay_keywords[pragma_code-1].second);
 							TokenList.DeleteNSlotsAt(3,i+1);
 							continue;
 						}

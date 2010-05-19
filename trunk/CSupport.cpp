@@ -10285,7 +10285,7 @@ static void CPP_handle_pragma_relay(parse_tree& src)
 					if (RELAY_ZCC_ENABLE_TYPEID==Idx) typeid_is_ok = true;
 					src.DeleteIdx<0>(i);
 					}
-				else if (!typeid_is_ok && token_is_string<7>(src.data<0>()[i].index_tokens[0].token,"type_id"))
+				else if (!typeid_is_ok && token_is_string<6>(src.data<0>()[i].index_tokens[0].token,"typeid"))
 					//! \bug need test case
 					simple_error(src.c_array<0>()[i]," requires #include <typeinfo> first (C++0X 5.2.8p6)");
 				}

@@ -5,6 +5,8 @@
 // (it's a std::typeinfo structure) -- but the result of == and != operators
 // can be known at compile-time in simple cases.
 
+#include <typeinfo>
+
 // identity checks
 static_assert(typeid(void)==typeid(void),"automatic success failed");
 static_assert(typeid(bool)==typeid(bool),"automatic success failed");
