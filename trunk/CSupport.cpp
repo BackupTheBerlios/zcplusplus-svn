@@ -615,7 +615,8 @@ enum hard_type_indexes {
 	FLOAT__COMPLEX,
 	DOUBLE__COMPLEX,
 	LDOUBLE__COMPLEX,
-	WCHAR_T
+	WCHAR_T,	// C++-specific
+	TYPEINFO	// C++-specific
 };
 
 }
@@ -983,7 +984,8 @@ const POD_pair<const char* const,size_t> CPP_atomic_types[]
 		DICT_STRUCT("float _Complex"),		/* start C++ extension support: C99 _Complex in C++ (we can do this as _Complex is reserved to the implementation) */
 		DICT_STRUCT("double _Complex"),
 		DICT_STRUCT("long double _Complex"),
-		DICT_STRUCT("wchar_t")
+		DICT_STRUCT("wchar_t"),			// C++-specific
+		DICT_STRUCT("std::typeinfo")	// C++-specific
 		};
 
 BOOST_STATIC_ASSERT(STATIC_SIZE(C_atomic_types)==C_TYPE_MAX);
@@ -3452,7 +3454,7 @@ static void CPP_notice_primary_type(parse_tree& src)
 {
 	if (NULL!=src.index_tokens[0].token.first)
 		{
-		if (token_is_string<5>(src.index_tokens[0].token,"_Bool"))
+		if (token_is_string<4>(src.index_tokens[0].token,"bool"))
 			{
 			src.type_code.set_type(C_TYPE::BOOL);
 			src.flags |= PARSE_PRIMARY_TYPE;
@@ -3613,6 +3615,21 @@ static bool is_CPP_bitwise_complement_expression(const parse_tree& src)
 //			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
 }
 #/*cut-cpp*/
+
+static bool is_CPP0X_typeid_expression(const parse_tree& src)
+{
+	return		(robust_token_is_string<6>(src.index_tokens[0].token,"typeid"))
+#ifndef NDEBUG
+			&&	NULL!=src.index_tokens[0].src_filename
+#endif
+			&&	NULL==src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	src.empty<1>()
+			&&	1==src.size<2>() && ((PARSE_EXPRESSION | PARSE_TYPE) & src.data<2>()->flags)
+			&&	C_TYPE::TYPEINFO==src.type_code.base_type_index
+			&&	0==src.type_code.pointer_power
+			&&	(src.type_code.qualifier<0>() & (type_spec::lvalue | type_spec::_const))==(type_spec::lvalue | type_spec::_const);
+}
 
 #ifndef NDEBUG
 static bool is_C99_CPP_sizeof_expression(const parse_tree& src)
@@ -5120,6 +5137,58 @@ static void locate_C99_postfix_expression(parse_tree& src, size_t& i, const type
 		}
 }
 
+#/*cut-cpp*/
+
+// if #include <typeinfo> hasn't happened, context-free error stops this
+//! \throw std::bad_alloc
+static bool terse_locate_CPP0X_typeid(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
+	assert(src.data<0>()[i].is_atomic());
+
+	if (token_is_string<6>(src.data<0>()[i].index_tokens[0].token,"typeid")
+		&& 1<src.size<0>()-i
+		&& is_naked_parentheses_pair(src.data<0>()[i+1]))
+		{
+		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
+		if ((PARSE_EXPRESSION | PARSE_TYPE) & src.data<0>()[i+1].flags)
+			{
+			{
+			parse_tree* const tmp = repurpose_inner_parentheses(src.c_array<0>()[i+1]);	// RAM conservation
+			src.c_array<0>()[i+1].OverwriteInto(*tmp);
+			src.c_array<0>()[i].fast_set_arg<2>(tmp);
+			src.c_array<0>()[i].core_flag_update();
+			src.c_array<0>()[i].flags |= PARSE_STRICT_POSTFIX_EXPRESSION;
+			src.DeleteIdx<0>(i+1);
+			cancel_outermost_parentheses(src.c_array<0>()[i].c_array<2>()[0]);
+			}
+			src.c_array<0>()[i].type_code.set_type(C_TYPE::TYPEINFO);
+			src.c_array<0>()[i].type_code.qualifier<0>() |= (type_spec::lvalue | type_spec::_const);
+			assert(is_CPP0X_typeid_expression(src.c_array<0>()[i]));
+			return true;			
+			}
+		}
+	return false;
+}
+
+// We can't eval typeid itself at compile-time, but we *can* eval == and != of
+// typeid.  Most other operators should error, through.
+
+//! \throw std::bad_alloc()
+static bool locate_CPP0X_typeid(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+
+	if (	!(PARSE_OBVIOUS & src.data<0>()[i].flags)
+		&&	src.data<0>()[i].is_atomic()
+		&&	terse_locate_CPP0X_typeid(src,i,types))
+		return true;
+	return false;
+}
+#/*cut-cpp*/
 /*postfixexpression:
 	primaryexpression
 	postfixexpression [ expression ]
@@ -5161,8 +5230,13 @@ static void locate_CPP_postfix_expression(parse_tree& src, size_t& i, const type
 				{
 				}
 			}
+#/*cut-cpp*/
+#endif
 		}
 	else{	// if (NULL==src.data<0>()[i].index_tokens[1].token.first)
+		if (locate_CPP0X_typeid(src,i,types)) return;
+#if 0
+#/*cut-cpp*/
 		if (token_is_char<'.'>(src.data<0>()[i].index_tokens[0].token))
 			{
 			if (1<=i && 1<src.size<0>()-i)
@@ -8374,6 +8448,20 @@ static bool terse_locate_CPP_equality_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
+#/*cut-cpp*/
+static bool typeid_equal_content(const parse_tree& lhs, const parse_tree& rhs,bool& is_equal)
+{
+	if (   is_CPP0X_typeid_expression(lhs) && is_CPP0X_typeid_expression(rhs)
+		&& C_TYPE::NOT_VOID!=lhs.data<2>()->type_code.base_type_index
+		&& C_TYPE::NOT_VOID!=rhs.data<2>()->type_code.base_type_index)
+		{
+		is_equal = lhs.type_code.typeid_equal(rhs.type_code);
+		return true;
+		}
+	return false;
+}
+
+#/*cut-cpp*/
 static bool eval_equality_expression(parse_tree& src, const type_system& types, literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {	
 	BOOST_STATIC_ASSERT(1==C99_EQUALITY_SUBTYPE_NEQ-C99_EQUALITY_SUBTYPE_EQ);
@@ -8390,7 +8478,11 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 				//! \test default/Pass_if_nonzero.hpp, default/Pass_if_nonzero.h, 
 				//! \test default/Pass_if_zero.hpp, default/Pass_if_zero.h, 
 			bool is_equal = false;
-			if (C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal))
+			if (   C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal)
+#/*cut-cpp*/
+				|| typeid_equal_content(*src.data<1>(),*src.data<2>(),is_equal)
+#/*cut-cpp*/
+				)
 				{
 				force_decimal_literal(src,is_equal_op==is_equal ? "1" : "0",types);
 				return true;

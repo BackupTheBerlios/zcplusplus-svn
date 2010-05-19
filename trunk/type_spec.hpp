@@ -64,6 +64,7 @@ struct type_spec
 
 	//! \throw std::bad_alloc only if dest.pointer_power<src.pointer_power 
 	static void value_copy(type_spec& dest, const type_spec& src) {::value_copy(dest,src);};
+	bool typeid_equal(const type_spec& rhs) const;
 	void MoveInto(type_spec& dest);
 	void OverwriteInto(type_spec& dest);
 #ifndef ZAIMONI_FORCE_ISO

@@ -1,4 +1,4 @@
-// CSupport.hpp
+// CSupport_pp.hpp
 // support for C/C++ language parsing
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
@@ -133,7 +133,7 @@ extern const zaimoni::POD_pair<const char* const,size_t> CPP_atomic_types[];	// 
 extern const size_t C_int_priority[];
 
 #define C_TYPE_MAX 21
-#define CPP_TYPE_MAX 22
+#define CPP_TYPE_MAX 23
 #define C_INT_PRIORITY_SIZE 7
 #define C_PP_INT_PRIORITY_ORIGIN 4
 

@@ -558,7 +558,8 @@ enum hard_type_indexes {
 	FLOAT__COMPLEX,
 	DOUBLE__COMPLEX,
 	LDOUBLE__COMPLEX,
-	WCHAR_T
+	WCHAR_T,	// C++-specific
+	TYPEINFO	// C++-specific
 };
 
 }
@@ -905,7 +906,8 @@ const POD_pair<const char* const,size_t> CPP_atomic_types[]
 		DICT_STRUCT("float _Complex"),		/* start C++ extension support: C99 _Complex in C++ (we can do this as _Complex is reserved to the implementation) */
 		DICT_STRUCT("double _Complex"),
 		DICT_STRUCT("long double _Complex"),
-		DICT_STRUCT("wchar_t")
+		DICT_STRUCT("wchar_t"),			// C++-specific
+		DICT_STRUCT("std::typeinfo")	// C++-specific
 		};
 
 BOOST_STATIC_ASSERT(STATIC_SIZE(C_atomic_types)==C_TYPE_MAX);
@@ -3359,7 +3361,7 @@ static void CPP_notice_primary_type(parse_tree& src)
 {
 	if (NULL!=src.index_tokens[0].token.first)
 		{
-		if (token_is_string<5>(src.index_tokens[0].token,"_Bool"))
+		if (token_is_string<4>(src.index_tokens[0].token,"bool"))
 			{
 			src.type_code.set_type(C_TYPE::BOOL);
 			src.flags |= PARSE_PRIMARY_TYPE;
@@ -4700,8 +4702,6 @@ static void locate_CPP_postfix_expression(parse_tree& src, size_t& i, const type
 				{
 				}
 			}
-		}
-	else{	// if (NULL==src.data<0>()[i].index_tokens[1].token.first)
 		if (token_is_char<'.'>(src.data<0>()[i].index_tokens[0].token))
 			{
 			if (1<=i && 1<src.size<0>()-i)
@@ -7496,7 +7496,8 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 				//! \test default/Pass_if_nonzero.hpp, default/Pass_if_nonzero.h, 
 				//! \test default/Pass_if_zero.hpp, default/Pass_if_zero.h, 
 			bool is_equal = false;
-			if (C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal))
+			if (   C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal)
+				)
 				{
 				force_decimal_literal(src,is_equal_op==is_equal ? "1" : "0",types);
 				return true;

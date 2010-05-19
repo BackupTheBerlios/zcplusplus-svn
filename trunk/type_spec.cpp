@@ -173,6 +173,21 @@ bool type_spec::operator==(const type_spec& rhs) const
 		&& (0==pointer_power || !memcmp(extent_vector,rhs.extent_vector,sizeof(uintmax_t)*pointer_power));
 }
 
+bool type_spec::typeid_equal(const type_spec& rhs) const
+{
+	if (   base_type_index==rhs.base_type_index
+		&& pointer_power==rhs.pointer_power)
+		{	// C++0X 5.2.8p5: lose the topmost level of 
+			// C++ cv-qualification (extending to C would be 
+			// C type-qualifiers)
+		if (0==pointer_power) return true;
+		if (	!memcmp(extent_vector,rhs.extent_vector,sizeof(uintmax_t)*pointer_power)
+			&&	!memcmp(q_vector.data(),rhs.q_vector.data(),pointer_power))
+			return true;
+		}
+	return false;
+}
+
 void type_spec::MoveInto(type_spec& dest)
 {
 	dest.destroy();
