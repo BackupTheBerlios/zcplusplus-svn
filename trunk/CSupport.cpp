@@ -8455,7 +8455,7 @@ static bool typeid_equal_content(const parse_tree& lhs, const parse_tree& rhs,bo
 		&& C_TYPE::NOT_VOID!=lhs.data<2>()->type_code.base_type_index
 		&& C_TYPE::NOT_VOID!=rhs.data<2>()->type_code.base_type_index)
 		{
-		is_equal = lhs.type_code.typeid_equal(rhs.type_code);
+		is_equal = lhs.data<2>()->type_code.typeid_equal(rhs.data<2>()->type_code);
 		return true;
 		}
 	return false;
