@@ -2759,6 +2759,22 @@ static size_t LengthOfCStringLiteral(const char* src, size_t src_len)
 	return LengthOfUnescapedCString(src,src_len)+1;
 }
 
+static size_t LengthOfCCharLiteral(const char* src, size_t src_len)
+{
+	assert(NULL!=src);
+	assert(2<=src_len);
+	const bool wide_char = ('L'==src[0]);
+	if (wide_char)
+		{
+		++src;
+		if (2 > --src_len) return 0;
+		}
+	if ('\''!=src[--src_len]) return 0;
+	if ('\''!=*(src++)) return 0;
+	if (0 == --src_len) return 1;
+	return LengthOfUnescapedCString(src,src_len);
+}
+
 /*! 
  * Locates the character in a character literal as a substring.  Use this as preparation for "collapsing in place".
  * 
@@ -4442,8 +4458,12 @@ static void _label_one_literal(parse_tree& src,const type_system& types)
 			return;
 			}
 		else if (C_TESTFLAG_CHAR_LITERAL==src.index_tokens[0].flags)
-			{
-			src.type_code.set_type(C_TYPE::CHAR);
+			{	// C99 6.4.4.4p10: the type of a character literal is int
+				// C++0X 2.13.4p1: the type of a single character literal is char 
+				// but the type of a multiple-character literal is int
+				// unfortunately, we don't have the language here.  Go with
+				// C++ rules, and patch up C elsewhere
+			src.type_code.set_type(LengthOfCCharLiteral(src.index_tokens[0].token.first,src.index_tokens[0].token.second) ? C_TYPE::CHAR : C_TYPE::INT);
 			return;
 			};
 		assert(C_TESTFLAG_PP_NUMERAL & src.index_tokens[0].flags);
