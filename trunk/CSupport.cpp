@@ -3142,6 +3142,7 @@ static void simple_error(parse_tree& src, const char* const err_str)
 		zcc_errors.inc_error();
 		};
 }
+#/*cut-cpp*/
 
 /* deal with following type catalog
 atomic:
@@ -3425,9 +3426,9 @@ static size_t _C99_CPP_notice_multitoken_primary_type(parse_tree& src, size_t i)
 	return 0;
 }
 
-static void C99_notice_primary_type(parse_tree& src)
+static void C99_notice_primary_type_atomic(parse_tree& src)
 {
-	if (NULL!=src.index_tokens[0].token.first)
+	if (src.is_atomic())
 		{
 		if (token_is_string<5>(src.index_tokens[0].token,"_Bool"))
 			{
@@ -3442,14 +3443,18 @@ static void C99_notice_primary_type(parse_tree& src)
 			return;
 			}
 		}
+}
 
+static void C99_notice_primary_type(parse_tree& src)
+{
+	assert(src.is_raw_list());
+	std::for_each(src.begin<0>(),src.end<0>(),C99_notice_primary_type_atomic);
 	size_t i = 0;
 	size_t offset = 0;
 	while(i+offset<src.size<0>())
 		{
-		{
+		{	//! \todo retest object size with/without tmp_ref
 		parse_tree& tmp_ref = src.c_array<0>()[i];
-		C99_notice_primary_type(tmp_ref);
 		const size_t truncate_by = (!(PARSE_PRIMARY_TYPE & tmp_ref.flags) && NULL!=tmp_ref.index_tokens[0].token.first) 
 								 ? _C99_CPP_notice_multitoken_primary_type(src,i) : 0;
 		if (0<truncate_by)
@@ -3466,9 +3471,9 @@ static void C99_notice_primary_type(parse_tree& src)
 	if (0<offset) src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
 }
 
-static void CPP_notice_primary_type(parse_tree& src)
+static void CPP_notice_primary_type_atomic(parse_tree& src)
 {
-	if (NULL!=src.index_tokens[0].token.first)
+	if (src.is_atomic())
 		{
 		if (token_is_string<4>(src.index_tokens[0].token,"bool"))
 			{
@@ -3489,14 +3494,18 @@ static void CPP_notice_primary_type(parse_tree& src)
 			return;
 			}
 		}
+}
 
+static void CPP_notice_primary_type(parse_tree& src)
+{
+	assert(src.is_raw_list());
+	std::for_each(src.begin<0>(),src.end<0>(),CPP_notice_primary_type_atomic);
 	size_t i = 0;
 	size_t offset = 0;
 	while(i+offset<src.size<0>())
 		{
-		{
+		{	//! \todo retest object size with/without tmp_ref
 		parse_tree& tmp_ref = src.c_array<0>()[i];
-		CPP_notice_primary_type(tmp_ref);
 		const size_t truncate_by = (!(PARSE_PRIMARY_TYPE & tmp_ref.flags) && NULL!=tmp_ref.index_tokens[0].token.first) 
 								 ? _C99_CPP_notice_multitoken_primary_type(src,i) : 0;
 		if (0<truncate_by)
@@ -3512,6 +3521,7 @@ static void CPP_notice_primary_type(parse_tree& src)
 		};
 	if (0<offset) src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
 }
+#/*cut-cpp*/
 
 //! \todo generalize -- function pointer parameter target, functor target
 static size_t _count_identifiers(const parse_tree& src)
@@ -5415,6 +5425,7 @@ static void VM_to_literal(parse_tree& dest, const umaxint& src_int,const parse_t
 	_label_one_literal(dest,types);
 	assert(PARSE_EXPRESSION & dest.flags);
 }
+#/*cut-cpp*/
 
 // can't do much syntax-checking or immediate-evaluation here because of binary +/-
 // unary +/- syntax checking out out of place as it's needed by all of the unary operators
@@ -5447,7 +5458,7 @@ static void uint_to_literal(parse_tree& dest, uintmax_t src_int,const parse_tree
 	_label_one_literal(dest,types);
 	assert(PARSE_EXPRESSION & dest.flags);
 }
-
+#/*cut-cpp*/
 
 static void force_decimal_literal(parse_tree& dest,const char* src,const type_system& types)
 {
@@ -10168,9 +10179,9 @@ static void C99_ContextFreeParse(parse_tree& src,const type_system& types)
 {
 	assert(src.is_raw_list());
 	_label_literals(src,types);
-	if (!_match_pairs(src)) return;
 	// handle core type specifiers
 	C99_notice_primary_type(src);
+	if (!_match_pairs(src)) return;
 	// struct/union/enum specifiers can occur in all sorts of strange places
 	C99_notice_struct_union_enum(src);
 }
@@ -10322,9 +10333,9 @@ static void CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 	CPP_handle_pragma_relay(src);
 	_label_literals(src,types);
 	std::for_each(src.begin<0>(),src.end<0>(),_label_CPP_literal);	// intercepts: true, false, this
-	if (!_match_pairs(src)) return;
 	// handle core type specifiers
 	CPP_notice_primary_type(src);
+	if (!_match_pairs(src)) return;
 	// do context-free part of qualified-names
 	CPP_notice_scope_glue(src);
 	// class/struct/union/enum specifiers can occur in all sorts of strange places
