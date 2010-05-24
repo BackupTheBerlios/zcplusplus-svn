@@ -1,4 +1,4 @@
-// CSupport.cpp
+// CSupport_pp.cpp
 // support for C/C++ parsing
 // (C)2009, 2010 Kenneth Boyd, license: MIT.txt
 
@@ -912,52 +912,6 @@ const POD_pair<const char* const,size_t> CPP_atomic_types[]
 
 BOOST_STATIC_ASSERT(STATIC_SIZE(C_atomic_types)==C_TYPE_MAX);
 BOOST_STATIC_ASSERT(STATIC_SIZE(CPP_atomic_types)==CPP_TYPE_MAX);
-
-static const POD_pair<const char*,size_t> C99_decl_specifiers[] =
-	{	DICT_STRUCT("typedef"),
-		DICT_STRUCT("const"),
-		DICT_STRUCT("volatile"),
-		DICT_STRUCT("restrict"),
-		DICT_STRUCT("register"),
-		DICT_STRUCT("static"),
-		DICT_STRUCT("extern"),
-		DICT_STRUCT("inline"),
-		DICT_STRUCT("auto")
-	};
-
-// we implement C++0X, not C++98.  auto as storage specifier is pretty much a waste of source code anyway.
-// may have to invoke weirdness to deal with C headers that use restrict (and link with C standard library functions!)
-static const POD_pair<const char*,size_t> CPP0X_decl_specifiers[] =
-	{	DICT_STRUCT("typedef"),
-		DICT_STRUCT("const"),
-		DICT_STRUCT("volatile"),
-		DICT_STRUCT("thread_local"),
-		DICT_STRUCT("register"),
-		DICT_STRUCT("static"),
-		DICT_STRUCT("extern"),
-		DICT_STRUCT("inline"),
-		DICT_STRUCT("constexpr"),
-		DICT_STRUCT("mutable"),
-		DICT_STRUCT("virtual"),
-		DICT_STRUCT("explicit"),
-		DICT_STRUCT("friend")
-	};
-
-#define C99_CPP0X_DECLSPEC_TYPEDEF (1ULL<<0)
-#define C99_CPP0X_DECLSPEC_CONST (1ULL<<1)
-#define C99_CPP0X_DECLSPEC_VOLATILE (1ULL<<2)
-#define C99_CPP0X_DECLSPEC_REGISTER (1ULL<<4)
-#define C99_CPP0X_DECLSPEC_STATIC (1ULL<<5)
-#define C99_CPP0X_DECLSPEC_EXTERN (1ULL<<6)
-#define C99_CPP0X_DECLSPEC_INLINE (1ULL<<7)
-#define C99_DECLSPEC_AUTO (1ULL<<8)
-#define CPP_DECLSPEC_MUTABLE (1ULL<<9)
-#define CPP_DECLSPEC_VIRTUAL (1ULL<<10)
-#define CPP_DECLSPEC_EXPLICIT (1ULL<<11)
-#define CPP_DECLSPEC_FRIEND (1ULL<<12)
-
-BOOST_STATIC_ASSERT(C99_CPP0X_DECLSPEC_CONST==type_spec::_const);
-BOOST_STATIC_ASSERT(C99_CPP0X_DECLSPEC_VOLATILE==type_spec::_volatile);
 
 #undef DICT2_STRUCT
 #undef DICT_STRUCT

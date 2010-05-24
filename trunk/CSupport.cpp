@@ -36,6 +36,7 @@
 #/*cut-cpp*/
 #include "enum_type.hpp"
 #include "struct_type.hpp"
+#include "kleene_star.hpp"
 #/*cut-cpp*/
 #include "CheckReturn.hpp"
 
@@ -990,6 +991,7 @@ const POD_pair<const char* const,size_t> CPP_atomic_types[]
 
 BOOST_STATIC_ASSERT(STATIC_SIZE(C_atomic_types)==C_TYPE_MAX);
 BOOST_STATIC_ASSERT(STATIC_SIZE(CPP_atomic_types)==CPP_TYPE_MAX);
+#/*cut-cpp*/
 
 static const POD_pair<const char*,size_t> C99_decl_specifiers[] =
 	{	DICT_STRUCT("typedef"),
@@ -1036,6 +1038,91 @@ static const POD_pair<const char*,size_t> CPP0X_decl_specifiers[] =
 
 BOOST_STATIC_ASSERT(C99_CPP0X_DECLSPEC_CONST==type_spec::_const);
 BOOST_STATIC_ASSERT(C99_CPP0X_DECLSPEC_VOLATILE==type_spec::_volatile);
+
+// todo: rewrite of decl-specifiers that actually can handle the reordering requirements.  
+// decl-specifier-seq is mostly context-free, so first-pass should be in 
+// the context-free section, if not integrated preprocessor
+static const POD_pair<const char*,size_t> C99_decl_specifier_list[] =
+	{	DICT_STRUCT("typedef"),
+		DICT_STRUCT("const"),
+		DICT_STRUCT("volatile"),
+		DICT_STRUCT("restrict"),	// C99-specific
+		DICT_STRUCT("register"),
+		DICT_STRUCT("static"),
+		DICT_STRUCT("extern"),
+		DICT_STRUCT("inline"),
+		DICT_STRUCT("auto"),
+		DICT_STRUCT("void"),
+		DICT_STRUCT("char"),
+		DICT_STRUCT("short"),
+		DICT_STRUCT("int"),
+		DICT_STRUCT("long"),
+		DICT_STRUCT("float"),
+		DICT_STRUCT("double"),
+		DICT_STRUCT("signed"),
+		DICT_STRUCT("unsigned"),
+		DICT_STRUCT("_Bool"),
+		DICT_STRUCT("_Complex"),
+		DICT_STRUCT("_Thread_Local"),	// C1X, actually
+	};
+
+// we implement C++0X, not C++98.  auto as storage specifier is pretty much a waste of source code anyway.
+// may have to invoke weirdness to deal with C headers that use restrict (and link with C standard library functions!)
+// we don't handle char16_t and char32_t yet
+static const POD_pair<const char*,size_t> CPP0X_decl_specifier_list[] =
+	{	DICT_STRUCT("typedef"),
+		DICT_STRUCT("const"),
+		DICT_STRUCT("volatile"),
+		DICT_STRUCT("wchar_t"),	// C++-specific
+		DICT_STRUCT("register"),
+		DICT_STRUCT("static"),
+		DICT_STRUCT("extern"),
+		DICT_STRUCT("inline"),
+		DICT_STRUCT("auto"),	// storage-class in C, type-specifier in C++
+		DICT_STRUCT("void"),
+		DICT_STRUCT("char"),
+		DICT_STRUCT("short"),
+		DICT_STRUCT("int"),
+		DICT_STRUCT("long"),
+		DICT_STRUCT("float"),
+		DICT_STRUCT("double"),
+		DICT_STRUCT("signed"),
+		DICT_STRUCT("unsigned"),
+		DICT_STRUCT("bool"),	// _Bool in C
+		DICT_STRUCT("_Complex"),	// extension
+		DICT_STRUCT("thread_local"),	// C1X _Thread_Local
+		DICT_STRUCT("constexpr"),
+		DICT_STRUCT("mutable"),
+		DICT_STRUCT("virtual"),
+		DICT_STRUCT("explicit"),
+		DICT_STRUCT("friend")
+	};
+
+#define C99_CPP_TYPEDEF_IDX 0
+#define C99_CPP_CONST_IDX 1
+#define C99_CPP_VOLATILE_IDX 2
+#define C99_RESTRICT_IDX 3
+#define C99_CPP_REGISTER_IDX 4
+#define C99_CPP_STATIC_IDX 5
+#define C99_CPP_EXTERN_IDX 6
+#define C99_CPP_AUTO_IDX 8
+#define C1X_CPP0X_THREAD_LOCAL_IDX 20
+#define CPP_MUTABLE_IDX 22
+
+size_t C99_invariant_decl_specifier(const char* const x)
+{
+	const errr i = linear_find(x,C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list));
+	if (STATIC_SIZE(C99_decl_specifier_list)>i) return i;
+	return (size_t)(-1);
+}
+
+size_t CPP0X_invariant_decl_specifier(const char* const x)
+{
+	const errr i = linear_find(x,CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list));
+	if (STATIC_SIZE(CPP0X_decl_specifier_list)>i) return i;
+	return (size_t)(-1);
+}	
+#/*cut-cpp*/
 
 #undef DICT2_STRUCT
 #undef DICT_STRUCT
@@ -3449,7 +3536,162 @@ static void C99_notice_primary_type(parse_tree& src)
 {
 	assert(src.is_raw_list());
 	std::for_each(src.begin<0>(),src.end<0>(),C99_notice_primary_type_atomic);
+
 	size_t i = 0;
+	kleene_star<STATIC_SIZE(C99_decl_specifier_list),size_t (*)(const char*)> invariant_decl_scanner(C99_invariant_decl_specifier);
+	do	{
+		if (src.data<0>()[i].is_atomic() && invariant_decl_scanner(src.data<0>()[i].index_tokens[0].token.first))
+			{
+			bool have_warned_about_register = false;
+			bool have_warned_about_static = false;
+			bool have_warned_about_extern = false;
+			bool have_warned_about_thread_local = false;
+			bool have_warned_about_auto = false;
+			bool have_warned_about_typedef = false;
+			bool have_warned_about_const = false;
+			bool have_warned_about_volatile = false;
+			bool have_warned_about_restrict = false;
+
+			size_t offset = 0;
+			while(src.size<0>()>i+ ++offset && invariant_decl_scanner(src.data<0>()[i+offset].index_tokens[0].token.first))
+				{	// C1X 6.7.1p2: at most one storage-class specifier, except _Thread_Local may stack with static or extern
+				if (1<invariant_decl_scanner.count(C99_CPP_REGISTER_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_register)
+						{
+						message_header(src.data<0>()[i+offset].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing prohibited duplicated register storage class and continuing (C99 6.7.1p2)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_register = true;
+						}
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				if (1<invariant_decl_scanner.count(C99_CPP_STATIC_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_static)
+						{
+						message_header(src.data<0>()[i+offset].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing prohibited duplicated static storage class and continuing (C99 6.7.1p2)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_static = true;
+						}
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				if (1<invariant_decl_scanner.count(C99_CPP_EXTERN_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_extern)
+						{
+						message_header(src.data<0>()[i+offset].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing prohibited duplicated extern storage class and continuing (C99 6.7.1p2)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_extern = true;
+						}
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				if (1<invariant_decl_scanner.count(C1X_CPP0X_THREAD_LOCAL_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_thread_local)
+						{
+						message_header(src.data<0>()[i+offset].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing prohibited duplicated _Thread_Local storage class and continuing (C1X 6.7.1p2)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_thread_local = true;
+						}
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				if (1<invariant_decl_scanner.count(C99_CPP_AUTO_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_auto)
+						{
+						message_header(src.data<0>()[i+offset].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing prohibited duplicated auto storage class and continuing (C99 6.7.1p2)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_auto = true;
+						}
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				if (1<invariant_decl_scanner.count(C99_CPP_TYPEDEF_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_typedef)
+						{
+						message_header(src.data<0>()[i+offset].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing prohibited duplicated typedef storage class and continuing (C99 6.7.1p2)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_typedef = true;
+						}
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				// C1X 6.7.3p3: duplicate type-qualifiers should be cleaned (warn unless -Wno-OAOO or -Wno-DRY)
+				if (1<invariant_decl_scanner.count(C99_CPP_CONST_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_const)
+						{
+						message_header(src.data<0>()[i+offset].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing redundant const type qualifier (C99 6.7.3p4)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_const = true;
+						}
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				if (1<invariant_decl_scanner.count(C99_CPP_VOLATILE_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_volatile)
+						{
+						message_header(src.data<0>()[i+offset].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing redundant volatile type qualifier (C99 6.7.3p4)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_volatile = true;
+						}
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				if (1<invariant_decl_scanner.count(C99_RESTRICT_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_restrict)
+						{
+						message_header(src.data<0>()[i+offset].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing redundant restrict type qualifier (C99 6.7.3p4)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_restrict = true;
+						}
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				};
+
+			//! \todo handle allowed sequences of type-qualifiers (do need second pass later)
+			// defer handling: _Thread_Local, typedef, other storage class issues
+			invariant_decl_scanner.clear();
+			}
+		}
+	while(src.size<0>()> ++i);
+
+	i = 0;
 	size_t offset = 0;
 	while(i+offset<src.size<0>())
 		{
@@ -3500,7 +3742,164 @@ static void CPP_notice_primary_type(parse_tree& src)
 {
 	assert(src.is_raw_list());
 	std::for_each(src.begin<0>(),src.end<0>(),CPP_notice_primary_type_atomic);
+
 	size_t i = 0;
+	kleene_star<STATIC_SIZE(CPP0X_decl_specifier_list),size_t (*)(const char*)> invariant_decl_scanner(CPP0X_invariant_decl_specifier);
+	do	{
+		if (src.data<0>()[i].is_atomic() && invariant_decl_scanner(src.data<0>()[i].index_tokens[0].token.first))
+			{
+			bool have_warned_about_register = false;
+			bool have_warned_about_static = false;
+			bool have_warned_about_extern = false;
+			bool have_warned_about_thread_local = false;
+			bool have_warned_about_mutable = false;
+			bool have_warned_about_typedef = false;
+			bool have_warned_about_const = false;
+			bool have_warned_about_volatile = false;
+			bool using_linkage = false;
+			size_t offset = 0;
+
+			// C++0X 7.5: intercept linkage specifications here, warn if discarding (must accept "C" and "C++")
+			if (C99_CPP_EXTERN_IDX==invariant_decl_scanner[0] && 1<src.size<0>()-i && (C_TESTFLAG_STRING_LITERAL & src.data<0>()[i+1].flags))
+				{	//! \todo should accept escape codes here as well
+				if (strcmp(src.data<0>()[i+1].index_tokens[0].token.first,"\"C\"") && strcmp(src.data<0>()[i+1].index_tokens[0].token.first,"\"C++\""))
+					{
+					message_header(src.data<0>()[i+1].index_tokens[0]);
+					INC_INFORM(WARN_STR);
+					INFORM("discarding unrecognized linkage (only C, C++ required: C++0X 7.5p2)");
+					if (bool_options[boolopt::warnings_are_errors])
+						zcc_errors.inc_error();
+					src.DeleteIdx<0>(i+1);
+					}
+				else
+					using_linkage = true;
+				}
+			
+			while(src.size<0>()>i+ ++offset+using_linkage && invariant_decl_scanner(src.data<0>()[i+offset+using_linkage].index_tokens[0].token.first))
+				{	// C++0X 7.1.1p1: at most one storage-class specifier, except thread_local may stack with static or extern
+				if (1<invariant_decl_scanner.count(C99_CPP_REGISTER_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_register)
+						{
+						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing prohibited duplicated register storage class and continuing (C++0X 7.1.1p1)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_register = true;
+						}
+					src.DeleteIdx<0>(i+offset+using_linkage);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				if (1<invariant_decl_scanner.count(C99_CPP_STATIC_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_static)
+						{
+						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing prohibited duplicated static storage class and continuing (C++0X 7.1.1p1)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_static = true;
+						}
+					src.DeleteIdx<0>(i+offset+using_linkage);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				if (1<invariant_decl_scanner.count(C99_CPP_EXTERN_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_extern)
+						{
+						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing prohibited duplicated extern storage class and continuing (C++0X 7.1.1p1)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_extern = true;
+						}
+					src.DeleteIdx<0>(i+offset+using_linkage);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				if (1<invariant_decl_scanner.count(C1X_CPP0X_THREAD_LOCAL_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_thread_local)
+						{
+						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing prohibited duplicated thread_local storage class and continuing (C++0X 7.1.1p1)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_thread_local = true;
+						}
+					src.DeleteIdx<0>(i+offset+using_linkage);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				if (1<invariant_decl_scanner.count(CPP_MUTABLE_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_mutable)
+						{
+						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing prohibited duplicated mutable storage class and continuing (C++0X 7.1.1p1)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_mutable = true;
+						}
+					src.DeleteIdx<0>(i+offset+using_linkage);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				if (1<invariant_decl_scanner.count(C99_CPP_TYPEDEF_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_typedef)
+						{
+						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing prohibited duplicated typedef specifier and continuing (C++0X 7.1.3p1)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_typedef = true;
+						}
+					src.DeleteIdx<0>(i+offset+using_linkage);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				// C++0X 7.1.6.1: duplicate cv-qualifiers should be cleaned (warn unless -Wno-OAOO or -Wno-DRY)
+				if (1<invariant_decl_scanner.count(C99_CPP_CONST_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_const)
+						{
+						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing redundant const cv-qualifier (C++0X 7.1.6.1p1)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_const = true;
+						}
+					src.DeleteIdx<0>(i+offset+using_linkage);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				if (1<invariant_decl_scanner.count(C99_CPP_VOLATILE_IDX))
+					{	//! \bug need test case
+					if (!have_warned_about_volatile)
+						{
+						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
+						INC_INFORM(WARN_STR);
+						INFORM("removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+						if (bool_options[boolopt::warnings_are_errors])
+							zcc_errors.inc_error();
+						have_warned_about_volatile = true;
+						}
+					src.DeleteIdx<0>(i+offset+using_linkage);
+					invariant_decl_scanner.DeleteIdx(offset--);					
+					}
+				};
+			
+			//! \todo handle allowed sequences of type-qualifiers (do need second pass later)
+			// defer handling thread_local, typedef restrictions 
+			invariant_decl_scanner.clear();
+			}
+		}
+	while(src.size<0>()> ++i);
+
+	i = 0;
 	size_t offset = 0;
 	while(i+offset<src.size<0>())
 		{
@@ -13800,6 +14199,27 @@ void InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
 	assert(C_TYPE::DOUBLE__COMPLEX==linear_find("double _Complex",CPP_atomic_types,CPP_TYPE_MAX)+1);
 	assert(C_TYPE::LDOUBLE__COMPLEX==linear_find("long double _Complex",CPP_atomic_types,CPP_TYPE_MAX)+1);
 	assert(C_TYPE::WCHAR_T==linear_find("wchar_t",CPP_atomic_types,CPP_TYPE_MAX)+1);
+#/*cut-cpp*/
+
+	assert(C99_CPP_TYPEDEF_IDX==linear_find("typedef",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
+	assert(C99_CPP_TYPEDEF_IDX==linear_find("typedef",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
+	assert(C99_CPP_CONST_IDX==linear_find("const",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
+	assert(C99_CPP_CONST_IDX==linear_find("const",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
+	assert(C99_CPP_VOLATILE_IDX==linear_find("volatile",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
+	assert(C99_CPP_VOLATILE_IDX==linear_find("volatile",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
+	assert(C99_RESTRICT_IDX==linear_find("restrict",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
+	assert(C99_CPP_REGISTER_IDX==linear_find("register",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
+	assert(C99_CPP_REGISTER_IDX==linear_find("register",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
+	assert(C99_CPP_STATIC_IDX==linear_find("static",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
+	assert(C99_CPP_STATIC_IDX==linear_find("static",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
+	assert(C99_CPP_EXTERN_IDX==linear_find("extern",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
+	assert(C99_CPP_EXTERN_IDX==linear_find("extern",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
+	assert(C99_CPP_AUTO_IDX==linear_find("auto",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
+	assert(C99_CPP_AUTO_IDX==linear_find("auto",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
+	assert(C1X_CPP0X_THREAD_LOCAL_IDX==linear_find("_Thread_Local",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
+	assert(C1X_CPP0X_THREAD_LOCAL_IDX==linear_find("thread_local",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
+	assert(CPP_MUTABLE_IDX==linear_find("mutable",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
+#/*cut-cpp*/
 
 	/* does bool converts_to_integerlike(size_t base_type_index) work */
 	BOOST_STATIC_ASSERT(!(C_TYPE::BOOL<=C_TYPE::NOT_VOID && C_TYPE::NOT_VOID<=C_TYPE::INTEGERLIKE));
