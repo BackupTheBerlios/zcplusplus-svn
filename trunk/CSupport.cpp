@@ -3310,10 +3310,11 @@ void set_C_canonical_type_representation(parse_tree& src,size_t i,size_t target_
 	| (1ULL<<C_TYPE::FLOAT) \
 	| (1ULL<<C_TYPE::DOUBLE))
 
-	src.c_array<0>()[i].type_code.set_type(target_type);
+	parse_tree& tmp = src.c_array<0>()[i];
+	tmp.type_code.set_type(target_type);
 	//! \todo should use something informative in place of 0; identifier not fine
-	src.c_array<0>()[i].grab_index_token_from_str_literal<0>(C_atomic_types[target_type-1].first,C_ATOMIC_TYPE_IDENTIFIER_BITFLAG & (1ULL<<target_type) ? C_TESTFLAG_IDENTIFIER : 0);
-	src.c_array<0>()[i].flags |= PARSE_PRIMARY_TYPE;
+	tmp.grab_index_token_from_str_literal<0>(C_atomic_types[target_type-1].first,C_ATOMIC_TYPE_IDENTIFIER_BITFLAG & (1ULL<<target_type) ? C_TESTFLAG_IDENTIFIER : 0);
+	tmp.flags |= PARSE_PRIMARY_TYPE;
 #undef C_ATOMIC_TYPE_IDENTIFIER_BITFLAG
 }
 
@@ -3435,7 +3436,7 @@ static void C99_notice_primary_type(parse_tree& src)
 					src.DeleteIdx<0>(i+offset);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
-				if (1<invariant_decl_scanner.count(C99_CPP_STATIC_IDX))
+				else if (1<invariant_decl_scanner.count(C99_CPP_STATIC_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_static)
 						{
@@ -3449,7 +3450,7 @@ static void C99_notice_primary_type(parse_tree& src)
 					src.DeleteIdx<0>(i+offset);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
-				if (1<invariant_decl_scanner.count(C99_CPP_EXTERN_IDX))
+				else if (1<invariant_decl_scanner.count(C99_CPP_EXTERN_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_extern)
 						{
@@ -3463,7 +3464,7 @@ static void C99_notice_primary_type(parse_tree& src)
 					src.DeleteIdx<0>(i+offset);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
-				if (1<invariant_decl_scanner.count(C1X_CPP0X_THREAD_LOCAL_IDX))
+				else if (1<invariant_decl_scanner.count(C1X_CPP0X_THREAD_LOCAL_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_thread_local)
 						{
@@ -3477,7 +3478,7 @@ static void C99_notice_primary_type(parse_tree& src)
 					src.DeleteIdx<0>(i+offset);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
-				if (1<invariant_decl_scanner.count(C99_CPP_AUTO_IDX))
+				else if (1<invariant_decl_scanner.count(C99_CPP_AUTO_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_auto)
 						{
@@ -3491,7 +3492,7 @@ static void C99_notice_primary_type(parse_tree& src)
 					src.DeleteIdx<0>(i+offset);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
-				if (1<invariant_decl_scanner.count(C99_CPP_TYPEDEF_IDX))
+				else if (1<invariant_decl_scanner.count(C99_CPP_TYPEDEF_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_typedef)
 						{
@@ -3506,7 +3507,7 @@ static void C99_notice_primary_type(parse_tree& src)
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
 				// C1X 6.7.3p3: duplicate type-qualifiers should be cleaned (warn unless -Wno-OAOO or -Wno-DRY)
-				if (1<invariant_decl_scanner.count(C99_CPP_CONST_IDX))
+				else if (1<invariant_decl_scanner.count(C99_CPP_CONST_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_const)
 						{
@@ -3520,7 +3521,7 @@ static void C99_notice_primary_type(parse_tree& src)
 					src.DeleteIdx<0>(i+offset);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
-				if (1<invariant_decl_scanner.count(C99_CPP_VOLATILE_IDX))
+				else if (1<invariant_decl_scanner.count(C99_CPP_VOLATILE_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_volatile)
 						{
@@ -3534,7 +3535,7 @@ static void C99_notice_primary_type(parse_tree& src)
 					src.DeleteIdx<0>(i+offset);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
-				if (1<invariant_decl_scanner.count(C99_RESTRICT_IDX))
+				else if (1<invariant_decl_scanner.count(C99_RESTRICT_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_restrict)
 						{
@@ -3751,7 +3752,7 @@ static void CPP_notice_primary_type(parse_tree& src)
 			if (C99_CPP_EXTERN_IDX==invariant_decl_scanner[0] && 1<src.size<0>()-i && (C_TESTFLAG_STRING_LITERAL & src.data<0>()[i+1].flags))
 				{	//! \todo should accept escape codes here as well
 				if (strcmp(src.data<0>()[i+1].index_tokens[0].token.first,"\"C\"") && strcmp(src.data<0>()[i+1].index_tokens[0].token.first,"\"C++\""))
-					{
+					{	//! \bug need test case
 					message_header(src.data<0>()[i+1].index_tokens[0]);
 					INC_INFORM(WARN_STR);
 					INFORM("discarding unrecognized linkage (only C, C++ required: C++0X 7.5p2)");
@@ -3793,7 +3794,7 @@ static void CPP_notice_primary_type(parse_tree& src)
 					src.DeleteIdx<0>(i+offset+using_linkage);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
-				if (1<invariant_decl_scanner.count(C99_CPP_EXTERN_IDX))
+				else if (1<invariant_decl_scanner.count(C99_CPP_EXTERN_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_extern)
 						{
@@ -3807,7 +3808,7 @@ static void CPP_notice_primary_type(parse_tree& src)
 					src.DeleteIdx<0>(i+offset+using_linkage);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
-				if (1<invariant_decl_scanner.count(C1X_CPP0X_THREAD_LOCAL_IDX))
+				else if (1<invariant_decl_scanner.count(C1X_CPP0X_THREAD_LOCAL_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_thread_local)
 						{
@@ -3821,7 +3822,7 @@ static void CPP_notice_primary_type(parse_tree& src)
 					src.DeleteIdx<0>(i+offset+using_linkage);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
-				if (1<invariant_decl_scanner.count(CPP_MUTABLE_IDX))
+				else if (1<invariant_decl_scanner.count(CPP_MUTABLE_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_mutable)
 						{
@@ -3835,7 +3836,7 @@ static void CPP_notice_primary_type(parse_tree& src)
 					src.DeleteIdx<0>(i+offset+using_linkage);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
-				if (1<invariant_decl_scanner.count(C99_CPP_TYPEDEF_IDX))
+				else if (1<invariant_decl_scanner.count(C99_CPP_TYPEDEF_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_typedef)
 						{
@@ -3850,7 +3851,7 @@ static void CPP_notice_primary_type(parse_tree& src)
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
 				// C++0X 7.1.6.1: duplicate cv-qualifiers should be cleaned (warn unless -Wno-OAOO or -Wno-DRY)
-				if (1<invariant_decl_scanner.count(C99_CPP_CONST_IDX))
+				else if (1<invariant_decl_scanner.count(C99_CPP_CONST_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_const)
 						{
@@ -3864,7 +3865,7 @@ static void CPP_notice_primary_type(parse_tree& src)
 					src.DeleteIdx<0>(i+offset+using_linkage);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
-				if (1<invariant_decl_scanner.count(C99_CPP_VOLATILE_IDX))
+				else if (1<invariant_decl_scanner.count(C99_CPP_VOLATILE_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_volatile)
 						{
