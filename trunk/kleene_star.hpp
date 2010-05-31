@@ -27,6 +27,12 @@ public:
 	size_t operator[](size_t i) const {assert(size()>i);return result_scan[i];};
 	size_t front() const {return result_scan.front();};
 	size_t back() const {return result_scan.back();};
+	bool scan(const size_t target, size_t& offset, const size_t origin = 0) const;
+	bool scan(const size_t target, const size_t target2, size_t& offset, size_t& offset2, const size_t origin = 0) const;
+	bool scan(size_t* target, size_t scan_len, size_t* offset, const size_t origin = 0) const;
+	size_t scan_nofail(const size_t target, const size_t origin = 0) const {size_t tmp; if (!scan(target,tmp,origin)) _fatal_code("kleene_star<...>::scan_nofail failed",3); return tmp;};
+	void scan_nofail(const size_t target, const size_t target2, size_t& offset, size_t& offset2, const size_t origin = 0) const{if (!scan(target,target2,offset,offset2,origin)) _fatal_code("kleene_star<...>::scan_nofail failed",3);};
+	void scan_nofail(size_t* target, size_t scan_len, size_t* offset, const size_t origin = 0) const{if (!scan(target,scan_len,offset,origin)) _fatal_code("kleene_star<...>::scan_nofail failed",3);};
 };
 
 template<size_t strict_ub_valid_detect, typename classifier>
@@ -61,5 +67,68 @@ public:
 		memset(detect_count,0,sizeof(detect_count));
 		}
 };
+
+template<typename classifier>
+bool kleene_star_core<classifier>::scan(const size_t target, size_t& offset, const size_t origin) const
+{
+	size_t i = 0;
+	while(result_scan.size()>i+origin)
+		{
+		if (target==result_scan[i+origin])
+			return offset = i,true;
+		++i;
+		};
+	return false;
+}
+
+template<typename classifier>
+bool kleene_star_core<classifier>::scan(const size_t target, const size_t target2, size_t& offset, size_t& offset2, const size_t origin) const
+{
+	size_t i = 0;
+	while(result_scan.size()>i+origin)
+		{
+		if (target==result_scan[i+origin])
+			{
+			if (!scan(target2,offset2,i+origin+1)) return false;
+			return ++offset2,offset = i,true;
+			};
+		if (target2==result_scan[i+origin])
+			{
+			if (!scan(target,offset2,i+origin+1)) return false;
+			return ++offset2,offset = i,true;
+			}
+		++i;
+		}
+	return false;
+}
+
+// target array is writable in order to avoid dynamic memory allocation
+template<typename classifier>
+bool kleene_star_core<classifier>::scan(size_t* target, size_t scan_len, size_t* offset, const size_t origin) const
+{
+	assert(target);
+	assert(offset);
+	assert(1<=scan_len);
+	assert(result_scan.size()>=origin);
+	if (2==scan_len)
+		return scan(target[0],target[1],offset[0],offset[1],origin);
+	if (1==scan_len) return scan(target[0],offset[0],origin);
+	size_t i = 0;
+	while(result_scan.size()-origin>i)
+		{
+		size_t j = scan_len;
+		do	if (target[--j]==result_scan[i+origin])
+				{	//! \todo rework this to avoid useless recursion
+				if (0<j) memmove(target+j,target+j+1,sizeof(size_t)*(scan_len-j-1U));
+				if (!scan(target,scan_len-1,offset+1,i+origin+1))
+					return false;
+				do ++offset[--scan_len]; while(1<scan_len);
+				return offset[0] = i,true;
+				}
+		while(0<j);
+		++i;
+		}
+	return false;
+}
 
 #endif

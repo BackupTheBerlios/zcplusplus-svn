@@ -869,7 +869,7 @@ const POD_pair<const char* const,size_t> C_atomic_types[]
 		DICT_STRUCT("short"),
 		DICT_STRUCT("unsigned short"),
 		DICT_STRUCT("int"),
-		DICT_STRUCT("unsigned int"),
+		DICT_STRUCT("unsigned"),
 		DICT_STRUCT("long"),
 		DICT_STRUCT("unsigned long"),
 		DICT_STRUCT("long long"),
@@ -894,7 +894,7 @@ const POD_pair<const char* const,size_t> CPP_atomic_types[]
 		DICT_STRUCT("short"),
 		DICT_STRUCT("unsigned short"),
 		DICT_STRUCT("int"),
-		DICT_STRUCT("unsigned int"),
+		DICT_STRUCT("unsigned"),
 		DICT_STRUCT("long"),
 		DICT_STRUCT("unsigned long"),
 		DICT_STRUCT("long long"),
@@ -9451,7 +9451,7 @@ void InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
 	assert(C_TYPE::SHRT==linear_find("short",C_atomic_types,C_TYPE_MAX)+1);
 	assert(C_TYPE::USHRT==linear_find("unsigned short",C_atomic_types,C_TYPE_MAX)+1);
 	assert(C_TYPE::INT==linear_find("int",C_atomic_types,C_TYPE_MAX)+1);
-	assert(C_TYPE::UINT==linear_find("unsigned int",C_atomic_types,C_TYPE_MAX)+1);
+	assert(C_TYPE::UINT==linear_find("unsigned",C_atomic_types,C_TYPE_MAX)+1);
 	assert(C_TYPE::LONG==linear_find("long",C_atomic_types,C_TYPE_MAX)+1);
 	assert(C_TYPE::ULONG==linear_find("unsigned long",C_atomic_types,C_TYPE_MAX)+1);
 	assert(C_TYPE::LLONG==linear_find("long long",C_atomic_types,C_TYPE_MAX)+1);
@@ -9473,7 +9473,7 @@ void InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
 	assert(C_TYPE::SHRT==linear_find("short",CPP_atomic_types,CPP_TYPE_MAX)+1);
 	assert(C_TYPE::USHRT==linear_find("unsigned short",CPP_atomic_types,CPP_TYPE_MAX)+1);
 	assert(C_TYPE::INT==linear_find("int",CPP_atomic_types,CPP_TYPE_MAX)+1);
-	assert(C_TYPE::UINT==linear_find("unsigned int",CPP_atomic_types,CPP_TYPE_MAX)+1);
+	assert(C_TYPE::UINT==linear_find("unsigned",CPP_atomic_types,CPP_TYPE_MAX)+1);
 	assert(C_TYPE::LONG==linear_find("long",CPP_atomic_types,CPP_TYPE_MAX)+1);
 	assert(C_TYPE::ULONG==linear_find("unsigned long",CPP_atomic_types,CPP_TYPE_MAX)+1);
 	assert(C_TYPE::LLONG==linear_find("long long",CPP_atomic_types,CPP_TYPE_MAX)+1);
