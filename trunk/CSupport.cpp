@@ -12973,7 +12973,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				type_system::type_index tmp = types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
 				src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	// C: enums are int (although we'd like to extend this a bit)
 				if (!tmp)
-					{	//! \test zcc\decl.C99\Error_enum_undef.h
+					{	//! \test zcc/decl.C99/Error_enum_undef.h
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("'enum ");
@@ -12988,7 +12988,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 			{	// can only define once
 			const type_system::type_index tmp = types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
 			if (tmp)
-				{	//! \test zcc\decl.C99\Error_enum_multidef.h
+				{	//! \test zcc/decl.C99/Error_enum_multidef.h
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("'enum ");
@@ -13004,7 +13004,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				continue;
 				};
 			// enum-specifier doesn't have a specific declaration mode
-			//! \test zcc\decl.C99\Pass_enum_def.h
+			//! \test zcc/decl.C99/Pass_enum_def.h
 			const type_system::type_index tmp2 = types.register_enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 			assert(types.get_id_enum(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
 			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),types,tmp2,NULL,false,C99_echo_reserved_keyword,C99_intlike_literal_to_VM,C99_CondenseParseTree,C99_EvalParseTree))
@@ -13382,8 +13382,8 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 	// think we can handle this as "disallow conflicting definitions"
 	// should be able to disable this warning (it's about bloat)
 	if (src.empty<0>())
-		{	//! \test zcc\namespace.CPP\Warn_emptybody1.hpp
-			//! \test zcc\namespace.CPP\Warn_emptybody2.hpp
+		{	//! \test zcc/namespace.CPP/Warn_emptybody1.hpp
+			//! \test zcc/namespace.CPP/Warn_emptybody2.hpp
 			//! \todo -Wno-bloat turns off 
 		message_header(src.index_tokens[0]);
 		INC_INFORM(WARN_STR);
@@ -13500,7 +13500,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				src.c_array<0>()[i].type_code.set_type(tmp);	// C++: enums are own type
 				if (!tmp)
 					{	// this belongs elsewhere
-						//! \test zcc\decl.C99\Error_enum_undef.hpp
+						//! \test zcc/decl.C99/Error_enum_undef.hpp
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("'enum ");
@@ -13518,7 +13518,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
 			type_system::type_index tmp = types.get_id_enum(fullname);
 			if (tmp)
-				{	//! \test zcc\decl.C99\Error_enum_multidef.hpp
+				{	//! \test zcc/decl.C99/Error_enum_multidef.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("'enum ");
@@ -13535,7 +13535,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				continue;
 				};
 			free(namespace_name);
-			//! \test zcc\decl.C99\Pass_enum_def.hpp
+			//! \test zcc/decl.C99/Pass_enum_def.hpp
 			// enum-specifier doesn't have a specific declaration mode
 			const type_system::type_index tmp2 = types.register_enum_def_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 			assert(types.get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
@@ -13776,7 +13776,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				// accept if: next token is an identifier, and the token after that is {} (typical namespace)
 				// fail otherwise
 			if (1>=src.size<0>()-i)
-				{	//! \test zcc\namespace.CPP\Error_premature1.hpp
+				{	//! \test zcc/namespace.CPP/Error_premature1.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("namespace declaration cut off by end of scope");
@@ -13787,7 +13787,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			if (	robust_token_is_char<'{'>(src.data<0>()[i+1].index_tokens[0].token)
 				&&	robust_token_is_char<'}'>(src.data<0>()[i+1].index_tokens[1].token))
 				{	//! handle unnamed namespace
-					//! \test zcc\namespace.CPP\Warn_emptybody2.hpp
+					//! \test zcc/namespace.CPP/Warn_emptybody2.hpp
 					// regardless of official linkage, entities in anonymous namespaces aren't very accessible outside of the current translation unit;
 					// any reasonable linker thinks they have static linkage
 				src.c_array<0>()[i].resize<2>(2);
@@ -13836,7 +13836,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				continue;
 				};
 			if (!namespace_has_body)
-				{	//! \test zcc\namespace.CPP\Error_premature2.hpp
+				{	//! \test zcc/namespace.CPP/Error_premature2.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("'namespace ");
@@ -13846,7 +13846,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				src.DeleteNSlotsAt<0>(2,i);
 				continue;
 				};
-			//! \test zcc\namespace.CPP\Warn_emptybody1.hpp
+			//! \test zcc/namespace.CPP/Warn_emptybody1.hpp
 			// process namespace
 			// namespace name: postfix arg 1
 			// namespace definition body: postfix arg 2
