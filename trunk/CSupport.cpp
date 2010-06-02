@@ -37,6 +37,7 @@
 #include "enum_type.hpp"
 #include "struct_type.hpp"
 #include "kleene_star.hpp"
+#include "cond_act.hpp"
 #/*cut-cpp*/
 #include "CheckReturn.hpp"
 
@@ -4558,9 +4559,8 @@ static void make_target_postfix_arg(parse_tree& src,size_t& offset,const size_t 
 		offset = 0;
 		tmp = _new_buffer_nonNULL_throws<parse_tree>(1);
 		}
-	*tmp = src.data<0>()[j];
+	src.c_array<0>()[j].OverwriteInto(*tmp);
 	src.c_array<0>()[i].fast_set_arg<2>(tmp);
-	src.c_array<0>()[j].clear();
 }
 
 //! \throw std::bad_alloc()
@@ -4596,12 +4596,6 @@ static void C99_notice_struct_union_enum(parse_tree& src)
 				src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
 				offset += 1;
 				assert(is_C99_anonymous_specifier(src.data<0>()[i],tmp2));
-				if (!src.data<0>()[i].data<2>()->empty<0>())
-					{	// recurse into { ... }
-					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
-					offset = 0;
-					C99_notice_struct_union_enum(*src.c_array<0>()[i].c_array<2>());
-					};
 				continue;
 				};
 			if (!C99_looks_like_identifier(src.data<0>()[i+1]))
@@ -4626,12 +4620,6 @@ static void C99_notice_struct_union_enum(parse_tree& src)
 				src.DestroyNAtAndRotateTo<0>(2,i+1,src.size<0>()-offset);
 				offset += 2;
 				assert(is_C99_named_specifier_definition(src.data<0>()[i],tmp2));
-				if (!src.data<0>()[i].data<2>()->empty<0>())
-					{	// recurse into { ... }
-					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
-					offset = 0;
-					C99_notice_struct_union_enum(*src.c_array<0>()[i].c_array<2>());
-					};
 				continue;
 				};
 			src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
@@ -4639,18 +4627,10 @@ static void C99_notice_struct_union_enum(parse_tree& src)
 			assert(is_C99_named_specifier(src.data<0>()[i],tmp2));
 			continue;
 			}
-		else if (is_nonempty_naked_pair(src.data<0>()[i])) 
-			{	// recurse into (...)/{...}/[...]
-			if (0<offset)
-				{
-				src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
-				offset = 0;
-				};
-			C99_notice_struct_union_enum(src.c_array<0>()[i]);
-			}
 		++i;
 		};
 	if (0<offset) src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+	std::for_each(src.begin<0>(),src.end<0>(),conditional_action<bool (*)(const parse_tree&),void (*)(parse_tree&)>(is_nonempty_naked_pair,C99_notice_struct_union_enum));
 }
 
 //! \throw std::bad_alloc()
@@ -4687,12 +4667,6 @@ static void CPP_notice_class_struct_union_enum(parse_tree& src)
 				src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
 				offset += 1;
 				assert(is_C99_anonymous_specifier(src.data<0>()[i],tmp2));
-				if (!src.data<0>()[i].data<2>()->empty<0>())
-					{	// recurse into { ... }
-					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
-					offset = 0;
-					CPP_notice_class_struct_union_enum(*src.c_array<0>()[i].c_array<2>());
-					};
 				continue;
 				};
 			if (!CPP_looks_like_identifier(src.data<0>()[i+1]))
@@ -4717,12 +4691,6 @@ static void CPP_notice_class_struct_union_enum(parse_tree& src)
 				src.DestroyNAtAndRotateTo<0>(2,i+1,src.size<0>()-offset);
 				offset += 2;
 				assert(is_C99_named_specifier_definition(src.data<0>()[i],tmp2));
-				if (!src.data<0>()[i].data<2>()->empty<0>())
-					{	// recurse into { ... }
-					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
-					offset = 0;
-					CPP_notice_class_struct_union_enum(*src.c_array<0>()[i].c_array<2>());
-					};
 				continue;
 				};
 			src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
@@ -4730,18 +4698,10 @@ static void CPP_notice_class_struct_union_enum(parse_tree& src)
 			assert(is_C99_named_specifier(src.data<0>()[i],tmp2));
 			continue;
 			}
-		else if (is_nonempty_naked_pair(src.data<0>()[i]))
-			{	// recurse into (...)/{...}/[...]
-			if (0<offset)
-				{
-				src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
-				offset = 0;
-				};
-			CPP_notice_class_struct_union_enum(src.c_array<0>()[i]);
-			}
 		++i;
 		};
 	if (0<offset) src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+	std::for_each(src.begin<0>(),src.end<0>(),conditional_action<bool (*)(const parse_tree&),void (*)(parse_tree&)>(is_nonempty_naked_pair,CPP_notice_class_struct_union_enum));
 }
 #/*cut-cpp*/
 
@@ -10798,13 +10758,7 @@ static void CPP_notice_scope_glue(parse_tree& src)
 
 	// efficiency tuning: we have to have no empty slots at top level before recursing,
 	// to mitigate risk of dynamic memory allocation failure
-	i = 0;
-	while(i<src.size<0>())
-		{
-		parse_tree& tmp = src.c_array<0>()[i++];
-		// recurse into (...)/{...}/[...]
-		if (is_nonempty_naked_pair(tmp)) CPP_notice_scope_glue(tmp);
-		};
+	std::for_each(src.begin<0>(),src.end<0>(),conditional_action<bool (*)(const parse_tree&),void (*)(parse_tree&)>(is_nonempty_naked_pair,CPP_notice_scope_glue));
 }
 
 static void CPP_handle_pragma_relay(parse_tree& src)
