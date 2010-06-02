@@ -4611,17 +4611,20 @@ static void C99_notice_struct_union_enum(parse_tree& src)
 				offset += 1;
 				continue;
 				};
-			src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+1]);
-			src.c_array<0>()[i].grab_index_token_location_from<1,0>(src.data<0>()[i+1]);
-			src.c_array<0>()[i+1].clear();
 			if (2<src.size<0>()-(i+offset) && is_naked_brace_pair(src.data<0>()[i+2]))
 				{
 				make_target_postfix_arg(src,offset,i,i+2);
+				src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+1]);
+				src.c_array<0>()[i].grab_index_token_location_from<1,0>(src.data<0>()[i+1]);
+				src.c_array<0>()[i+1].clear();
 				src.DestroyNAtAndRotateTo<0>(2,i+1,src.size<0>()-offset);
 				offset += 2;
 				assert(is_C99_named_specifier_definition(src.data<0>()[i],tmp2));
 				continue;
 				};
+			src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+1]);
+			src.c_array<0>()[i].grab_index_token_location_from<1,0>(src.data<0>()[i+1]);
+			src.c_array<0>()[i+1].clear();
 			src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
 			offset += 1;
 			assert(is_C99_named_specifier(src.data<0>()[i],tmp2));
@@ -4682,17 +4685,20 @@ static void CPP_notice_class_struct_union_enum(parse_tree& src)
 				offset += 1;
 				continue;
 				};
-			src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+1]);
-			src.c_array<0>()[i].grab_index_token_location_from<1,0>(src.data<0>()[i+1]);
-			src.c_array<0>()[i+1].clear();
 			if (2<src.size<0>()-(i+offset) && is_naked_brace_pair(src.data<0>()[i+2]))
 				{
 				make_target_postfix_arg(src,offset,i,i+2);
+				src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+1]);
+				src.c_array<0>()[i].grab_index_token_location_from<1,0>(src.data<0>()[i+1]);
+				src.c_array<0>()[i+1].clear();
 				src.DestroyNAtAndRotateTo<0>(2,i+1,src.size<0>()-offset);
 				offset += 2;
 				assert(is_C99_named_specifier_definition(src.data<0>()[i],tmp2));
 				continue;
 				};
+			src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+1]);
+			src.c_array<0>()[i].grab_index_token_location_from<1,0>(src.data<0>()[i+1]);
+			src.c_array<0>()[i+1].clear();
 			src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
 			offset += 1;
 			assert(is_C99_named_specifier(src.data<0>()[i],tmp2));
