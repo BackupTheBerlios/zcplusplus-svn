@@ -4078,6 +4078,13 @@ static bool is_naked_bracket_pair(const parse_tree& src)
 #endif
 			&&	src.empty<1>() && src.empty<2>();
 }
+
+static bool is_nonempty_naked_pair(const parse_tree& src)
+{
+	return !src.empty<0>()  && (is_naked_parentheses_pair(src) 
+		|| is_naked_brace_pair(src)
+		|| is_naked_bracket_pair(src));
+}
 #/*cut-cpp*/
 
 #ifndef NDEBUG
@@ -4541,6 +4548,7 @@ static bool CPP_looks_like_identifier(const parse_tree& x)
 	return C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags;
 }
 
+//! \throw std::bad_alloc()
 static void make_target_postfix_arg(parse_tree& src,size_t& offset,const size_t i,const size_t j)
 {
 	parse_tree* tmp = (0==offset ? _new_buffer_nonNULL_throws<parse_tree>(1) :  _new_buffer<parse_tree>(1));
@@ -4555,6 +4563,7 @@ static void make_target_postfix_arg(parse_tree& src,size_t& offset,const size_t 
 	src.c_array<0>()[j].clear();
 }
 
+//! \throw std::bad_alloc()
 static void C99_notice_struct_union_enum(parse_tree& src)
 {
 	assert(!src.empty<0>());
@@ -4630,25 +4639,21 @@ static void C99_notice_struct_union_enum(parse_tree& src)
 			assert(is_C99_named_specifier(src.data<0>()[i],tmp2));
 			continue;
 			}
-		else if (   is_naked_parentheses_pair(src.data<0>()[i])
-				 || is_naked_brace_pair(src.data<0>()[i])
-				 || is_naked_bracket_pair(src.data<0>()[i]))
-			{
-			if (!src.data<0>()[i].empty<0>())
-				{	// recurse into (...)
-				if (0<offset)
-					{
-					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
-					offset = 0;
-					};
-				C99_notice_struct_union_enum(src.c_array<0>()[i]);
-				}
+		else if (is_nonempty_naked_pair(src.data<0>()[i])) 
+			{	// recurse into (...)/{...}/[...]
+			if (0<offset)
+				{
+				src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+				offset = 0;
+				};
+			C99_notice_struct_union_enum(src.c_array<0>()[i]);
 			}
 		++i;
 		};
 	if (0<offset) src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
 }
 
+//! \throw std::bad_alloc()
 static void CPP_notice_class_struct_union_enum(parse_tree& src)
 {
 	assert(!src.empty<0>());
@@ -4725,19 +4730,14 @@ static void CPP_notice_class_struct_union_enum(parse_tree& src)
 			assert(is_C99_named_specifier(src.data<0>()[i],tmp2));
 			continue;
 			}
-		else if (   is_naked_parentheses_pair(src.data<0>()[i])
-				 || is_naked_brace_pair(src.data<0>()[i])
-				 || is_naked_bracket_pair(src.data<0>()[i]))
-			{
-			if (!src.data<0>()[i].empty<0>())
-				{	// recurse into (...)/{...}/[...]
-				if (0<offset)
-					{
-					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
-					offset = 0;
-					};
-				CPP_notice_class_struct_union_enum(src.c_array<0>()[i]);
-				}
+		else if (is_nonempty_naked_pair(src.data<0>()[i]))
+			{	// recurse into (...)/{...}/[...]
+			if (0<offset)
+				{
+				src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
+				offset = 0;
+				};
+			CPP_notice_class_struct_union_enum(src.c_array<0>()[i]);
 			}
 		++i;
 		};
@@ -10685,6 +10685,7 @@ static bool CPP_CondenseParseTree(parse_tree& src,const type_system& types)
 
 #/*cut-cpp*/
 //! \todo check that the fact all literals are already legal-form is used
+//! \throw std::bad_alloc()
 static void C99_ContextFreeParse(parse_tree& src,const type_system& types)
 {
 	assert(src.is_raw_list());
@@ -10801,12 +10802,8 @@ static void CPP_notice_scope_glue(parse_tree& src)
 	while(i<src.size<0>())
 		{
 		parse_tree& tmp = src.c_array<0>()[i++];
-		if (tmp.empty<0>()) continue;
-		// recurse into ...
-		if (   is_naked_parentheses_pair(tmp) // (...)
-			|| is_naked_brace_pair(tmp) // {...}
-			|| is_naked_bracket_pair(tmp)) // [...]
-			CPP_notice_scope_glue(tmp);
+		// recurse into (...)/{...}/[...]
+		if (is_nonempty_naked_pair(tmp)) CPP_notice_scope_glue(tmp);
 		};
 }
 
