@@ -49,6 +49,9 @@ struct parse_tree
 	// XXX synchronized against type_system.hpp
     type_spec type_code;
 
+    // language-specific helper for INC_INFORM
+    static bool (*hook_INC_INFORM)(const parse_tree&); 
+    
 	void MoveInto(parse_tree& dest);
 	void OverwriteInto(parse_tree& dest);
 
@@ -310,6 +313,7 @@ struct parse_tree
 		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>src_idx);
 		if (own_index_token<dest_idx>()) free(const_cast<char*>(index_tokens[dest_idx].token.first));
 		index_tokens[dest_idx].token = tmp.index_tokens[src_idx].token;
+		index_tokens[dest_idx].flags = tmp.index_tokens[src_idx].flags;
 		control_index_token<dest_idx>(tmp.own_index_token<src_idx>());
 		tmp.control_index_token<src_idx>(false);
 		}

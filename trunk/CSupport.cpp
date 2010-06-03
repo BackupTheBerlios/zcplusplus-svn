@@ -13353,13 +13353,13 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 static bool is_CPP_namespace(const parse_tree& src)
 {
 	return		robust_token_is_string<9>(src.index_tokens[0].token,"namespace")
-			&&	2==src.size<2>()
-			&&	src.data<2>()[0].is_atomic()
+			&&	src.index_tokens[1].token.first
+			&&	1==src.size<2>()
 #ifndef NDEBUG
-			&&	C_TESTFLAG_IDENTIFIER==src.data<2>()[0].index_tokens[0].flags
+			&&	C_TESTFLAG_IDENTIFIER==src.index_tokens[1].flags
 #endif
-			&&	robust_token_is_char<'{'>(src.data<2>()[1].index_tokens[0].token)
-			&&	robust_token_is_char<'}'>(src.data<2>()[1].index_tokens[1].token);
+			&&	robust_token_is_char<'{'>(src.data<2>()[0].index_tokens[0].token)
+			&&	robust_token_is_char<'}'>(src.data<2>()[0].index_tokens[1].token);
 }
 #endif
 
@@ -13790,14 +13790,14 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					//! \test zcc/namespace.CPP/Warn_emptybody2.hpp
 					// regardless of official linkage, entities in anonymous namespaces aren't very accessible outside of the current translation unit;
 					// any reasonable linker thinks they have static linkage
-				src.c_array<0>()[i].resize<2>(2);
-				src.c_array<0>()[i+1].OverwriteInto(src.c_array<0>()[i].c_array<2>()[1]);
+				src.c_array<0>()[i].resize<2>(1);
+				src.c_array<0>()[i+1].OverwriteInto(src.c_array<0>()[i].c_array<2>()[0]);
 				src.DeleteIdx<0>(i+1);
 
 				// anonymous namespace names are technically illegal
 				// GCC uses <unknown> and handles uniqueness at link time
-				src.c_array<0>()[i].c_array<2>()[0].grab_index_token_from_str_literal<0>("<unknown>",C_TESTFLAG_IDENTIFIER);	// pretend it's an identifier
-				src.c_array<0>()[i].c_array<2>()[0].grab_index_token_location_from<0,0>(src.data<0>()[i].data<2>()[1]);	// inject it at where the namespace body starts
+				src.c_array<0>()[i].grab_index_token_from_str_literal<1>("<unknown>",C_TESTFLAG_IDENTIFIER);	// pretend it's an identifier
+				src.c_array<0>()[i].grab_index_token_location_from<1,0>(src.data<0>()[i].data<2>()[0]);	// inject it at where the namespace body starts
 				src.c_array<0>()[i].flags |= parse_tree::GOOD_LINE_BREAK;
 				assert(is_CPP_namespace(src.data<0>()[i]));
 
@@ -13807,11 +13807,11 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					strcpy(new_active_namespace,active_namespace);
 					strcat(new_active_namespace,"::<unknown>");
 					strcat(new_active_namespace,"");
-					CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[1],types,new_active_namespace);
+					CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[0],types,new_active_namespace);
 					free(new_active_namespace);
 					}
 				else{
-					CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[1],types,"<unknown>");
+					CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[0],types,"<unknown>");
 					}
 				++i;
 				continue;
@@ -13852,9 +13852,10 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			// namespace definition body: postfix arg 2
 			// the namespace name is likely to be reused: atomic string target
 			register_token<0>(src.c_array<0>()[i+1]);
-			src.c_array<0>()[i].resize<2>(2);
-			src.c_array<0>()[i+1].OverwriteInto(src.c_array<0>()[i].c_array<2>()[0]);
-			src.c_array<0>()[i+2].OverwriteInto(src.c_array<0>()[i].c_array<2>()[1]);
+			src.c_array<0>()[i].resize<2>(1);
+			src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+1]);
+			src.c_array<0>()[i].grab_index_token_location_from<1,0>(src.data<0>()[i+1]);	// inject it at where the namespace body starts
+			src.c_array<0>()[i+2].OverwriteInto(src.c_array<0>()[i].c_array<2>()[0]);
 			src.DeleteNSlotsAt<0>(2,i+1);
 			src.c_array<0>()[i].flags |= parse_tree::GOOD_LINE_BREAK;
 			assert(is_CPP_namespace(src.data<0>()[i]));
@@ -13862,12 +13863,12 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 			if (NULL==active_namespace)
 				{	// global
 					//! \todo expand namespace aliases
-				CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[1],types,src.c_array<0>()[i].c_array<2>()[0].index_tokens[0].token.first);
+				CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[0],types,src.c_array<0>()[i].index_tokens[1].token.first);
 				}
 			else{	// nested
 					//! \todo expand namespace aliases
-				char* const new_active_namespace = type_system::namespace_concatenate(src.c_array<0>()[i].c_array<2>()[0].index_tokens[0].token.first,active_namespace,"::");
-				CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[1],types,new_active_namespace);
+				char* const new_active_namespace = type_system::namespace_concatenate(src.c_array<0>()[i].index_tokens[1].token.first,active_namespace,"::");
+				CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[0],types,new_active_namespace);
 				free(new_active_namespace);
 				}
 			++i;

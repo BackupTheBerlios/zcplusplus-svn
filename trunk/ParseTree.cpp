@@ -5,6 +5,8 @@
 
 using namespace zaimoni;
 
+bool (*parse_tree::hook_INC_INFORM)(const parse_tree&) = NULL;
+
 // in case we have to debug memory corruption
 // #define IRRATIONAL_CAUTION 1
 
@@ -452,6 +454,7 @@ bool parse_tree::_resize(const size_t arg_idx,size_t n)
 
 void INC_INFORM(const parse_tree& src)
 {	// generally...
+	if (parse_tree::hook_INC_INFORM && parse_tree::hook_INC_INFORM(src)) return;
 	// prefix data
 #define USER_MASK (ULONG_MAX-((1U<<parse_tree::PREDEFINED_STRICT_UB)-1))
 	const lex_flags my_rank = src.flags & USER_MASK;
