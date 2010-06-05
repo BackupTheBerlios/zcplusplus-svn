@@ -13,6 +13,7 @@
 // Unfortunately, new/delete and realloc don't mix -- and this type can have multiple lists of tokens underneath it....
 
 struct parse_tree;
+class type_system;
 
 namespace boost {
 
@@ -49,8 +50,9 @@ struct parse_tree
 	// XXX synchronized against type_system.hpp
     type_spec type_code;
 
-    // language-specific helper for INC_INFORM
-    static bool (*hook_INC_INFORM)(const parse_tree&); 
+    // language-specific helpers for INC_INFORM
+    static bool (*hook_INC_INFORM)(const parse_tree&);
+    static type_system* types;
     
 	void MoveInto(parse_tree& dest);
 	void OverwriteInto(parse_tree& dest);
