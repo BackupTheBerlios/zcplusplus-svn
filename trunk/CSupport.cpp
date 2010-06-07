@@ -1124,14 +1124,14 @@ size_t C99_invariant_decl_specifier(const char* const x)
 {
 	const errr i = linear_find(x,C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list));
 	if (STATIC_SIZE(C99_decl_specifier_list)>i) return i;
-	return (size_t)(-1);
+	return SIZE_MAX;
 }
 
 size_t CPP0X_invariant_decl_specifier(const char* const x)
 {
 	const errr i = linear_find(x,CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list));
 	if (STATIC_SIZE(CPP0X_decl_specifier_list)>i) return i;
-	return (size_t)(-1);
+	return SIZE_MAX;
 }	
 #/*cut-cpp*/
 
@@ -3698,7 +3698,6 @@ static void C99_notice_primary_type(parse_tree& src)
 			while(!invariant_decl_scanner.empty());
 
 			// defer handling: _Thread_Local, typedef, other storage class issues
-			invariant_decl_scanner.clear();
 			}
 		}
 	while(src.size<0>()> ++i);
@@ -4028,7 +4027,6 @@ static void CPP_notice_primary_type(parse_tree& src)
 			while(!invariant_decl_scanner.empty());
 
 			// defer handling thread_local, typedef restrictions 
-			invariant_decl_scanner.clear();
 			}
 		}
 	while(src.size<0>()> ++i);
