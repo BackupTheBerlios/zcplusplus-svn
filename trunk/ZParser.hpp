@@ -4,7 +4,8 @@
 #ifndef ZPARSER_HPP
 #define ZPARSER_HPP 1
 
-#include <stddef.h>
+#include "type_system.hpp"
+#include "Zaimoni.STL/Perl_localize.hpp"
 
 struct parse_tree;
 namespace virtual_machine {
@@ -14,7 +15,6 @@ namespace virtual_machine {
 namespace zaimoni {
 class LangConf;
 
-template<class T> class autovalarray_ptr;
 template<class T> class Token;
 }
 
@@ -31,6 +31,9 @@ private:
 	size_t lang_code;
 	zaimoni::LangConf& lang;	//!< lexer corresponding to the language being preprocessed (need this to share expression evaluation)
 	const virtual_machine::CPUInfo& target_machine;	//!< target machine information
+	type_system types;
+	zaimoni::Perl::localize<type_system*> lock_types;
+	zaimoni::Perl::localize<bool (*)(const parse_tree&)> lock_display_hook;
 	bool debug_mode;		//!< triggers some diagnostics
 
 	void debug_to_stderr(const zaimoni::autovalarray_ptr<parse_tree*>& x) const;

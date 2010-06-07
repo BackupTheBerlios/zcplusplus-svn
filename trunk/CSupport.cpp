@@ -5,6 +5,7 @@
 #/*cut-cpp*/
 #include "CSupport.hpp"
 #include "_CSupport3.hpp"
+#include "_CSupport4.hpp"
 #/*cut-cpp*/
 #include "CSupport_pp.hpp"
 #include "_CSupport1.hpp"
@@ -38,7 +39,6 @@
 #include "struct_type.hpp"
 #include "kleene_star.hpp"
 #include "cond_act.hpp"
-#include "Zaimoni.STL/Perl_localize.hpp"
 #/*cut-cpp*/
 #include "CheckReturn.hpp"
 
@@ -12881,113 +12881,6 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 	return true;
 }
 
-// language-specific printing overrides
-static void render_type(const type_spec& src,const type_system& types, const char* const name)
-{	// function types will need a different naming scheme
-	const char* const type_name = types.name(src.base_type_index);
-	// each ptr to array transition needs a parentheses pair to group properly
-	size_t i = src.pointer_power;
-	size_t start_ptr_scan = src.pointer_power;
-	while(0<i)
-		{
-		if (type_spec::_array & src.qualifier(i--)) continue;
-		if (0<i && (type_spec::_array & src.qualifier(i)) && !(type_spec::_array & src.qualifier(i+1)))
-			{
-			while(--start_ptr_scan>i)
-				{
-				if (type_spec::_array & src.qualifier(start_ptr_scan+1)) continue;
-				INC_INFORM('*');
-				if (type_spec::_restrict & src.qualifier(start_ptr_scan+1))
-					INC_INFORM("restrict ");
-				if (type_spec::_const & src.qualifier(start_ptr_scan+1))
-					INC_INFORM("const ");
-				if (type_spec::_volatile & src.qualifier(start_ptr_scan+1))
-					INC_INFORM("volatile ");
-				};
-			INC_INFORM("(");
-			}
-		}
-		
-	if (type_spec::_const & src.qualifier<0>())
-		INC_INFORM("const ");
-	if (type_spec::_volatile & src.qualifier<0>())
-		INC_INFORM("volatile ");
-	INC_INFORM(type_name ? type_name : "<unresolved type>");
-
-	while(0<start_ptr_scan--)
-		{
-		if (type_spec::_array & src.qualifier(start_ptr_scan+1)) continue;
-		INC_INFORM('*');
-		if (type_spec::_restrict & src.qualifier(start_ptr_scan+1))
-			INC_INFORM("restrict ");
-		if (type_spec::_const & src.qualifier(start_ptr_scan+1))
-			INC_INFORM("const ");
-		if (type_spec::_volatile & src.qualifier(start_ptr_scan+1))
-			INC_INFORM("volatile ");		
-		}
-
-	if (name && *name) INC_INFORM(name);
-		
-	i = 0;
-	while(i<src.pointer_power)
-		{
-		if (!(type_spec::_array & src.qualifier(++i)))
-			{
-			if (type_spec::_array & src.qualifier(i-1))
-				INC_INFORM(")");
-			continue;
-			}
-		INC_INFORM("[");
-		if (src.extent_vector[i-1]) INC_INFORM(src.extent_vector[i-1]); 
-		INC_INFORM("]");
-		}
-	
-}
-
-static bool C99_hook_INC_INFORM(const parse_tree& src)
-{
-	if (PARSE_TYPE & src.flags)
-		{
-		assert(parse_tree::types);
-		render_type(src.type_code,*parse_tree::types,NULL);
-		return true;
-		}
-	return false;
-}
-
-static bool is_CPP_namespace(const parse_tree& src)
-{
-	return	robust_token_is_string<9>(src.index_tokens[0].token,"namespace")
-		&&	src.index_tokens[1].token.first
-		&&	1==src.size<2>()
-#ifndef NDEBUG
-		&&	C_TESTFLAG_IDENTIFIER==src.index_tokens[1].flags
-#endif
-		&&	robust_token_is_char<'{'>(src.data<2>()[0].index_tokens[0].token)
-		&&	robust_token_is_char<'}'>(src.data<2>()[0].index_tokens[1].token);
-}
-
-static bool CPP_hook_INC_INFORM(const parse_tree& src)
-{
-	if (PARSE_TYPE & src.flags)
-		{
-		assert(parse_tree::types);
-		render_type(src.type_code,*parse_tree::types,NULL);
-		return true;
-		}
-	if (is_CPP_namespace(src) && robust_token_is_string<9>(src.index_tokens[1].token,"<unknown>"))
-		{	// make anonymous namespaces look like authentic source code
-		// first index token
-		INC_INFORM(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
-		INC_INFORM(' ');
-		// postfix data
-		INC_INFORM(*src.data<2>());
-		if (src.flags & parse_tree::GOOD_LINE_BREAK) INC_INFORM('\n');
-		return true;
-		};
-	return false;
-}
-
 // will need: "function-type vector"
 // return: 1 typespec record (for now, other languages may have more demanding requirements)
 // incoming: n typespec records, flag for trailing ...
@@ -13011,8 +12904,6 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 	// note that typedefs and struct/union declarations/definitions create new types; if this happens we are no longer context-free (so second pass with context-based parsing)
 	// ask GCC: struct/class/union/enum collides with each other (both C and C++), does not collide with namespace
 	// think we can handle this as "disallow conflicting definitions"
-	zaimoni::Perl::localize<bool (*)(const parse_tree&)>(parse_tree::hook_INC_INFORM,C99_hook_INC_INFORM);
-	zaimoni::Perl::localize<type_system*>(parse_tree::types,&types);
 	size_t i = 0;
 	while(i<src.size<0>())
 		{
@@ -13455,6 +13346,113 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		}
 		++i;
 		}
+}
+
+// language-specific printing overrides
+static void render_type(const type_spec& src,const type_system& types, const char* const name)
+{	// function types will need a different naming scheme
+	const char* const type_name = types.name(src.base_type_index);
+	// each ptr to array transition needs a parentheses pair to group properly
+	size_t i = src.pointer_power;
+	size_t start_ptr_scan = src.pointer_power;
+	while(0<i)
+		{
+		if (type_spec::_array & src.qualifier(i--)) continue;
+		if (0<i && (type_spec::_array & src.qualifier(i)) && !(type_spec::_array & src.qualifier(i+1)))
+			{
+			while(--start_ptr_scan>i)
+				{
+				if (type_spec::_array & src.qualifier(start_ptr_scan+1)) continue;
+				INC_INFORM('*');
+				if (type_spec::_restrict & src.qualifier(start_ptr_scan+1))
+					INC_INFORM("restrict ");
+				if (type_spec::_const & src.qualifier(start_ptr_scan+1))
+					INC_INFORM("const ");
+				if (type_spec::_volatile & src.qualifier(start_ptr_scan+1))
+					INC_INFORM("volatile ");
+				};
+			INC_INFORM("(");
+			}
+		}
+		
+	if (type_spec::_const & src.qualifier<0>())
+		INC_INFORM("const ");
+	if (type_spec::_volatile & src.qualifier<0>())
+		INC_INFORM("volatile ");
+	INC_INFORM(type_name ? type_name : "<unresolved type>");
+
+	while(0<start_ptr_scan--)
+		{
+		if (type_spec::_array & src.qualifier(start_ptr_scan+1)) continue;
+		INC_INFORM('*');
+		if (type_spec::_restrict & src.qualifier(start_ptr_scan+1))
+			INC_INFORM("restrict ");
+		if (type_spec::_const & src.qualifier(start_ptr_scan+1))
+			INC_INFORM("const ");
+		if (type_spec::_volatile & src.qualifier(start_ptr_scan+1))
+			INC_INFORM("volatile ");		
+		}
+
+	if (name && *name) INC_INFORM(name);
+		
+	i = 0;
+	while(i<src.pointer_power)
+		{
+		if (!(type_spec::_array & src.qualifier(++i)))
+			{
+			if (type_spec::_array & src.qualifier(i-1))
+				INC_INFORM(")");
+			continue;
+			}
+		INC_INFORM("[");
+		if (src.extent_vector[i-1]) INC_INFORM(src.extent_vector[i-1]); 
+		INC_INFORM("]");
+		}
+	
+}
+
+bool C99_hook_INC_INFORM(const parse_tree& src)
+{
+	if (PARSE_TYPE & src.flags)
+		{
+		assert(parse_tree::types);
+		render_type(src.type_code,*parse_tree::types,NULL);
+		return true;
+		}
+	return false;
+}
+
+static bool is_CPP_namespace(const parse_tree& src)
+{
+	return	robust_token_is_string<9>(src.index_tokens[0].token,"namespace")
+		&&	src.index_tokens[1].token.first
+		&&	1==src.size<2>()
+#ifndef NDEBUG
+		&&	C_TESTFLAG_IDENTIFIER==src.index_tokens[1].flags
+#endif
+		&&	robust_token_is_char<'{'>(src.data<2>()[0].index_tokens[0].token)
+		&&	robust_token_is_char<'}'>(src.data<2>()[0].index_tokens[1].token);
+}
+
+bool CPP_hook_INC_INFORM(const parse_tree& src)
+{
+	if (PARSE_TYPE & src.flags)
+		{
+		assert(parse_tree::types);
+		render_type(src.type_code,*parse_tree::types,NULL);
+		return true;
+		}
+	if (is_CPP_namespace(src) && robust_token_is_string<9>(src.index_tokens[1].token,"<unknown>"))
+		{	// make anonymous namespaces look like authentic source code
+		// first index token
+		INC_INFORM(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
+		INC_INFORM(' ');
+		// postfix data
+		INC_INFORM(*src.data<2>());
+		if (src.flags & parse_tree::GOOD_LINE_BREAK) INC_INFORM('\n');
+		return true;
+		};
+	return false;
 }
 
 // handle namespaces or else
@@ -14192,8 +14190,6 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 //! \throw std::bad_alloc
 static void CPP_ContextParse(parse_tree& src,type_system& types)
 {
-	zaimoni::Perl::localize<bool (*)(const parse_tree&)>(parse_tree::hook_INC_INFORM,CPP_hook_INC_INFORM);
-	zaimoni::Perl::localize<type_system*>(parse_tree::types,&types);
 	CPP_ParseNamespace(src,types,NULL);
 }
 #/*cut-cpp*/
