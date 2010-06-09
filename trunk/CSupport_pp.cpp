@@ -3979,7 +3979,6 @@ static void cancel_outermost_parentheses(parse_tree& src)
  * determines whether a context-driven primary expression is obviously one
  * 
  * \param src target to inspect
- * \param err_count running error count
  * 
  * \return true iff ( ... ) expression was recognized
  * \throw std::bad_alloc only if 1==src.size<0>() and src.type_code.pointer_power<src.data<0>()->type_code.pointer_power

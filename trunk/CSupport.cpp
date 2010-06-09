@@ -3510,7 +3510,7 @@ static void C99_notice_primary_type(parse_tree& src)
 					}
 				// C1X 6.7.3p3: duplicate type-qualifiers should be cleaned (warn unless -Wno-OAOO or -Wno-DRY)
 				else if (1<invariant_decl_scanner.count(C99_CPP_CONST_IDX))
-					{	//! \bug need test case
+					{	//! \test decl.C99/Warn_dup_const.h
 					if (!have_warned_about_const)
 						{
 						message_header(src.data<0>()[i+offset].index_tokens[0]);
@@ -3524,7 +3524,7 @@ static void C99_notice_primary_type(parse_tree& src)
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
 				else if (1<invariant_decl_scanner.count(C99_CPP_VOLATILE_IDX))
-					{	//! \bug need test case
+					{	//! \test decl.C99/Warn_dup_volatile.h
 					if (!have_warned_about_volatile)
 						{
 						message_header(src.data<0>()[i+offset].index_tokens[0]);
@@ -3853,7 +3853,7 @@ static void CPP_notice_primary_type(parse_tree& src)
 					}
 				// C++0X 7.1.6.1: duplicate cv-qualifiers should be cleaned (warn unless -Wno-OAOO or -Wno-DRY)
 				else if (1<invariant_decl_scanner.count(C99_CPP_CONST_IDX))
-					{	//! \bug need test case
+					{	//! \test decl.C99/Warn_dup_const.hpp
 					if (!have_warned_about_const)
 						{
 						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
@@ -3867,7 +3867,7 @@ static void CPP_notice_primary_type(parse_tree& src)
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
 				else if (1<invariant_decl_scanner.count(C99_CPP_VOLATILE_IDX))
-					{	//! \bug need test case
+					{	//! \test decl.C99/Warn_dup_volatile.hpp
 					if (!have_warned_about_volatile)
 						{
 						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
@@ -5347,7 +5347,6 @@ static void cancel_outermost_parentheses(parse_tree& src)
  * determines whether a context-driven primary expression is obviously one
  * 
  * \param src target to inspect
- * \param err_count running error count
  * 
  * \return true iff ( ... ) expression was recognized
  * \throw std::bad_alloc only if 1==src.size<0>() and src.type_code.pointer_power<src.data<0>()->type_code.pointer_power
@@ -12754,7 +12753,7 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 						base_enum_type = C_TYPE::LLONG;
 						break;
 						}
-				default:	//! \test decl.C99\Error_enum_nobase.hpp
+				default:	//! \test decl.C99/Error_enum_nobase.hpp
 					message_header(src.data<0>()[origin-2].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("enumeration requires both negative values and values above INTMAX_MAX, underlying type doesn't exist (C++0X 7.2p6)");
@@ -12793,7 +12792,7 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 						base_enum_type = C_TYPE::LLONG;
 					case C_TYPE::LLONG:
 						if (target_machine->signed_max<virtual_machine::std_int_long_long>()>=latest_value) break;
-					default:	//! \test decl.C99\Error_enum_nobase2.hpp
+					default:	//! \test decl.C99/Error_enum_nobase2.hpp
 						message_header(src.data<0>()[origin-2].index_tokens[0]);
 						INC_INFORM(ERR_STR);
 						INFORM("enumeration requires both negative values and values above INTMAX_MAX, underlying type doesn't exist (C++0X 7.2p6)");

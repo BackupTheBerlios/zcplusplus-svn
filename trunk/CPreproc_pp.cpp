@@ -2336,8 +2336,7 @@ CPreprocessor::tokenize_line(autovalarray_ptr<Token<char>* >& TokenList, size_t 
 /*! 
  * finds a local include file
  * 
- * \param src : substring describing file to find
- * \param src_len : length of substring
+ * \param src : string describing file to find
  * \param filepath_buf : pointer to character buffer of length FILENAME_MAX
  * 
  * \return true if and only if a filepath was found.
@@ -2394,8 +2393,7 @@ CPreprocessor::find_local_include(const char* const src, char* const filepath_bu
 /*! 
  * finds a system include file
  * 
- * \param src : substring describing file to find
- * \param src_len : length of substring
+ * \param src : string describing file to find
  * \param filepath_buf : pointer to character buffer of length FILENAME_MAX
  * 
  * \return true if and only if a filepath was found.
@@ -3339,8 +3337,6 @@ CPreprocessor::predefined_macro_replacement(Token<char>& x, size_t critical_offs
  * \param x token containing candidate for predefined macro
  * \param critical_offset where the candidate is
  * \param token_len length of candidate
- * \param time_str __TIME__ value
- * \param date_str __DATE__ value
  * 
  * \return true iff replaced a predefined macro.  Updates critical_offset when returning true
  */
@@ -4055,7 +4051,6 @@ CPreprocessor::discard_duplicate_define(autovalarray_ptr<Token<char>* >& TokenLi
  * Discards leading and trailing ## operators in macro expansion lists; errors but continues.
  * 
  * \param x : macro expansion
- * \param src : #define (for location info)
  * 
  * \return bool : true iff truncated to empty
  */
@@ -4472,7 +4467,7 @@ CPreprocessor::function_macro_invocation_argspan(const char* const src,const siz
 /*! 
  * implements C preprocessor stringize operator.
  * 
- * \param stringized_actual valid C string representing src (postcondition)
+ * \param dest valid C string representing src (postcondition)
  * \param src to be stringized
  */
 void
