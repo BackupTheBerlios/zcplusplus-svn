@@ -1,0 +1,6 @@
+SUFFIXES h hpp
+// check error for duplicate static
+// (C)2010 Kenneth Boyd, license: MIT.txt
+
+static static const volatile int i;
+

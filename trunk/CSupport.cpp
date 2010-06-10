@@ -3427,40 +3427,37 @@ static void C99_notice_primary_type(parse_tree& src)
 				if (1<invariant_decl_scanner.count(C99_CPP_REGISTER_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_register)
-						{
+						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset].index_tokens[0]);
-						INC_INFORM(WARN_STR);
+						INC_INFORM(ERR_STR);
 						INFORM("removing prohibited duplicated register storage class and continuing (C99 6.7.1p2)");
-						if (bool_options[boolopt::warnings_are_errors])
-							zcc_errors.inc_error();
+						zcc_errors.inc_error();
 						have_warned_about_register = true;
 						}
 					src.DeleteIdx<0>(i+offset);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
 				else if (1<invariant_decl_scanner.count(C99_CPP_STATIC_IDX))
-					{	//! \bug need test case
+					{	//! \test decl.C99/Error_dup_static.h
 					if (!have_warned_about_static)
-						{
+						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset].index_tokens[0]);
-						INC_INFORM(WARN_STR);
+						INC_INFORM(ERR_STR);
 						INFORM("removing prohibited duplicated static storage class and continuing (C99 6.7.1p2)");
-						if (bool_options[boolopt::warnings_are_errors])
-							zcc_errors.inc_error();
+						zcc_errors.inc_error();
 						have_warned_about_static = true;
 						}
 					src.DeleteIdx<0>(i+offset);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
 				else if (1<invariant_decl_scanner.count(C99_CPP_EXTERN_IDX))
-					{	//! \bug need test case
+					{	//! \test decl.C99/Error_dup_extern.h
 					if (!have_warned_about_extern)
-						{
+						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset].index_tokens[0]);
-						INC_INFORM(WARN_STR);
+						INC_INFORM(ERR_STR);
 						INFORM("removing prohibited duplicated extern storage class and continuing (C99 6.7.1p2)");
-						if (bool_options[boolopt::warnings_are_errors])
-							zcc_errors.inc_error();
+						zcc_errors.inc_error();
 						have_warned_about_extern = true;
 						}
 					src.DeleteIdx<0>(i+offset);
@@ -3469,12 +3466,11 @@ static void C99_notice_primary_type(parse_tree& src)
 				else if (1<invariant_decl_scanner.count(C1X_CPP0X_THREAD_LOCAL_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_thread_local)
-						{
+						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset].index_tokens[0]);
-						INC_INFORM(WARN_STR);
+						INC_INFORM(ERR_STR);
 						INFORM("removing prohibited duplicated _Thread_Local storage class and continuing (C1X 6.7.1p2)");
-						if (bool_options[boolopt::warnings_are_errors])
-							zcc_errors.inc_error();
+						zcc_errors.inc_error();
 						have_warned_about_thread_local = true;
 						}
 					src.DeleteIdx<0>(i+offset);
@@ -3483,12 +3479,11 @@ static void C99_notice_primary_type(parse_tree& src)
 				else if (1<invariant_decl_scanner.count(C99_CPP_AUTO_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_auto)
-						{
+						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset].index_tokens[0]);
-						INC_INFORM(WARN_STR);
+						INC_INFORM(ERR_STR);
 						INFORM("removing prohibited duplicated auto storage class and continuing (C99 6.7.1p2)");
-						if (bool_options[boolopt::warnings_are_errors])
-							zcc_errors.inc_error();
+						zcc_errors.inc_error();
 						have_warned_about_auto = true;
 						}
 					src.DeleteIdx<0>(i+offset);
@@ -3497,12 +3492,11 @@ static void C99_notice_primary_type(parse_tree& src)
 				else if (1<invariant_decl_scanner.count(C99_CPP_TYPEDEF_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_typedef)
-						{
+						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset].index_tokens[0]);
-						INC_INFORM(WARN_STR);
+						INC_INFORM(ERR_STR);
 						INFORM("removing prohibited duplicated typedef storage class and continuing (C99 6.7.1p2)");
-						if (bool_options[boolopt::warnings_are_errors])
-							zcc_errors.inc_error();
+						zcc_errors.inc_error();
 						have_warned_about_typedef = true;
 						}
 					src.DeleteIdx<0>(i+offset);
@@ -3770,40 +3764,37 @@ static void CPP_notice_primary_type(parse_tree& src)
 				if (1<invariant_decl_scanner.count(C99_CPP_REGISTER_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_register)
-						{
+						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
-						INC_INFORM(WARN_STR);
+						INC_INFORM(ERR_STR);
 						INFORM("removing prohibited duplicated register storage class and continuing (C++0X 7.1.1p1)");
-						if (bool_options[boolopt::warnings_are_errors])
-							zcc_errors.inc_error();
+						zcc_errors.inc_error();
 						have_warned_about_register = true;
 						}
 					src.DeleteIdx<0>(i+offset+using_linkage);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
 				if (1<invariant_decl_scanner.count(C99_CPP_STATIC_IDX))
-					{	//! \bug need test case
+					{	//! \test decl.C99/Error_dup_static.hpp
 					if (!have_warned_about_static)
-						{
+						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
-						INC_INFORM(WARN_STR);
+						INC_INFORM(ERR_STR);
 						INFORM("removing prohibited duplicated static storage class and continuing (C++0X 7.1.1p1)");
-						if (bool_options[boolopt::warnings_are_errors])
-							zcc_errors.inc_error();
+						zcc_errors.inc_error();
 						have_warned_about_static = true;
 						}
 					src.DeleteIdx<0>(i+offset+using_linkage);
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
 				else if (1<invariant_decl_scanner.count(C99_CPP_EXTERN_IDX))
-					{	//! \bug need test case
+					{	//! \test decl.C99/Error_dup_extern.hpp
 					if (!have_warned_about_extern)
-						{
+						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
-						INC_INFORM(WARN_STR);
+						INC_INFORM(ERR_STR);
 						INFORM("removing prohibited duplicated extern storage class and continuing (C++0X 7.1.1p1)");
-						if (bool_options[boolopt::warnings_are_errors])
-							zcc_errors.inc_error();
+						zcc_errors.inc_error();
 						have_warned_about_extern = true;
 						}
 					src.DeleteIdx<0>(i+offset+using_linkage);
@@ -3812,12 +3803,11 @@ static void CPP_notice_primary_type(parse_tree& src)
 				else if (1<invariant_decl_scanner.count(C1X_CPP0X_THREAD_LOCAL_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_thread_local)
-						{
+						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
-						INC_INFORM(WARN_STR);
+						INC_INFORM(ERR_STR);
 						INFORM("removing prohibited duplicated thread_local storage class and continuing (C++0X 7.1.1p1)");
-						if (bool_options[boolopt::warnings_are_errors])
-							zcc_errors.inc_error();
+						zcc_errors.inc_error();
 						have_warned_about_thread_local = true;
 						}
 					src.DeleteIdx<0>(i+offset+using_linkage);
@@ -3826,12 +3816,11 @@ static void CPP_notice_primary_type(parse_tree& src)
 				else if (1<invariant_decl_scanner.count(CPP_MUTABLE_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_mutable)
-						{
+						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
-						INC_INFORM(WARN_STR);
+						INC_INFORM(ERR_STR);
 						INFORM("removing prohibited duplicated mutable storage class and continuing (C++0X 7.1.1p1)");
-						if (bool_options[boolopt::warnings_are_errors])
-							zcc_errors.inc_error();
+						zcc_errors.inc_error();
 						have_warned_about_mutable = true;
 						}
 					src.DeleteIdx<0>(i+offset+using_linkage);
@@ -3840,12 +3829,11 @@ static void CPP_notice_primary_type(parse_tree& src)
 				else if (1<invariant_decl_scanner.count(C99_CPP_TYPEDEF_IDX))
 					{	//! \bug need test case
 					if (!have_warned_about_typedef)
-						{
+						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
-						INC_INFORM(WARN_STR);
+						INC_INFORM(ERR_STR);
 						INFORM("removing prohibited duplicated typedef specifier and continuing (C++0X 7.1.3p1)");
-						if (bool_options[boolopt::warnings_are_errors])
-							zcc_errors.inc_error();
+						zcc_errors.inc_error();
 						have_warned_about_typedef = true;
 						}
 					src.DeleteIdx<0>(i+offset+using_linkage);
