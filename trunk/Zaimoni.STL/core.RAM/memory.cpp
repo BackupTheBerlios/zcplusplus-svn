@@ -1,5 +1,5 @@
 // memory.cpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)1998,1999,2000,2008,2009,2010 Kenneth Boyd, license: MIT.txt
 // implementation of the following:
 //	_msize
 //	malloc
@@ -205,18 +205,26 @@ ExitUnchanged:
 	return memblock;
 }
 
+/*!
+ * \return 1 above index if found, 0 otherwise
+ */
 static size_t
-__IdxOfPointerInPtrList(const void* const Target, size_t Idx, const _track_pointer* const BasePtrIndex)
-{	// FORMALLY CORRECT: Kenneth Boyd, 10/30/1999
-	// this routine checks to see if Target was allocated by RAMManager, by scanning the
-	// list pointed to by BasePtrIndex.  It 1 above the index if found, 0 otherwise
+__IdxOfPointerInPtrList(const void* const Target, size_t strict_ub, const _track_pointer* const BasePtrIndex)
+{	// FORMALLY CORRECT: Kenneth Boyd, 6/11/2010
+	// this routine checks to see if Target was allocated by RAMManager, by 
+	// binary-searching the array pointed to by BasePtrIndex.  
 	// Idx is a strict upper bound to the valid indices.
-	// NOTE: this is unstable.  I should be using a binary search for
-	// "sufficiently large tables".  On the other hand...recent pointers are likely to both
-	// be deleted first, and to be near the end of the table.
-	while(0<Idx)
-		if (Target==BasePtrIndex[--Idx]._address)
-			return Idx+1;
+	size_t lb = 0;
+	while(lb<=strict_ub)
+		{
+		const size_t midpoint = lb + (strict_ub-lb)/2;
+		if (Target==BasePtrIndex[midpoint]._address)
+			return midpoint+1;
+		else if ((const char*)Target<BasePtrIndex[midpoint]._address)
+			lb = midpoint+1;
+		else
+			strict_ub = midpoint;
+		};
 	return 0;
 }
 
