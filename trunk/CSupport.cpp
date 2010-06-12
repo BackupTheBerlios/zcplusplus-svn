@@ -377,10 +377,6 @@ size_t LengthOfCStringLiteral(const char* const x)
           xor  xor_eq
 #endif
 
-#define DICT_STRUCT(A) { (A), sizeof(A)-1 }
-// regrettably, varadic macros are not C++98
-#define DICT2_STRUCT(A,B) { (A), sizeof(A)-1, (B) }
-
 #define ATOMIC_PREPROC_PUNC "()[]{};~,?"
 
 static const POD_triple<const char*,size_t,unsigned int> valid_pure_preprocessing_op_punc[]
@@ -1134,9 +1130,6 @@ size_t CPP0X_invariant_decl_specifier(const char* const x)
 	return SIZE_MAX;
 }	
 #/*cut-cpp*/
-
-#undef DICT2_STRUCT
-#undef DICT_STRUCT
 
 const size_t C_int_priority[]
 	=	{
@@ -10770,7 +10763,7 @@ static void CPP_handle_pragma_relay(parse_tree& src)
 					src.DeleteIdx<0>(i);
 					}
 				else if (!typeid_is_ok && token_is_string<6>(src.data<0>()[i].index_tokens[0].token,"typeid"))
-					//! \bug need test case
+					//! \test staticassert.C1X/Error_typeid_no_typeinfo.hpp
 					simple_error(src.c_array<0>()[i]," requires #include <typeinfo> first (C++0X 5.2.8p6)");
 				}
 			}

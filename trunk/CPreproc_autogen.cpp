@@ -18,9 +18,6 @@ using virtual_machine::umaxint;
 #undef VM_MAX_BIT_PLATFORM
 #define VM_MAX_BIT_PLATFORM target_machine.C_bit<virtual_machine::std_int_long_long>()
 
-//! \bug Once And Only Once violation
-#define DICT_STRUCT(A) { (A), sizeof(A)-1 }
-
 //! \todo POSIX support as feasible
 static const char* const limits_h_reserved[]
 	=	{	"CHAR_BIT",

@@ -27,7 +27,12 @@
 /* this is meant to be lightweight */
 #define ZAIMONI_STATIC_ASSERT(A) typedef char DEEP_CONCATENATE(static_assert_,__LINE__)[(A) ? 1 : -1]
 
+/* size of a static array */
 #define STATIC_SIZE(A) (sizeof(A)/sizeof(*A))
+
+/* some macros to help with aggregate initialization */
+#define DICT_STRUCT(A) { (A), sizeof(A)-1 }
+#define DICT2_STRUCT(A,B) { (A), sizeof(A)-1, (B) }
 
 /* C strings to stdout; include stdio.h before using these */
 /* including cstdio ok if not on a deathstation */

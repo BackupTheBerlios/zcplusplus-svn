@@ -363,10 +363,6 @@ size_t LengthOfCStringLiteral(const char* const x)
           xor  xor_eq
 #endif
 
-#define DICT_STRUCT(A) { (A), sizeof(A)-1 }
-// regrettably, varadic macros are not C++98
-#define DICT2_STRUCT(A,B) { (A), sizeof(A)-1, (B) }
-
 #define ATOMIC_PREPROC_PUNC "()[]{};~,?"
 
 static const POD_triple<const char*,size_t,unsigned int> valid_pure_preprocessing_op_punc[]
@@ -912,9 +908,6 @@ const POD_pair<const char* const,size_t> CPP_atomic_types[]
 
 BOOST_STATIC_ASSERT(STATIC_SIZE(C_atomic_types)==C_TYPE_MAX);
 BOOST_STATIC_ASSERT(STATIC_SIZE(CPP_atomic_types)==CPP_TYPE_MAX);
-
-#undef DICT2_STRUCT
-#undef DICT_STRUCT
 
 const size_t C_int_priority[]
 	=	{
