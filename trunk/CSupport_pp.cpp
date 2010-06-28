@@ -1002,6 +1002,20 @@ const char* const system_headers[]
 #define CPP_SYS_HEADER_STRICT_UB STATIC_SIZE(system_headers)
 #define C_SYS_HEADER_STRICT_UB 23
 
+static size_t LengthOfCSystemHeader(const char* src)
+{
+	const errr i = linear_find(src,system_headers,C_SYS_HEADER_STRICT_UB);
+	if (0<=i) return strlen(system_headers[i]);
+	return 0;
+}
+
+static size_t LengthOfCPPSystemHeader(const char* src)
+{
+	const errr i = linear_find(src,system_headers,CPP_SYS_HEADER_STRICT_UB);
+	if (0<=i) return strlen(system_headers[i]);
+	return 0;
+}
+
 /* XXX this may belong with weak_token XXX */
 static void message_header(const weak_token& src)
 {
@@ -1783,20 +1797,6 @@ CPPPurePreprocessingOperatorPunctuationCode(const char* const x, size_t x_len)
 {
 	BOOST_STATIC_ASSERT(INT_MAX-1>=CPP_PREPROC_OP_STRICT_UB);
 	return 1+linear_reverse_find_lencached(x,x_len,valid_pure_preprocessing_op_punc,CPP_PREPROC_OP_STRICT_UB);
-}
-
-static size_t LengthOfCSystemHeader(const char* src)
-{
-	const errr i = linear_find(src,system_headers,C_SYS_HEADER_STRICT_UB);
-	if (0<=i) return strlen(system_headers[i]);
-	return 0;
-}
-
-static size_t LengthOfCPPSystemHeader(const char* src)
-{
-	const errr i = linear_find(src,system_headers,CPP_SYS_HEADER_STRICT_UB);
-	if (0<=i) return strlen(system_headers[i]);
-	return 0;
 }
 
 static void _bad_syntax_tokenized(const char* const x, size_t x_len, lex_flags& flags, const char* const src_filename, size_t line_no, func_traits<signed int (*)(const char* const, size_t)>::function_type find_pp_code)

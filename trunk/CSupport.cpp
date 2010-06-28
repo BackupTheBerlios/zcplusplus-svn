@@ -1224,6 +1224,20 @@ const char* const system_headers[]
 #define CPP_SYS_HEADER_STRICT_UB STATIC_SIZE(system_headers)
 #define C_SYS_HEADER_STRICT_UB 23
 
+static size_t LengthOfCSystemHeader(const char* src)
+{
+	const errr i = linear_find(src,system_headers,C_SYS_HEADER_STRICT_UB);
+	if (0<=i) return strlen(system_headers[i]);
+	return 0;
+}
+
+static size_t LengthOfCPPSystemHeader(const char* src)
+{
+	const errr i = linear_find(src,system_headers,CPP_SYS_HEADER_STRICT_UB);
+	if (0<=i) return strlen(system_headers[i]);
+	return 0;
+}
+
 /* XXX this may belong with weak_token XXX */
 static void message_header(const weak_token& src)
 {
@@ -2020,20 +2034,6 @@ CPPPurePreprocessingOperatorPunctuationCode(const char* const x, size_t x_len)
 {
 	BOOST_STATIC_ASSERT(INT_MAX-1>=CPP_PREPROC_OP_STRICT_UB);
 	return 1+linear_reverse_find_lencached(x,x_len,valid_pure_preprocessing_op_punc,CPP_PREPROC_OP_STRICT_UB);
-}
-
-static size_t LengthOfCSystemHeader(const char* src)
-{
-	const errr i = linear_find(src,system_headers,C_SYS_HEADER_STRICT_UB);
-	if (0<=i) return strlen(system_headers[i]);
-	return 0;
-}
-
-static size_t LengthOfCPPSystemHeader(const char* src)
-{
-	const errr i = linear_find(src,system_headers,CPP_SYS_HEADER_STRICT_UB);
-	if (0<=i) return strlen(system_headers[i]);
-	return 0;
 }
 
 static void _bad_syntax_tokenized(const char* const x, size_t x_len, lex_flags& flags, const char* const src_filename, size_t line_no, func_traits<signed int (*)(const char* const, size_t)>::function_type find_pp_code)
@@ -10629,6 +10629,235 @@ static bool CPP_CondenseParseTree(parse_tree& src,const type_system& types)
 }
 
 #/*cut-cpp*/
+static const POD_pair<const char*,size_t> C99_nontype_decl_specifier_list[] =
+	{	DICT_STRUCT("typedef"),
+		DICT_STRUCT("const"),
+		DICT_STRUCT("volatile"),
+		DICT_STRUCT("restrict"),
+		DICT_STRUCT("register"),
+		DICT_STRUCT("static"),
+		DICT_STRUCT("extern"),
+		DICT_STRUCT("inline"),
+		DICT_STRUCT("auto"),
+		DICT_STRUCT("_Thread_Local"),	// C1X, actually
+	};
+
+static const POD_pair<const char*,size_t> CPP0X_nontype_decl_specifier_list[] =
+	{	DICT_STRUCT("typedef"),
+		DICT_STRUCT("const"),
+		DICT_STRUCT("volatile"),
+		DICT_STRUCT("register"),
+		DICT_STRUCT("static"),
+		DICT_STRUCT("extern"),
+		DICT_STRUCT("inline"),
+		DICT_STRUCT("thread_local"),	// C1X _Thread_Local
+		DICT_STRUCT("constexpr"),
+		DICT_STRUCT("mutable"),
+		DICT_STRUCT("virtual"),
+		DICT_STRUCT("explicit"),
+		DICT_STRUCT("friend")
+	};
+
+size_t C99_type_or_invariant_decl_specifier(const parse_tree& x)
+{
+	if (PARSE_TYPE & x.flags)
+		return STATIC_SIZE(C99_nontype_decl_specifier_list);
+	if (x.is_atomic())
+		{
+		const errr i = linear_find(x.index_tokens[0].token.first,C99_nontype_decl_specifier_list,STATIC_SIZE(C99_nontype_decl_specifier_list));
+		if (STATIC_SIZE(C99_nontype_decl_specifier_list)>i) return i;
+		}
+	return SIZE_MAX;
+}
+
+size_t CPP0X_type_or_invariant_decl_specifier(const parse_tree& x)
+{
+	if (PARSE_TYPE & x.flags)
+		return STATIC_SIZE(CPP0X_nontype_decl_specifier_list); 
+	if (x.is_atomic())
+		{
+		const errr i = linear_find(x.index_tokens[0].token.first,CPP0X_nontype_decl_specifier_list,STATIC_SIZE(CPP0X_nontype_decl_specifier_list));
+		if (STATIC_SIZE(CPP0X_nontype_decl_specifier_list)>i) return i;
+		}
+	return SIZE_MAX;
+}	
+
+void record_qualifier(parse_tree* x, unsigned char qualify)
+{
+	assert(x);
+	assert(PARSE_TYPE & x->flags);
+tail_recurse:
+	x->type_code.q_vector.back() |= qualify;
+	if (is_naked_parentheses_pair(*x) && 1==x->size<0>() && (PARSE_TYPE & x->data<0>()->flags))
+		{	// discard nested parentheses
+		while(is_naked_parentheses_pair(*x->data<0>()) && 1==x->data<0>()->size<0>() && (PARSE_TYPE & x->data<0>()->data<0>()->flags))
+			x->c_array<0>()->eval_to_arg<0>(0);
+		// tail-recurse
+		x = x->c_array<0>();
+		goto tail_recurse;
+		}
+}
+
+void record_qualifier_or_warn(parse_tree& src,unsigned char qualify,size_t type_at,size_t qual_at,bool& have_warned,const char* const warning)
+{
+	assert(src.size<0>()>type_at);
+	assert(src.size<0>()>qual_at);
+	assert(PARSE_TYPE & src.data<0>()[type_at].flags);
+	if (!(qualify & src.data<0>()[type_at].type_code.q_vector.back()))
+		record_qualifier(src.c_array<0>()+type_at,qualify);
+	else if (!have_warned)
+		{	// already qualified, have not warned yet
+		message_header(src.data<0>()[qual_at].index_tokens[0]);
+		INC_INFORM(WARN_STR);
+		INFORM(warning);
+		if (bool_options[boolopt::warnings_are_errors])
+			zcc_errors.inc_error();
+		have_warned = true;
+		}
+}
+
+void C99_condense_const_volatile_onto_type(parse_tree& src)
+{
+	assert(src.is_raw_list());
+	size_t i = 0;
+	kleene_star<STATIC_SIZE(C99_nontype_decl_specifier_list)+1,size_t (*)(const parse_tree&)> invariant_decl_scanner(C99_type_or_invariant_decl_specifier);
+	do	if (PARSE_TYPE & src.data<0>()[i].flags)
+			{
+			size_t offset = 0;
+			bool have_warned_too_many_types = false;
+			bool have_warned_about_const = false;
+			bool have_warned_about_volatile = false;
+
+			while(0<i-offset && invariant_decl_scanner(src.data<0>()[i- ++offset]))
+				switch(invariant_decl_scanner[offset-1])
+				{
+				case STATIC_SIZE(C99_nontype_decl_specifier_list):
+					if (!have_warned_too_many_types)
+						{
+						message_header(src.data<0>()[i-offset].index_tokens[0]);
+						INC_INFORM(ERR_STR);
+						INFORM("multiple types in decl-specifier sequence, discarding extra types");
+						zcc_errors.inc_error();
+						have_warned_too_many_types = true;
+						}
+					src.DeleteIdx<0>(i-- -offset);
+					invariant_decl_scanner.DeleteIdx(--offset);
+					return;
+				case C99_CPP_CONST_IDX:
+					record_qualifier_or_warn(src,type_spec::_const,i,i-offset,have_warned_about_const,"removing redundant const type qualifier (C99 6.7.3p4)");
+					src.DeleteIdx<0>(i-- -offset);
+					invariant_decl_scanner.DeleteIdx(--offset);
+					continue;
+				case C99_CPP_VOLATILE_IDX:
+					record_qualifier_or_warn(src,type_spec::_volatile,i,i-offset,have_warned_about_volatile,"removing redundant volatile type qualifier (C99 6.7.3p4)");
+					src.DeleteIdx<0>(i-- -offset);
+					invariant_decl_scanner.DeleteIdx(--offset);
+					continue;
+				}
+
+			invariant_decl_scanner.clear();
+			offset = 0;
+			while(src.size<0>()-i>offset+1 && invariant_decl_scanner(src.data<0>()[i+ ++offset]))
+				switch(invariant_decl_scanner[offset-1])
+				{
+				case STATIC_SIZE(C99_nontype_decl_specifier_list):
+					if (!have_warned_too_many_types)
+						{
+						message_header(src.data<0>()[i+offset].index_tokens[0]);
+						INC_INFORM(ERR_STR);
+						INFORM("multiple types in decl-specifier sequence, discarding extra types");
+						zcc_errors.inc_error();
+						have_warned_too_many_types = true;
+						}
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(--offset);
+					return;
+				case C99_CPP_CONST_IDX:
+					record_qualifier_or_warn(src,type_spec::_const,i,i-offset,have_warned_about_const,"removing redundant const type qualifier (C99 6.7.3p4)");
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(--offset);
+					continue;
+				case C99_CPP_VOLATILE_IDX:
+					record_qualifier_or_warn(src,type_spec::_volatile,i,i-offset,have_warned_about_volatile,"removing redundant volatile type qualifier (C99 6.7.3p4)");
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(--offset);
+					continue;
+				}
+			}
+	while(src.size<0>()> ++i);
+}
+
+void CPP0X_condense_const_volatile_onto_type(parse_tree& src)
+{
+	assert(src.is_raw_list());
+	size_t i = 0;
+	kleene_star<STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+1,size_t (*)(const parse_tree&)> invariant_decl_scanner(CPP0X_type_or_invariant_decl_specifier);
+	do	if (PARSE_TYPE & src.data<0>()[i].flags)
+			{
+			size_t offset = 0;
+			bool have_warned_too_many_types = false;
+			bool have_warned_about_const = false;
+			bool have_warned_about_volatile = false;
+
+			while(0<i-offset && invariant_decl_scanner(src.data<0>()[i- ++offset]))
+				switch(invariant_decl_scanner[offset-1])
+				{
+				case STATIC_SIZE(CPP0X_nontype_decl_specifier_list):
+					if (!have_warned_too_many_types)
+						{	//! \bug need test case
+						message_header(src.data<0>()[i-offset].index_tokens[0]);
+						INC_INFORM(ERR_STR);
+						INFORM("multiple types in decl-specifier sequence, discarding extra types");
+						zcc_errors.inc_error();
+						have_warned_too_many_types = true;
+						}
+					src.DeleteIdx<0>(i-- -offset);
+					invariant_decl_scanner.DeleteIdx(--offset);
+					return;
+				case C99_CPP_CONST_IDX:	//! \bug need test case
+					record_qualifier_or_warn(src,type_spec::_const,i,i-offset,have_warned_about_const,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)");
+					src.DeleteIdx<0>(i-- -offset);
+					invariant_decl_scanner.DeleteIdx(--offset);
+					continue;
+				case C99_CPP_VOLATILE_IDX:	//! \bug need test case
+					record_qualifier_or_warn(src,type_spec::_volatile,i,i-offset,have_warned_about_volatile,"removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+					src.DeleteIdx<0>(i-- -offset);
+					invariant_decl_scanner.DeleteIdx(--offset);
+					continue;
+				}
+
+			invariant_decl_scanner.clear();
+			offset = 0;
+			while(src.size<0>()-i>offset+1 && invariant_decl_scanner(src.data<0>()[i+ ++offset]))
+				switch(invariant_decl_scanner[offset-1])
+				{
+				case STATIC_SIZE(CPP0X_nontype_decl_specifier_list):
+					if (!have_warned_too_many_types)
+						{	//! \bug need test case
+						message_header(src.data<0>()[i+offset].index_tokens[0]);
+						INC_INFORM(ERR_STR);
+						INFORM("multiple types in decl-specifier sequence, discarding extra types");
+						zcc_errors.inc_error();
+						have_warned_too_many_types = true;
+						}
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(--offset);
+					return;
+				case C99_CPP_CONST_IDX:	//! \bug need test case
+					record_qualifier_or_warn(src,type_spec::_const,i,i-offset,have_warned_about_const,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)");
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(--offset);
+					continue;
+				case C99_CPP_VOLATILE_IDX:	//! \bug need test case
+					record_qualifier_or_warn(src,type_spec::_volatile,i,i-offset,have_warned_about_volatile,"removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+					src.DeleteIdx<0>(i+offset);
+					invariant_decl_scanner.DeleteIdx(--offset);
+					continue;
+				}
+			}
+	while(src.size<0>()> ++i);
+}
+
 //! \todo check that the fact all literals are already legal-form is used
 //! \throw std::bad_alloc()
 static void C99_ContextFreeParse(parse_tree& src,const type_system& types)
@@ -10637,6 +10866,7 @@ static void C99_ContextFreeParse(parse_tree& src,const type_system& types)
 	_label_literals(src,types);
 	// handle core type specifiers
 	C99_notice_primary_type(src);
+	C99_condense_const_volatile_onto_type(src);
 	if (!_match_pairs(src)) return;
 	// struct/union/enum specifiers can occur in all sorts of strange places
 	C99_notice_struct_union_enum(src);
@@ -10781,6 +11011,7 @@ static void CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 	std::for_each(src.begin<0>(),src.end<0>(),_label_CPP_literal);	// intercepts: true, false, this
 	// handle core type specifiers
 	CPP_notice_primary_type(src);
+	CPP0X_condense_const_volatile_onto_type(src);
 	if (!_match_pairs(src)) return;
 	// do context-free part of qualified-names
 	CPP_notice_scope_glue(src);
@@ -14346,8 +14577,12 @@ void InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
 	assert(C99_CPP_TYPEDEF_IDX==linear_find("typedef",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
 	assert(C99_CPP_CONST_IDX==linear_find("const",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
 	assert(C99_CPP_CONST_IDX==linear_find("const",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
+	assert(C99_CPP_CONST_IDX==linear_find("const",C99_nontype_decl_specifier_list,STATIC_SIZE(C99_nontype_decl_specifier_list)));
+	assert(C99_CPP_CONST_IDX==linear_find("const",CPP0X_nontype_decl_specifier_list,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)));
 	assert(C99_CPP_VOLATILE_IDX==linear_find("volatile",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
 	assert(C99_CPP_VOLATILE_IDX==linear_find("volatile",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
+	assert(C99_CPP_VOLATILE_IDX==linear_find("volatile",C99_nontype_decl_specifier_list,STATIC_SIZE(C99_nontype_decl_specifier_list)));
+	assert(C99_CPP_VOLATILE_IDX==linear_find("volatile",CPP0X_nontype_decl_specifier_list,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)));
 	assert(C99_RESTRICT_IDX==linear_find("restrict",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
 	assert(C99_CPP_REGISTER_IDX==linear_find("register",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
 	assert(C99_CPP_REGISTER_IDX==linear_find("register",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
