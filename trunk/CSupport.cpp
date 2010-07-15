@@ -3313,15 +3313,15 @@ void set_C_canonical_type_representation(parse_tree& src,size_t i,size_t target_
 #undef C_ATOMIC_TYPE_IDENTIFIER_BITFLAG
 }
 
-template<size_t strict_ub_valid_detect> typename zaimoni::Loki::CheckReturnRequireRange<0,2,int>::value_type optional_keyword_choice(parse_tree& src,size_t i,kleene_star<strict_ub_valid_detect,size_t (*)(const char*)>& invariant_decl_scanner,size_t idx1,size_t idx2)
+zaimoni::Loki::CheckReturnRequireRange<0,2,int>::value_type optional_keyword_choice(parse_tree& src,size_t i,kleene_star_core<size_t (*)(const char*)>& invariant_decl_scanner,size_t idx1,size_t idx2)
 {
 	size_t offset[2];
 	int tmp = 0;
 	assert(!invariant_decl_scanner.empty());
 	assert(src.size<0>()>i);
 	assert(src.size<0>()-i>=invariant_decl_scanner.size());
-	assert(strict_ub_valid_detect>idx1);
-	assert(strict_ub_valid_detect>idx2);
+	assert(invariant_decl_scanner.strict_ub()>idx1);
+	assert(invariant_decl_scanner.strict_ub()>idx2);
 	if ((idx1==invariant_decl_scanner[0])<invariant_decl_scanner.count(idx1))
 		{
 		++tmp;
@@ -3342,13 +3342,13 @@ template<size_t strict_ub_valid_detect> typename zaimoni::Loki::CheckReturnRequi
 	return tmp;
 }
 
-template<size_t ub,size_t strict_ub_valid_detect> typename zaimoni::Loki::CheckReturnRequireRange<0,ub,size_t>::value_type optional_keyword_limit(parse_tree& src,size_t i,kleene_star<strict_ub_valid_detect,size_t (*)(const char*)>& invariant_decl_scanner,size_t idx1)
+template<size_t ub> typename zaimoni::Loki::CheckReturnRequireRange<0,ub,size_t>::value_type optional_keyword_limit(parse_tree& src,size_t i,kleene_star_core<size_t (*)(const char*)>& invariant_decl_scanner,size_t idx1)
 {
 	size_t tmp = 0;
 	assert(!invariant_decl_scanner.empty());
 	assert(src.size<0>()>i);
 	assert(src.size<0>()-i>=invariant_decl_scanner.size());
-	assert(strict_ub_valid_detect>idx1);
+	assert(invariant_decl_scanner.strict_ub()>idx1);
 	while(ub>tmp && (idx1==invariant_decl_scanner[0])<invariant_decl_scanner.count(idx1))
 		{
 		size_t tmp2 = invariant_decl_scanner.scan_nofail(idx1,1);
@@ -3359,12 +3359,12 @@ template<size_t ub,size_t strict_ub_valid_detect> typename zaimoni::Loki::CheckR
 	return tmp;
 }
 
-template<size_t strict_ub_valid_detect>  bool optional_keyword(parse_tree& src,size_t i,kleene_star<strict_ub_valid_detect,size_t (*)(const char*)>& invariant_decl_scanner,size_t idx1)
+bool optional_keyword(parse_tree& src,size_t i,kleene_star_core<size_t (*)(const char*)>& invariant_decl_scanner,size_t idx1)
 {
 	assert(!invariant_decl_scanner.empty());
 	assert(src.size<0>()>i);
 	assert(src.size<0>()-i>=invariant_decl_scanner.size());
-	assert(strict_ub_valid_detect>idx1);
+	assert(invariant_decl_scanner.strict_ub()>idx1);
 	if ((idx1==invariant_decl_scanner[0])<invariant_decl_scanner.count(idx1))
 		{
 		size_t tmp = invariant_decl_scanner.scan_nofail(idx1,1);
