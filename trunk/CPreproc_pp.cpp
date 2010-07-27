@@ -4236,12 +4236,10 @@ CPreprocessor::hard_locked_macro(const char* const x,const size_t x_len) const
 	assert(0<x_len);
 // C99: 6.11.9 Predefined macro names
 // Macro names beginning with __STDC_ are reserved for future standardization.
-//! \test Error20.hpp : #undef __STDC__
 //! \bug should have positive test suite for named __STDC_ macros
 	if (7<=x_len && !strncmp(x,"__STDC_",sizeof("__STDC_")-1)) return true;
 // C++0x 17.4.3.2.2 simply prohibits all keywords as macros; prefer this to C++98.  C99/C0X is handled elsewhere, as it isn't so draconian.
 // follow C++0x when generalizing to non-standard languages, as that's more intuitive.
-//! \bug should have positive test suite for all supported C++ keywords
 	if (Lang::C!=lang_code && 0<=linear_find_lencached(x,x_len,lang.InvariantKeywords,lang.len_InvariantKeywords)) return true;
 	return 0<=linear_find_lencached(x,x_len,macro_locked_default,macro_locked_default_count);
 }
