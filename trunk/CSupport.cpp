@@ -3483,7 +3483,7 @@ static void C99_notice_primary_type(parse_tree& src)
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
 				else if (1<invariant_decl_scanner.count(C99_CPP_TYPEDEF_IDX))
-					{	//! \bug need test case
+					{	//! \test decl.C99/Error_dup_typedef.h
 					if (!have_warned_about_typedef)
 						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset].index_tokens[0]);
@@ -3820,7 +3820,7 @@ static void CPP_notice_primary_type(parse_tree& src)
 					invariant_decl_scanner.DeleteIdx(offset--);					
 					}
 				else if (1<invariant_decl_scanner.count(C99_CPP_TYPEDEF_IDX))
-					{	//! \bug need test case
+					{	//! \test decl.C99/Error_dup_typedef.h
 					if (!have_warned_about_typedef)
 						{	//! \todo --do-what-i-mean should warn
 						message_header(src.data<0>()[i+offset+using_linkage].index_tokens[0]);
