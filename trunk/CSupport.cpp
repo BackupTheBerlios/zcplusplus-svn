@@ -10716,74 +10716,85 @@ void record_qualifier_or_warn(parse_tree& src,unsigned char qualify,size_t type_
 		}
 }
 
+static void _condense_const_volatile_onto_type(parse_tree& src,size_t& i,kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner,const char* const warn_const,const char* const warn_volatile)
+{
+	size_t offset = 0;
+	bool have_warned_too_many_types = false;
+	bool have_warned_about_const = false;
+	bool have_warned_about_volatile = false;
+
+	while(0<i-offset && invariant_decl_scanner(src.data<0>()[i- ++offset]))
+		switch(invariant_decl_scanner[offset-1])
+		{
+		case C99_CPP_CONST_IDX:
+			record_qualifier_or_warn(src,type_spec::_const,i,i-offset,have_warned_about_const,warn_const);
+			src.DeleteIdx<0>(i-- -offset);
+			invariant_decl_scanner.DeleteIdx(--offset);
+			continue;
+		case C99_CPP_VOLATILE_IDX:
+			record_qualifier_or_warn(src,type_spec::_volatile,i,i-offset,have_warned_about_volatile,warn_volatile);
+			src.DeleteIdx<0>(i-- -offset);
+			invariant_decl_scanner.DeleteIdx(--offset);
+			continue;
+		default:
+			if (invariant_decl_scanner.strict_ub()-1==invariant_decl_scanner[offset-1])
+				{
+				if (!have_warned_too_many_types)
+					{
+					message_header(src.data<0>()[i-offset].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("multiple types in decl-specifier sequence, discarding extra types");
+					zcc_errors.inc_error();
+					have_warned_too_many_types = true;
+					}
+				src.DeleteIdx<0>(i-- -offset);
+				invariant_decl_scanner.DeleteIdx(--offset);
+				continue;
+				}
+		}
+
+	invariant_decl_scanner.clear();
+	offset = 0;
+	while(src.size<0>()-i>offset+1 && invariant_decl_scanner(src.data<0>()[i+ ++offset]))
+		switch(invariant_decl_scanner[offset-1])
+		{
+		case C99_CPP_CONST_IDX:
+			record_qualifier_or_warn(src,type_spec::_const,i,i-offset,have_warned_about_const,warn_const);
+			src.DeleteIdx<0>(i+offset);
+			invariant_decl_scanner.DeleteIdx(--offset);
+			continue;
+		case C99_CPP_VOLATILE_IDX:
+			record_qualifier_or_warn(src,type_spec::_volatile,i,i-offset,have_warned_about_volatile,warn_volatile);
+			src.DeleteIdx<0>(i+offset);
+			invariant_decl_scanner.DeleteIdx(--offset);
+			continue;
+		default:
+			if (invariant_decl_scanner.strict_ub()-1==invariant_decl_scanner[offset-1])
+				{
+				if (!have_warned_too_many_types)
+					{
+					message_header(src.data<0>()[i-offset].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("multiple types in decl-specifier sequence, discarding extra types");
+					zcc_errors.inc_error();
+					have_warned_too_many_types = true;
+					}
+				src.DeleteIdx<0>(i-- -offset);
+				invariant_decl_scanner.DeleteIdx(--offset);
+				continue;
+				}
+		}
+
+	invariant_decl_scanner.clear();
+}
+
 void C99_condense_const_volatile_onto_type(parse_tree& src)
 {
 	assert(src.is_raw_list());
 	size_t i = 0;
 	kleene_star<STATIC_SIZE(C99_nontype_decl_specifier_list)+1,size_t (*)(const parse_tree&)> invariant_decl_scanner(C99_type_or_invariant_decl_specifier);
 	do	if (PARSE_TYPE & src.data<0>()[i].flags)
-			{
-			size_t offset = 0;
-			bool have_warned_too_many_types = false;
-			bool have_warned_about_const = false;
-			bool have_warned_about_volatile = false;
-
-			while(0<i-offset && invariant_decl_scanner(src.data<0>()[i- ++offset]))
-				switch(invariant_decl_scanner[offset-1])
-				{
-				case STATIC_SIZE(C99_nontype_decl_specifier_list):
-					if (!have_warned_too_many_types)
-						{
-						message_header(src.data<0>()[i-offset].index_tokens[0]);
-						INC_INFORM(ERR_STR);
-						INFORM("multiple types in decl-specifier sequence, discarding extra types");
-						zcc_errors.inc_error();
-						have_warned_too_many_types = true;
-						}
-					src.DeleteIdx<0>(i-- -offset);
-					invariant_decl_scanner.DeleteIdx(--offset);
-					return;
-				case C99_CPP_CONST_IDX:
-					record_qualifier_or_warn(src,type_spec::_const,i,i-offset,have_warned_about_const,"removing redundant const type qualifier (C99 6.7.3p4)");
-					src.DeleteIdx<0>(i-- -offset);
-					invariant_decl_scanner.DeleteIdx(--offset);
-					continue;
-				case C99_CPP_VOLATILE_IDX:
-					record_qualifier_or_warn(src,type_spec::_volatile,i,i-offset,have_warned_about_volatile,"removing redundant volatile type qualifier (C99 6.7.3p4)");
-					src.DeleteIdx<0>(i-- -offset);
-					invariant_decl_scanner.DeleteIdx(--offset);
-					continue;
-				}
-
-			invariant_decl_scanner.clear();
-			offset = 0;
-			while(src.size<0>()-i>offset+1 && invariant_decl_scanner(src.data<0>()[i+ ++offset]))
-				switch(invariant_decl_scanner[offset-1])
-				{
-				case STATIC_SIZE(C99_nontype_decl_specifier_list):
-					if (!have_warned_too_many_types)
-						{
-						message_header(src.data<0>()[i+offset].index_tokens[0]);
-						INC_INFORM(ERR_STR);
-						INFORM("multiple types in decl-specifier sequence, discarding extra types");
-						zcc_errors.inc_error();
-						have_warned_too_many_types = true;
-						}
-					src.DeleteIdx<0>(i+offset);
-					invariant_decl_scanner.DeleteIdx(--offset);
-					return;
-				case C99_CPP_CONST_IDX:
-					record_qualifier_or_warn(src,type_spec::_const,i,i-offset,have_warned_about_const,"removing redundant const type qualifier (C99 6.7.3p4)");
-					src.DeleteIdx<0>(i+offset);
-					invariant_decl_scanner.DeleteIdx(--offset);
-					continue;
-				case C99_CPP_VOLATILE_IDX:
-					record_qualifier_or_warn(src,type_spec::_volatile,i,i-offset,have_warned_about_volatile,"removing redundant volatile type qualifier (C99 6.7.3p4)");
-					src.DeleteIdx<0>(i+offset);
-					invariant_decl_scanner.DeleteIdx(--offset);
-					continue;
-				}
-			}
+			_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
 	while(src.size<0>()> ++i);
 }
 
@@ -10793,68 +10804,7 @@ void CPP0X_condense_const_volatile_onto_type(parse_tree& src)
 	size_t i = 0;
 	kleene_star<STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+1,size_t (*)(const parse_tree&)> invariant_decl_scanner(CPP0X_type_or_invariant_decl_specifier);
 	do	if (PARSE_TYPE & src.data<0>()[i].flags)
-			{
-			size_t offset = 0;
-			bool have_warned_too_many_types = false;
-			bool have_warned_about_const = false;
-			bool have_warned_about_volatile = false;
-
-			while(0<i-offset && invariant_decl_scanner(src.data<0>()[i- ++offset]))
-				switch(invariant_decl_scanner[offset-1])
-				{
-				case STATIC_SIZE(CPP0X_nontype_decl_specifier_list):
-					if (!have_warned_too_many_types)
-						{	//! \bug need test case
-						message_header(src.data<0>()[i-offset].index_tokens[0]);
-						INC_INFORM(ERR_STR);
-						INFORM("multiple types in decl-specifier sequence, discarding extra types");
-						zcc_errors.inc_error();
-						have_warned_too_many_types = true;
-						}
-					src.DeleteIdx<0>(i-- -offset);
-					invariant_decl_scanner.DeleteIdx(--offset);
-					return;
-				case C99_CPP_CONST_IDX:	//! \bug need test case
-					record_qualifier_or_warn(src,type_spec::_const,i,i-offset,have_warned_about_const,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)");
-					src.DeleteIdx<0>(i-- -offset);
-					invariant_decl_scanner.DeleteIdx(--offset);
-					continue;
-				case C99_CPP_VOLATILE_IDX:	//! \bug need test case
-					record_qualifier_or_warn(src,type_spec::_volatile,i,i-offset,have_warned_about_volatile,"removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
-					src.DeleteIdx<0>(i-- -offset);
-					invariant_decl_scanner.DeleteIdx(--offset);
-					continue;
-				}
-
-			invariant_decl_scanner.clear();
-			offset = 0;
-			while(src.size<0>()-i>offset+1 && invariant_decl_scanner(src.data<0>()[i+ ++offset]))
-				switch(invariant_decl_scanner[offset-1])
-				{
-				case STATIC_SIZE(CPP0X_nontype_decl_specifier_list):
-					if (!have_warned_too_many_types)
-						{	//! \bug need test case
-						message_header(src.data<0>()[i+offset].index_tokens[0]);
-						INC_INFORM(ERR_STR);
-						INFORM("multiple types in decl-specifier sequence, discarding extra types");
-						zcc_errors.inc_error();
-						have_warned_too_many_types = true;
-						}
-					src.DeleteIdx<0>(i+offset);
-					invariant_decl_scanner.DeleteIdx(--offset);
-					return;
-				case C99_CPP_CONST_IDX:	//! \bug need test case
-					record_qualifier_or_warn(src,type_spec::_const,i,i-offset,have_warned_about_const,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)");
-					src.DeleteIdx<0>(i+offset);
-					invariant_decl_scanner.DeleteIdx(--offset);
-					continue;
-				case C99_CPP_VOLATILE_IDX:	//! \bug need test case
-					record_qualifier_or_warn(src,type_spec::_volatile,i,i-offset,have_warned_about_volatile,"removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
-					src.DeleteIdx<0>(i+offset);
-					invariant_decl_scanner.DeleteIdx(--offset);
-					continue;
-				}
-			}
+			_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
 	while(src.size<0>()> ++i);
 }
 
