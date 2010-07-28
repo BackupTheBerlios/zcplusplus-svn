@@ -4281,20 +4281,17 @@ CPreprocessor::use_line_directive_and_discard(autovalarray_ptr<Token<char>* >& T
 void
 CPreprocessor::truncate_illegal_tokens(Token<char>& x,const int directive_type,const size_t critical_offset)
 {
-	if (x.size()>critical_offset)
+	if (x.size()<=critical_offset) return;
+	if (x.size()-critical_offset>strspn(x.data()+critical_offset,lang.WhiteSpace+1))
 		{
-		const size_t skip_ws2 = strspn(x.data()+critical_offset,lang.WhiteSpace+1);
-		if (x.size()-critical_offset>skip_ws2)
-			{
-			message_header(x);
-			INC_INFORM(ERR_STR);
-			INC_INFORM("#");
-			INC_INFORM(valid_directives[directive_type].first);
-			INFORM(" is trailed by illegal preprocessing tokens; discarding them. (C99 6.10p1/C++98 16p1)");
-			zcc_errors.inc_error();
-			}
-		x.lslice(critical_offset);
+		message_header(x);
+		INC_INFORM(ERR_STR);
+		INC_INFORM("#");
+		INC_INFORM(valid_directives[directive_type].first);
+		INFORM(" is trailed by illegal preprocessing tokens; discarding them. (C99 6.10p1/C++98 16p1)");
+		zcc_errors.inc_error();
 		}
+	x.lslice(critical_offset);
 }
 
 bool
