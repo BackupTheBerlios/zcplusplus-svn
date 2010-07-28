@@ -1,0 +1,6 @@
+SUFFIXES h hpp
+// check warning for duplicate volatile
+// (C)2010 Kenneth Boyd, license: MIT.txt
+
+const int volatile volatile i;
+

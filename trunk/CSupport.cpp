@@ -10727,11 +10727,19 @@ static void _condense_const_volatile_onto_type(parse_tree& src,size_t& i,kleene_
 		switch(invariant_decl_scanner[offset-1])
 		{
 		case C99_CPP_CONST_IDX:
+			//! \test decl.C99/Warn_dup_const.h
+			//! \test decl.C99/Warn_dup_const.hpp
+			//! \test decl.C99/Warn_dup_const2.h
+			//! \test decl.C99/Warn_dup_const2.hpp
 			record_qualifier_or_warn(src,type_spec::_const,i,i-offset,have_warned_about_const,warn_const);
 			src.DeleteIdx<0>(i-- -offset);
 			invariant_decl_scanner.DeleteIdx(--offset);
 			continue;
 		case C99_CPP_VOLATILE_IDX:
+			//! \test decl.C99/Warn_dup_volatile.h
+			//! \test decl.C99/Warn_dup_volatile.hpp
+			//! \test decl.C99/Warn_dup_volatile2.h
+			//! \test decl.C99/Warn_dup_volatile2.hpp
 			record_qualifier_or_warn(src,type_spec::_volatile,i,i-offset,have_warned_about_volatile,warn_volatile);
 			src.DeleteIdx<0>(i-- -offset);
 			invariant_decl_scanner.DeleteIdx(--offset);
@@ -10759,11 +10767,19 @@ static void _condense_const_volatile_onto_type(parse_tree& src,size_t& i,kleene_
 		switch(invariant_decl_scanner[offset-1])
 		{
 		case C99_CPP_CONST_IDX:
+			//! \test decl.C99/Warn_dup_const2.h
+			//! \test decl.C99/Warn_dup_const2.hpp
+			//! \test decl.C99/Warn_dup_const3.h
+			//! \test decl.C99/Warn_dup_const3.hpp
 			record_qualifier_or_warn(src,type_spec::_const,i,i+offset,have_warned_about_const,warn_const);
 			src.DeleteIdx<0>(i+offset);
 			invariant_decl_scanner.DeleteIdx(--offset);
 			continue;
 		case C99_CPP_VOLATILE_IDX:
+			//! \test decl.C99/Warn_dup_volatile2.h
+			//! \test decl.C99/Warn_dup_volatile2.hpp
+			//! \test decl.C99/Warn_dup_volatile3.h
+			//! \test decl.C99/Warn_dup_volatile3.hpp
 			record_qualifier_or_warn(src,type_spec::_volatile,i,i+offset,have_warned_about_volatile,warn_volatile);
 			src.DeleteIdx<0>(i+offset);
 			invariant_decl_scanner.DeleteIdx(--offset);
