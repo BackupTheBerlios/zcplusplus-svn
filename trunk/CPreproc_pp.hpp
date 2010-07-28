@@ -1,5 +1,5 @@
 // CPreproc_pp.hpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #ifndef CPREPROC_HPP
 #define CPREPROC_HPP 1
@@ -54,7 +54,7 @@ private:
 	bool debug_mode;		//!< triggers some diagnostics
 
 	void die_on_pp_errors() const;
-	void debug_to_stderr(const zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion, const zaimoni::autovalarray_ptr<char*>& macros_function, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_arglist, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion) const;
+	void debug_to_stderr(const zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& TokenList,const zaimoni::autovalarray_ptr<char*>& macros_object, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_object_expansion, const zaimoni::autovalarray_ptr<char*>& macros_function, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_arglist, const zaimoni::autovalarray_ptr<zaimoni::Token<char>*>& macros_function_expansion,const zaimoni::autovalarray_ptr<char*>& locked_macros) const;
 	bool C99_VA_ARGS_flinch(const zaimoni::Token<char>& x, const size_t critical_offset) const;
 	void detailed_UNICODE_syntax(zaimoni::Token<char>& x) const;
 

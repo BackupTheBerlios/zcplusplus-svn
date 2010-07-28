@@ -728,7 +728,7 @@ bool CPreprocessor::preprocess(autovalarray_ptr<Token<char>* >& TokenList)
 	_preprocess(TokenList, locked_macros, macros_object, macros_object_expansion, macros_object_expansion_pre_eval, macros_function, macros_function_arglist, macros_function_expansion, macros_function_expansion_pre_eval, include_file_index, include_file_cache, min_types);
 
 	// need whitespace tokens here to force pretty-printing
-	debug_to_stderr(TokenList,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion);
+	debug_to_stderr(TokenList,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion,locked_macros);
 	die_on_pp_errors();
 	if (TokenList.empty())
 		{	//! \todo make this more efficient by providing a global flush-all
@@ -4006,7 +4006,7 @@ void CPreprocessor::die_on_pp_errors() const
 }
 
 void
-CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<Token<char>*>& macros_object_expansion, const autovalarray_ptr<char*>& macros_function, const autovalarray_ptr<Token<char>*>& macros_function_arglist, const autovalarray_ptr<Token<char>*>& macros_function_expansion) const
+CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<Token<char>*>& macros_object_expansion, const autovalarray_ptr<char*>& macros_function, const autovalarray_ptr<Token<char>*>& macros_function_arglist, const autovalarray_ptr<Token<char>*>& macros_function_expansion,const autovalarray_ptr<char*>& locked_macros) const
 {
 	// need whitespace tokens here to force pretty-printing
 	if (debug_mode)
@@ -4071,7 +4071,13 @@ CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,
 				INC_INFORM("\n");
 			++i;
 			}
-		//! \bug put non-default macro locks here when we get to them.
+		const size_t locked_macro_size = locked_macros.size();
+		i = 0;
+		while(i<locked_macro_size)
+			{
+			INC_INFORM("#pragma ZCC lock ");
+			INFORM(locked_macros[i++]);
+			}
 		};
 }
 
