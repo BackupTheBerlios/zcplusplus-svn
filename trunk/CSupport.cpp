@@ -12999,7 +12999,7 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 						base_enum_type = C_TYPE::ULLONG;
 					case C_TYPE::ULLONG:
 						if (target_machine->unsigned_max<virtual_machine::std_int_long_long>()>=latest_value) break;
-					default:	//! \bug needs test case
+					default:	//! \test decl.C99\Error_enum_overflow.hpp
 						message_header(src.data<0>()[origin-2].index_tokens[0]);
 						INC_INFORM(ERR_STR);
 						INFORM("enumeration requires values above UINTMAX_MAX, underlying type doesn't exist (C++0X 7.2p6)");
