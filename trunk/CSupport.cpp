@@ -10723,6 +10723,7 @@ static void _condense_const_volatile_onto_type(parse_tree& src,size_t& i,kleene_
 	bool have_warned_about_const = false;
 	bool have_warned_about_volatile = false;
 
+	assert(PARSE_TYPE & src.data<0>()[i].flags);
 	while(0<i-offset && invariant_decl_scanner(src.data<0>()[i- ++offset]))
 		switch(invariant_decl_scanner[offset-1])
 		{
@@ -10795,7 +10796,7 @@ static void _condense_const_volatile_onto_type(parse_tree& src,size_t& i,kleene_
 					zcc_errors.inc_error();
 					have_warned_too_many_types = true;
 					}
-				src.DeleteIdx<0>(i-- -offset);
+				src.DeleteIdx<0>(i-- +offset);
 				invariant_decl_scanner.DeleteIdx(--offset);
 				continue;
 				}
