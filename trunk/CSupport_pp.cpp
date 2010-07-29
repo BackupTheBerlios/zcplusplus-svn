@@ -84,14 +84,12 @@ static const virtual_machine::CPUInfo* target_machine = NULL;
 template<size_t i> void register_token(parse_tree& x)
 {
 	BOOST_STATIC_ASSERT(STATIC_SIZE(x.index_tokens)>i);
-	if (x.own_index_token<i>())
-		{
-		const char* tmp = register_substring(x.index_tokens[i].token.first,x.index_tokens[i].token.second);
-		assert(tmp!=x.index_tokens[i].token.first);
-		free(const_cast<char*>(x.index_tokens[i].token.first));
-		x.index_tokens[i].token.first = tmp;
-		x.control_index_token<i>(false);
-		}
+	if (!x.own_index_token<i>()) return;
+	const char* const tmp = register_substring(x.index_tokens[i].token.first,x.index_tokens[i].token.second);
+	assert(tmp!=x.index_tokens[i].token.first);
+	free(const_cast<char*>(x.index_tokens[i].token.first));
+	x.index_tokens[i].token.first = tmp;
+	x.control_index_token<i>(false);
 }
 
 /* need for compiler implementation */
@@ -1752,9 +1750,8 @@ static bool CPP_ControlExpressionContextFreeErrorCount(const weak_token* tokenli
 
 size_t LengthOfCPurePreprocessingOperatorPunctuation(const char* const x)
 {
-	assert(NULL!=x);
-	assert('\0'!=*x);
-	if (NULL!=strchr(ATOMIC_PREPROC_PUNC,*x)) return 1;
+	assert(x && *x);
+	if (strchr(ATOMIC_PREPROC_PUNC,*x)) return 1;
 	const errr i = linear_reverse_find_prefix_in_lencached(x,valid_pure_preprocessing_op_punc+NONATOMIC_PREPROC_OP_LB,C_PREPROC_OP_STRICT_UB-NONATOMIC_PREPROC_OP_LB);
 	if (0<=i) return valid_pure_preprocessing_op_punc[i+NONATOMIC_PREPROC_OP_LB].second;
 	return 0;
@@ -1762,9 +1759,8 @@ size_t LengthOfCPurePreprocessingOperatorPunctuation(const char* const x)
 
 size_t LengthOfCPPPurePreprocessingOperatorPunctuation(const char* const x)
 {
-	assert(NULL!=x);
-	assert('\0'!=*x);
-	if (NULL!=strchr(ATOMIC_PREPROC_PUNC,*x)) return 1;
+	assert(x && *x);
+	if (strchr(ATOMIC_PREPROC_PUNC,*x)) return 1;
 	const errr i = linear_reverse_find_prefix_in_lencached(x,valid_pure_preprocessing_op_punc+NONATOMIC_PREPROC_OP_LB,CPP_PREPROC_OP_STRICT_UB-NONATOMIC_PREPROC_OP_LB);
 	if (0<=i) return valid_pure_preprocessing_op_punc[i+NONATOMIC_PREPROC_OP_LB].second;
 	return 0;
@@ -1801,8 +1797,8 @@ CPPPurePreprocessingOperatorPunctuationCode(const char* const x, size_t x_len)
 
 static void _bad_syntax_tokenized(const char* const x, size_t x_len, lex_flags& flags, const char* const src_filename, size_t line_no, func_traits<signed int (*)(const char* const, size_t)>::function_type find_pp_code)
 {
-	assert(NULL!=x);
-	assert(NULL!=src_filename && '\0'!= *src_filename);
+	assert(x);
+	assert(src_filename && *src_filename);
 	assert(x_len<=strlen(x));
 	assert((C_TESTFLAG_PP_NUMERAL | C_TESTFLAG_PP_OP_PUNC | C_TESTFLAG_STRING_LITERAL | C_TESTFLAG_CHAR_LITERAL | C_TESTFLAG_IDENTIFIER) & flags);
 
@@ -1820,13 +1816,9 @@ static void _bad_syntax_tokenized(const char* const x, size_t x_len, lex_flags& 
 		{
 		union_quartet<C_PPIntCore,C_PPFloatCore,C_PPDecimalFloat,C_PPHexFloat> test;
 		if 		(C_PPDecimalFloat::is(x,x_len,test.third))
-			{
 			flags |= C_TESTFLAG_FLOAT | C_TESTFLAG_DECIMAL;
-			}
 		else if	(C_PPHexFloat::is(x,x_len,test.fourth))
-			{
 			flags |= C_TESTFLAG_FLOAT | C_TESTFLAG_HEXADECIMAL;
-			}
 		else if (C_PPIntCore::is(x,x_len,test.first))
 			{
 			assert(C_PPIntCore::ULL>=test.first.hinted_type);
@@ -5772,20 +5764,17 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, liter
 			lhs_test %= rhs_test;
 			if (0!=lhs_test && rhs_negative!=lhs_negative)
 				{
-				if (bool_options[boolopt::int_neg_div_rounds_away_from_zero])
-					{
-					rhs_test -= lhs_test;
-					lhs_test = rhs_test;
-					}
-				else{
-					// convert to parsed - literal
+				if (!bool_options[boolopt::int_neg_div_rounds_away_from_zero])
+					{	// convert to parsed - literal
 					parse_tree tmp;
 					VM_to_literal(tmp,lhs_test,src,types);
 
 					src.DeleteIdx<1>(0);
 					force_unary_negative_literal(src,tmp);
 					return true;
-					}
+					};
+				rhs_test -= lhs_test;
+				lhs_test = rhs_test;
 				};
 
 			res_int = lhs_test;
@@ -6844,20 +6833,15 @@ static bool eval_relation_expression(parse_tree& src, const type_system& types,i
 				BOOST_STATIC_ASSERT(!(C99_RELATION_SUBTYPE_GTE%2));
 				use_unsigned_compare = false;
 				if (!lhs_zero)
-					{
 					result = lhs_negative ? (op_uses_less_than ? "1" : "0") : (op_uses_less_than ? "0" : "1");
-					}
-				else if (rhs_zero)
-					{
-					result = (C99_RELATION_SUBTYPE_LTE<=src.subtype) ? "1" : "0"; 	// low-level, check with static assertions
-					// is above correct?
+				else if (!rhs_zero)
+					result = rhs_negative ? (op_uses_less_than ? "0" : "1") : (op_uses_less_than ? "1" : "0");
+				else{	// is below correct?
 					BOOST_STATIC_ASSERT(C99_RELATION_SUBTYPE_LTE<=C99_RELATION_SUBTYPE_GTE);
 					BOOST_STATIC_ASSERT(C99_RELATION_SUBTYPE_LT<C99_RELATION_SUBTYPE_LTE);
 					BOOST_STATIC_ASSERT(C99_RELATION_SUBTYPE_GT<C99_RELATION_SUBTYPE_LTE);
-					}
-				else{
-					result = rhs_negative ? (op_uses_less_than ? "0" : "1") : (op_uses_less_than ? "1" : "0");
-					}
+					result = (C99_RELATION_SUBTYPE_LTE<=src.subtype) ? "1" : "0"; 	// low-level, check with static assertions					
+					}				
 				}
 			};
 		if (use_unsigned_compare)
@@ -8750,13 +8734,9 @@ static void eval_string_literal_deref(parse_tree& src,const type_system& types,c
 			if (index_src_is_char && target_machine->signed_max<virtual_machine::std_int_char>()<tmp)
 				{
 				if (tmp.to_uint()-1==target_machine->signed_max<virtual_machine::std_int_char>())
-					{
 					INFORM("(does this source code want char to act like signed char, with integer representation sign-and-magnitude?)");
-					}
 				else if (tmp==target_machine->unsigned_max<virtual_machine::std_int_char>())
-					{
 					INFORM("(does this source code want char to act like signed char, with integer representation one's complement?)");
-					}
 				}
 			src.flags |= parse_tree::INVALID;
 			zcc_errors.inc_error();
