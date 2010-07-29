@@ -83,32 +83,30 @@ static bool fixed_system_include_exists_init = false;
 
 static void init_fixed_system_include_search(void)
 {
-	if (!fixed_system_include_exists_init)
-		{
-		char filepath[FILENAME_MAX];
-		char workpath[FILENAME_MAX];
-		size_t i = STATIC_SIZE(fixed_system_include_search);
-		do	{
-			--i;
-			assert(!is_empty_string(fixed_system_include_search[i]));
-			if ('.'==fixed_system_include_search[i][0] && FILENAME_MAX>strlen(self_path)+strlen(fixed_system_include_search[i])+1)
-				{	// obviously relative path
-				z_dirname(workpath,self_path);
-				strcat(workpath,ZAIMONI_PATH_SEP);
-				strcat(workpath,fixed_system_include_search[i]);
-				char* exists = z_realpath(filepath,workpath);
-				if (NULL!=exists && !access(exists,F_OK))
-					actual_system_include_search[i] = register_string(filepath);
-				}
-			else if (ZAIMONI_PATH_SEP[0]==fixed_system_include_search[i][0])
-				{	// absolute path, current drive
-				char* exists = z_realpath(filepath,fixed_system_include_search[i]);
-				if (NULL!=exists && !access(exists,F_OK))
-					actual_system_include_search[i] = register_string(filepath);
-				};
+	if (fixed_system_include_exists_init) return;
+	char filepath[FILENAME_MAX];
+	char workpath[FILENAME_MAX];
+	size_t i = STATIC_SIZE(fixed_system_include_search);
+	do	{
+		--i;
+		assert(!is_empty_string(fixed_system_include_search[i]));
+		if ('.'==fixed_system_include_search[i][0] && FILENAME_MAX>strlen(self_path)+strlen(fixed_system_include_search[i])+1)
+			{	// obviously relative path
+			z_dirname(workpath,self_path);
+			strcat(workpath,ZAIMONI_PATH_SEP);
+			strcat(workpath,fixed_system_include_search[i]);
+			char* exists = z_realpath(filepath,workpath);
+			if (exists && !access(exists,F_OK))
+				actual_system_include_search[i] = register_string(filepath);
 			}
-		while(0<i);
+		else if (ZAIMONI_PATH_SEP[0]==fixed_system_include_search[i][0])
+			{	// absolute path, current drive
+			char* exists = z_realpath(filepath,fixed_system_include_search[i]);
+			if (exists && !access(exists,F_OK))
+				actual_system_include_search[i] = register_string(filepath);
+			};
 		}
+	while(0<i);
 }
 
 #define LEXER_STRICT_UB (Lexer::CPlusPlus+1)
@@ -2241,16 +2239,14 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 
 static void _complete_string_character_literal(Token<char>& x,const char delim, const char* const end_error)
 {
-	if (delim!=x.back())
-		{
-		message_header2(x,x.original_line.second);
-		INC_INFORM(ERR_STR);
-		INC_INFORM("unterminated");
-		if ('L'==x.front()) INC_INFORM(" wide");
-		INFORM(end_error);
-		zcc_errors.inc_error();
-		x.append(delim);
-		}
+	if (delim==x.back()) return;
+	message_header2(x,x.original_line.second);
+	INC_INFORM(ERR_STR);
+	INC_INFORM("unterminated");
+	if ('L'==x.front()) INC_INFORM(" wide");
+	INFORM(end_error);
+	zcc_errors.inc_error();
+	x.append(delim);
 }
 
 static void complete_string_character_literal(Token<char>& x)
@@ -3933,14 +3929,12 @@ CPreprocessor::intradirective_flush_identifiers_to_zero(Token<char>& x, size_t c
 
 void CPreprocessor::die_on_pp_errors() const
 {
-	if (0<zcc_errors.err_count())
-		{
-		INC_INFORM("FATAL: ");
-		INC_INFORM(zcc_errors.err_count());
-		INC_INFORM(" preprocessing error");
-		INFORM((1==zcc_errors.err_count()) ? "\n" : "s\n");
-		exit(EXIT_FAILURE);
-		};
+	if (0>=zcc_errors.err_count()) return;
+	INC_INFORM("FATAL: ");
+	INC_INFORM(zcc_errors.err_count());
+	INC_INFORM(" preprocessing error");
+	INFORM((1==zcc_errors.err_count()) ? "\n" : "s\n");
+	exit(EXIT_FAILURE);
 }
 
 void
