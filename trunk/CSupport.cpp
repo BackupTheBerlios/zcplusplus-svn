@@ -13075,13 +13075,61 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		// check naked declarations first
 		if (is_C99_named_specifier(src.data<0>()[i],"union"))
 			{
-			type_system::type_index tmp = types.get_id_union(src.data<0>()[i].index_tokens[1].token.first);
-			src.c_array<0>()[i].type_code.set_type(tmp);
+			const type_system::type_index tmp = types.get_id_union(src.data<0>()[i].index_tokens[1].token.first);
+			if (   1<src.size<0>()-i
+				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
+				{	// check for forward-declaration here (C99 6.7.2.3)
+					//! \bug C1X 6.7.3p3 indicates const/volatile qualification of a forward-declaration is meaningless, so warn
+					//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
+				if (tmp)
+					{	// but if already (forward-)declared then this is a no-op
+						// think this is common enough to not warrant OAOO/DRY treatment
+					//! \test zcc/decl.C99/Pass_union_forward_def.h
+					// remove from parse
+					src.DeleteNSlotsAt<0>(2,i);
+					continue;					
+					}
+				// forward-declare
+				//! \test zcc/decl.C99/Pass_union_forward_def.h
+				const type_system::type_index tmp2 = types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_union);
+				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				i += 2;
+				continue;
+				}
+			else
+				src.c_array<0>()[i].type_code.set_type(tmp);
 			}
 		else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
 			{
-			type_system::type_index tmp = types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first);
-			src.c_array<0>()[i].type_code.set_type(tmp);
+			const type_system::type_index tmp = types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first);
+			if (   1<src.size<0>()-i
+				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
+				{	// check for forward-declaration here (C99 6.7.2.3)
+					//! \bug C1X 6.7.3p3 indicates const/volatile qualification of a forward-declaration is meaningless
+					//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
+				if (tmp)
+					{	// but if already (forward-)declared then this is a no-op
+						// think this is common enough to not warrant OAOO/DRY treatment
+					//! \test zcc/decl.C99/Pass_struct_forward_def.h
+					// remove from parse
+					src.DeleteNSlotsAt<0>(2,i);
+					continue;					
+					}
+				// forward-declare
+				//! \test zcc/decl.C99/Pass_struct_forward_def.h
+				const type_system::type_index tmp2 = types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_struct);
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				i += 2;
+				continue;
+				}
+			else
+				src.c_array<0>()[i].type_code.set_type(tmp);
 			}
 		else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
 			{	// can only define once
@@ -13209,46 +13257,12 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				src.DeleteNSlotsAt<0>(2,i);
 				continue;
 				}
-			else if (is_C99_named_specifier(src.data<0>()[i],"union"))
-				{	// forward-declare, fine
-				if (types.get_id_union(src.data<0>()[i].index_tokens[1].token.first))
-					{	// but if already (forward-)declared then this is a no-op
-						// think this is common enough to not warrant OAOO/DRY treatment
-					//! \test zcc/decl.C99/Pass_union_forward_def.h
-					// remove from parse
-					src.DeleteNSlotsAt<0>(2,i);
-					continue;					
-					}
-				// forward-declare
-				//! \test zcc/decl.C99/Pass_union_forward_def.h
-				const type_system::type_index tmp2 = types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_union);
-				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
-				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-				assert(types.get_structdecl(tmp2));
-				src.c_array<0>()[i].type_code.set_type(tmp2);
-				i += 2;
-				continue;
-				}
-			else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
-				{	// forward-declare, fine
-				if (types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first))
-					{	// but if already (forward-)declared then this is a no-op
-						// think this is common enough to not warrant OAOO/DRY treatment
-					//! \test zcc/decl.C99/Pass_struct_forward_def.h
-					// remove from parse
-					src.DeleteNSlotsAt<0>(2,i);
-					continue;					
-					}
-				// forward-declare
-				//! \test zcc/decl.C99/Pass_struct_forward_def.h
-				const type_system::type_index tmp2 = types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_struct);
-				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
-				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-				assert(types.get_structdecl(tmp2));
-				src.c_array<0>()[i].type_code.set_type(tmp2);
-				i += 2;
-				continue;
-				}
+/*			else if (is_C99_named_specifier(src.data<0>()[i],"union"))
+				{	// forward-declaration already handled
+				} */
+/*			else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
+				{	// forward-declaration already handled
+				}	*/
 			else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
 				{	// definitions...fine
 				const type_system::type_index tmp = types.get_id_union(src.data<0>()[i].index_tokens[1].token.first);
@@ -13657,18 +13671,87 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		//! \bug indentation fixup needed (stage 3)
 		if (is_C99_named_specifier(src.data<0>()[i],"union"))
 			{
-			type_system::type_index tmp = types.get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
-			src.c_array<0>()[i].type_code.set_type(tmp);
+			const type_system::type_index tmp = types.get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
+			if (   1<src.size<0>()-i
+				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
+				{	// check for forward-declaration here
+					//! \bug C++0X 7.1.6.1p1 : const, volatile is an error here 
+				if (tmp)
+					{	// but if already (forward-)declared then this is a no-op
+						// think this is common enough to not warrant OAOO/DRY treatment
+					//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+					// remove from parse
+					src.DeleteNSlotsAt<0>(2,i);
+					continue;					
+					}
+				// forward-declare
+				//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+				const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union);
+				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				i += 2;
+				continue;
+				}
+			else
+				src.c_array<0>()[i].type_code.set_type(tmp);
 			}
 		else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
 			{
-			type_system::type_index tmp = types.get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
-			src.c_array<0>()[i].type_code.set_type(tmp);
+			const type_system::type_index tmp = types.get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
+			if (   1<src.size<0>()-i
+				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
+				{	// check for forward-declaration here
+					//! \bug C++0X 7.1.6.1p1 : const, volatile is an error here
+				if (tmp)
+					{	// but if already (forward-)declared then this is a no-op
+						// think this is common enough to not warrant OAOO/DRY treatment
+					//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
+					// remove from parse
+					src.DeleteNSlotsAt<0>(2,i);
+					continue;					
+					}
+				// forward-declare
+				//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
+				const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_struct);
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				i += 2;
+				continue;
+				}
+			else
+				src.c_array<0>()[i].type_code.set_type(tmp);
 			}
 		else if (is_C99_named_specifier(src.data<0>()[i],"class"))
 			{
-			type_system::type_index tmp = types.get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
-			src.c_array<0>()[i].type_code.set_type(tmp);
+			const type_system::type_index tmp = types.get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
+			if (   1<src.size<0>()-i
+				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
+				{	// check for forward-declaration here
+					//! \bug C++0X 7.1.6.1p1 : const, volatile is an error here
+				if (tmp)
+					{	// but if already (forward-)declared then this is a no-op
+						// think this is common enough to not warrant OAOO/DRY treatment
+					//! \test zcc/decl.C99/Pass_class_forward_def.hpp
+					// remove from parse
+					src.DeleteNSlotsAt<0>(2,i);
+					continue;					
+					}
+				// forward-declare
+				//! \test zcc/decl.C99/Pass_class_forward_def.hpp
+				const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class);
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				i += 2;
+				continue;
+				}
+			else
+				src.c_array<0>()[i].type_code.set_type(tmp);
 			}
 		else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
 			{	// can only define once
@@ -13847,81 +13930,15 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				src.DeleteNSlotsAt<0>(2,i);
 				continue;
 				}
-			else if (is_C99_named_specifier(src.data<0>()[i],"union"))
-				{	// forward-declare, fine
-				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-				const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-				if (types.get_id_union(fullname))
-					{	// but if already (forward-)declared then this is a no-op
-						// think this is common enough to not warrant OAOO/DRY treatment
-					//! \test zcc/decl.C99/Pass_union_forward_def.hpp
-					// remove from parse
-					free(namespace_name);
-					src.DeleteNSlotsAt<0>(2,i);
-					continue;					
-					}
-				free(namespace_name);
-				// forward-declare
-				//! \test zcc/decl.C99/Pass_union_forward_def.hpp
-				//! \todo fix up fully-qualified name
-				const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union);
-				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
-				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-				assert(types.get_structdecl(tmp2));
-				src.c_array<0>()[i].type_code.set_type(tmp2);
-				i += 2;
-				continue;
-				}
-			else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
-				{	// forward-declare, fine
-				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-				const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-				if (types.get_id_struct_class(fullname))
-					{	// but if already (forward-)declared then this is a no-op
-						// think this is common enough to not warrant OAOO/DRY treatment
-					//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
-					// remove from parse
-					free(namespace_name);
-					src.DeleteNSlotsAt<0>(2,i);
-					continue;					
-					}
-				free(namespace_name);
-				// forward-declare
-				//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
-				//! \todo fix up fully-qualified name
-				const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_struct);
-				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
-				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-				assert(types.get_structdecl(tmp2));
-				src.c_array<0>()[i].type_code.set_type(tmp2);
-				i += 2;
-				continue;
-				}
-			else if (is_C99_named_specifier(src.data<0>()[i],"class"))
-				{	// forward-declare, fine
-				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-				const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-				if (types.get_id_struct_class(fullname))
-					{	// but if already (forward-)declared then this is a no-op
-						// think this is common enough to not warrant OAOO/DRY treatment
-					//! \test zcc/decl.C99/Pass_class_forward_def.hpp
-					// remove from parse
-					free(namespace_name);
-					src.DeleteNSlotsAt<0>(2,i);
-					continue;					
-					}
-				free(namespace_name);
-				// forward-declare
-				//! \test zcc/decl.C99/Pass_class_forward_def.hpp
-				//! \todo fix up fully-qualified name
-				const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class);
-				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
-				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-				assert(types.get_structdecl(tmp2));
-				src.c_array<0>()[i].type_code.set_type(tmp2);
-				i += 2;
-				continue;
-				}
+/*			else if (is_C99_named_specifier(src.data<0>()[i],"union"))
+				{	// forward-declaration already handled
+				}	*/
+/*			else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
+				{	// forward-declaration already handled
+				}	*/
+/*			else if (is_C99_named_specifier(src.data<0>()[i],"class"))
+				{	// forward-declaration already handled
+				} */
 			else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
 				{	// definitions...fine
 				char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
