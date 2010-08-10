@@ -3180,6 +3180,7 @@ bool CCharLiteralIsFalse(const char* x,size_t x_len)
 /* strict type categories of parsing */
 #define PARSE_PRIMARY_TYPE ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-19))
 #define PARSE_UNION_TYPE ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-20))
+#define PARSE_CLASS_STRUCT_TYPE ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-21))
 
 // check for collision with lowest three bits
 BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>=20);
@@ -3204,7 +3205,7 @@ BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>
 #define PARSE_EXPRESSION (PARSE_PRIMARY_EXPRESSION | PARSE_STRICT_POSTFIX_EXPRESSION | PARSE_STRICT_UNARY_EXPRESSION | PARSE_STRICT_CAST_EXPRESSION | PARSE_STRICT_PM_EXPRESSION | PARSE_STRICT_MULT_EXPRESSION | PARSE_STRICT_ADD_EXPRESSION | PARSE_STRICT_SHIFT_EXPRESSION | PARSE_STRICT_RELATIONAL_EXPRESSION | PARSE_STRICT_EQUALITY_EXPRESSION | PARSE_STRICT_BITAND_EXPRESSION | PARSE_STRICT_BITXOR_EXPRESSION | PARSE_STRICT_BITOR_EXPRESSION | PARSE_STRICT_LOGICAND_EXPRESSION | PARSE_STRICT_LOGICOR_EXPRESSION | PARSE_STRICT_CONDITIONAL_EXPRESSION | PARSE_STRICT_ASSIGNMENT_EXPRESSION | PARSE_STRICT_COMMA_EXPRESSION)
 
 /* nonstrict type categories */
-#define PARSE_TYPE (PARSE_PRIMARY_TYPE | PARSE_UNION_TYPE)
+#define PARSE_TYPE (PARSE_PRIMARY_TYPE | PARSE_UNION_TYPE | PARSE_CLASS_STRUCT_TYPE)
 
 /* already-parsed */
 #define PARSE_OBVIOUS (PARSE_EXPRESSION | PARSE_TYPE | parse_tree::INVALID)
@@ -4600,6 +4601,13 @@ static void C99_notice_struct_union_enum(parse_tree& src)
 			src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
 			offset += 1;
 			assert(is_C99_named_specifier(src.data<0>()[i],tmp2));
+			// parser is having normal-form issues.  Shove named specifiers ahead of any const/volatile type qualifiers
+			size_t j = i;
+			while(0<j && (robust_token_is_string<5>(src.data<0>()[j-1],"const") || robust_token_is_string<8>(src.data<0>()[j-1],"volatile")))
+				{
+				std::swap(src.c_array<0>()[j],src.c_array<0>()[j-1]);
+				--j;
+				};
 			continue;
 			}
 		++i;
@@ -12017,7 +12025,7 @@ static size_t C99_cv_qualifier_span(parse_tree& x, size_t i,type_spec& target_ty
 					}
 				target_type.q_vector.back() |= type_spec::_const;
 				}
-			else if (robust_token_is_string<5>(x.data<0>()[i+ub],"volatile"))
+			else if (robust_token_is_string<8>(x.data<0>()[i+ub],"volatile"))
 				{	//! \bug need test cases
 				if (target_type.q_vector.back() & type_spec::_volatile)
 					{
@@ -12028,7 +12036,7 @@ static size_t C99_cv_qualifier_span(parse_tree& x, size_t i,type_spec& target_ty
 					}
 				target_type.q_vector.back() |= type_spec::_volatile;
 				}
-			else if (robust_token_is_string<5>(x.data<0>()[i+ub],"restrict"))
+			else if (robust_token_is_string<8>(x.data<0>()[i+ub],"restrict"))
 				{	//! \bug need test cases
 				if (target_type.q_vector.back() & type_spec::_restrict)
 					{
@@ -12195,7 +12203,7 @@ static size_t CPP_cv_qualifier_span(parse_tree& x, size_t i,type_spec& target_ty
 					}
 				target_type.q_vector.back() |= type_spec::_const;
 				}
-			else if (robust_token_is_string<5>(x.data<0>()[i+ub],"volatile"))
+			else if (robust_token_is_string<8>(x.data<0>()[i+ub],"volatile"))
 				{	//! \bug need test cases
 				if (target_type.q_vector.back() & type_spec::_volatile)
 					{
@@ -13061,6 +13069,7 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 	// note that typedefs and struct/union declarations/definitions create new types; if this happens we are no longer context-free (so second pass with context-based parsing)
 	// ask GCC: struct/class/union/enum collides with each other (both C and C++), does not collide with namespace
 	// think we can handle this as "disallow conflicting definitions"
+	kleene_star<STATIC_SIZE(C99_nontype_decl_specifier_list)+1,size_t (*)(const parse_tree&)> invariant_decl_scanner(C99_type_or_invariant_decl_specifier);
 	size_t i = 0;
 	while(i<src.size<0>())
 		{
@@ -13076,11 +13085,60 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 		if (is_C99_named_specifier(src.data<0>()[i],"union"))
 			{
 			const type_system::type_index tmp = types.get_id_union(src.data<0>()[i].index_tokens[1].token.first);
+			if (tmp)
+				{
+				src.c_array<0>()[i].type_code.set_type(tmp);
+				src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
+				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
+				};
+			//! \bug C1X 6.7.2.3p2 states that conflicting enum or struct must error
+			// tentatively forward-declare immediately
+			const type_system::type_index tmp2 = tmp ? 0 : types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_union);
+			if (tmp2)
+				{	//! \test zcc/decl.C99/Pass_union_forward_def.h
+				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
+				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
+				};
+			assert(tmp || tmp2);
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here (C99 6.7.2.3)
-					//! \bug C1X 6.7.3p3 indicates const/volatile qualification of a forward-declaration is meaningless, so warn
-					//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
+				//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
+				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
+					{	//! \test decl.C99/Warn_union_forward_def_const1.h
+						//! \test decl.C99/Warn_union_forward_def_const2.h
+						//! \test decl.C99/Warn_union_forward_def_const3.h
+						//! \test decl.C99/Warn_union_forward_def_const4.h
+						//! \test decl.C99/Warn_union_forward_def_volatile1.h
+						//! \test decl.C99/Warn_union_forward_def_volatile2.h
+						//! \test decl.C99/Warn_union_forward_def_volatile3.h
+						//! \test decl.C99/Warn_union_forward_def_volatile4.h
+						//! \test decl.C99/Warn_union_forward_def_const_volatile1.h
+						//! \test decl.C99/Warn_union_forward_def_const_volatile2.h
+						//! \test decl.C99/Warn_union_forward_def_const_volatile3.h
+						//! \test decl.C99/Warn_union_forward_def_const_volatile4.h
+						//! \test decl.C99/Warn_union_forward_def_const_volatile5.h
+						//! \test decl.C99/Warn_union_forward_def_const_volatile6.h
+						//! \test decl.C99/Warn_union_forward_def_const_volatile7.h
+						//! \test decl.C99/Warn_union_forward_def_const_volatile8.h
+						//! \test decl.C99/Warn_union_forward_def_const_volatile9.h
+						//! \test decl.C99/Warn_union_forward_def_const_volatile10.h
+						//! \test decl.C99/Warn_union_forward_def_const_volatile11.h
+						//! \test decl.C99/Warn_union_forward_def_const_volatile12.h
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(WARN_STR);
+					INFORM("useless const/volatile qualification of a forward-declaration (C99 6.7.3p3)");
+					if (bool_options[boolopt::warn_crosslang_compatibility])
+						INFORM("(error in C++: C++0X 7.1.6.1p1)");
+					if (bool_options[boolopt::warnings_are_errors])
+						zcc_errors.inc_error();
+					// XXX may not behave well on trapping-int hosts XXX
+					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
+					};
 				if (tmp)
 					{	// but if already (forward-)declared then this is a no-op
 						// think this is common enough to not warrant OAOO/DRY treatment
@@ -13091,25 +13149,57 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					}
 				// forward-declare
 				//! \test zcc/decl.C99/Pass_union_forward_def.h
-				const type_system::type_index tmp2 = types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_union);
-				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
-				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-				assert(types.get_structdecl(tmp2));
-				src.c_array<0>()[i].type_code.set_type(tmp2);
+				assert(tmp2);
 				i += 2;
 				continue;
 				}
-			else
-				src.c_array<0>()[i].type_code.set_type(tmp);
+			else if (!tmp)
+				{	// used without at least forward-declaring
+					//! \bug needs test cases
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("used without at least forward-declaring");
+				zcc_errors.inc_error();
+				}
 			}
 		else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
 			{
 			const type_system::type_index tmp = types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first);
+			if (tmp)
+				{
+				src.c_array<0>()[i].type_code.set_type(tmp);
+				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
+				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
+				};
+			//! \bug C1X 6.7.2.3p2 states that conflicting enum or struct must error
+			// tentatively forward-declare immediately
+			const type_system::type_index tmp2 = tmp ? 0 : types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_struct);
+			if (tmp2)
+				{	//! \test zcc/decl.C99/Pass_struct_forward_def.h
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
+				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
+				};
+			assert(tmp || tmp2);
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here (C99 6.7.2.3)
-					//! \bug C1X 6.7.3p3 indicates const/volatile qualification of a forward-declaration is meaningless
-					//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
+				//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
+				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
+					{	//! \bug need test cases
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(WARN_STR);
+					INFORM("useless const/volatile qualification of a forward-declaration (C99 6.7.3p3)");
+					if (bool_options[boolopt::warn_crosslang_compatibility])
+						INFORM("(error in C++: C++0X 7.1.6.1p1)");
+					if (bool_options[boolopt::warnings_are_errors])
+						zcc_errors.inc_error();
+					// XXX may not behave well on trapping-int hosts XXX
+					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
+					};
 				if (tmp)
 					{	// but if already (forward-)declared then this is a no-op
 						// think this is common enough to not warrant OAOO/DRY treatment
@@ -13120,16 +13210,18 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 					}
 				// forward-declare
 				//! \test zcc/decl.C99/Pass_struct_forward_def.h
-				const type_system::type_index tmp2 = types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_struct);
-				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
-				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-				assert(types.get_structdecl(tmp2));
-				src.c_array<0>()[i].type_code.set_type(tmp2);
+				assert(tmp2);
 				i += 2;
 				continue;
 				}
-			else
-				src.c_array<0>()[i].type_code.set_type(tmp);
+			else if (!tmp)
+				{	// used without at least forward-declaring
+					//! \bug needs test cases
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("used without at least forward-declaring");
+				zcc_errors.inc_error();
+				}
 			}
 		else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
 			{	// can only define once
@@ -13656,6 +13748,7 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		return;
 		}
 
+	kleene_star<STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+1,size_t (*)(const parse_tree&)> invariant_decl_scanner(CPP0X_type_or_invariant_decl_specifier);
 	size_t i = 0;
 	while(i<src.size<0>())
 		{
@@ -13672,10 +13765,37 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 		if (is_C99_named_specifier(src.data<0>()[i],"union"))
 			{
 			const type_system::type_index tmp = types.get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
+			if (tmp)
+				{
+				src.c_array<0>()[i].type_code.set_type(tmp);
+				src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
+				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+				};
+			//! \bug [find citation] states that conflicting enum, struct, or class must error
+			// tentatively forward-declare immediately
+			const type_system::type_index tmp2 = tmp ? 0 : types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union);
+			if (tmp2)
+				{	//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
+				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+				};
+			assert(tmp || tmp2);
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here
-					//! \bug C++0X 7.1.6.1p1 : const, volatile is an error here 
+				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
+					{	//! \bug need test cases
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
+					zcc_errors.inc_error();
+					// XXX may not behave well on trapping-int hosts XXX
+					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
+					}
 				if (tmp)
 					{	// but if already (forward-)declared then this is a no-op
 						// think this is common enough to not warrant OAOO/DRY treatment
@@ -13683,27 +13803,55 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					// remove from parse
 					src.DeleteNSlotsAt<0>(2,i);
 					continue;					
-					}
-				// forward-declare
+					};
 				//! \test zcc/decl.C99/Pass_union_forward_def.hpp
-				const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union);
-				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
-				assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-				assert(types.get_structdecl(tmp2));
-				src.c_array<0>()[i].type_code.set_type(tmp2);
+				assert(tmp2);
 				i += 2;
 				continue;
 				}
-			else
-				src.c_array<0>()[i].type_code.set_type(tmp);
+			else if (!tmp)
+				{	// used without at least forward-declaring
+					//! \bug needs test cases
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("used without at least forward-declaring");
+				zcc_errors.inc_error();
+				}
 			}
 		else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
 			{
 			const type_system::type_index tmp = types.get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
+			if (tmp)
+				{
+				src.c_array<0>()[i].type_code.set_type(tmp);
+				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
+				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+				};
+			//! \bug [find citation] states that conflicting enum, struct, or class must error
+			// tentatively forward-declare immediately
+			const type_system::type_index tmp2 = tmp ? 0 : types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_struct);
+			if (tmp2)
+				{	//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
+				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+				};
+			assert(tmp || tmp2);
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here
-					//! \bug C++0X 7.1.6.1p1 : const, volatile is an error here
+				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
+					{	//! \bug need test cases
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
+					zcc_errors.inc_error();
+					// XXX may not behave well on trapping-int hosts XXX
+					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
+					}
 				if (tmp)
 					{	// but if already (forward-)declared then this is a no-op
 						// think this is common enough to not warrant OAOO/DRY treatment
@@ -13714,24 +13862,53 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					}
 				// forward-declare
 				//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
-				const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_struct);
-				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
-				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-				assert(types.get_structdecl(tmp2));
-				src.c_array<0>()[i].type_code.set_type(tmp2);
+				assert(tmp2);
 				i += 2;
 				continue;
 				}
-			else
-				src.c_array<0>()[i].type_code.set_type(tmp);
+			else if (!tmp)
+				{	// used without at least forward-declaring
+					//! \bug needs test cases
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("used without at least forward-declaring");
+				zcc_errors.inc_error();
+				}
 			}
 		else if (is_C99_named_specifier(src.data<0>()[i],"class"))
 			{
 			const type_system::type_index tmp = types.get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
+			if (tmp)
+				{
+				src.c_array<0>()[i].type_code.set_type(tmp);
+				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
+				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+				};
+			//! \bug [find citation] states that conflicting enum, struct, or class must error
+			// tentatively forward-declare immediately
+			const type_system::type_index tmp2 = tmp ? 0 : types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class);
+			if (tmp2)
+				{	//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
+				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+				};
+			assert(tmp || tmp2);
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here
-					//! \bug C++0X 7.1.6.1p1 : const, volatile is an error here
+				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
+					{	//! \bug need test cases
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
+					zcc_errors.inc_error();
+					// XXX may not behave well on trapping-int hosts XXX
+					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
+					}
 				if (tmp)
 					{	// but if already (forward-)declared then this is a no-op
 						// think this is common enough to not warrant OAOO/DRY treatment
@@ -13742,16 +13919,18 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 					}
 				// forward-declare
 				//! \test zcc/decl.C99/Pass_class_forward_def.hpp
-				const type_system::type_index tmp2 = types.register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class);
-				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
-				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
-				assert(types.get_structdecl(tmp2));
-				src.c_array<0>()[i].type_code.set_type(tmp2);
+				assert(tmp2);
 				i += 2;
 				continue;
 				}
-			else
-				src.c_array<0>()[i].type_code.set_type(tmp);
+			else if (!tmp)
+				{	// used without at least forward-declaring
+					//! \bug needs test cases
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("used without at least forward-declaring");
+				zcc_errors.inc_error();
+				}
 			}
 		else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
 			{	// can only define once
