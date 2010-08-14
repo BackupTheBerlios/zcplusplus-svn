@@ -13189,7 +13189,26 @@ static void C99_ContextParse(parse_tree& src,type_system& types)
 				{	// check for forward-declaration here (C99 6.7.2.3)
 				//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
 				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \bug need test cases
+					{	//! \test decl.C99/Warn_struct_forward_def_const1.h
+						//! \test decl.C99/Warn_struct_forward_def_const2.h
+						//! \test decl.C99/Warn_struct_forward_def_const3.h
+						//! \test decl.C99/Warn_struct_forward_def_const4.h
+						//! \test decl.C99/Warn_struct_forward_def_volatile1.h
+						//! \test decl.C99/Warn_struct_forward_def_volatile2.h
+						//! \test decl.C99/Warn_struct_forward_def_volatile3.h
+						//! \test decl.C99/Warn_struct_forward_def_volatile4.h
+						//! \test decl.C99/Warn_struct_forward_def_const_volatile1.h
+						//! \test decl.C99/Warn_struct_forward_def_const_volatile2.h
+						//! \test decl.C99/Warn_struct_forward_def_const_volatile3.h
+						//! \test decl.C99/Warn_struct_forward_def_const_volatile4.h
+						//! \test decl.C99/Warn_struct_forward_def_const_volatile5.h
+						//! \test decl.C99/Warn_struct_forward_def_const_volatile6.h
+						//! \test decl.C99/Warn_struct_forward_def_const_volatile7.h
+						//! \test decl.C99/Warn_struct_forward_def_const_volatile8.h
+						//! \test decl.C99/Warn_struct_forward_def_const_volatile9.h
+						//! \test decl.C99/Warn_struct_forward_def_const_volatile10.h
+						//! \test decl.C99/Warn_struct_forward_def_const_volatile11.h
+						//! \test decl.C99/Warn_struct_forward_def_const_volatile12.h
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(WARN_STR);
 					INFORM("useless const/volatile qualification of a forward-declaration (C99 6.7.3p3)");
@@ -13788,7 +13807,26 @@ static void CPP_ParseNamespace(parse_tree& src,type_system& types,const char* co
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here
 				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \bug need test cases
+					{	//! \test decl.C99/Error_union_forward_def_const1.hpp
+						//! \test decl.C99/Error_union_forward_def_const2.hpp
+						//! \test decl.C99/Error_union_forward_def_const3.hpp
+						//! \test decl.C99/Error_union_forward_def_const4.hpp
+						//! \test decl.C99/Error_union_forward_def_volatile1.hpp
+						//! \test decl.C99/Error_union_forward_def_volatile2.hpp
+						//! \test decl.C99/Error_union_forward_def_volatile3.hpp
+						//! \test decl.C99/Error_union_forward_def_volatile4.hpp
+						//! \test decl.C99/Error_union_forward_def_const_volatile1.hpp
+						//! \test decl.C99/Error_union_forward_def_const_volatile2.hpp
+						//! \test decl.C99/Error_union_forward_def_const_volatile3.hpp
+						//! \test decl.C99/Error_union_forward_def_const_volatile4.hpp
+						//! \test decl.C99/Error_union_forward_def_const_volatile5.hpp
+						//! \test decl.C99/Error_union_forward_def_const_volatile6.hpp
+						//! \test decl.C99/Error_union_forward_def_const_volatile7.hpp
+						//! \test decl.C99/Error_union_forward_def_const_volatile8.hpp
+						//! \test decl.C99/Error_union_forward_def_const_volatile9.hpp
+						//! \test decl.C99/Error_union_forward_def_const_volatile10.hpp
+						//! \test decl.C99/Error_union_forward_def_const_volatile11.hpp
+						//! \test decl.C99/Error_union_forward_def_const_volatile12.hpp
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
