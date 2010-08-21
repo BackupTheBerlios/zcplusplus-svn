@@ -1,5 +1,5 @@
 // decl.C99\Warn_struct_forward_def_const3.h
-// using singly defined union
+// using singly defined struct
 // (C)2010 Kenneth Boyd, license: MIT.txt
 
 struct good_test;
