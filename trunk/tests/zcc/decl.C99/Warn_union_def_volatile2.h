@@ -1,4 +1,4 @@
-// decl.C99\Warn_union_def_volatile4.h
+// decl.C99\Warn_union_def_volatile2.h
 // using singly defined union
 // (C)2010 Kenneth Boyd, license: MIT.txt
 

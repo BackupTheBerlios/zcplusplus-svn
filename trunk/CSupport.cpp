@@ -13172,6 +13172,7 @@ C99_union_specifier:
 			}
 		else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
 			{
+C99_struct_specifier:
 			const type_system::type_index tmp = types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first);
 			if (tmp)
 				{
@@ -13257,10 +13258,10 @@ C99_union_specifier:
 				{
 				const C_union_struct_def* const fatal_def = types.get_C_structdef(tmp);
 				if (fatal_def)
-					{	//! \test zcc/decl.C99/Error_struct_multidef.h
+					{	//! \test zcc/decl.C99/Error_union_multidef.h
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
-					INC_INFORM("'struct ");
+					INC_INFORM("'union ");
 					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 					INFORM("' already defined (C99 6.7.2.3p1)");
 					message_header(*fatal_def);
@@ -13314,7 +13315,7 @@ C99_union_specifier:
 						//! \test decl.C99/Warn_union_def_const_volatile6.h
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(WARN_STR);
-					INFORM("useless const/volatile qualification of a forward-declaration (C99 6.7.3p3)");
+					INFORM("useless const/volatile qualification of a definition (C99 6.7.3p3)");
 					if (bool_options[boolopt::warn_crosslang_compatibility])
 						INFORM("(error in C++: C++0X 7.1.6.1p1)");
 					if (bool_options[boolopt::warnings_are_errors])
@@ -13330,22 +13331,81 @@ C99_union_specifier:
 			}
 		else if (is_C99_named_specifier_definition(src.data<0>()[i],"struct"))
 			{	// can only define once
-			const C_union_struct_def* const tmp = types.get_C_structdef(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+			const type_system::type_index tmp = types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first);
 			if (tmp)
-				{	//! \test zcc/decl.C99/Error_struct_multidef.h
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM("'struct ");
-				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
-				INFORM("' already defined (C99 6.7.2.3p1)");
-				message_header(*tmp);
-				INFORM("prior definition here");
-				zcc_errors.inc_error();
-				// now it's gone
-				// remove trailing semicolon if present
-				src.DeleteNSlotsAt<0>((1<src.size<0>()-i && robust_token_is_char<';'>(src.data<0>()[i+1])) ? 2 : 1,i);
+				{
+				const C_union_struct_def* const fatal_def = types.get_C_structdef(tmp);
+				if (fatal_def)
+					{	//! \test zcc/decl.C99/Error_struct_multidef.h
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("'struct ");
+					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
+					INFORM("' already defined (C99 6.7.2.3p1)");
+					message_header(*fatal_def);
+					INFORM("prior definition here");
+					zcc_errors.inc_error();
+					// reduce to named-specifier
+					src.c_array<0>()[i].DeleteIdx<2>(0);
+					assert(is_C99_named_specifier(src.data<0>()[i],"struct"));
+					goto C99_struct_specifier;
+					}
+				src.c_array<0>()[i].type_code.set_type(tmp);
+				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
+				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
+				};
+			//! \bug C1X 6.7.2.3p2 states that conflicting enum or union must error
+			// tentatively forward-declare immediately
+			const type_system::type_index tmp2 = tmp ? 0 : types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_struct);
+			if (tmp2)
+				{	//! \test zcc/decl.C99/Pass_struct_forward_def.h
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
+				assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
+				assert(types.get_structdecl(tmp2));
+				src.c_array<0>()[i].type_code.set_type(tmp2);
+				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
+				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
+				};
+			assert(tmp || tmp2);
+			// parse the union and upgrade it to a full definition
+			const type_system::type_index vr_tmp = tmp ? tmp : tmp2;
+			const union_struct_decl* tmp3 = types.get_structdecl(vr_tmp);
+			assert(tmp3);
+			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+			//! \todo record field structure, etc.
+			types.upgrade_decl_to_def(vr_tmp,tmp4);
+			assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==vr_tmp);
+			assert(types.get_C_structdef(vr_tmp));
+			if (   1<src.size<0>()-i
+				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
+				{	// no objects declared, trigger the const/volatile warnings
+				//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
+				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
+					{	//! \test decl.C99/Warn_struct_def_const.h
+						//! \test decl.C99/Warn_struct_def_const2.h
+						//! \test decl.C99/Warn_struct_def_volatile.h
+						//! \test decl.C99/Warn_struct_def_volatile2.h
+						//! \test decl.C99/Warn_struct_def_const_volatile.h
+						//! \test decl.C99/Warn_struct_def_const_volatile2.h
+						//! \test decl.C99/Warn_struct_def_const_volatile3.h
+						//! \test decl.C99/Warn_struct_def_const_volatile4.h
+						//! \test decl.C99/Warn_struct_def_const_volatile5.h
+						//! \test decl.C99/Warn_struct_def_const_volatile6.h
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(WARN_STR);
+					INFORM("useless const/volatile qualification of a definition (C99 6.7.3p3)");
+					if (bool_options[boolopt::warn_crosslang_compatibility])
+						INFORM("(error in C++: C++0X 7.1.6.1p1)");
+					if (bool_options[boolopt::warnings_are_errors])
+						zcc_errors.inc_error();
+					// XXX may not behave well on trapping-int hosts XXX
+					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
+					};
+				// accept definition
+				//! \test zcc/decl.C99/Pass_union_forward_def.h
+				i += 2;
 				continue;
-				}
+				};
 			}
 		// enum was difficult to interpret in C++, so parked here while waiting on comp.std.c++
 		else if (is_C99_named_specifier(src.data<0>()[i],"enum"))
@@ -13444,33 +13504,9 @@ C99_union_specifier:
 /*			else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
 				{	// forward-declaration already handled
 				} */
-			else if (is_C99_named_specifier_definition(src.data<0>()[i],"struct"))
-				{	// definitions...fine
-				const type_system::type_index tmp = types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first);
-				C_union_struct_def* tmp2 = NULL;
-				if (tmp)
-					{	// promoting forward-declare to definition
-						//! \test zcc/decl.C99/Pass_struct_forward_def.h
-					const union_struct_decl* tmp3 = types.get_structdecl(tmp);
-					assert(tmp3);
-					tmp2 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
-					//! \todo record field structure, etc.
-					types.upgrade_decl_to_def(tmp,tmp2);
-					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp);
-					assert(types.get_C_structdef(tmp));
-					}
-				else{	// definition
-						//! \test zcc/decl.C99/Pass_struct_def.h
-					//! \todo record field structure, etc.
-					const type_system::type_index tmp3 = types.register_C_structdef(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename,union_struct_decl::decl_struct);
-					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
-					assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp3);
-					assert(types.get_C_structdef(tmp3));
-					src.c_array<0>()[i].type_code.set_type(tmp3);
-					}
-				i += 2;
-				continue;
-				};
+/*			else if (is_C99_named_specifier_definition(src.data<0>()[i],"struct"))
+				{	// forward-declaration already handled
+				}; */
 			};
 		// general declaration scanner 
 		// we intercept typedefs as part of general variable declaration detection (weird storage qualifier)
