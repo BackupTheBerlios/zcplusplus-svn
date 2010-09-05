@@ -4681,6 +4681,13 @@ static void CPP_notice_class_struct_union_enum(parse_tree& src)
 				src.DestroyNAtAndRotateTo<0>(2,i+1,src.size<0>()-offset);
 				offset += 2;
 				assert(is_C99_named_specifier_definition(src.data<0>()[i],tmp2));
+				// parser is having normal-form issues.  Shove named specifier definitions ahead of any const/volatile type qualifiers
+				size_t j = i;
+				while(0<j && (robust_token_is_string<5>(src.data<0>()[j-1],"const") || robust_token_is_string<8>(src.data<0>()[j-1],"volatile")))
+					{
+					std::swap(src.c_array<0>()[j],src.c_array<0>()[j-1]);
+					--j;
+					};
 				continue;
 				};
 			src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+1]);
@@ -4689,6 +4696,13 @@ static void CPP_notice_class_struct_union_enum(parse_tree& src)
 			src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
 			offset += 1;
 			assert(is_C99_named_specifier(src.data<0>()[i],tmp2));
+			// parser is having normal-form issues.  Shove named specifiers ahead of any const/volatile type qualifiers
+			size_t j = i;
+			while(0<j && (robust_token_is_string<5>(src.data<0>()[j-1],"const") || robust_token_is_string<8>(src.data<0>()[j-1],"volatile")))
+				{
+				std::swap(src.c_array<0>()[j],src.c_array<0>()[j-1]);
+				--j;
+				};
 			continue;
 			}
 		++i;
@@ -13740,6 +13754,48 @@ static void render_type(const type_spec& src,const type_system& types, const cha
 		INC_INFORM("const ");
 	if (type_spec::_volatile & src.qualifier<0>())
 		INC_INFORM("volatile ");
+
+	if (types.get_enum_def(src.base_type_index))
+		INC_INFORM("enum ");
+	else{
+		zaimoni::POD_pair<const union_struct_decl*,const C_union_struct_def*> tmp;
+		tmp.first = types.get_structdecl(src.base_type_index);
+		if (tmp.first)
+			{
+			switch(tmp.first->keyword())
+			{
+			default: _fatal_code("invalid state",3); 
+			case union_struct_decl::decl_union:
+				INC_INFORM("union ");
+				break;
+			case union_struct_decl::decl_struct:
+				INC_INFORM("struct ");
+				break;
+			case union_struct_decl::decl_class:
+				INC_INFORM("class ");
+//				break;
+			}				
+			}
+		else{
+			tmp.second = types.get_C_structdef(src.base_type_index);
+			if (tmp.second)
+				{
+				switch(tmp.second->_decl.keyword())
+				{
+				default: _fatal_code("invalid state",3); 
+				case union_struct_decl::decl_union:
+					INC_INFORM("union ");
+					break;
+				case union_struct_decl::decl_struct:
+					INC_INFORM("struct ");
+					break;
+				case union_struct_decl::decl_class:
+					INC_INFORM("class ");
+//					break;
+				}				
+				}
+			}
+		}
 	INC_INFORM(type_name ? type_name : "<unresolved type>");
 
 	while(0<start_ptr_scan--)
@@ -13778,6 +13834,10 @@ bool C99_hook_INC_INFORM(const parse_tree& src)
 		{
 		assert(parse_tree::types);
 		render_type(src.type_code,*parse_tree::types,NULL);
+		if (   is_C99_named_specifier_definition(src,"enum")
+			|| is_C99_named_specifier_definition(src,"union")
+			|| is_C99_named_specifier_definition(src,"struct"))
+			INC_INFORM(*src.data<2>());
 		return true;
 		}
 	return false;
@@ -13801,6 +13861,11 @@ bool CPP_hook_INC_INFORM(const parse_tree& src)
 		{
 		assert(parse_tree::types);
 		render_type(src.type_code,*parse_tree::types,NULL);
+		if (   is_C99_named_specifier_definition(src,"enum")
+			|| is_C99_named_specifier_definition(src,"union")
+			|| is_C99_named_specifier_definition(src,"class")
+			|| is_C99_named_specifier_definition(src,"struct"))
+			INC_INFORM(*src.data<2>());
 		return true;
 		}
 	if (is_CPP_namespace(src) && robust_token_is_string<9>(src.index_tokens[1].token,"<unknown>"))
