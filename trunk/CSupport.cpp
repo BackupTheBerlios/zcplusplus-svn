@@ -4506,6 +4506,20 @@ static bool is_C99_named_specifier_definition(const parse_tree& src,const char* 
 	return false;
 }
 
+static bool is_C99_named_specifier_definitionlike(const parse_tree& src)
+{
+	if (	NULL!=src.index_tokens[0].token.first
+#ifndef NDEBUG
+			&&	NULL!=src.index_tokens[0].src_filename
+#endif
+			&&	NULL!=src.index_tokens[1].token.first
+			&&	src.empty<0>()
+			&&	src.empty<1>()
+			&&	1==src.size<2>() && is_naked_brace_pair(*src.data<2>()))
+		return true;
+	return false;
+}
+
 static bool C99_looks_like_identifier(const parse_tree& x)
 {
 	if (!x.is_atomic()) return false;
@@ -13723,6 +13737,26 @@ C99_struct_specifier:
 		}
 }
 
+// relies on _fatal_code being noreturn to avoid risk of undefined return value
+static const char* text_from_keyword(const union_struct_decl& x)
+{
+	switch(x.keyword())
+	{
+	default: _fatal_code("invalid state",3); 
+	case union_struct_decl::decl_union: return "union ";
+	case union_struct_decl::decl_struct: return "struct ";
+	case union_struct_decl::decl_class: return "class ";
+	}				
+}
+
+// this needs to line up with the return type for type_spec::qualifier
+static void display_qualifier_text(unsigned char x)
+{
+	if (type_spec::_restrict & x) INC_INFORM("restrict ");
+	if (type_spec::_const    & x) INC_INFORM("const ");
+	if (type_spec::_volatile & x) INC_INFORM("volatile ");
+}
+
 // language-specific printing overrides
 static void render_type(const type_spec& src,const type_system& types, const char* const name)
 {	// function types will need a different naming scheme
@@ -13739,61 +13773,24 @@ static void render_type(const type_spec& src,const type_system& types, const cha
 				{
 				if (type_spec::_array & src.qualifier(start_ptr_scan+1)) continue;
 				INC_INFORM('*');
-				if (type_spec::_restrict & src.qualifier(start_ptr_scan+1))
-					INC_INFORM("restrict ");
-				if (type_spec::_const & src.qualifier(start_ptr_scan+1))
-					INC_INFORM("const ");
-				if (type_spec::_volatile & src.qualifier(start_ptr_scan+1))
-					INC_INFORM("volatile ");
+				display_qualifier_text(src.qualifier(start_ptr_scan+1));
 				};
 			INC_INFORM("(");
 			}
 		}
 		
-	if (type_spec::_const & src.qualifier<0>())
-		INC_INFORM("const ");
-	if (type_spec::_volatile & src.qualifier<0>())
-		INC_INFORM("volatile ");
+	display_qualifier_text(src.qualifier<0>());
 
 	if (types.get_enum_def(src.base_type_index))
 		INC_INFORM("enum ");
 	else{
 		zaimoni::POD_pair<const union_struct_decl*,const C_union_struct_def*> tmp;
 		tmp.first = types.get_structdecl(src.base_type_index);
-		if (tmp.first)
-			{
-			switch(tmp.first->keyword())
-			{
-			default: _fatal_code("invalid state",3); 
-			case union_struct_decl::decl_union:
-				INC_INFORM("union ");
-				break;
-			case union_struct_decl::decl_struct:
-				INC_INFORM("struct ");
-				break;
-			case union_struct_decl::decl_class:
-				INC_INFORM("class ");
-//				break;
-			}				
-			}
+		if (tmp.first) INC_INFORM(text_from_keyword(*tmp.first));
 		else{
 			tmp.second = types.get_C_structdef(src.base_type_index);
 			if (tmp.second)
-				{
-				switch(tmp.second->_decl.keyword())
-				{
-				default: _fatal_code("invalid state",3); 
-				case union_struct_decl::decl_union:
-					INC_INFORM("union ");
-					break;
-				case union_struct_decl::decl_struct:
-					INC_INFORM("struct ");
-					break;
-				case union_struct_decl::decl_class:
-					INC_INFORM("class ");
-//					break;
-				}				
-				}
+				INC_INFORM(text_from_keyword(tmp.second->_decl));
 			}
 		}
 	INC_INFORM(type_name ? type_name : "<unresolved type>");
@@ -13802,12 +13799,7 @@ static void render_type(const type_spec& src,const type_system& types, const cha
 		{
 		if (type_spec::_array & src.qualifier(start_ptr_scan+1)) continue;
 		INC_INFORM('*');
-		if (type_spec::_restrict & src.qualifier(start_ptr_scan+1))
-			INC_INFORM("restrict ");
-		if (type_spec::_const & src.qualifier(start_ptr_scan+1))
-			INC_INFORM("const ");
-		if (type_spec::_volatile & src.qualifier(start_ptr_scan+1))
-			INC_INFORM("volatile ");		
+		display_qualifier_text(src.qualifier(start_ptr_scan+1));		
 		}
 
 	if (name && *name) INC_INFORM(name);
@@ -13834,9 +13826,7 @@ bool C99_hook_INC_INFORM(const parse_tree& src)
 		{
 		assert(parse_tree::types);
 		render_type(src.type_code,*parse_tree::types,NULL);
-		if (   is_C99_named_specifier_definition(src,"enum")
-			|| is_C99_named_specifier_definition(src,"union")
-			|| is_C99_named_specifier_definition(src,"struct"))
+		if (is_C99_named_specifier_definitionlike(src))
 			INC_INFORM(*src.data<2>());
 		return true;
 		}
@@ -13861,10 +13851,7 @@ bool CPP_hook_INC_INFORM(const parse_tree& src)
 		{
 		assert(parse_tree::types);
 		render_type(src.type_code,*parse_tree::types,NULL);
-		if (   is_C99_named_specifier_definition(src,"enum")
-			|| is_C99_named_specifier_definition(src,"union")
-			|| is_C99_named_specifier_definition(src,"class")
-			|| is_C99_named_specifier_definition(src,"struct"))
+		if (is_C99_named_specifier_definitionlike(src))
 			INC_INFORM(*src.data<2>());
 		return true;
 		}
