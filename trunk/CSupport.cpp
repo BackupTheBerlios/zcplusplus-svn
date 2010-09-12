@@ -4583,6 +4583,13 @@ static void C99_notice_struct_union_enum(parse_tree& src)
 				src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
 				offset += 1;
 				assert(is_C99_anonymous_specifier(src.data<0>()[i],tmp2));
+				// parser is having normal-form issues.  Shove named specifier definitions ahead of any const/volatile type qualifiers
+				size_t j = i;
+				while(0<j && (robust_token_is_string<5>(src.data<0>()[j-1],"const") || robust_token_is_string<8>(src.data<0>()[j-1],"volatile")))
+					{
+					std::swap(src.c_array<0>()[j],src.c_array<0>()[j-1]);
+					--j;
+					};
 				continue;
 				};
 			if (!C99_looks_like_identifier(src.data<0>()[i+1]))
@@ -4671,6 +4678,13 @@ static void CPP_notice_class_struct_union_enum(parse_tree& src)
 				src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
 				offset += 1;
 				assert(is_C99_anonymous_specifier(src.data<0>()[i],tmp2));
+				// parser is having normal-form issues.  Shove named specifiers ahead of any const/volatile type qualifiers
+				size_t j = i;
+				while(0<j && (robust_token_is_string<5>(src.data<0>()[j-1],"const") || robust_token_is_string<8>(src.data<0>()[j-1],"volatile")))
+					{
+					std::swap(src.c_array<0>()[j],src.c_array<0>()[j-1]);
+					--j;
+					};
 				continue;
 				};
 			if (!CPP_looks_like_identifier(src.data<0>()[i+1]))
