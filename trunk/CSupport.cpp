@@ -11794,29 +11794,13 @@ public:
 			};
 		// not a decl-specifier; bail out if we already have a type
 		if (base_type.base_type_index) return false;
-		if (PARSE_PRIMARY_TYPE & x.flags)
+		if (PARSE_TYPE & x.flags)
 			{
 			value_copy(base_type,x.type_code);
 			return true;
 			}
 		// handle typedefs
 		if (check_for_typedef(base_type,x.index_tokens[0].token.first,types)) return true;
-		//! \todo handle other known types
-#if 0
-		// we must accept any specifier here: C99 6.7.2p1
-		if (   is_C99_anonymous_specifier(x,"enum")
-			|| is_C99_named_specifier(x,"enum")
-			|| is_C99_named_specifier_definition(x,"enum"))
-			return true;
-		if (   is_C99_anonymous_specifier(x,"struct")
-			|| is_C99_named_specifier(x,"struct")
-			|| is_C99_named_specifier_definition(x,"struct"))
-			return true;
-		if (   is_C99_anonymous_specifier(x,"union")
-			|| is_C99_named_specifier(x,"union")
-			|| is_C99_named_specifier_definition(x,"union"))
-			return true;
-#endif
 		return false;
 		};
 	bool analyze_flags_global(parse_tree& x, size_t i, size_t& decl_count)
@@ -11914,7 +11898,7 @@ public:
 			};
 		// not a decl-specifier; bail out if we already have a type
 		if (base_type.base_type_index) return false;
-		if (PARSE_PRIMARY_TYPE & x.data<0>()[i].flags)
+		if (PARSE_TYPE & x.data<0>()[i].flags)
 			{
 			value_copy(base_type,x.data<0>()[i].type_code);
 			return true;
@@ -11925,37 +11909,9 @@ public:
 			&& !(PARSE_TYPE & x.data<0>()[i].flags)
 			&& !CPP_echo_reserved_keyword(x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second)
 			&& (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags))
-			{	// shove Koenig lookup into type_system
-#if 0
-			if (check_for_typedef(base_type,x.data<0>()[i].index_tokens[0].token.first+2,active_namespace,types)) return true;
-			if (check_for_enum(base_type,x.data<0>()[i].index_tokens[0].token.first+2,active_namespace,types)) return true;
-			if (check_for_class_struct_union(base_type,x.data<0>()[i].index_tokens[0].token.first+2,active_namespace,types)) return true;
-			return false;
-#else
+			// shove Koenig lookup into type_system
 			return check_for_typedef(base_type,x.data<0>()[i].index_tokens[0].token.first,active_namespace,types);
-#endif
-			}
 		}
-		//! \todo handle other known types
-#if 0
-		// we must accept any specifier here: C++0X 7.1.6.2p1
-		if (   is_C99_anonymous_specifier(x,"enum")
-			|| is_C99_named_specifier(x,"enum")
-			|| is_C99_named_specifier_definition(x,"enum"))
-			return true;
-		if (   is_C99_anonymous_specifier(x,"struct")
-			|| is_C99_named_specifier(x,"struct")
-			|| is_C99_named_specifier_definition(x,"struct"))
-			return true;
-		if (   is_C99_anonymous_specifier(x,"union")
-			|| is_C99_named_specifier(x,"union")
-			|| is_C99_named_specifier_definition(x,"union"))
-			return true;
-		if (   is_C99_anonymous_specifier(x,"class")
-			|| is_C99_named_specifier(x,"class")
-			|| is_C99_named_specifier_definition(x,"class"))
-			return true;
-#endif
 		return false;
 		};
 	bool analyze_flags_global(parse_tree& x, size_t i, size_t& decl_count)
