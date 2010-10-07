@@ -5,6 +5,7 @@
 #include "type_system.hpp"
 #/*cut-cpp*/
 #include "type_system_pp.hpp"
+#/*cut-cpp*/
 #include "enum_type.hpp"
 #include "struct_type.hpp"
 #include "Zaimoni.STL/search.hpp"
@@ -17,7 +18,6 @@
 #define DYNAMIC_STRUCTDECL 2
 #define DYNAMIC_C_STRUCTDEF 3
 #define DYNAMIC_ENUMDEF 4
-#/*cut-cpp*/
 
 type_system::type_index type_system::_get_id_union(const char* const x) const
 {
@@ -271,8 +271,10 @@ const char* type_system::_name(size_t id) const
 {
 	if (0==id) return "(?)";
 	if (core_types_size> --id) return core_types[id].first;
+#/*cut-cpp*/
 	if (dynamic_types.size() > (id -= core_types_size))
 		return dynamic_types[id].first;
+#/*cut-cpp*/
 	return "(?)";
 }
 #/*cut-cpp*/

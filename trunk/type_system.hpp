@@ -5,6 +5,7 @@
 #define TYPE_SYSTEM_HPP 1
 
 #include "Zaimoni.STL/POD.hpp"
+#/*cut-cpp*/
 #include "Zaimoni.STL/AutoPtr.hpp"
 #include "type_spec.hpp"
 
@@ -12,23 +13,29 @@ class function_type;
 class union_struct_decl;
 class C_union_struct_def;
 class enum_def;
+#/*cut-cpp*/
+#ifndef assert
+#include "Zaimoni.STL/Logging.h"
+#endif
 
 class type_system
 {
 public:
 	typedef size_t type_index;
+#/*cut-cpp*/
 	// { {type, representation, value}, {filename, location }}
 	// uchar_blob is a POD backing store for unsigned_var_int here
 	typedef zaimoni::POD_pair<const char*,zaimoni::POD_pair<zaimoni::POD_triple<type_index,unsigned char,uchar_blob>, zaimoni::POD_pair<const char*,zaimoni::POD_pair<size_t,size_t> > > > enumerator_info;
+#/*cut-cpp*/
 
 	const zaimoni::POD_pair<const char* const,size_t>* const core_types;
 	const type_index* const int_priority;
 	const size_t core_types_size;
 	const size_t int_priority_size;
 private:
+#/*cut-cpp*/
 	typedef zaimoni::POD_triple<const char*,size_t,zaimoni::POD_pair<zaimoni::union_quartet<function_type*,union_struct_decl*,C_union_struct_def*,enum_def*>, unsigned char> > dynamic_type_format;
 	zaimoni::autovalarray_ptr<dynamic_type_format> dynamic_types;
-#/*cut-cpp*/
 	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> > > typedef_registry;
 	zaimoni::weakautovalarray_ptr<const char*> inline_namespace_alias_targets;
 	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,const char*> > inline_namespace_alias_map;
@@ -66,7 +73,14 @@ public:
 #/*cut-cpp*/
 	const char* name(type_index id) const
 		{
+#/*cut-cpp*/
 		assert(core_types_size+dynamic_types.size()>=id);
+#define ZCC_CPP_SCREEN 1
+#/*cut-cpp*/
+#ifndef ZCC_CPP_SCREEN
+		assert(core_types_size>=id);
+#endif
+#undef ZCC_CPP_SCREEN
 		return _name(id);
 		}
 #/*cut-cpp*/
