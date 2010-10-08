@@ -6,7 +6,7 @@
 #define ZAIMONI_STL_POD_HPP 1
 
 #include "boost_core.hpp"
-#include <cstring>
+#include <string.h>
 
 // ==, != operators a bit too sophisticated for templating, even with infrastructure to detect padding or lack thereof
 
@@ -17,17 +17,17 @@ namespace zaimoni
 template<typename T>
 inline typename boost::enable_if<boost::has_trivial_assign<T>, void>::type
 clear(T& x)
-{	std::memset(&x,0,sizeof(T));}
+{	memset(&x,0,sizeof(T));}
 
 template<typename T>
 typename boost::enable_if<boost::has_trivial_assign<T>, void>::type
 clear(T* x,size_t n)
-{	if (NULL!=x) std::memset(x,0,n*sizeof(T));}
+{	if (x) memset(x,0,n*sizeof(T));}
 
 template<size_t n, typename T>
 typename boost::enable_if<boost::has_trivial_assign<T>, void>::type
 clear(T* x)
-{	if (NULL!=x) std::memset(x,0,n*sizeof(T));}
+{	if (x) memset(x,0,n*sizeof(T));}
 
 // handle POD-struct pairs, etc. here as well
 
@@ -47,15 +47,15 @@ struct POD_pair
 	// POD-struct has no constructors or destructors
 };
 
-template<class T1, class T2, class T3, class T4>
+template<class T1, class T2, class U1, class U2>
 inline bool
-operator==(const POD_pair<T1, T2>& x, const POD_pair<T3, T4>& y)
+operator==(const POD_pair<T1, T2>& x, const POD_pair<U1, U2>& y)
 {	return x.first==y.first && x.second==y.second;	}
 
 // dictionary ordering
-template<class T1, class T2, class T3, class T4>
+template<class T1, class T2, class U1, class U2>
 inline bool
-operator<(const POD_pair<T1, T2>& x, const POD_pair<T3, T4>& y)
+operator<(const POD_pair<T1, T2>& x, const POD_pair<U1, U2>& y)
 {
 	if (x.first<y.first) return true;
 	if (y.first<x.first) return false;
@@ -80,15 +80,15 @@ struct POD_triple
 	// POD-struct has no constructors or destructors
 };
 
-template<class T1, class T2, class T3, class T4, class T5, class T6>
+template<class T1, class T2, class T3, class U1, class U2, class U3>
 inline bool
-operator==(const POD_triple<T1, T2, T3>& x, const POD_triple<T4, T5, T6>& y)
+operator==(const POD_triple<T1, T2, T3>& x, const POD_triple<U1, U2, U3>& y)
 {	return x.first==y.first && x.second==y.second && x.third==y.third;	}
 
 // dictionary ordering
-template<class T1, class T2, class T3, class T4, class T5, class T6>
+template<class T1, class T2, class T3, class U1, class U2, class U3>
 inline bool
-operator<(const POD_triple<T1, T2, T3>& x, const POD_triple<T4, T5, T6>& y)
+operator<(const POD_triple<T1, T2, T3>& x, const POD_triple<U1, U2, U3>& y)
 {
 	if (x.first<y.first) return true;
 	if (y.first<x.first) return false;
@@ -96,6 +96,47 @@ operator<(const POD_triple<T1, T2, T3>& x, const POD_triple<T4, T5, T6>& y)
 	if (y.second<x.second) return false;
 	return x.third<y.third;
 }
+
+template<class T1, class T2, class T3, class T4>
+struct POD_quartet
+{
+	BOOST_STATIC_ASSERT(boost::is_pod<T1>::value);
+	BOOST_STATIC_ASSERT(boost::is_pod<T2>::value);
+	BOOST_STATIC_ASSERT(boost::is_pod<T3>::value);
+	BOOST_STATIC_ASSERT(boost::is_pod<T4>::value);
+
+	typedef T1 first_type;
+	typedef T2 second_type;
+	typedef T3 third_type;
+	typedef T4 fourth_type;
+
+	T1 first;
+	T2 second;
+	T3 third;
+	T4 fourth;
+
+	// POD-struct has no constructors or destructors
+};
+
+template<class T1, class T2, class T3, class T4, class U1, class U2, class U3, class U4>
+inline bool
+operator==(const POD_quartet<T1, T2, T3, T4>& x, const POD_quartet<U1, U2, U3, U4>& y)
+{	return x.first==y.first && x.second==y.second && x.third==y.third && x.fourth==y.fourth;	}
+
+// dictionary ordering
+template<class T1, class T2, class T3, class T4, class U1, class U2, class U3, class U4>
+inline bool
+operator<(const POD_quartet<T1, T2, T3, T4>& x, const POD_quartet<U1, U2, U3, U4>& y)
+{
+	if (x.first<y.first) return true;
+	if (y.first<x.first) return false;
+	if (x.second<y.second) return true;
+	if (y.second<x.second) return false;
+	if (x.third<y.third) return true;
+	if (y.third<x.third) return false;
+	return x.fourth<y.fourth;
+}
+
 
 template<class T1, class T2>
 union union_pair
