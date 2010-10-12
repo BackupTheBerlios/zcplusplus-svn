@@ -34,7 +34,7 @@ public:
 	const size_t int_priority_size;
 private:
 #/*cut-cpp*/
-	typedef zaimoni::POD_triple<const char*,size_t,zaimoni::POD_pair<zaimoni::union_quartet<function_type*,union_struct_decl*,C_union_struct_def*,enum_def*>, unsigned char> > dynamic_type_format;
+	typedef zaimoni::POD_quartet<const char*,size_t,zaimoni::POD_pair<zaimoni::union_quartet<function_type*,union_struct_decl*,C_union_struct_def*,enum_def*>, unsigned char>, size_t> dynamic_type_format;
 	zaimoni::autovalarray_ptr<dynamic_type_format> dynamic_types;
 	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> > > typedef_registry;
 	zaimoni::weakautovalarray_ptr<const char*> inline_namespace_alias_targets;
@@ -46,8 +46,8 @@ private:
 	void operator=(const type_system& src);
 public:
 	type_system(const zaimoni::POD_pair<const char* const,size_t>* _core_types,size_t _core_types_size,const type_index* _int_priority,size_t _int_priority_size)
-	:	core_types((assert(NULL!=_core_types),_core_types)),
-		int_priority((assert(NULL!=_int_priority),_int_priority)),
+	:	core_types((assert(_core_types),_core_types)),
+		int_priority((assert(_int_priority),_int_priority)),
 		core_types_size((assert(0<_core_types_size),_core_types_size)),
 		int_priority_size((assert(0<_int_priority_size),_int_priority_size)) {};
 
@@ -139,6 +139,7 @@ public:
 	void upgrade_decl_to_def(type_index i,C_union_struct_def*& src);
 #/*cut-cpp*/
 private:
+	const char* _name(type_index id) const;
 #/*cut-cpp*/
 	type_index _get_id_union(const char* x) const;
 	type_index _get_id_union_CPP(const char* x) const;
@@ -148,9 +149,6 @@ private:
 	type_index _get_id_struct_class_CPP(const char* x) const;
 	enum_def* _get_enum_def(type_index i) const;
 	
-#/*cut-cpp*/
-	const char* _name(type_index id) const;
-#/*cut-cpp*/
 	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> dealias_inline_namespace_index(const char* alias) const;
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* _get_typedef_CPP(const char* alias) const;
 	const enumerator_info* _get_enumerator_CPP(const char* alias) const;

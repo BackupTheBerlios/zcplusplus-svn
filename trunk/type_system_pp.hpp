@@ -24,8 +24,8 @@ private:
 	void operator=(const type_system& src);
 public:
 	type_system(const zaimoni::POD_pair<const char* const,size_t>* _core_types,size_t _core_types_size,const type_index* _int_priority,size_t _int_priority_size)
-	:	core_types((assert(NULL!=_core_types),_core_types)),
-		int_priority((assert(NULL!=_int_priority),_int_priority)),
+	:	core_types((assert(_core_types),_core_types)),
+		int_priority((assert(_int_priority),_int_priority)),
 		core_types_size((assert(0<_core_types_size),_core_types_size)),
 		int_priority_size((assert(0<_int_priority_size),_int_priority_size)) {};
 
