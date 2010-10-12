@@ -5,9 +5,7 @@
 #define TYPE_SYSTEM_HPP 1
 
 #include "Zaimoni.STL/POD.hpp"
-#ifndef assert
 #include "Zaimoni.STL/Logging.h"
-#endif
 
 class type_system
 {
@@ -31,10 +29,7 @@ public:
 
 	const char* name(type_index id) const
 		{
-#ifndef ZCC_CPP_SCREEN
 		assert(core_types_size>=id);
-#endif
-#undef ZCC_CPP_SCREEN
 		return _name(id);
 		}
 private:

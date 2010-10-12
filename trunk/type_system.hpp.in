@@ -5,6 +5,7 @@
 #define TYPE_SYSTEM_HPP 1
 
 #include "Zaimoni.STL/POD.hpp"
+#/*cut-cpp*/
 #include "Zaimoni.STL/AutoPtr.hpp"
 #include "type_spec.hpp"
 
@@ -12,26 +13,34 @@ class function_type;
 class union_struct_decl;
 class C_union_struct_def;
 class enum_def;
+#/*cut-cpp*/
+#/*cut-nocpp*/
+#include "Zaimoni.STL/Logging.h"
+#/*cut-nocpp*/
 
 class type_system
 {
 public:
 	typedef size_t type_index;
+#/*cut-cpp*/
 	// { {type, representation, value}, {filename, location }}
 	// uchar_blob is a POD backing store for unsigned_var_int here
 	typedef zaimoni::POD_pair<const char*,zaimoni::POD_pair<zaimoni::POD_triple<type_index,unsigned char,uchar_blob>, zaimoni::POD_pair<const char*,zaimoni::POD_pair<size_t,size_t> > > > enumerator_info;
+#/*cut-cpp*/
 
 	const zaimoni::POD_pair<const char* const,size_t>* const core_types;
 	const type_index* const int_priority;
 	const size_t core_types_size;
 	const size_t int_priority_size;
 private:
+#/*cut-cpp*/
 	typedef zaimoni::POD_quartet<const char*,size_t,zaimoni::POD_pair<zaimoni::union_quartet<function_type*,union_struct_decl*,C_union_struct_def*,enum_def*>, unsigned char>, size_t> dynamic_type_format;
 	zaimoni::autovalarray_ptr<dynamic_type_format> dynamic_types;
 	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> > > typedef_registry;
 	zaimoni::weakautovalarray_ptr<const char*> inline_namespace_alias_targets;
 	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,const char*> > inline_namespace_alias_map;
 	zaimoni::autovalarray_ptr<enumerator_info> enumerator_registry;
+#/*cut-cpp*/
 	// uncopyable
 	type_system(const type_system& src);
 	void operator=(const type_system& src);
@@ -42,6 +51,7 @@ public:
 		core_types_size((assert(0<_core_types_size),_core_types_size)),
 		int_priority_size((assert(0<_int_priority_size),_int_priority_size)) {};
 
+#/*cut-cpp*/
 	type_index get_id_union(const char* x) const
 		{
 		assert(x && *x);
@@ -60,11 +70,18 @@ public:
 		return _get_id_enum(x);
 		}
 	type_index get_id_enum_CPP(const char* alias,const char* active_namespace) const;
+#/*cut-cpp*/
 	const char* name(type_index id) const
 		{
+#/*cut-cpp*/
 		assert(core_types_size+dynamic_types.size()>=id);
+#/*cut-cpp*/
+#/*cut-nocpp*/
+		assert(core_types_size>=id);
+#/*cut-nocpp*/
 		return _name(id);
 		}
+#/*cut-cpp*/
 
 	// can throw std::bad_alloc; returned string is owned by the caller (use free to deallocate)
 	// defer five other variants for now (YAGNI)
@@ -118,8 +135,10 @@ public:
 	const enum_def* get_enum_def(type_index i) const {return _get_enum_def(i);};
 	void set_enum_underlying_type(type_index i,size_t new_type);
 	void upgrade_decl_to_def(type_index i,C_union_struct_def*& src);
+#/*cut-cpp*/
 private:
 	const char* _name(type_index id) const;
+#/*cut-cpp*/
 	type_index _get_id_union(const char* x) const;
 	type_index _get_id_union_CPP(const char* x) const;
 	type_index _get_id_enum(const char* x) const;
@@ -138,5 +157,6 @@ private:
 	// can throw std::bad_alloc; returned string is owned by the caller (use free to deallocate)
 	static char* _namespace_concatenate(const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len);
 	static void _namespace_concatenate(char* buf, const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len);
+#/*cut-cpp*/
 };
 #endif
