@@ -2,12 +2,9 @@
 // support for C/C++ parsing
 // (C)2009, 2010 Kenneth Boyd, license: MIT.txt
 
-#/*cut-cpp*/
 #include "CSupport.hpp"
 #include "_CSupport3.hpp"
 #include "_CSupport4.hpp"
-#/*cut-cpp*/
-#include "CSupport_pp.hpp"
 #include "_CSupport1.hpp"
 #include "_CSupport2.hpp"
 
@@ -34,20 +31,12 @@
 #include "C_PPOctalInteger.hpp"
 #include "C_PPDecimalFloat.hpp"
 #include "C_PPHexFloat.hpp"
-#/*cut-cpp*/
 #include "enum_type.hpp"
 #include "struct_type.hpp"
 #include "kleene_star.hpp"
 #include "cond_act.hpp"
-#/*cut-cpp*/
 #include "CheckReturn.hpp"
 
-#ifdef ZCC_NOT_BUILDING_CPP
-#error internal macro ZCC_NOT_BUILDING_CPP already defined 
-#endif
-#/*cut-cpp*/
-#define ZCC_NOT_BUILDING_CPP 1
-#/*cut-cpp*/
 // handle function signature differences between z_cpp and other users
 #ifdef SIG_CONST_TYPES
 #error internal macro SIG_CONST_TYPES already defined 
@@ -55,13 +44,8 @@
 #ifdef ARG_TYPES
 #error internal macro ARG_TYPES already defined 
 #endif
-#ifdef ZCC_NOT_BUILDING_CPP
 #define SIG_CONST_TYPES ,const type_system& types 
 #define ARG_TYPES ,types 
-#else
-#define SIG_CONST_TYPES 
-#define ARG_TYPES 
-#endif
 
 using namespace zaimoni;
 using virtual_machine::umaxint;
@@ -541,7 +525,6 @@ static const POD_pair<const char*,size_t> valid_keyword[]
 
 BOOST_STATIC_ASSERT(C_KEYWORD_NONSTRICT_LB<C_KEYWORD_STRICT_UB);
 BOOST_STATIC_ASSERT(CPP_KEYWORD_NONSTRICT_LB<C_KEYWORD_STRICT_UB);
-#/*cut-cpp*/
 
 static const char* C99_echo_reserved_keyword(const char* x,size_t x_len)
 {
@@ -586,7 +569,6 @@ static const char* CPP_echo_reserved_symbol(const char* x,size_t x_len)
 	while(0<i);
 	return NULL;
 }
-#/*cut-cpp*/
 
 namespace C_TYPE {
 
@@ -623,13 +605,11 @@ static inline virtual_machine::std_int_enum machine_type_from_type_index(size_t 
 	assert(C_TYPE::INT<=base_type_index && C_TYPE::ULLONG>=base_type_index);
 	return (virtual_machine::std_int_enum)((base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
 }
-#/*cut-cpp*/
 
 static inline size_t unsigned_type_from_machine_type(virtual_machine::std_int_enum x)
 {
 	return C_TYPE::SCHAR+2*(x-virtual_machine::std_int_char)+1;
 }
-#/*cut-cpp*/
 
 #if 0
 static bool is_innate_type(size_t base_type_index)
@@ -660,12 +640,8 @@ static bool is_innate_definite_type(size_t base_type_index)
 
 static bool converts_to_integerlike(size_t base_type_index SIG_CONST_TYPES)
 {	//! \todo handle cast operator overloading
-#ifdef ZCC_NOT_BUILDING_CPP
 	if (C_TYPE::BOOL<=base_type_index && C_TYPE::INTEGERLIKE>=base_type_index) return true;
 	return types.get_enum_def(base_type_index);
-#else
-	return C_TYPE::BOOL<=base_type_index && C_TYPE::INTEGERLIKE>=base_type_index;
-#endif
 }
 
 static bool converts_to_integerlike(const type_spec& type_code SIG_CONST_TYPES)
@@ -677,32 +653,20 @@ static bool converts_to_integerlike(const type_spec& type_code SIG_CONST_TYPES)
 static bool converts_to_integer(const type_spec& type_code SIG_CONST_TYPES)
 {	//! \todo handle cast operator overloading
 	if (0<type_code.pointer_power) return false;	// pointers do not have a standard conversion to integers
-#ifdef ZCC_NOT_BUILDING_CPP
 	if (C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::INTEGERLIKE>type_code.base_type_index) return true;
 	return types.get_enum_def(type_code.base_type_index);
-#else
-	return C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::INTEGERLIKE>type_code.base_type_index;
-#endif
 }
 
 static bool converts_to_reallike(size_t base_type_index SIG_CONST_TYPES)
 {	//! \todo handle cast operator overloading
-#ifdef ZCC_NOT_BUILDING_CPP
 	if (C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE>=base_type_index) return true;
 	return types.get_enum_def(base_type_index);
-#else
-	return C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE>=base_type_index;
-#endif
 }
 
 static bool converts_to_arithmeticlike(size_t base_type_index SIG_CONST_TYPES)
 {	//! \todo handle cast operator overloading
-#ifdef ZCC_NOT_BUILDING_CPP
 	if (C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE__COMPLEX>=base_type_index) return true;
 	return types.get_enum_def(base_type_index);
-#else
-	return C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE__COMPLEX>=base_type_index;
-#endif
 }
 
 static bool converts_to_arithmeticlike(const type_spec& type_code SIG_CONST_TYPES)
@@ -722,14 +686,12 @@ static bool converts_to_bool(const type_spec& type_code SIG_CONST_TYPES)
 // the integer promotions rely on low-level weirdness, so test that here
 static size_t arithmetic_reconcile(size_t base_type_index1, size_t base_type_index2 SIG_CONST_TYPES)
 {
-#/*cut-cpp*/
 	{
 	const enum_def* tmp = types.get_enum_def(base_type_index1);
 	if (tmp) base_type_index1 = tmp->represent_as;
 	tmp = types.get_enum_def(base_type_index2);
 	if (tmp) base_type_index2 = tmp->represent_as;	
 	}
-#/*cut-cpp*/
 	assert(is_innate_definite_type(base_type_index1));
 	assert(is_innate_definite_type(base_type_index2));
 	// identity, do not do anything
@@ -843,12 +805,10 @@ static size_t arithmetic_reconcile(size_t base_type_index1, size_t base_type_ind
 
 static size_t default_promote_type(size_t i SIG_CONST_TYPES)
 {
-#/*cut-cpp*/
 	{
 	const enum_def* tmp = types.get_enum_def(i);
 	if (tmp) i = tmp->represent_as;
 	}
-#/*cut-cpp*/
 	switch(i)
 	{
 	case C_TYPE::BOOL: return C_TYPE::INT;
@@ -987,7 +947,6 @@ const POD_pair<const char* const,size_t> CPP_atomic_types[]
 
 BOOST_STATIC_ASSERT(STATIC_SIZE(C_atomic_types)==C_TYPE_MAX);
 BOOST_STATIC_ASSERT(STATIC_SIZE(CPP_atomic_types)==CPP_TYPE_MAX);
-#/*cut-cpp*/
 
 static const POD_pair<const char*,size_t> C99_decl_specifiers[] =
 	{	DICT_STRUCT("typedef"),
@@ -1127,7 +1086,6 @@ size_t CPP0X_invariant_decl_specifier(const char* const x)
 	if (STATIC_SIZE(CPP0X_decl_specifier_list)>i) return i;
 	return SIZE_MAX;
 }	
-#/*cut-cpp*/
 
 const size_t C_int_priority[]
 	=	{
@@ -1243,7 +1201,6 @@ static void message_header(const weak_token& src)
 	message_header(src.src_filename,src.logical_line.first);
 }
 
-#/*cut-cpp*/
 /* XXX this may belong with enum_type XXX */
 static void message_header(const enum_def& src)
 {
@@ -1257,7 +1214,6 @@ static void message_header(const C_union_struct_def& src)
 	assert(src.filename() && *src.filename());
 	message_header(src.filename(),src.loc().first);
 }
-#/*cut-cpp*/
 
 // balanced character count
 static POD_pair<size_t,size_t>
@@ -3226,7 +3182,6 @@ static void simple_error(parse_tree& src, const char* const err_str)
 		zcc_errors.inc_error();
 		};
 }
-#/*cut-cpp*/
 
 /* deal with following type catalog
 atomic:
@@ -4005,7 +3960,6 @@ static void CPP_notice_primary_type(parse_tree& src)
 		}
 	while(src.size<0>()> ++i);
 }
-#/*cut-cpp*/
 
 //! \todo generalize -- function pointer parameter target, functor target
 static size_t _count_identifiers(const parse_tree& src)
@@ -4031,7 +3985,6 @@ static bool is_naked_parentheses_pair(const parse_tree& src)
 #endif
 			&&	src.empty<1>() && src.empty<2>();
 }
-#/*cut-cpp*/
 
 static bool is_naked_brace_pair(const parse_tree& src)
 {
@@ -4059,7 +4012,6 @@ static bool is_nonempty_naked_pair(const parse_tree& src)
 		|| is_naked_brace_pair(src)
 		|| is_naked_bracket_pair(src));
 }
-#/*cut-cpp*/
 
 #ifndef NDEBUG
 static bool is_array_deref_strict(const parse_tree& src)
@@ -4131,7 +4083,6 @@ static bool is_CPP_bitwise_complement_expression(const parse_tree& src)
 			&&	1==src.size<2>() && (PARSE_EXPRESSION & src.data<2>()->flags);
 //			&&	1==src.size<2>() && (PARSE_CAST_EXPRESSION & src.data<2>()->flags);
 }
-#/*cut-cpp*/
 
 static bool is_CPP0X_typeid_expression(const parse_tree& src)
 {
@@ -4162,7 +4113,6 @@ static bool is_C99_CPP_sizeof_expression(const parse_tree& src)
 //			&&	1==src.size<2>() && ((PARSE_UNARY_EXPRESSION | PARSE_TYPE) & src.data<2>()->flags);
 }
 #endif
-#/*cut-cpp*/
 
 #define C99_MULT_SUBTYPE_DIV 1
 #define C99_MULT_SUBTYPE_MOD 2
@@ -4462,7 +4412,6 @@ static bool is_C99_conditional_operator_expression(const parse_tree& src)
 			&&	1==src.size<1>() && (PARSE_EXPRESSION & src.data<2>()->flags)
 			&&	1==src.size<2>() && (PARSE_EXPRESSION & src.data<2>()->flags);
 }
-#/*cut-cpp*/
 
 static bool is_C99_anonymous_specifier(const parse_tree& src,const char* const spec_name)
 {
@@ -4738,7 +4687,6 @@ static void CPP_notice_class_struct_union_enum(parse_tree& src)
 	if (0<offset) src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
 	std::for_each(src.begin<0>(),src.end<0>(),conditional_action<bool (*)(const parse_tree&),void (*)(parse_tree&)>(is_nonempty_naked_pair,CPP_notice_class_struct_union_enum));
 }
-#/*cut-cpp*/
 
 bool convert_to(umaxint& dest,const C_PPIntCore& src)
 {
@@ -4775,7 +4723,6 @@ bool convert_to(umaxint& dest,const C_PPIntCore& src)
 		};
 	return true;
 }
-#/*cut-cpp*/
 
 static const enum_def* is_noticed_enumerator(const parse_tree& x,const type_system& types)
 {
@@ -4784,7 +4731,6 @@ static const enum_def* is_noticed_enumerator(const parse_tree& x,const type_syst
 		tmp = types.get_enum_def(x.type_code.base_type_index);
 	return tmp;
 }
-#/*cut-cpp*/
 
 // forward-declare to handle recursion
 static bool C99_intlike_literal_to_VM(umaxint& dest, const parse_tree& src SIG_CONST_TYPES);
@@ -4838,7 +4784,6 @@ static bool _C99_intlike_literal_to_VM(umaxint& dest, const parse_tree& src SIG_
 		dest.set_bitcount(VM_MAX_BIT_PLATFORM);
 		return true;
 		}	
-#/*cut-cpp*/
 
 	// creative interpretation: enumerators as integer-like literals
 	if (is_noticed_enumerator(src,types))
@@ -4848,7 +4793,6 @@ static bool _C99_intlike_literal_to_VM(umaxint& dest, const parse_tree& src SIG_
 		dest = tmp2->second.first.third;
 		return true;
 		}
-#/*cut-cpp*/
 		
 	if (!(C_TESTFLAG_INTEGER & src.index_tokens[0].flags)) return false;
 	C_PPIntCore tmp;
@@ -5169,7 +5113,6 @@ static void _label_literals(parse_tree& src,const type_system& types)
 		}
 }
 
-#/*cut-cpp*/
 // returns true if and only if no errors
 static bool _this_vaguely_where_it_could_be_cplusplus(const parse_tree& src)
 {
@@ -5204,7 +5147,6 @@ static bool _this_vaguely_where_it_could_be_cplusplus(const parse_tree& src)
 	while(0<j);
 	return starting_errors==zcc_errors.err_count();
 }
-#/*cut-cpp*/
 
 // this handles: ( ), [ ], { }
 // the content of ( ), [ ], { } fills the zeroth argument array
@@ -5410,7 +5352,6 @@ static bool inspect_potential_paren_primary_expression(parse_tree& src)
 				src.flags |= (PARSE_PAREN_PRIMARY_PASSTHROUGH & src.data<0>()->flags);
 				return true;
 				}
-#/*cut-cpp*/
 			else if (PARSE_TYPE & src.data<0>()->flags)
 				{	// abuse: handle parenthesized type-specifiers here
 				value_copy(src.type_code,src.data<0>()->type_code);
@@ -5418,7 +5359,6 @@ static bool inspect_potential_paren_primary_expression(parse_tree& src)
 				src.flags |= (PARSE_TYPE & src.data<0>()->flags);
 				return false;	// not an expression 
 				}
-#/*cut-cpp*/
 			};
 		}
 	return false;
@@ -5671,7 +5611,6 @@ static void locate_C99_postfix_expression(parse_tree& src, size_t& i, const type
 		}
 }
 
-#/*cut-cpp*/
 
 // if #include <typeinfo> hasn't happened, context-free error stops this
 //! \throw std::bad_alloc
@@ -5722,7 +5661,6 @@ static bool locate_CPP0X_typeid(parse_tree& src, size_t& i, const type_system& t
 		return true;
 	return false;
 }
-#/*cut-cpp*/
 /*postfixexpression:
 	primaryexpression
 	postfixexpression [ expression ]
@@ -5764,13 +5702,11 @@ static void locate_CPP_postfix_expression(parse_tree& src, size_t& i, const type
 				{
 				}
 			}
-#/*cut-cpp*/
 #endif
 		}
 	else{	// if (NULL==src.data<0>()[i].index_tokens[1].token.first)
 		if (locate_CPP0X_typeid(src,i,types)) return;
 #if 0
-#/*cut-cpp*/
 		if (token_is_char<'.'>(src.data<0>()[i].index_tokens[0].token))
 			{
 			if (1<=i && 1<src.size<0>()-i)
@@ -5836,7 +5772,6 @@ static bool _C99_literal_converts_to_bool(const parse_tree& src, bool& is_true S
 		is_true = !CCharLiteralIsFalse(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
 		return true;
 		};
-#/*cut-cpp*/
 	if (is_noticed_enumerator(src,types))
 		{	// misintepret enumerators as literals (avoid dynamic memory thrashing)
 		const type_system::enumerator_info* const tmp2 = types.get_enumerator(src.index_tokens[0].token.first);
@@ -5845,7 +5780,6 @@ static bool _C99_literal_converts_to_bool(const parse_tree& src, bool& is_true S
 		is_true = !target_machine->is_zero(tmp2->second.first.third.data(),tmp2->second.first.third.size(),dest_type);
 		return true;
 		}
-#/*cut-cpp*/
 	if (!(C_TESTFLAG_PP_NUMERAL & src.index_tokens[0].flags)) return false;
 	C_REALITY_CHECK_PP_NUMERAL_FLAGS(src.index_tokens[0].flags);
 	if (C_TESTFLAG_FLOAT & src.index_tokens[0].flags) return false;	//! \todo handle floats as well (underflow to zero is target-sensitive)
@@ -5929,7 +5863,6 @@ static void VM_to_literal(parse_tree& dest, const umaxint& src_int,const parse_t
 	_label_one_literal(dest,types);
 	assert(PARSE_EXPRESSION & dest.flags);
 }
-#/*cut-cpp*/
 
 // can't do much syntax-checking or immediate-evaluation here because of binary +/-
 // unary +/- syntax checking out out of place as it's needed by all of the unary operators
@@ -5962,7 +5895,6 @@ static void uint_to_literal(parse_tree& dest, uintmax_t src_int,const parse_tree
 	_label_one_literal(dest,types);
 	assert(PARSE_EXPRESSION & dest.flags);
 }
-#/*cut-cpp*/
 
 static void force_decimal_literal(parse_tree& dest,const char* src,const type_system& types)
 {
@@ -6046,7 +5978,6 @@ static void VM_to_signed_literal(parse_tree& x,const bool is_negative, const uma
 		}
 	else VM_to_literal(x,src_int,src,types);
 }
-#/*cut-cpp*/
 
 //! \throw std::bad_alloc()
 static void enumerator_to_integer_representation(parse_tree& x,const type_system& types)
@@ -6074,16 +6005,13 @@ static void enumerator_to_integer_representation(parse_tree& x,const type_system
 	}
 	tmp3.MoveInto(x);
 }
-#/*cut-cpp*/
 
 static bool is_integerlike_literal(const parse_tree& x SIG_CONST_TYPES)
 {
 	return converts_to_integerlike(x.type_code ARG_TYPES) && (PARSE_PRIMARY_EXPRESSION & x.flags);
 }
 
-#/*cut-cpp*/
 //! \throw std::bad_alloc()
-#/*cut-cpp*/
 static bool eval_unary_plus(parse_tree& src, const type_system& types)
 {
 	assert(is_C99_unary_operator_expression<'+'>(src));
@@ -6098,7 +6026,6 @@ static bool eval_unary_plus(parse_tree& src, const type_system& types)
 			}
 		return false;
 		};
-#/*cut-cpp*/
 	if (is_noticed_enumerator(*src.data<2>(),types))
 		{
 		enumerator_to_integer_representation(*src.c_array<2>(),types);
@@ -6108,7 +6035,6 @@ static bool eval_unary_plus(parse_tree& src, const type_system& types)
 			return true;
 			}
 		}
-#/*cut-cpp*/
  	// handle integer-like literals like a real integer literal
 	if (is_integerlike_literal(*src.data<2>() ARG_TYPES))
 		{
@@ -6133,7 +6059,6 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,literal_c
 		tmp.MoveInto(src.type_code);
 		return true;
 		};
-#/*cut-cpp*/
 	if (is_noticed_enumerator(*src.data<2>(),types))
 		{
 		enumerator_to_integer_representation(*src.c_array<2>(),types);
@@ -6144,7 +6069,6 @@ static bool eval_unary_minus(parse_tree& src, const type_system& types,literal_c
 			}
 		value_copy(src.type_code,src.data<2>()->type_code);
 		}
-#/*cut-cpp*/
 	if (is_integerlike_literal(*src.data<2>() ARG_TYPES) && 1==(src.type_code.base_type_index-C_TYPE::INT)%2)
 		{	// unsigned...we're fine
 		const virtual_machine::std_int_enum machine_type = machine_type_from_type_index(src.type_code.base_type_index);
@@ -6184,7 +6108,6 @@ static void C_unary_plusminus_easy_syntax_check(parse_tree& src,const type_syste
 		simple_error(src,(C99_UNARY_SUBTYPE_PLUS==src.subtype) ? " applies unary + to a pointer (C99 6.5.3.3p1)" : " applies unary - to a pointer (C99 6.5.3.3p1)");
 		return;
 		}
-#/*cut-cpp*/
 	// can type if an (C++0X unscoped) enumerator
 	if (is_noticed_enumerator(*src.data<2>(),types))
 		{
@@ -6193,7 +6116,6 @@ static void C_unary_plusminus_easy_syntax_check(parse_tree& src,const type_syste
 		src.type_code.set_type(tmp2->second.first.first);
 		}
 	else
-#/*cut-cpp*/
 	// can type if result is a primitive arithmetic type
 	if (converts_to_arithmeticlike(src.data<2>()->type_code.base_type_index ARG_TYPES))
 		src.type_code.set_type(default_promote_type(src.data<2>()->type_code.base_type_index ARG_TYPES));
@@ -6226,7 +6148,6 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 	assert((C99_UNARY_SUBTYPE_PLUS==src.subtype) ? is_C99_unary_operator_expression<'+'>(src) : is_C99_unary_operator_expression<'-'>(src));
 	
 	// can type if result is a primitive arithmetic type
-#/*cut-cpp*/
 	// can type if an (C++0X unscoped) enumerator
 	if (is_noticed_enumerator(*src.data<2>(),types))
 		{
@@ -6235,7 +6156,6 @@ static void CPP_unary_plusminus_easy_syntax_check(parse_tree& src,const type_sys
 		src.type_code.set_type(tmp2->second.first.first);
 		}
 	else
-#/*cut-cpp*/
 	if (converts_to_arithmeticlike(src.data<2>()->type_code ARG_TYPES))
 		src.type_code.set_type(default_promote_type(src.data<2>()->type_code.base_type_index ARG_TYPES));
 
@@ -6615,13 +6535,11 @@ static bool eval_bitwise_compl(parse_tree& src, const type_system& types,func_tr
 {
 	assert(is_bitwise_complement_expression(src));
 	assert(converts_to_integerlike(src.data<2>()->type_code ARG_TYPES));
-#/*cut-cpp*/
 	if (is_noticed_enumerator(*src.data<2>(),types))
 		{
 		enumerator_to_integer_representation(*src.c_array<2>(),types);
 		value_copy(src.type_code,src.data<2>()->type_code);
 		}
-#/*cut-cpp*/
 	umaxint res_int;
 	if (intlike_literal_to_VM(res_int,*src.data<2>() ARG_TYPES)) 
 		{
@@ -6814,7 +6732,6 @@ static bool locate_CPP_unary_plusminus(parse_tree& src, size_t& i, const type_sy
 
 	return terse_locate_CPP_unary_plusminus(src,i,types);
 }
-#/*cut-cpp*/
 
 // handle C++0X sizeof... elsewhere (context-free syntax checks should be fixed first, possibly consider sizeof... a psuedo-identifier)
 //! \throw std::bad_alloc
@@ -7078,7 +6995,6 @@ static bool locate_CPP_sizeof(parse_tree& src, size_t& i, const type_system& typ
 		}
 	return false;
 }
-#/*cut-cpp*/
 
 /* Scan for unary operators and cast expressions
 unary-expression:
@@ -7110,9 +7026,7 @@ static void locate_C99_unary_expression(parse_tree& src, size_t& i, const type_s
 	if (locate_C99_logical_NOT(src,i,types)) return;
 	if (locate_C99_bitwise_complement(src,i,types)) return;
 	if (locate_C99_unary_plusminus(src,i,types)) return;
-#/*cut-cpp*/
 	if (locate_C99_sizeof(src,i,types)) return;
-#/*cut-cpp*/
 
 #if 0
 	if (terse_locate_unary_operator(src,i))
@@ -7190,9 +7104,7 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 	if (locate_CPP_logical_NOT(src,i,types)) return;
 	if (locate_CPP_bitwise_complement(src,i,types)) return;
 	if (locate_CPP_unary_plusminus(src,i,types)) return;
-#/*cut-cpp*/
 	if (locate_CPP_sizeof(src,i,types)) return;
-#/*cut-cpp*/
 
 #if 0
 	if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"++"))
@@ -7675,9 +7587,7 @@ static bool eval_mod_expression(parse_tree& src, const type_system& types, liter
 BOOST_STATIC_ASSERT(1==C99_MULT_SUBTYPE_MOD-C99_MULT_SUBTYPE_DIV);
 BOOST_STATIC_ASSERT(1==C99_MULT_SUBTYPE_MULT-C99_MULT_SUBTYPE_MOD);
 
-#/*cut-cpp*/
 //! \throw std::bad_alloc
-#/*cut-cpp*/
 static bool _mod_expression_typecheck(parse_tree& src SIG_CONST_TYPES)
 {
 	assert(C99_MULT_SUBTYPE_MOD==src.subtype && is_C99_mult_operator_expression<'%'>(src));
@@ -7694,7 +7604,6 @@ static bool _mod_expression_typecheck(parse_tree& src SIG_CONST_TYPES)
 		simple_error(src," has nonintegral RHS (C99 6.5.5p2, C++98 5.6p2)");
 		return false;
 		};
-#/*cut-cpp*/
 	if (is_noticed_enumerator(*src.data<1>(),types))
 		{
 		enumerator_to_integer_representation(*src.c_array<1>(),types);
@@ -7707,14 +7616,11 @@ static bool _mod_expression_typecheck(parse_tree& src SIG_CONST_TYPES)
 		rhs = default_promotion_is_integerlike(src.data<2>()->type_code,types);
 		assert(rhs.second);
 		}
-#/*cut-cpp*/
 	src.type_code.set_type(arithmetic_reconcile(lhs.first,rhs.first ARG_TYPES));
 	return true;
 }
 
-#/*cut-cpp*/
 //! \throw std::bad_alloc
-#/*cut-cpp*/
 static bool _mult_div_expression_typecheck(parse_tree& src SIG_CONST_TYPES)
 {
 	assert(C99_MULT_SUBTYPE_DIV==src.subtype || C99_MULT_SUBTYPE_MULT==src.subtype);
@@ -7736,7 +7642,6 @@ static bool _mult_div_expression_typecheck(parse_tree& src SIG_CONST_TYPES)
 		return false;
 		};
 
-#/*cut-cpp*/
 	// arithmeticlike subsumes integerlike so this is fine
 	if (is_noticed_enumerator(*src.data<1>(),types))
 		{
@@ -7750,7 +7655,6 @@ static bool _mult_div_expression_typecheck(parse_tree& src SIG_CONST_TYPES)
 		rhs = default_promotion_is_integerlike(src.data<2>()->type_code,types);
 		assert(rhs.second);
 		}
-#/*cut-cpp*/
 	src.type_code.set_type(arithmetic_reconcile(lhs.first,rhs.first ARG_TYPES));
 	return true;
 }
@@ -8305,7 +8209,6 @@ static void C_CPP_add_expression_easy_syntax_check(parse_tree& src,const type_sy
 				return;
 				}
 
-#/*cut-cpp*/
 			// arithmeticlike subsumes integerlike so this is fine
 			if (is_noticed_enumerator(*src.data<1>(),types))
 				{
@@ -8319,7 +8222,6 @@ static void C_CPP_add_expression_easy_syntax_check(parse_tree& src,const type_sy
 				rhs = default_promotion_is_integerlike(src.data<2>()->type_code,types);
 				assert(rhs.second);
 				}
-#/*cut-cpp*/
 			src.type_code.set_type(arithmetic_reconcile(lhs.first,rhs.first ARG_TYPES));
 			zaimoni::simple_lock<unsigned int> lock(no_runtime_errors);
 			eval_add_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
@@ -8368,7 +8270,6 @@ static void C_CPP_add_expression_easy_syntax_check(parse_tree& src,const type_sy
 				return;
 				}
 
-#/*cut-cpp*/
 			// arithmeticlike subsumes integerlike so this is fine
 			if (is_noticed_enumerator(*src.data<1>(),types))
 				{
@@ -8382,7 +8283,6 @@ static void C_CPP_add_expression_easy_syntax_check(parse_tree& src,const type_sy
 				rhs = default_promotion_is_integerlike(src.data<2>()->type_code,types);
 				assert(rhs.second);
 				}
-#/*cut-cpp*/
 			src.type_code.set_type(arithmetic_reconcile(lhs.first,rhs.first ARG_TYPES));
 			zaimoni::simple_lock<unsigned int> lock(no_runtime_errors);
 			eval_sub_expression(src,types,C99_literal_converts_to_bool,C99_intlike_literal_to_VM);
@@ -8570,11 +8470,9 @@ static bool eval_shift(parse_tree& src, const type_system& types, literal_conver
 		{
 		if (!is_true)
 			{	// __ << 0 or __ >> 0: lift
-#/*cut-cpp*/
 			// handle enumerators now
 			if (is_noticed_enumerator(*src.data<1>(),types))
 				enumerator_to_integer_representation(*src.c_array<1>(),types);
-#/*cut-cpp*/
 			src.type_code.MoveInto(src.c_array<1>()->type_code);
 			src.eval_to_arg<1>(0);
 			return true;
@@ -8975,7 +8873,6 @@ static bool terse_locate_CPP_equality_expression(parse_tree& src, size_t& i)
 	return false;
 }
 
-#/*cut-cpp*/
 static bool typeid_equal_content(const parse_tree& lhs, const parse_tree& rhs,bool& is_equal)
 {
 	if (   is_CPP0X_typeid_expression(lhs) && is_CPP0X_typeid_expression(rhs)
@@ -8988,7 +8885,6 @@ static bool typeid_equal_content(const parse_tree& lhs, const parse_tree& rhs,bo
 	return false;
 }
 
-#/*cut-cpp*/
 static bool eval_equality_expression(parse_tree& src, const type_system& types, literal_converts_to_bool_func& literal_converts_to_bool,intlike_literal_to_VM_func& intlike_literal_to_VM)
 {	
 	BOOST_STATIC_ASSERT(1==C99_EQUALITY_SUBTYPE_NEQ-C99_EQUALITY_SUBTYPE_EQ);
@@ -9006,9 +8902,7 @@ static bool eval_equality_expression(parse_tree& src, const type_system& types, 
 				//! \test default/Pass_if_zero.hpp, default/Pass_if_zero.h, 
 			bool is_equal = false;
 			if (   C_string_literal_equal_content(*src.data<1>(),*src.data<2>(),is_equal)
-#/*cut-cpp*/
 				|| typeid_equal_content(*src.data<1>(),*src.data<2>(),is_equal)
-#/*cut-cpp*/
 				)
 				{
 				force_decimal_literal(src,is_equal_op==is_equal ? "1" : "0",types);
@@ -9271,22 +9165,18 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types, literal_
 		if 		(res_int==lhs_int)
 			// lhs & rhs = lhs; conserve type
 			{
-#/*cut-cpp*/
 			// handle enumerators now
 			if (is_noticed_enumerator(*src.data<1>(),types))
 				enumerator_to_integer_representation(*src.c_array<1>(),types);
-#/*cut-cpp*/
 			src.type_code.MoveInto(src.c_array<1>()->type_code);
 			src.eval_to_arg<1>(0);
 			}
 		else if (res_int==rhs_int)
 			// lhs & rhs = rhs; conserve type
 			{
-#/*cut-cpp*/
 			// handle enumerators now
 			if (is_noticed_enumerator(*src.data<2>(),types))
 				enumerator_to_integer_representation(*src.c_array<2>(),types);
-#/*cut-cpp*/
 			src.type_code.MoveInto(src.c_array<2>()->type_code);
 			src.eval_to_arg<2>(0);
 			}
@@ -9439,11 +9329,9 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, literal_
 		{
 		if (!is_true)
 			{	// 0 ^ __
-#/*cut-cpp*/
 			// handle enumerators now
 			if (is_noticed_enumerator(*src.data<2>(),types))
 				enumerator_to_integer_representation(*src.c_array<2>(),types);
-#/*cut-cpp*/
 			src.eval_to_arg<2>(0);
 			//! \bug convert char literal to appropriate integer
 			return true;
@@ -9453,11 +9341,9 @@ static bool eval_bitwise_XOR(parse_tree& src, const type_system& types, literal_
 		{
 		if (!is_true)
 			{	// __ ^ 0
-#/*cut-cpp*/
 			// handle enumerators now
 			if (is_noticed_enumerator(*src.data<1>(),types))
 				enumerator_to_integer_representation(*src.c_array<1>(),types);
-#/*cut-cpp*/
 			src.eval_to_arg<1>(0);
 			//! \bug convert char literal to appropriate integer
 			return true;
@@ -9621,11 +9507,9 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, literal_c
 		{
 		if (!is_true)
 			{	// 0 | __
-#/*cut-cpp*/
 			// handle enumerators now
 			if (is_noticed_enumerator(*src.data<2>(),types))
 				enumerator_to_integer_representation(*src.c_array<2>(),types);
-#/*cut-cpp*/
 			src.eval_to_arg<2>(0);
 			//! \bug convert char literal to appropriate integer
 			return true;
@@ -9635,11 +9519,9 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, literal_c
 		{
 		if (!is_true)
 			{	// __ | 0
-#/*cut-cpp*/
 			// handle enumerators now
 			if (is_noticed_enumerator(*src.data<1>(),types))
 				enumerator_to_integer_representation(*src.c_array<1>(),types);
-#/*cut-cpp*/
 			src.eval_to_arg<1>(0);
 			//! \bug convert char literal to appropriate integer
 			return true;
@@ -9657,22 +9539,18 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, literal_c
 		if 		(res_int==lhs_int)
 			// lhs | rhs = lhs; conserve type
 			{
-#/*cut-cpp*/
 			// handle enumerators now
 			if (is_noticed_enumerator(*src.data<1>(),types))
 				enumerator_to_integer_representation(*src.c_array<1>(),types);
-#/*cut-cpp*/
 			src.type_code.MoveInto(src.c_array<1>()->type_code);
 			src.eval_to_arg<1>(0);
 			}
 		else if (res_int==rhs_int)
 			// lhs | rhs = rhs; conserve type
 			{
-#/*cut-cpp*/
 			// handle enumerators now
 			if (is_noticed_enumerator(*src.data<1>(),types))
 				enumerator_to_integer_representation(*src.c_array<1>(),types);
-#/*cut-cpp*/
 			src.type_code.MoveInto(src.c_array<2>()->type_code);
 			src.eval_to_arg<2>(0);
 			}
@@ -10652,10 +10530,8 @@ static bool CPP_CondenseParseTree(parse_tree& src,const type_system& types)
 	_label_literals(src,types);
 	std::for_each(src.begin<0>(),src.end<0>(),_label_CPP_literal);	// intercepts: true, false, this
 	if (!_match_pairs(src)) return false;
-#/*cut-cpp*/
 	// check that this is at least within a brace pair or a parentheses pair (it is actually required to be in a non-static member function, or constructor mem-initializer
 	if (!_this_vaguely_where_it_could_be_cplusplus(src)) return false;
-#/*cut-cpp*/	
 	try {
 		CPP_locate_expressions(src,SIZE_MAX,types);
 		}
@@ -10669,7 +10545,6 @@ static bool CPP_CondenseParseTree(parse_tree& src,const type_system& types)
 	return true;
 }
 
-#/*cut-cpp*/
 static const POD_pair<const char*,size_t> C99_nontype_decl_specifier_list[] =
 	{	DICT_STRUCT("typedef"),
 		DICT_STRUCT("const"),
@@ -11025,7 +10900,6 @@ static void CPP_ContextFreeParse(parse_tree& src,const type_system& types)
 	// class/struct/union/enum specifiers can occur in all sorts of strange places
 	CPP_notice_class_struct_union_enum(src);
 }
-#/*cut-cpp*/
 
 //! \test if.C99/Pass_zero.hpp, if.C99/Pass_zero.h
 bool C99_integer_literal_is_zero(const char* const x,const size_t x_len,const lex_flags flags)
@@ -11586,14 +11460,12 @@ void C99_PPHackTree(parse_tree& src,const type_system& types)
 				}
 			}
 		}
-#/*cut-cpp*/
 	if (src.type_code.decays_to_nonnull_pointer())
 		{
 		force_decimal_literal(src,"1",types);
 		src.type_code.set_type(C_TYPE::INT);
 		return;
 		}
-#/*cut-cpp*/
 }
 
 //! \throw std::bad_alloc
@@ -11663,17 +11535,14 @@ void CPP_PPHackTree(parse_tree& src,const type_system& types)
 				}
 			}
 		}
-#/*cut-cpp*/
 	if (src.type_code.decays_to_nonnull_pointer())
 		{
 		force_decimal_literal(src,"1",types);
 		src.type_code.set_type(C_TYPE::INT);
 		return;
 		}
-#/*cut-cpp*/
 }
 
-#/*cut-cpp*/
 static void conserve_tokens(parse_tree& x)
 {
 	if (x.own_index_token<0>())
@@ -11699,7 +11568,6 @@ static void conserve_tokens(parse_tree& x)
 			}
 		}
 }
-#/*cut-cpp*/
 
 //! \todo really should be somewhere in natural-language output
 void INFORM_separated_list(const char* const* x,size_t x_len, const char* const sep)
@@ -11716,7 +11584,6 @@ void INFORM_separated_list(const char* const* x,size_t x_len, const char* const 
 			}
 		};
 }
-#/*cut-cpp*/
 
 //! \todo should this be a type_system member?
 //! \throw std::bad_alloc
@@ -14796,7 +14663,6 @@ static void CPP_ContextParse(parse_tree& src,type_system& types)
 {
 	CPP_ParseNamespace(src,types,NULL);
 }
-#/*cut-cpp*/
 
 PP_auxfunc C99_aux
  = 	{
@@ -14810,14 +14676,12 @@ PP_auxfunc C99_aux
 	C99_PPHackTree,
 	ConcatenateCStringLiterals,
 	C99_bad_syntax_tokenized,
-#/*cut-cpp*/
 	C99_echo_reserved_keyword,
 	C99_echo_reserved_symbol,
 	C99_ContextFreeParse,
 	C99_ContextParse,
 	C99_locate_expressions,
 	C99_literal_converts_to_bool
-#/*cut-cpp*/
 	};
 
 PP_auxfunc CPlusPlus_aux
@@ -14832,14 +14696,12 @@ PP_auxfunc CPlusPlus_aux
 	CPP_PPHackTree,
 	ConcatenateCStringLiterals,
 	CPP_bad_syntax_tokenized,
-#/*cut-cpp*/
 	CPP_echo_reserved_keyword,
 	CPP_echo_reserved_symbol,
 	CPP_ContextFreeParse,
 	CPP_ContextParse,
 	CPP_locate_expressions,
 	CPP_literal_converts_to_bool
-#/*cut-cpp*/
 	};
 
 #if 0
@@ -14964,7 +14826,6 @@ void InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
 	assert(C_TYPE::DOUBLE__COMPLEX==linear_find("double _Complex",CPP_atomic_types,CPP_TYPE_MAX)+1);
 	assert(C_TYPE::LDOUBLE__COMPLEX==linear_find("long double _Complex",CPP_atomic_types,CPP_TYPE_MAX)+1);
 	assert(C_TYPE::WCHAR_T==linear_find("wchar_t",CPP_atomic_types,CPP_TYPE_MAX)+1);
-#/*cut-cpp*/
 
 	assert(C99_CPP_TYPEDEF_IDX==linear_find("typedef",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
 	assert(C99_CPP_TYPEDEF_IDX==linear_find("typedef",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
@@ -15008,7 +14869,6 @@ void InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
 	assert(C1X_CPP0X_THREAD_LOCAL_IDX==linear_find("_Thread_Local",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
 	assert(C1X_CPP0X_THREAD_LOCAL_IDX==linear_find("thread_local",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
 	assert(CPP_MUTABLE_IDX==linear_find("mutable",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
-#/*cut-cpp*/
 
 	/* does bool converts_to_integerlike(size_t base_type_index) work */
 	BOOST_STATIC_ASSERT(!(C_TYPE::BOOL<=C_TYPE::NOT_VOID && C_TYPE::NOT_VOID<=C_TYPE::INTEGERLIKE));

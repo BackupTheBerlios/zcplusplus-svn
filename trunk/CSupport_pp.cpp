@@ -21,7 +21,7 @@
 #include "errcount.hpp"
 #include "CPUInfo.hpp"
 #include "ParseTree.hpp"
-#include "type_system.hpp"
+#include "type_system_pp.hpp"
 #include "type_algebra.hpp"
 #include "weak_token.hpp"
 #include "C_PPDecimalInteger.hpp"
@@ -31,9 +31,6 @@
 #include "C_PPHexFloat.hpp"
 #include "CheckReturn.hpp"
 
-#ifdef ZCC_NOT_BUILDING_CPP
-#error internal macro ZCC_NOT_BUILDING_CPP already defined 
-#endif
 // handle function signature differences between z_cpp and other users
 #ifdef SIG_CONST_TYPES
 #error internal macro SIG_CONST_TYPES already defined 
@@ -41,13 +38,8 @@
 #ifdef ARG_TYPES
 #error internal macro ARG_TYPES already defined 
 #endif
-#ifdef ZCC_NOT_BUILDING_CPP
-#define SIG_CONST_TYPES ,const type_system& types 
-#define ARG_TYPES ,types 
-#else
 #define SIG_CONST_TYPES 
 #define ARG_TYPES 
-#endif
 
 using namespace zaimoni;
 using virtual_machine::umaxint;
@@ -593,12 +585,7 @@ static bool is_innate_definite_type(size_t base_type_index)
 
 static bool converts_to_integerlike(size_t base_type_index SIG_CONST_TYPES)
 {	//! \todo handle cast operator overloading
-#ifdef ZCC_NOT_BUILDING_CPP
-	if (C_TYPE::BOOL<=base_type_index && C_TYPE::INTEGERLIKE>=base_type_index) return true;
-	return types.get_enum_def(base_type_index);
-#else
 	return C_TYPE::BOOL<=base_type_index && C_TYPE::INTEGERLIKE>=base_type_index;
-#endif
 }
 
 static bool converts_to_integerlike(const type_spec& type_code SIG_CONST_TYPES)
@@ -610,32 +597,17 @@ static bool converts_to_integerlike(const type_spec& type_code SIG_CONST_TYPES)
 static bool converts_to_integer(const type_spec& type_code SIG_CONST_TYPES)
 {	//! \todo handle cast operator overloading
 	if (0<type_code.pointer_power) return false;	// pointers do not have a standard conversion to integers
-#ifdef ZCC_NOT_BUILDING_CPP
-	if (C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::INTEGERLIKE>type_code.base_type_index) return true;
-	return types.get_enum_def(type_code.base_type_index);
-#else
 	return C_TYPE::BOOL<=type_code.base_type_index && C_TYPE::INTEGERLIKE>type_code.base_type_index;
-#endif
 }
 
 static bool converts_to_reallike(size_t base_type_index SIG_CONST_TYPES)
 {	//! \todo handle cast operator overloading
-#ifdef ZCC_NOT_BUILDING_CPP
-	if (C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE>=base_type_index) return true;
-	return types.get_enum_def(base_type_index);
-#else
 	return C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE>=base_type_index;
-#endif
 }
 
 static bool converts_to_arithmeticlike(size_t base_type_index SIG_CONST_TYPES)
 {	//! \todo handle cast operator overloading
-#ifdef ZCC_NOT_BUILDING_CPP
-	if (C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE__COMPLEX>=base_type_index) return true;
-	return types.get_enum_def(base_type_index);
-#else
 	return C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE__COMPLEX>=base_type_index;
-#endif
 }
 
 static bool converts_to_arithmeticlike(const type_spec& type_code SIG_CONST_TYPES)
@@ -2943,6 +2915,7 @@ bool CCharLiteralIsFalse(const char* x,size_t x_len)
 /* strict type categories of parsing */
 #define PARSE_PRIMARY_TYPE ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-19))
 #define PARSE_UNION_TYPE ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-20))
+#define PARSE_CLASS_STRUCT_TYPE ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-21))
 
 // check for collision with lowest three bits
 BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>=20);
@@ -2967,7 +2940,7 @@ BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>
 #define PARSE_EXPRESSION (PARSE_PRIMARY_EXPRESSION | PARSE_STRICT_POSTFIX_EXPRESSION | PARSE_STRICT_UNARY_EXPRESSION | PARSE_STRICT_CAST_EXPRESSION | PARSE_STRICT_PM_EXPRESSION | PARSE_STRICT_MULT_EXPRESSION | PARSE_STRICT_ADD_EXPRESSION | PARSE_STRICT_SHIFT_EXPRESSION | PARSE_STRICT_RELATIONAL_EXPRESSION | PARSE_STRICT_EQUALITY_EXPRESSION | PARSE_STRICT_BITAND_EXPRESSION | PARSE_STRICT_BITXOR_EXPRESSION | PARSE_STRICT_BITOR_EXPRESSION | PARSE_STRICT_LOGICAND_EXPRESSION | PARSE_STRICT_LOGICOR_EXPRESSION | PARSE_STRICT_CONDITIONAL_EXPRESSION | PARSE_STRICT_ASSIGNMENT_EXPRESSION | PARSE_STRICT_COMMA_EXPRESSION)
 
 /* nonstrict type categories */
-#define PARSE_TYPE (PARSE_PRIMARY_TYPE | PARSE_UNION_TYPE)
+#define PARSE_TYPE (PARSE_PRIMARY_TYPE | PARSE_UNION_TYPE | PARSE_CLASS_STRUCT_TYPE)
 
 /* already-parsed */
 #define PARSE_OBVIOUS (PARSE_EXPRESSION | PARSE_TYPE | parse_tree::INVALID)
