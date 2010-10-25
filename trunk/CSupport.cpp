@@ -13277,13 +13277,10 @@ C99_struct_specifier:
 #if 0
 			// fix following: anonymous types are un-matchable
 			// tentatively forward-declare immediately
-			const type_system::type_index tmp2 = types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_union);
+			const type_system::type_index tmp2 = types.register_structdecl("<unknown>",union_struct_decl::decl_union);
 			assert(tmp2);
-
-			//! \test zcc/decl.C99/Pass_union_forward_def.h
-			assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first));
-			assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
 			assert(types.get_structdecl(tmp2));
+
 			src.c_array<0>()[i].type_code.set_type(tmp2);
 			src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
 			_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
@@ -13294,7 +13291,6 @@ C99_struct_specifier:
 			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 			//! \todo record field structure, etc.
 			types.upgrade_decl_to_def(tmp2,tmp4);
-			assert(types.get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
 			assert(types.get_C_structdef(tmp2));
 #endif
 			if (   1<src.size<0>()-i
@@ -13317,13 +13313,10 @@ C99_struct_specifier:
 #if 0
 			// fix following: anonymous types are un-matchable
 			// tentatively forward-declare immediately
-			const type_system::type_index tmp2 = types.register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_struct);
+			const type_system::type_index tmp2 = types.register_structdecl("<unknown>",union_struct_decl::decl_struct);
 			assert(tmp2);
-
-			//! \test zcc/decl.C99/Pass_struct_forward_def.h
-			assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
-			assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
 			assert(types.get_structdecl(tmp2));
+
 			src.c_array<0>()[i].type_code.set_type(tmp2);
 			src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
 			_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
@@ -13334,7 +13327,6 @@ C99_struct_specifier:
 			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 			//! \todo record field structure, etc.
 			types.upgrade_decl_to_def(tmp2,tmp4);
-			assert(types.get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
 			assert(types.get_C_structdef(tmp2));
 #endif
 			if (   1<src.size<0>()-i
@@ -14238,6 +14230,113 @@ CPP_class_specifier:
 				continue;
 				}
 			}
+		else if (is_C99_anonymous_specifier(src.data<0>()[i],"union"))
+			{
+#if 0
+			// fix following
+			// tentatively forward-declare immediately
+			const type_system::type_index tmp2 = types.register_structdecl_CPP("<unknown>",active_namespace,union_struct_decl::decl_union);
+			assert(tmp2);
+
+			//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+			assert(types.get_structdecl(tmp2));
+			src.c_array<0>()[i].type_code.set_type(tmp2);
+			src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
+			_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+
+			// parse the union and upgrade it to a full definition
+			const union_struct_decl* tmp3 = types.get_structdecl(tmp2);
+			assert(tmp3);
+			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+			//! \todo record field structure, etc.
+			types.upgrade_decl_to_def(tmp2,tmp4);
+			assert(types.get_C_structdef(tmp2));
+#endif
+			if (	1<src.size<0>()-i
+				&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
+				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
+					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+					//! \test zcc/decl.C99/Warn_inaccessible_union.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(WARN_STR);
+				INFORM("unreferenceable anonymous union declaration");
+				if (bool_options[boolopt::warnings_are_errors])
+					zcc_errors.inc_error();
+				// remove from parse
+				src.DeleteNSlotsAt<0>(2,i);
+				continue;
+				}
+			}
+		else if (is_C99_anonymous_specifier(src.data<0>()[i],"struct"))
+			{
+#if 0
+			// fix following
+			// tentatively forward-declare immediately
+			const type_system::type_index tmp2 = types.register_structdecl_CPP("<unknown>",active_namespace,union_struct_decl::decl_struct);
+			assert(tmp2);
+			assert(types.get_structdecl(tmp2));
+			src.c_array<0>()[i].type_code.set_type(tmp2);
+			src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
+			_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+
+			// parse the union and upgrade it to a full definition
+			const union_struct_decl* tmp3 = types.get_structdecl(tmp2);
+			assert(tmp3);
+			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+			//! \todo record field structure, etc.
+			types.upgrade_decl_to_def(tmp2,tmp4);
+			assert(types.get_C_structdef(tmp2));
+#endif
+			if (	1<src.size<0>()-i
+				&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
+				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
+					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+					//! \test zcc/decl.C99/Warn_inaccessible_struct.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(WARN_STR);
+				INFORM("unreferenceable anonymous struct declaration");
+				if (bool_options[boolopt::warnings_are_errors])
+					zcc_errors.inc_error();
+				// remove from parse
+				src.DeleteNSlotsAt<0>(2,i);
+				continue;
+				}
+			}
+		else if (is_C99_anonymous_specifier(src.data<0>()[i],"class"))
+			{
+#if 0
+			// fix following
+			// tentatively forward-declare immediately
+			const type_system::type_index tmp2 = types.register_structdecl_CPP("<unknown>",active_namespace,union_struct_decl::decl_class);
+			assert(tmp2);
+			assert(types.get_structdecl(tmp2));
+			src.c_array<0>()[i].type_code.set_type(tmp2);
+			src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
+			_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+
+			// parse the union and upgrade it to a full definition
+			const union_struct_decl* tmp3 = types.get_structdecl(tmp2);
+			assert(tmp3);
+			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
+			//! \todo record field structure, etc.
+			types.upgrade_decl_to_def(tmp2,tmp4);
+			assert(types.get_C_structdef(tmp2));
+#endif
+			if (	1<src.size<0>()-i
+				&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
+				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
+					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+					//! \test zcc/decl.C99/Warn_inaccessible_class.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(WARN_STR);
+				INFORM("unreferenceable anonymous class declaration");
+				if (bool_options[boolopt::warnings_are_errors])
+					zcc_errors.inc_error();
+				// remove from parse
+				src.DeleteNSlotsAt<0>(2,i);
+				continue;
+				}
+			}
 		// enum was difficult to interpret in C++, so parked here while waiting on comp.std.c++
 		//! \todo actually, we can try forward-declare both scoped enums and enum-based enums (C++0X 7.2p3, these have enough size information); but other parts of the standard get in the way
 		else if (is_C99_named_specifier(src.data<0>()[i],"enum"))
@@ -14304,67 +14403,6 @@ CPP_class_specifier:
 				}
 			}
 
-		if (	1<src.size<0>()-i
-			&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
-			{	// is_C99_named_specifier(src.data<0>()[i],"enum") will cause an error later, in variable parsing
-			if (is_C99_anonymous_specifier(src.data<0>()[i],"union"))
-				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
-					//! \test zcc/decl.C99/Warn_inaccessible_union.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(WARN_STR);
-				INFORM("unreferenceable anonymous union declaration");
-				if (bool_options[boolopt::warnings_are_errors])
-					zcc_errors.inc_error();
-				// remove from parse
-				src.DeleteNSlotsAt<0>(2,i);
-				continue;
-				}
-			else if (is_C99_anonymous_specifier(src.data<0>()[i],"struct"))
-				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
-					//! \test zcc/decl.C99/Warn_inaccessible_struct.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(WARN_STR);
-				INFORM("unreferenceable anonymous struct declaration");
-				if (bool_options[boolopt::warnings_are_errors])
-					zcc_errors.inc_error();
-				// remove from parse
-				src.DeleteNSlotsAt<0>(2,i);
-				continue;
-				}
-			else if (is_C99_anonymous_specifier(src.data<0>()[i],"class"))
-				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
-					//! \test zcc/decl.C99/Warn_inaccessible_class.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(WARN_STR);
-				INFORM("unreferenceable anonymous class declaration");
-				if (bool_options[boolopt::warnings_are_errors])
-					zcc_errors.inc_error();
-				// remove from parse
-				src.DeleteNSlotsAt<0>(2,i);
-				continue;
-				}
-/*			else if (is_C99_named_specifier(src.data<0>()[i],"union"))
-				{	// forward-declaration already handled
-				}	*/
-/*			else if (is_C99_named_specifier(src.data<0>()[i],"struct"))
-				{	// forward-declaration already handled
-				}	*/
-/*			else if (is_C99_named_specifier(src.data<0>()[i],"class"))
-				{	// forward-declaration already handled
-				} */
-/*			else if (is_C99_named_specifier_definition(src.data<0>()[i],"union"))
-				{	// forward-declaration already handled
-				}	*/
-/*			else if (is_C99_named_specifier_definition(src.data<0>()[i],"struct"))
-				{	// forward-declaration already handled
-				} */
-/*			else if (is_C99_named_specifier_definition(src.data<0>()[i],"class"))
-				{	// forward-declaration already handled
-				} */
-			};
 		// namespace scanner
 		// need some scheme to handle unnamed namespaces (probably alphabetical counter after something illegal so unmatchable)
 		// C++0X has inline namespaces; ignore these for now (well, maybe not: consuming the inline will prevent problems)
