@@ -13775,6 +13775,19 @@ bool CPP_hook_INC_INFORM(const parse_tree& src)
 	return false;
 }
 
+static void CPP0X_flush_const_volatile_without_object(parse_tree& src)
+{
+	if ((type_spec::_const | type_spec::_volatile) & src.type_code.q_vector.back())
+		{
+		message_header(src.index_tokens[0]);
+		INC_INFORM(ERR_STR);
+		INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
+		zcc_errors.inc_error();
+		// XXX may not behave well on trapping-int hosts XXX
+		src.type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
+		}
+}
+
 // handle namespaces or else
 //! \todo check that the fact all literals are already legal-form is used
 //! \throw std::bad_alloc
@@ -13844,34 +13857,27 @@ CPP_union_specifier:
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Error_union_forward_def_const.hpp
-						//! \test decl.C99/Error_union_forward_def_const2.hpp
-						//! \test decl.C99/Error_union_forward_def_const3.hpp
-						//! \test decl.C99/Error_union_forward_def_const4.hpp
-						//! \test decl.C99/Error_union_forward_def_volatile.hpp
-						//! \test decl.C99/Error_union_forward_def_volatile2.hpp
-						//! \test decl.C99/Error_union_forward_def_volatile3.hpp
-						//! \test decl.C99/Error_union_forward_def_volatile4.hpp
-						//! \test decl.C99/Error_union_forward_def_const_volatile.hpp
-						//! \test decl.C99/Error_union_forward_def_const_volatile2.hpp
-						//! \test decl.C99/Error_union_forward_def_const_volatile3.hpp
-						//! \test decl.C99/Error_union_forward_def_const_volatile4.hpp
-						//! \test decl.C99/Error_union_forward_def_const_volatile5.hpp
-						//! \test decl.C99/Error_union_forward_def_const_volatile6.hpp
-						//! \test decl.C99/Error_union_forward_def_const_volatile7.hpp
-						//! \test decl.C99/Error_union_forward_def_const_volatile8.hpp
-						//! \test decl.C99/Error_union_forward_def_const_volatile9.hpp
-						//! \test decl.C99/Error_union_forward_def_const_volatile10.hpp
-						//! \test decl.C99/Error_union_forward_def_const_volatile11.hpp
-						//! \test decl.C99/Error_union_forward_def_const_volatile12.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
-					zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					}
+				//! \test decl.C99/Error_union_forward_def_const.hpp
+				//! \test decl.C99/Error_union_forward_def_const2.hpp
+				//! \test decl.C99/Error_union_forward_def_const3.hpp
+				//! \test decl.C99/Error_union_forward_def_const4.hpp
+				//! \test decl.C99/Error_union_forward_def_volatile.hpp
+				//! \test decl.C99/Error_union_forward_def_volatile2.hpp
+				//! \test decl.C99/Error_union_forward_def_volatile3.hpp
+				//! \test decl.C99/Error_union_forward_def_volatile4.hpp
+				//! \test decl.C99/Error_union_forward_def_const_volatile.hpp
+				//! \test decl.C99/Error_union_forward_def_const_volatile2.hpp
+				//! \test decl.C99/Error_union_forward_def_const_volatile3.hpp
+				//! \test decl.C99/Error_union_forward_def_const_volatile4.hpp
+				//! \test decl.C99/Error_union_forward_def_const_volatile5.hpp
+				//! \test decl.C99/Error_union_forward_def_const_volatile6.hpp
+				//! \test decl.C99/Error_union_forward_def_const_volatile7.hpp
+				//! \test decl.C99/Error_union_forward_def_const_volatile8.hpp
+				//! \test decl.C99/Error_union_forward_def_const_volatile9.hpp
+				//! \test decl.C99/Error_union_forward_def_const_volatile10.hpp
+				//! \test decl.C99/Error_union_forward_def_const_volatile11.hpp
+				//! \test decl.C99/Error_union_forward_def_const_volatile12.hpp
+				CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				if (tmp)
 					{	// but if already (forward-)declared then this is a no-op
 						// think this is common enough to not warrant OAOO/DRY treatment
@@ -13920,34 +13926,27 @@ CPP_struct_specifier:
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Error_struct_forward_def_const.hpp
-						//! \test decl.C99/Error_struct_forward_def_const2.hpp
-						//! \test decl.C99/Error_struct_forward_def_const3.hpp
-						//! \test decl.C99/Error_struct_forward_def_const4.hpp
-						//! \test decl.C99/Error_struct_forward_def_volatile.hpp
-						//! \test decl.C99/Error_struct_forward_def_volatile2.hpp
-						//! \test decl.C99/Error_struct_forward_def_volatile3.hpp
-						//! \test decl.C99/Error_struct_forward_def_volatile4.hpp
-						//! \test decl.C99/Error_struct_forward_def_const_volatile.hpp
-						//! \test decl.C99/Error_struct_forward_def_const_volatile2.hpp
-						//! \test decl.C99/Error_struct_forward_def_const_volatile3.hpp
-						//! \test decl.C99/Error_struct_forward_def_const_volatile4.hpp
-						//! \test decl.C99/Error_struct_forward_def_const_volatile5.hpp
-						//! \test decl.C99/Error_struct_forward_def_const_volatile6.hpp
-						//! \test decl.C99/Error_struct_forward_def_const_volatile7.hpp
-						//! \test decl.C99/Error_struct_forward_def_const_volatile8.hpp
-						//! \test decl.C99/Error_struct_forward_def_const_volatile9.hpp
-						//! \test decl.C99/Error_struct_forward_def_const_volatile10.hpp
-						//! \test decl.C99/Error_struct_forward_def_const_volatile11.hpp
-						//! \test decl.C99/Error_struct_forward_def_const_volatile12.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
-					zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					}
+				//! \test decl.C99/Error_struct_forward_def_const.hpp
+				//! \test decl.C99/Error_struct_forward_def_const2.hpp
+				//! \test decl.C99/Error_struct_forward_def_const3.hpp
+				//! \test decl.C99/Error_struct_forward_def_const4.hpp
+				//! \test decl.C99/Error_struct_forward_def_volatile.hpp
+				//! \test decl.C99/Error_struct_forward_def_volatile2.hpp
+				//! \test decl.C99/Error_struct_forward_def_volatile3.hpp
+				//! \test decl.C99/Error_struct_forward_def_volatile4.hpp
+				//! \test decl.C99/Error_struct_forward_def_const_volatile.hpp
+				//! \test decl.C99/Error_struct_forward_def_const_volatile2.hpp
+				//! \test decl.C99/Error_struct_forward_def_const_volatile3.hpp
+				//! \test decl.C99/Error_struct_forward_def_const_volatile4.hpp
+				//! \test decl.C99/Error_struct_forward_def_const_volatile5.hpp
+				//! \test decl.C99/Error_struct_forward_def_const_volatile6.hpp
+				//! \test decl.C99/Error_struct_forward_def_const_volatile7.hpp
+				//! \test decl.C99/Error_struct_forward_def_const_volatile8.hpp
+				//! \test decl.C99/Error_struct_forward_def_const_volatile9.hpp
+				//! \test decl.C99/Error_struct_forward_def_const_volatile10.hpp
+				//! \test decl.C99/Error_struct_forward_def_const_volatile11.hpp
+				//! \test decl.C99/Error_struct_forward_def_const_volatile12.hpp
+				CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				if (tmp)
 					{	// but if already (forward-)declared then this is a no-op
 						// think this is common enough to not warrant OAOO/DRY treatment
@@ -13997,34 +13996,27 @@ CPP_class_specifier:
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Error_class_forward_def_const.hpp
-						//! \test decl.C99/Error_class_forward_def_const2.hpp
-						//! \test decl.C99/Error_class_forward_def_const3.hpp
-						//! \test decl.C99/Error_class_forward_def_const4.hpp
-						//! \test decl.C99/Error_class_forward_def_volatile.hpp
-						//! \test decl.C99/Error_class_forward_def_volatile2.hpp
-						//! \test decl.C99/Error_class_forward_def_volatile3.hpp
-						//! \test decl.C99/Error_class_forward_def_volatile4.hpp
-						//! \test decl.C99/Error_class_forward_def_const_volatile.hpp
-						//! \test decl.C99/Error_class_forward_def_const_volatile2.hpp
-						//! \test decl.C99/Error_class_forward_def_const_volatile3.hpp
-						//! \test decl.C99/Error_class_forward_def_const_volatile4.hpp
-						//! \test decl.C99/Error_class_forward_def_const_volatile5.hpp
-						//! \test decl.C99/Error_class_forward_def_const_volatile6.hpp
-						//! \test decl.C99/Error_class_forward_def_const_volatile7.hpp
-						//! \test decl.C99/Error_class_forward_def_const_volatile8.hpp
-						//! \test decl.C99/Error_class_forward_def_const_volatile9.hpp
-						//! \test decl.C99/Error_class_forward_def_const_volatile10.hpp
-						//! \test decl.C99/Error_class_forward_def_const_volatile11.hpp
-						//! \test decl.C99/Error_class_forward_def_const_volatile12.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
-					zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					}
+				//! \test decl.C99/Error_class_forward_def_const.hpp
+				//! \test decl.C99/Error_class_forward_def_const2.hpp
+				//! \test decl.C99/Error_class_forward_def_const3.hpp
+				//! \test decl.C99/Error_class_forward_def_const4.hpp
+				//! \test decl.C99/Error_class_forward_def_volatile.hpp
+				//! \test decl.C99/Error_class_forward_def_volatile2.hpp
+				//! \test decl.C99/Error_class_forward_def_volatile3.hpp
+				//! \test decl.C99/Error_class_forward_def_volatile4.hpp
+				//! \test decl.C99/Error_class_forward_def_const_volatile.hpp
+				//! \test decl.C99/Error_class_forward_def_const_volatile2.hpp
+				//! \test decl.C99/Error_class_forward_def_const_volatile3.hpp
+				//! \test decl.C99/Error_class_forward_def_const_volatile4.hpp
+				//! \test decl.C99/Error_class_forward_def_const_volatile5.hpp
+				//! \test decl.C99/Error_class_forward_def_const_volatile6.hpp
+				//! \test decl.C99/Error_class_forward_def_const_volatile7.hpp
+				//! \test decl.C99/Error_class_forward_def_const_volatile8.hpp
+				//! \test decl.C99/Error_class_forward_def_const_volatile9.hpp
+				//! \test decl.C99/Error_class_forward_def_const_volatile10.hpp
+				//! \test decl.C99/Error_class_forward_def_const_volatile11.hpp
+				//! \test decl.C99/Error_class_forward_def_const_volatile12.hpp
+				CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				if (tmp)
 					{	// but if already (forward-)declared then this is a no-op
 						// think this is common enough to not warrant OAOO/DRY treatment
@@ -14098,24 +14090,17 @@ CPP_class_specifier:
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Error_union_def_const.hpp
-						//! \test decl.C99/Error_union_def_const2.hpp
-						//! \test decl.C99/Error_union_def_volatile.hpp
-						//! \test decl.C99/Error_union_def_volatile2.hpp
-						//! \test decl.C99/Error_union_def_const_volatile.hpp
-						//! \test decl.C99/Error_union_def_const_volatile2.hpp
-						//! \test decl.C99/Error_union_def_const_volatile3.hpp
-						//! \test decl.C99/Error_union_def_const_volatile4.hpp
-						//! \test decl.C99/Error_union_def_const_volatile5.hpp
-						//! \test decl.C99/Error_union_def_const_volatile6.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
-					zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					}
+				//! \test decl.C99/Error_union_def_const.hpp
+				//! \test decl.C99/Error_union_def_const2.hpp
+				//! \test decl.C99/Error_union_def_volatile.hpp
+				//! \test decl.C99/Error_union_def_volatile2.hpp
+				//! \test decl.C99/Error_union_def_const_volatile.hpp
+				//! \test decl.C99/Error_union_def_const_volatile2.hpp
+				//! \test decl.C99/Error_union_def_const_volatile3.hpp
+				//! \test decl.C99/Error_union_def_const_volatile4.hpp
+				//! \test decl.C99/Error_union_def_const_volatile5.hpp
+				//! \test decl.C99/Error_union_def_const_volatile6.hpp
+				CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				// accept definition
 				//! \test zcc/decl.C99/Pass_union_forward_def.hpp
 				i += 2;
@@ -14172,24 +14157,17 @@ CPP_class_specifier:
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Error_struct_def_const.hpp
-						//! \test decl.C99/Error_struct_def_const2.hpp
-						//! \test decl.C99/Error_struct_def_volatile.hpp
-						//! \test decl.C99/Error_struct_def_volatile2.hpp
-						//! \test decl.C99/Error_struct_def_const_volatile.hpp
-						//! \test decl.C99/Error_struct_def_const_volatile2.hpp
-						//! \test decl.C99/Error_struct_def_const_volatile3.hpp
-						//! \test decl.C99/Error_struct_def_const_volatile4.hpp
-						//! \test decl.C99/Error_struct_def_const_volatile5.hpp
-						//! \test decl.C99/Error_struct_def_const_volatile6.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
-					zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					}
+				//! \test decl.C99/Error_struct_def_const.hpp
+				//! \test decl.C99/Error_struct_def_const2.hpp
+				//! \test decl.C99/Error_struct_def_volatile.hpp
+				//! \test decl.C99/Error_struct_def_volatile2.hpp
+				//! \test decl.C99/Error_struct_def_const_volatile.hpp
+				//! \test decl.C99/Error_struct_def_const_volatile2.hpp
+				//! \test decl.C99/Error_struct_def_const_volatile3.hpp
+				//! \test decl.C99/Error_struct_def_const_volatile4.hpp
+				//! \test decl.C99/Error_struct_def_const_volatile5.hpp
+				//! \test decl.C99/Error_struct_def_const_volatile6.hpp
+				CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				// accept definition
 				//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
 				i += 2;
@@ -14246,24 +14224,17 @@ CPP_class_specifier:
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Error_class_def_const.hpp
-						//! \test decl.C99/Error_class_def_const2.hpp
-						//! \test decl.C99/Error_class_def_volatile.hpp
-						//! \test decl.C99/Error_class_def_volatile2.hpp
-						//! \test decl.C99/Error_class_def_const_volatile.hpp
-						//! \test decl.C99/Error_class_def_const_volatile2.hpp
-						//! \test decl.C99/Error_class_def_const_volatile3.hpp
-						//! \test decl.C99/Error_class_def_const_volatile4.hpp
-						//! \test decl.C99/Error_class_def_const_volatile5.hpp
-						//! \test decl.C99/Error_class_def_const_volatile6.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
-					zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					}
+				//! \test decl.C99/Error_class_def_const.hpp
+				//! \test decl.C99/Error_class_def_const2.hpp
+				//! \test decl.C99/Error_class_def_volatile.hpp
+				//! \test decl.C99/Error_class_def_volatile2.hpp
+				//! \test decl.C99/Error_class_def_const_volatile.hpp
+				//! \test decl.C99/Error_class_def_const_volatile2.hpp
+				//! \test decl.C99/Error_class_def_const_volatile3.hpp
+				//! \test decl.C99/Error_class_def_const_volatile4.hpp
+				//! \test decl.C99/Error_class_def_const_volatile5.hpp
+				//! \test decl.C99/Error_class_def_const_volatile6.hpp
+				CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				// accept definition
 				//! \test zcc/decl.C99/Pass_class_forward_def.hpp
 				i += 2;
@@ -14293,24 +14264,17 @@ CPP_class_specifier:
 			if (	1<src.size<0>()-i
 				&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Error_union_anon_def_const.hpp
-						//! \test decl.C99/Error_union_anon_def_const2.hpp
-						//! \test decl.C99/Error_union_anon_def_volatile.hpp
-						//! \test decl.C99/Error_union_anon_def_volatile2.hpp
-						//! \test decl.C99/Error_union_anon_def_const_volatile.hpp
-						//! \test decl.C99/Error_union_anon_def_const_volatile2.hpp
-						//! \test decl.C99/Error_union_anon_def_const_volatile3.hpp
-						//! \test decl.C99/Error_union_anon_def_const_volatile4.hpp
-						//! \test decl.C99/Error_union_anon_def_const_volatile5.hpp
-						//! \test decl.C99/Error_union_anon_def_const_volatile6.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
-					zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					}
+				//! \test decl.C99/Error_union_anon_def_const.hpp
+				//! \test decl.C99/Error_union_anon_def_const2.hpp
+				//! \test decl.C99/Error_union_anon_def_volatile.hpp
+				//! \test decl.C99/Error_union_anon_def_volatile2.hpp
+				//! \test decl.C99/Error_union_anon_def_const_volatile.hpp
+				//! \test decl.C99/Error_union_anon_def_const_volatile2.hpp
+				//! \test decl.C99/Error_union_anon_def_const_volatile3.hpp
+				//! \test decl.C99/Error_union_anon_def_const_volatile4.hpp
+				//! \test decl.C99/Error_union_anon_def_const_volatile5.hpp
+				//! \test decl.C99/Error_union_anon_def_const_volatile6.hpp
+				CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				//! \todo do not warn for -Wno-OOAO/-Wno-DRY
 				//! \test zcc/decl.C99/Warn_inaccessible_union.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
@@ -14344,24 +14308,17 @@ CPP_class_specifier:
 			if (	1<src.size<0>()-i
 				&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Error_struct_anon_def_const.hpp
-						//! \test decl.C99/Error_struct_anon_def_const2.hpp
-						//! \test decl.C99/Error_struct_anon_def_volatile.hpp
-						//! \test decl.C99/Error_struct_anon_def_volatile2.hpp
-						//! \test decl.C99/Error_struct_anon_def_const_volatile.hpp
-						//! \test decl.C99/Error_struct_anon_def_const_volatile2.hpp
-						//! \test decl.C99/Error_struct_anon_def_const_volatile3.hpp
-						//! \test decl.C99/Error_struct_anon_def_const_volatile4.hpp
-						//! \test decl.C99/Error_struct_anon_def_const_volatile5.hpp
-						//! \test decl.C99/Error_struct_anon_def_const_volatile6.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
-					zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					}
+				//! \test decl.C99/Error_struct_anon_def_const.hpp
+				//! \test decl.C99/Error_struct_anon_def_const2.hpp
+				//! \test decl.C99/Error_struct_anon_def_volatile.hpp
+				//! \test decl.C99/Error_struct_anon_def_volatile2.hpp
+				//! \test decl.C99/Error_struct_anon_def_const_volatile.hpp
+				//! \test decl.C99/Error_struct_anon_def_const_volatile2.hpp
+				//! \test decl.C99/Error_struct_anon_def_const_volatile3.hpp
+				//! \test decl.C99/Error_struct_anon_def_const_volatile4.hpp
+				//! \test decl.C99/Error_struct_anon_def_const_volatile5.hpp
+				//! \test decl.C99/Error_struct_anon_def_const_volatile6.hpp
+				CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				//! \todo do not warn for -Wno-OOAO/-Wno-DRY
 				//! \test zcc/decl.C99/Warn_inaccessible_struct.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
@@ -14395,24 +14352,17 @@ CPP_class_specifier:
 			if (	1<src.size<0>()-i
 				&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Error_class_anon_def_const.hpp
-						//! \test decl.C99/Error_class_anon_def_const2.hpp
-						//! \test decl.C99/Error_class_anon_def_volatile.hpp
-						//! \test decl.C99/Error_class_anon_def_volatile2.hpp
-						//! \test decl.C99/Error_class_anon_def_const_volatile.hpp
-						//! \test decl.C99/Error_class_anon_def_const_volatile2.hpp
-						//! \test decl.C99/Error_class_anon_def_const_volatile3.hpp
-						//! \test decl.C99/Error_class_anon_def_const_volatile4.hpp
-						//! \test decl.C99/Error_class_anon_def_const_volatile5.hpp
-						//! \test decl.C99/Error_class_anon_def_const_volatile6.hpp
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(ERR_STR);
-					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
-					zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					}
+				//! \test decl.C99/Error_class_anon_def_const.hpp
+				//! \test decl.C99/Error_class_anon_def_const2.hpp
+				//! \test decl.C99/Error_class_anon_def_volatile.hpp
+				//! \test decl.C99/Error_class_anon_def_volatile2.hpp
+				//! \test decl.C99/Error_class_anon_def_const_volatile.hpp
+				//! \test decl.C99/Error_class_anon_def_const_volatile2.hpp
+				//! \test decl.C99/Error_class_anon_def_const_volatile3.hpp
+				//! \test decl.C99/Error_class_anon_def_const_volatile4.hpp
+				//! \test decl.C99/Error_class_anon_def_const_volatile5.hpp
+				//! \test decl.C99/Error_class_anon_def_const_volatile6.hpp
+				CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				//! \todo do not warn for -Wno-OOAO/-Wno-DRY
 				//! \test zcc/decl.C99/Warn_inaccessible_class.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
