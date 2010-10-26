@@ -13489,9 +13489,30 @@ C99_struct_specifier:
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-					//! \todo handle useless const/volatile warning as well
-					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
-					//! \test zcc/decl.C99/Warn_inaccessible_struct.h
+				//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
+				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
+					{	//! \test decl.C99/Warn_struct_anon_def_const.h
+						//! \test decl.C99/Warn_struct_anon_def_const2.h
+						//! \test decl.C99/Warn_struct_anon_def_volatile.h
+						//! \test decl.C99/Warn_struct_anon_def_volatile2.h
+						//! \test decl.C99/Warn_struct_anon_def_const_volatile.h
+						//! \test decl.C99/Warn_struct_anon_def_const_volatile2.h
+						//! \test decl.C99/Warn_struct_anon_def_const_volatile3.h
+						//! \test decl.C99/Warn_struct_anon_def_const_volatile4.h
+						//! \test decl.C99/Warn_struct_anon_def_const_volatile5.h
+						//! \test decl.C99/Warn_struct_anon_def_const_volatile6.h
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(WARN_STR);
+					INFORM("useless const/volatile qualification of a definition (C99 6.7.3p3)");
+					if (bool_options[boolopt::warn_crosslang_compatibility])
+						INFORM("(error in C++: C++0X 7.1.6.1p1)");
+					if (bool_options[boolopt::warnings_are_errors])
+						zcc_errors.inc_error();
+					// XXX may not behave well on trapping-int hosts XXX
+					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
+					};
+				//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+				//! \test zcc/decl.C99/Warn_inaccessible_struct.h
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(WARN_STR);
 				INFORM("unreferenceable anonymous struct declaration");
@@ -14462,9 +14483,26 @@ CPP_class_specifier:
 			if (	1<src.size<0>()-i
 				&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-					//! \todo handle useless const/volatile warning as well
-					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
-					//! \test zcc/decl.C99/Warn_inaccessible_struct.hpp
+				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
+					{	//! \test decl.C99/Error_struct_anon_def_const.hpp
+						//! \test decl.C99/Error_struct_anon_def_const2.hpp
+						//! \test decl.C99/Error_struct_anon_def_volatile.hpp
+						//! \test decl.C99/Error_struct_anon_def_volatile2.hpp
+						//! \test decl.C99/Error_struct_anon_def_const_volatile.hpp
+						//! \test decl.C99/Error_struct_anon_def_const_volatile2.hpp
+						//! \test decl.C99/Error_struct_anon_def_const_volatile3.hpp
+						//! \test decl.C99/Error_struct_anon_def_const_volatile4.hpp
+						//! \test decl.C99/Error_struct_anon_def_const_volatile5.hpp
+						//! \test decl.C99/Error_struct_anon_def_const_volatile6.hpp
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
+					zcc_errors.inc_error();
+					// XXX may not behave well on trapping-int hosts XXX
+					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
+					}
+				//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+				//! \test zcc/decl.C99/Warn_inaccessible_struct.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(WARN_STR);
 				INFORM("unreferenceable anonymous struct declaration");
@@ -14496,9 +14534,26 @@ CPP_class_specifier:
 			if (	1<src.size<0>()-i
 				&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-					//! \todo handle useless const/volatile warning as well
-					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
-					//! \test zcc/decl.C99/Warn_inaccessible_class.hpp
+				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
+					{	//! \test decl.C99/Error_class_anon_def_const.hpp
+						//! \test decl.C99/Error_class_anon_def_const2.hpp
+						//! \test decl.C99/Error_class_anon_def_volatile.hpp
+						//! \test decl.C99/Error_class_anon_def_volatile2.hpp
+						//! \test decl.C99/Error_class_anon_def_const_volatile.hpp
+						//! \test decl.C99/Error_class_anon_def_const_volatile2.hpp
+						//! \test decl.C99/Error_class_anon_def_const_volatile3.hpp
+						//! \test decl.C99/Error_class_anon_def_const_volatile4.hpp
+						//! \test decl.C99/Error_class_anon_def_const_volatile5.hpp
+						//! \test decl.C99/Error_class_anon_def_const_volatile6.hpp
+					message_header(src.data<0>()[i].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("const/volatile qualification must apply to an object (C++0X 7.1.6.1p1)");
+					zcc_errors.inc_error();
+					// XXX may not behave well on trapping-int hosts XXX
+					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
+					}
+				//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+				//! \test zcc/decl.C99/Warn_inaccessible_class.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(WARN_STR);
 				INFORM("unreferenceable anonymous class declaration");
