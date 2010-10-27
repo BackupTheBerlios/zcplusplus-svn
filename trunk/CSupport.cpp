@@ -12918,6 +12918,22 @@ static bool record_enum_values(parse_tree& src, type_system& types, const type_s
 	return true;
 }
 
+static void C99_flush_const_volatile_without_object(parse_tree& src)
+{	//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
+	if ((type_spec::_const | type_spec::_volatile) & src.type_code.q_vector.back())
+		{
+		message_header(src.index_tokens[0]);
+		INC_INFORM(WARN_STR);
+		INFORM("useless const/volatile qualification of a forward-declaration (C99 6.7.3p3)");
+		if (bool_options[boolopt::warn_crosslang_compatibility])
+			INFORM("(error in C++: C++0X 7.1.6.1p1)");
+		if (bool_options[boolopt::warnings_are_errors])
+			zcc_errors.inc_error();
+		// XXX may not behave well on trapping-int hosts XXX
+		src.type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
+		};
+}
+
 // will need: "function-type vector"
 // return: 1 typespec record (for now, other languages may have more demanding requirements)
 // incoming: n typespec records, flag for trailing ...
@@ -12980,38 +12996,27 @@ C99_union_specifier:
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here (C99 6.7.2.3)
-				//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Warn_union_forward_def_const.h
-						//! \test decl.C99/Warn_union_forward_def_const2.h
-						//! \test decl.C99/Warn_union_forward_def_const3.h
-						//! \test decl.C99/Warn_union_forward_def_const4.h
-						//! \test decl.C99/Warn_union_forward_def_volatile.h
-						//! \test decl.C99/Warn_union_forward_def_volatile2.h
-						//! \test decl.C99/Warn_union_forward_def_volatile3.h
-						//! \test decl.C99/Warn_union_forward_def_volatile4.h
-						//! \test decl.C99/Warn_union_forward_def_const_volatile.h
-						//! \test decl.C99/Warn_union_forward_def_const_volatile2.h
-						//! \test decl.C99/Warn_union_forward_def_const_volatile3.h
-						//! \test decl.C99/Warn_union_forward_def_const_volatile4.h
-						//! \test decl.C99/Warn_union_forward_def_const_volatile5.h
-						//! \test decl.C99/Warn_union_forward_def_const_volatile6.h
-						//! \test decl.C99/Warn_union_forward_def_const_volatile7.h
-						//! \test decl.C99/Warn_union_forward_def_const_volatile8.h
-						//! \test decl.C99/Warn_union_forward_def_const_volatile9.h
-						//! \test decl.C99/Warn_union_forward_def_const_volatile10.h
-						//! \test decl.C99/Warn_union_forward_def_const_volatile11.h
-						//! \test decl.C99/Warn_union_forward_def_const_volatile12.h
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(WARN_STR);
-					INFORM("useless const/volatile qualification of a forward-declaration (C99 6.7.3p3)");
-					if (bool_options[boolopt::warn_crosslang_compatibility])
-						INFORM("(error in C++: C++0X 7.1.6.1p1)");
-					if (bool_options[boolopt::warnings_are_errors])
-						zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					};
+				//! \test decl.C99/Warn_union_forward_def_const.h
+				//! \test decl.C99/Warn_union_forward_def_const2.h
+				//! \test decl.C99/Warn_union_forward_def_const3.h
+				//! \test decl.C99/Warn_union_forward_def_const4.h
+				//! \test decl.C99/Warn_union_forward_def_volatile.h
+				//! \test decl.C99/Warn_union_forward_def_volatile2.h
+				//! \test decl.C99/Warn_union_forward_def_volatile3.h
+				//! \test decl.C99/Warn_union_forward_def_volatile4.h
+				//! \test decl.C99/Warn_union_forward_def_const_volatile.h
+				//! \test decl.C99/Warn_union_forward_def_const_volatile2.h
+				//! \test decl.C99/Warn_union_forward_def_const_volatile3.h
+				//! \test decl.C99/Warn_union_forward_def_const_volatile4.h
+				//! \test decl.C99/Warn_union_forward_def_const_volatile5.h
+				//! \test decl.C99/Warn_union_forward_def_const_volatile6.h
+				//! \test decl.C99/Warn_union_forward_def_const_volatile7.h
+				//! \test decl.C99/Warn_union_forward_def_const_volatile8.h
+				//! \test decl.C99/Warn_union_forward_def_const_volatile9.h
+				//! \test decl.C99/Warn_union_forward_def_const_volatile10.h
+				//! \test decl.C99/Warn_union_forward_def_const_volatile11.h
+				//! \test decl.C99/Warn_union_forward_def_const_volatile12.h
+				C99_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				if (tmp)
 					{	// but if already (forward-)declared then this is a no-op
 						// think this is common enough to not warrant OAOO/DRY treatment
@@ -13061,38 +13066,27 @@ C99_struct_specifier:
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// check for forward-declaration here (C99 6.7.2.3)
-				//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Warn_struct_forward_def_const.h
-						//! \test decl.C99/Warn_struct_forward_def_const2.h
-						//! \test decl.C99/Warn_struct_forward_def_const3.h
-						//! \test decl.C99/Warn_struct_forward_def_const4.h
-						//! \test decl.C99/Warn_struct_forward_def_volatile.h
-						//! \test decl.C99/Warn_struct_forward_def_volatile2.h
-						//! \test decl.C99/Warn_struct_forward_def_volatile3.h
-						//! \test decl.C99/Warn_struct_forward_def_volatile4.h
-						//! \test decl.C99/Warn_struct_forward_def_const_volatile.h
-						//! \test decl.C99/Warn_struct_forward_def_const_volatile2.h
-						//! \test decl.C99/Warn_struct_forward_def_const_volatile3.h
-						//! \test decl.C99/Warn_struct_forward_def_const_volatile4.h
-						//! \test decl.C99/Warn_struct_forward_def_const_volatile5.h
-						//! \test decl.C99/Warn_struct_forward_def_const_volatile6.h
-						//! \test decl.C99/Warn_struct_forward_def_const_volatile7.h
-						//! \test decl.C99/Warn_struct_forward_def_const_volatile8.h
-						//! \test decl.C99/Warn_struct_forward_def_const_volatile9.h
-						//! \test decl.C99/Warn_struct_forward_def_const_volatile10.h
-						//! \test decl.C99/Warn_struct_forward_def_const_volatile11.h
-						//! \test decl.C99/Warn_struct_forward_def_const_volatile12.h
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(WARN_STR);
-					INFORM("useless const/volatile qualification of a forward-declaration (C99 6.7.3p3)");
-					if (bool_options[boolopt::warn_crosslang_compatibility])
-						INFORM("(error in C++: C++0X 7.1.6.1p1)");
-					if (bool_options[boolopt::warnings_are_errors])
-						zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					};
+				//! \test decl.C99/Warn_struct_forward_def_const.h
+				//! \test decl.C99/Warn_struct_forward_def_const2.h
+				//! \test decl.C99/Warn_struct_forward_def_const3.h
+				//! \test decl.C99/Warn_struct_forward_def_const4.h
+				//! \test decl.C99/Warn_struct_forward_def_volatile.h
+				//! \test decl.C99/Warn_struct_forward_def_volatile2.h
+				//! \test decl.C99/Warn_struct_forward_def_volatile3.h
+				//! \test decl.C99/Warn_struct_forward_def_volatile4.h
+				//! \test decl.C99/Warn_struct_forward_def_const_volatile.h
+				//! \test decl.C99/Warn_struct_forward_def_const_volatile2.h
+				//! \test decl.C99/Warn_struct_forward_def_const_volatile3.h
+				//! \test decl.C99/Warn_struct_forward_def_const_volatile4.h
+				//! \test decl.C99/Warn_struct_forward_def_const_volatile5.h
+				//! \test decl.C99/Warn_struct_forward_def_const_volatile6.h
+				//! \test decl.C99/Warn_struct_forward_def_const_volatile7.h
+				//! \test decl.C99/Warn_struct_forward_def_const_volatile8.h
+				//! \test decl.C99/Warn_struct_forward_def_const_volatile9.h
+				//! \test decl.C99/Warn_struct_forward_def_const_volatile10.h
+				//! \test decl.C99/Warn_struct_forward_def_const_volatile11.h
+				//! \test decl.C99/Warn_struct_forward_def_const_volatile12.h
+				C99_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				if (tmp)
 					{	// but if already (forward-)declared then this is a no-op
 						// think this is common enough to not warrant OAOO/DRY treatment
@@ -13166,28 +13160,17 @@ C99_struct_specifier:
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// no objects declared, trigger the const/volatile warnings
-				//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Warn_union_def_const.h
-						//! \test decl.C99/Warn_union_def_const2.h
-						//! \test decl.C99/Warn_union_def_volatile.h
-						//! \test decl.C99/Warn_union_def_volatile2.h
-						//! \test decl.C99/Warn_union_def_const_volatile.h
-						//! \test decl.C99/Warn_union_def_const_volatile2.h
-						//! \test decl.C99/Warn_union_def_const_volatile3.h
-						//! \test decl.C99/Warn_union_def_const_volatile4.h
-						//! \test decl.C99/Warn_union_def_const_volatile5.h
-						//! \test decl.C99/Warn_union_def_const_volatile6.h
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(WARN_STR);
-					INFORM("useless const/volatile qualification of a definition (C99 6.7.3p3)");
-					if (bool_options[boolopt::warn_crosslang_compatibility])
-						INFORM("(error in C++: C++0X 7.1.6.1p1)");
-					if (bool_options[boolopt::warnings_are_errors])
-						zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					};
+				//! \test decl.C99/Warn_union_def_const.h
+				//! \test decl.C99/Warn_union_def_const2.h
+				//! \test decl.C99/Warn_union_def_volatile.h
+				//! \test decl.C99/Warn_union_def_volatile2.h
+				//! \test decl.C99/Warn_union_def_const_volatile.h
+				//! \test decl.C99/Warn_union_def_const_volatile2.h
+				//! \test decl.C99/Warn_union_def_const_volatile3.h
+				//! \test decl.C99/Warn_union_def_const_volatile4.h
+				//! \test decl.C99/Warn_union_def_const_volatile5.h
+				//! \test decl.C99/Warn_union_def_const_volatile6.h
+				C99_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				// accept definition
 				//! \test zcc/decl.C99/Pass_union_forward_def.h
 				i += 2;
@@ -13244,28 +13227,17 @@ C99_struct_specifier:
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// no objects declared, trigger the const/volatile warnings
-				//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Warn_struct_def_const.h
-						//! \test decl.C99/Warn_struct_def_const2.h
-						//! \test decl.C99/Warn_struct_def_volatile.h
-						//! \test decl.C99/Warn_struct_def_volatile2.h
-						//! \test decl.C99/Warn_struct_def_const_volatile.h
-						//! \test decl.C99/Warn_struct_def_const_volatile2.h
-						//! \test decl.C99/Warn_struct_def_const_volatile3.h
-						//! \test decl.C99/Warn_struct_def_const_volatile4.h
-						//! \test decl.C99/Warn_struct_def_const_volatile5.h
-						//! \test decl.C99/Warn_struct_def_const_volatile6.h
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(WARN_STR);
-					INFORM("useless const/volatile qualification of a definition (C99 6.7.3p3)");
-					if (bool_options[boolopt::warn_crosslang_compatibility])
-						INFORM("(error in C++: C++0X 7.1.6.1p1)");
-					if (bool_options[boolopt::warnings_are_errors])
-						zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					};
+				//! \test decl.C99/Warn_struct_def_const.h
+				//! \test decl.C99/Warn_struct_def_const2.h
+				//! \test decl.C99/Warn_struct_def_volatile.h
+				//! \test decl.C99/Warn_struct_def_volatile2.h
+				//! \test decl.C99/Warn_struct_def_const_volatile.h
+				//! \test decl.C99/Warn_struct_def_const_volatile2.h
+				//! \test decl.C99/Warn_struct_def_const_volatile3.h
+				//! \test decl.C99/Warn_struct_def_const_volatile4.h
+				//! \test decl.C99/Warn_struct_def_const_volatile5.h
+				//! \test decl.C99/Warn_struct_def_const_volatile6.h
+				C99_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				// accept definition
 				//! \test zcc/decl.C99/Pass_union_forward_def.h
 				i += 2;
@@ -13294,28 +13266,17 @@ C99_struct_specifier:
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-				//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Warn_union_anon_def_const.h
-						//! \test decl.C99/Warn_union_anon_def_const2.h
-						//! \test decl.C99/Warn_union_anon_def_volatile.h
-						//! \test decl.C99/Warn_union_anon_def_volatile2.h
-						//! \test decl.C99/Warn_union_anon_def_const_volatile.h
-						//! \test decl.C99/Warn_union_anon_def_const_volatile2.h
-						//! \test decl.C99/Warn_union_anon_def_const_volatile3.h
-						//! \test decl.C99/Warn_union_anon_def_const_volatile4.h
-						//! \test decl.C99/Warn_union_anon_def_const_volatile5.h
-						//! \test decl.C99/Warn_union_anon_def_const_volatile6.h
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(WARN_STR);
-					INFORM("useless const/volatile qualification of a definition (C99 6.7.3p3)");
-					if (bool_options[boolopt::warn_crosslang_compatibility])
-						INFORM("(error in C++: C++0X 7.1.6.1p1)");
-					if (bool_options[boolopt::warnings_are_errors])
-						zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					};
+				//! \test decl.C99/Warn_union_anon_def_const.h
+				//! \test decl.C99/Warn_union_anon_def_const2.h
+				//! \test decl.C99/Warn_union_anon_def_volatile.h
+				//! \test decl.C99/Warn_union_anon_def_volatile2.h
+				//! \test decl.C99/Warn_union_anon_def_const_volatile.h
+				//! \test decl.C99/Warn_union_anon_def_const_volatile2.h
+				//! \test decl.C99/Warn_union_anon_def_const_volatile3.h
+				//! \test decl.C99/Warn_union_anon_def_const_volatile4.h
+				//! \test decl.C99/Warn_union_anon_def_const_volatile5.h
+				//! \test decl.C99/Warn_union_anon_def_const_volatile6.h
+				C99_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				//! \todo do not warn for -Wno-OOAO/-Wno-DRY
 				//! \test zcc/decl.C99/Warn_inaccessible_union.h
 				message_header(src.data<0>()[i].index_tokens[0]);
@@ -13350,28 +13311,17 @@ C99_struct_specifier:
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
 				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-				//! \todo even if we use -Wno-OAOO/-Wno-DRY, -Wc-c++-compat should advise that const/volatile qualification of a forward-declaration is an error in C++
-				if ((type_spec::_const | type_spec::_volatile) & src.data<0>()[i].type_code.q_vector.back())
-					{	//! \test decl.C99/Warn_struct_anon_def_const.h
-						//! \test decl.C99/Warn_struct_anon_def_const2.h
-						//! \test decl.C99/Warn_struct_anon_def_volatile.h
-						//! \test decl.C99/Warn_struct_anon_def_volatile2.h
-						//! \test decl.C99/Warn_struct_anon_def_const_volatile.h
-						//! \test decl.C99/Warn_struct_anon_def_const_volatile2.h
-						//! \test decl.C99/Warn_struct_anon_def_const_volatile3.h
-						//! \test decl.C99/Warn_struct_anon_def_const_volatile4.h
-						//! \test decl.C99/Warn_struct_anon_def_const_volatile5.h
-						//! \test decl.C99/Warn_struct_anon_def_const_volatile6.h
-					message_header(src.data<0>()[i].index_tokens[0]);
-					INC_INFORM(WARN_STR);
-					INFORM("useless const/volatile qualification of a definition (C99 6.7.3p3)");
-					if (bool_options[boolopt::warn_crosslang_compatibility])
-						INFORM("(error in C++: C++0X 7.1.6.1p1)");
-					if (bool_options[boolopt::warnings_are_errors])
-						zcc_errors.inc_error();
-					// XXX may not behave well on trapping-int hosts XXX
-					src.c_array<0>()[i].type_code.q_vector.back() &= ~(type_spec::_const | type_spec::_volatile);
-					};
+				//! \test decl.C99/Warn_struct_anon_def_const.h
+				//! \test decl.C99/Warn_struct_anon_def_const2.h
+				//! \test decl.C99/Warn_struct_anon_def_volatile.h
+				//! \test decl.C99/Warn_struct_anon_def_volatile2.h
+				//! \test decl.C99/Warn_struct_anon_def_const_volatile.h
+				//! \test decl.C99/Warn_struct_anon_def_const_volatile2.h
+				//! \test decl.C99/Warn_struct_anon_def_const_volatile3.h
+				//! \test decl.C99/Warn_struct_anon_def_const_volatile4.h
+				//! \test decl.C99/Warn_struct_anon_def_const_volatile5.h
+				//! \test decl.C99/Warn_struct_anon_def_const_volatile6.h
+				C99_flush_const_volatile_without_object(src.c_array<0>()[i]);
 				//! \todo do not warn for -Wno-OOAO/-Wno-DRY
 				//! \test zcc/decl.C99/Warn_inaccessible_struct.h
 				message_header(src.data<0>()[i].index_tokens[0]);
