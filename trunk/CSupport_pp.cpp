@@ -537,28 +537,6 @@ static inline virtual_machine::std_int_enum machine_type_from_type_index(size_t 
 	return (virtual_machine::std_int_enum)((base_type_index-C_TYPE::INT)/2+virtual_machine::std_int_int);
 }
 
-#if 0
-static bool is_innate_type(size_t base_type_index)
-{
-	return C_TYPE::VOID<=base_type_index && C_TYPE::LDOUBLE__COMPLEX>=base_type_index;
-}
-
-static bool is_innate_nonvoid_type(size_t base_type_index)
-{
-	return C_TYPE::NOT_VOID<=base_type_index && C_TYPE::LDOUBLE__COMPLEX>=base_type_index;
-}
-
-static bool is_innate_integerlike(size_t base_type_index)
-{	// intentionally does not handle enum types
-	return C_TYPE::BOOL<=base_type_index && C_TYPE::INTEGERLIKE>=base_type_index;
-}
-
-static bool is_innate_floatcomplexlike(size_t base_type_index)
-{
-	return C_TYPE::FLOAT<=base_type_index && C_TYPE::LDOUBLE__COMPLEX>=base_type_index;
-}
-#endif
-
 static bool is_innate_definite_type(size_t base_type_index)
 {
 	return C_TYPE::BOOL<=base_type_index && C_TYPE::LDOUBLE__COMPLEX>=base_type_index;
@@ -701,21 +679,15 @@ static size_t arithmetic_reconcile(size_t base_type_index1, size_t base_type_ind
 	if (0==base_type_index1%2)
 		{	// first is unsigned
 		if ((base_type_index1-1)/2>=(base_type_index2-1)/2)
-			{
 			return base_type_index1;
-			}
-		else{
+		else
 			return base_type_index2;
-			}
 		}
 	else{	// second is unsigned
 		if ((base_type_index1-1)/2<=(base_type_index2-1)/2)
-			{
 			return base_type_index2;
-			}
-		else{
+		else
 			return base_type_index1;
-			}
 		}
 }
 
@@ -979,7 +951,7 @@ static void message_header(const weak_token& src)
 static POD_pair<size_t,size_t>
 _balanced_character_count(const weak_token* tokenlist,size_t tokenlist_len,const char l_match,const char r_match)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	POD_pair<size_t,size_t> depth = {0,0};
 	const weak_token* const iter_end = tokenlist+tokenlist_len;
@@ -996,7 +968,7 @@ _balanced_character_count(const weak_token* tokenlist,size_t tokenlist_len,const
 template<char l_match,char r_match>
 inline static POD_pair<size_t,size_t> balanced_character_count(const weak_token* tokenlist,size_t tokenlist_len)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	return _balanced_character_count(tokenlist,tokenlist_len,l_match,r_match);
 }
@@ -1004,7 +976,7 @@ inline static POD_pair<size_t,size_t> balanced_character_count(const weak_token*
 template<>
 POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const weak_token* tokenlist,size_t tokenlist_len)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	POD_pair<size_t,size_t> depth = {0, 0};
 	const weak_token* const iter_end = tokenlist+tokenlist_len;
@@ -1018,7 +990,7 @@ POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const weak_token* toke
 template<>
 POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const weak_token* tokenlist,size_t tokenlist_len)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	POD_pair<size_t,size_t> depth = {0, 0};
 	const weak_token* const iter_end = tokenlist+tokenlist_len;
@@ -1032,12 +1004,12 @@ POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const weak_token* toke
 static POD_pair<size_t,size_t>
 _balanced_character_count(const parse_tree* tokenlist,size_t tokenlist_len,const char l_match,const char r_match)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	POD_pair<size_t,size_t> depth = {0, 0};
 	const parse_tree* const iter_end = tokenlist+tokenlist_len;
 	const parse_tree* iter = tokenlist;
-	do	if (1==iter->index_tokens[0].token.second && NULL==iter->index_tokens[1].token.first)
+	do	if (1==iter->index_tokens[0].token.second && !iter->index_tokens[1].token.first)
 			{
 			if 		(l_match==iter->index_tokens[0].token.first[0]) ++depth.first;
 			else if (r_match==iter->index_tokens[0].token.first[0]) ++depth.second;
@@ -1049,7 +1021,7 @@ _balanced_character_count(const parse_tree* tokenlist,size_t tokenlist_len,const
 template<char l_match,char r_match>
 inline static POD_pair<size_t,size_t> balanced_character_count(const parse_tree* tokenlist,size_t tokenlist_len)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	return _balanced_character_count(tokenlist,tokenlist_len,l_match,r_match);
 }
@@ -1057,12 +1029,12 @@ inline static POD_pair<size_t,size_t> balanced_character_count(const parse_tree*
 template<>
 POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const parse_tree* tokenlist,size_t tokenlist_len)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	POD_pair<size_t,size_t> depth = {0, 0};
 	const parse_tree* const iter_end = tokenlist+tokenlist_len;
 	const parse_tree* iter = tokenlist;
-	do	if (NULL==iter->index_tokens[1].token.first)
+	do	if (!iter->index_tokens[1].token.first)
 			{
 			if 		(detect_C_left_bracket_op(iter->index_tokens[0].token.first,iter->index_tokens[0].token.second)) ++depth.first;
 			else if (detect_C_right_bracket_op(iter->index_tokens[0].token.first,iter->index_tokens[0].token.second)) ++depth.second;
@@ -1074,12 +1046,12 @@ POD_pair<size_t,size_t> balanced_character_count<'[',']'>(const parse_tree* toke
 template<>
 POD_pair<size_t,size_t> balanced_character_count<'{','}'>(const parse_tree* tokenlist,size_t tokenlist_len)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	POD_pair<size_t,size_t> depth = {0, 0};
 	const parse_tree* const iter_end = tokenlist+tokenlist_len;
 	const parse_tree* iter = tokenlist;
-	do	if (NULL==iter->index_tokens[1].token.first)
+	do	if (!iter->index_tokens[1].token.first)
 			{
 			if 		(detect_C_left_brace_op(iter->index_tokens[0].token.first,iter->index_tokens[0].token.second)) ++depth.first;
 			else if (detect_C_right_brace_op(iter->index_tokens[0].token.first,iter->index_tokens[0].token.second)) ++depth.second;
@@ -1102,15 +1074,14 @@ static void unbalanced_error(const weak_token& src,size_t count, char match)
 
 static void _construct_matched_pairs(const weak_token* tokenlist,size_t tokenlist_len, autovalarray_ptr<POD_pair<size_t,size_t> >& stack1,const char l_match,const char r_match)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	POD_pair<size_t,size_t> depth = _balanced_character_count(tokenlist,tokenlist_len,l_match,r_match);	// pre-scan
 	std::pair<size_t,size_t> unbalanced_loc(0,0);
 	const size_t starting_errors = zcc_errors.err_count();
 
 	if (0<depth.first && 0<depth.second)
-		{
-		// reality-check: balanced parentheses
+		{	// reality-check: balanced parentheses
 		autovalarray_ptr_throws<size_t> fixedstack(depth.first);
 		autovalarray_ptr_throws<POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 
@@ -1120,7 +1091,7 @@ static void _construct_matched_pairs(const weak_token* tokenlist,size_t tokenlis
 		size_t i = 0;
 		do	if (1==tokenlist[i].token.second)
 				{
-				assert(NULL!=tokenlist[i].token.first);
+				assert(tokenlist[i].token.first);
 				if 		(l_match==tokenlist[i].token.first[0])
 					{	// soft-left: not an error
 					if (0<depth.second)
@@ -1164,7 +1135,7 @@ static void _construct_matched_pairs(const weak_token* tokenlist,size_t tokenlis
 template<char l_match,char r_match>
 static void construct_matched_pairs(const weak_token* tokenlist,size_t tokenlist_len, autovalarray_ptr<POD_pair<size_t,size_t> >& stack1)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	_construct_matched_pairs(tokenlist,tokenlist_len,stack1,l_match,r_match);
 }
@@ -1172,15 +1143,14 @@ static void construct_matched_pairs(const weak_token* tokenlist,size_t tokenlist
 template<>
 void construct_matched_pairs<'[',']'>(const weak_token* tokenlist,size_t tokenlist_len, autovalarray_ptr<POD_pair<size_t,size_t> >& stack1)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	POD_pair<size_t,size_t> depth = balanced_character_count<'[',']'>(tokenlist,tokenlist_len);	// pre-scan
 	std::pair<size_t,size_t> unbalanced_loc(0,0);
 	const size_t starting_errors = zcc_errors.err_count();
 
 	if (0<depth.first && 0<depth.second)
-		{
-		// reality-check: balanced parentheses
+		{	// reality-check: balanced parentheses
 		autovalarray_ptr_throws<size_t> fixedstack(depth.first);
 		autovalarray_ptr_throws<POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 
@@ -1190,7 +1160,7 @@ void construct_matched_pairs<'[',']'>(const weak_token* tokenlist,size_t tokenli
 		size_t i = 0;
 		do	if (1==tokenlist[i].token.second)
 				{
-				assert(NULL!=tokenlist[i].token.first);
+				assert(tokenlist[i].token.first);
 				if 		(detect_C_left_bracket_op(tokenlist[i].token.first,tokenlist[i].token.second))
 					{
 					if (0<depth.second)
@@ -1232,15 +1202,14 @@ void construct_matched_pairs<'[',']'>(const weak_token* tokenlist,size_t tokenli
 template<>
 void construct_matched_pairs<'{','}'>(const weak_token* tokenlist,size_t tokenlist_len, autovalarray_ptr<POD_pair<size_t,size_t> >& stack1)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	POD_pair<size_t,size_t> depth = balanced_character_count<'{','}'>(tokenlist,tokenlist_len);	// pre-scan
 	std::pair<size_t,size_t> unbalanced_loc(0,0);
 	const size_t starting_errors = zcc_errors.err_count();
 
 	if (0<depth.first && 0<depth.second)
-		{
-		// reality-check: balanced parentheses
+		{	// reality-check: balanced parentheses
 		autovalarray_ptr_throws<size_t> fixedstack(depth.first);
 		autovalarray_ptr_throws<POD_pair<size_t,size_t> > pair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 
@@ -1250,7 +1219,7 @@ void construct_matched_pairs<'{','}'>(const weak_token* tokenlist,size_t tokenli
 		size_t i = 0;
 		do	if (1==tokenlist[i].token.second)
 				{
-				assert(NULL!=tokenlist[i].token.first);
+				assert(tokenlist[i].token.first);
 				if 		(detect_C_left_brace_op(tokenlist[i].token.first,tokenlist[i].token.second))
 					{
 					if (0<depth.second)
@@ -1308,7 +1277,7 @@ _slice_error(const weak_token& src,size_t slice_count,const char cut,const std::
 static void
 find_sliced_pairs(const weak_token* tokenlist, const autovalarray_ptr<POD_pair<size_t,size_t> >& stack1, const autovalarray_ptr<POD_pair<size_t,size_t> >& stack2,const std::pair<char,char>& pair1,const std::pair<char,char>& pair2)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	if (stack1.empty()) return;
 	if (stack2.empty()) return;
 	size_t i = 0;
@@ -1354,7 +1323,7 @@ find_sliced_pairs(const weak_token* tokenlist, const autovalarray_ptr<POD_pair<s
 
 static bool C_like_BalancingCheck(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	autovalarray_ptr<POD_pair<size_t,size_t> > parenpair_stack;
 	autovalarray_ptr<POD_pair<size_t,size_t> > bracketpair_stack;
@@ -1368,7 +1337,7 @@ static bool C_like_BalancingCheck(const weak_token* tokenlist,size_t tokenlist_l
 		construct_matched_pairs<'[',']'>(tokenlist,tokenlist_len,bracketpair_stack);
 		construct_matched_pairs<'{','}'>(tokenlist,tokenlist_len,bracepair_stack);
 		if (starting_errors==zcc_errors.err_count())
-			{	/* check for slicing */
+			{	// check for slicing
 			const int test_these = (!parenpair_stack.empty())+2*(!bracketpair_stack.empty())+4*(!bracepair_stack.empty());
 			switch(test_these)
 			{
