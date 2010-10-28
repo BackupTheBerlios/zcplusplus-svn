@@ -215,10 +215,7 @@ also ‘‘flush-to-zero’’ underflow.
 
 bool IsUnaccentedAlphabeticChar(unsigned char x)
 {	// FORMALLY CORRECT: Kenneth Boyd, 7/29/2001
-	if (   in_range<'A','Z'>(x)
-		|| in_range<'a','z'>(x))
-		return true;
-	return false;
+	return in_range<'A','Z'>(x) || in_range<'a','z'>(x);
 }
 
 bool IsAlphabeticChar(unsigned char x)
@@ -229,8 +226,8 @@ bool IsAlphabeticChar(unsigned char x)
 //		|| (unsigned char)('\x8c')==x				// OE ligature
 //		|| (unsigned char)('\x9c')==x				// oe ligature
 //		|| (unsigned char)('\x9f')==x				// Y umlaut
-		|| ((unsigned char)('\xc0')<=x && (unsigned char)('\xd6')>=x)	// various accented characters
-		|| ((unsigned char)('\xd8')<=x && (unsigned char)('\xf6')>=x)	// various accented characters
+		|| in_range<'\xc0','\xd6'>(x)	// various accented characters
+		|| in_range<'\xd8','\xf6'>(x)	// various accented characters
 		|| ((unsigned char)('\xf8')<=x /* && (unsigned char)('\xff')>=x */))	// various accented characters
 		return true;
 	return false;
@@ -238,10 +235,8 @@ bool IsAlphabeticChar(unsigned char x)
 
 bool C_IsLegalSourceChar(char x)
 {
-	if (   IsAlphabeticChar(x)
-		|| in_range<'0','9'>(x)
-		|| strchr(C_WHITESPACE,x)
-		|| strchr(C_ATOMIC_CHAR,x)
+	if (   IsAlphabeticChar(x) || in_range<'0','9'>(x)
+		|| strchr(C_WHITESPACE,x) || strchr(C_ATOMIC_CHAR,x)
 		|| strchr("_#<>%:.*+­/^&|!=\\",x))
 		return true;
 	return false;
@@ -251,13 +246,6 @@ static bool C_IsPrintableChar(unsigned char x)
 {
 	return in_range<' ','~'>(x);	//! \todo fix; assumes ASCII
 }
-
-#if 0
-static bool C_ExtendedSource(unsigned char x)
-{
-	return in_range<'\xA0','\xFF'>(x);	//! \todo fix: assumes CHAR_BIT 8, UNICODE
-}
-#endif
 
 #if 0
 	identifier
@@ -276,7 +264,7 @@ static bool C_ExtendedSource(unsigned char x)
 
 size_t LengthOfCIdentifier(const char* const x)
 {	//! \todo should handle universal character names
-	assert(NULL!=x);
+	assert(x);
 	const char* x2 = x;
 	if (IsAlphabeticChar(*x2) || '_'==*x2)
 		while(IsCIdentifierChar(*++x2));
@@ -295,12 +283,11 @@ size_t LengthOfCIdentifier(const char* const x)
 #endif
 size_t LengthOfCPreprocessingNumber(const char* const x)
 {
-	assert(NULL!=x);
+	assert(x);
 	size_t i = 0;	// Length
 	if (IsNumericChar(*x)) i = 1;
 	else if ('.'==*x && IsNumericChar(x[1])) i = 2;
 	if (0<i)
-		{
 		do	if ('.'==x[i] || IsNumericChar(x[i]))
 				++i;
 			else if (IsAlphabeticChar(x[i]))
@@ -311,55 +298,49 @@ size_t LengthOfCPreprocessingNumber(const char* const x)
 				else
 					i += 1;
 				}
-			else
-				return i;
+			else return i;
 		while(1);
-		};
 	return 0;
 }
 
 size_t LengthOfCCharLiteral(const char* const x)
 {	// FORMALLY CORRECT: Kenneth Boyd, 10/17/2004
-	size_t Length = 0;
-	if ('\''==*x)
-		Length = 1;
-	else if ('L'==x[0] && '\''==x[1])
-		Length = 2;
-	if (0==Length) return 0;
+	size_t Length;
+	if ('\''==*x) Length = 1;
+	else if ('L'==x[0] && '\''==x[1]) Length = 2;
+	else return 0;
 
 	const char* base = x+Length;
 	const char* find_end = strpbrk(base,"\\'\n");
-	while(NULL!=find_end)
+	while(find_end)
 		{
 		Length = find_end-x+1;
 		if ('\''==find_end[0]) return Length;
 		if ('\n'==find_end[0]) return Length-1;
 		if ('\0'==find_end[1]) return Length;
 		base = find_end+2;
-		find_end = ('\0'==base[0]) ? NULL : strpbrk(base,"\\'\n");
+		find_end = !base[0] ? NULL : strpbrk(base,"\\'\n");
 		};
 	return strlen(x);
 }
 
 size_t LengthOfCStringLiteral(const char* const x)
 {	// FORMALLY CORRECT: Kenneth Boyd, 10/17/2004
-	size_t Length = 0;
-	if ('"'==*x)
-		Length = 1;
-	else if ('L'==x[0] && '"'==x[1])
-		Length = 2;
-	if (0==Length) return 0;
+	size_t Length;
+	if ('"'==*x) Length = 1;
+	else if ('L'==x[0] && '"'==x[1]) Length = 2;
+	else return 0;
 
 	const char* base = x+Length;
 	const char* find_end = strpbrk(base,"\\\"\n");
-	while(NULL!=find_end)
+	while(find_end)
 		{
 		Length = find_end-x+1;
 		if ('"'==find_end[0]) return Length;
 		if ('\n'==find_end[0]) return Length-1;
 		if ('\0'==find_end[1]) return Length;
 		base = find_end+2;
-		find_end = ('\0'==base[0]) ? NULL : strpbrk(base,"\\\"\n");
+		find_end = !base[0] ? NULL : strpbrk(base,"\\\"\n");
 		};
 	return strlen(x);
 }
