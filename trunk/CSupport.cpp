@@ -1593,36 +1593,34 @@ template<size_t targ_len>
 static inline bool
 robust_token_is_string(const POD_pair<const char*,size_t>& x,const char* const target)
 {
-	assert(NULL!=target);
+	assert(target);
 	assert(targ_len==strlen(target));
-	return NULL!=x.first && targ_len==x.second
-		&& !strncmp(x.first,target,targ_len);
+	return x.first && targ_len==x.second && !strncmp(x.first,target,targ_len);
 }
 
 static inline bool
 robust_token_is_string(const POD_pair<const char*,size_t>& x,const char* const target)
 {
-	assert(NULL!=target);
+	assert(target);
 	const size_t targ_len = strlen(target);
-	return NULL!=x.first && targ_len==x.second
-		&& !strncmp(x.first,target,targ_len);
+	return x.first && targ_len==x.second && !strncmp(x.first,target,targ_len);
 }
 
 template<size_t targ_len>
 static inline bool
 token_is_string(const POD_pair<const char*,size_t>& x,const char* const target)
 {
-	assert(NULL!=target);
+	assert(target);
 	assert(targ_len==strlen(target));
-	assert(NULL!=x.first);
+	assert(x.first);
 	return targ_len==x.second && !strncmp(x.first,target,targ_len);
 }
 
 static inline bool
 token_is_string(const POD_pair<const char*,size_t>& x,const char* const target)
 {
-	assert(NULL!=target);
-	assert(NULL!=x.first);
+	assert(target);
+	assert(x.first);
 	const size_t targ_len = strlen(target);
 	return targ_len==x.second && !strncmp(x.first,target,targ_len);
 }
@@ -1644,79 +1642,79 @@ template<char c>
 static inline bool
 token_is_char(const POD_pair<const char*,size_t>& x)
 {
-	assert(NULL!=x.first);
+	assert(x.first);
 	return 1==x.second && c== *x.first;
 }
 
 template<>
 inline bool token_is_char<'#'>(const POD_pair<const char*,size_t>& x)
 {
-	assert(NULL!=x.first);
+	assert(x.first);
 	return detect_C_stringize_op(x.first,x.second);
 }
 
 template<>
 inline bool token_is_char<'['>(const POD_pair<const char*,size_t>& x)
 {
-	assert(NULL!=x.first);
+	assert(x.first);
 	return detect_C_left_bracket_op(x.first,x.second);
 }
 
 template<>
 inline bool token_is_char<']'>(const POD_pair<const char*,size_t>& x)
 {
-	assert(NULL!=x.first);
+	assert(x.first);
 	return detect_C_right_bracket_op(x.first,x.second);
 }
 
 template<>
 inline bool token_is_char<'{'>(const POD_pair<const char*,size_t>& x)
 {
-	assert(NULL!=x.first);
+	assert(x.first);
 	return detect_C_left_brace_op(x.first,x.second);
 }
 
 template<>
 inline bool token_is_char<'}'>(const POD_pair<const char*,size_t>& x)
 {
-	assert(NULL!=x.first);
+	assert(x.first);
 	return detect_C_right_brace_op(x.first,x.second);
 }
 
 template<char c>
 inline bool robust_token_is_char(const POD_pair<const char*,size_t>& x)
 {
-	return NULL!=x.first && 1==x.second && c== *x.first;
+	return x.first && 1==x.second && c== *x.first;
 }
 
 template<>
 inline bool robust_token_is_char<'#'>(const POD_pair<const char*,size_t>& x)
 {
-	return NULL!=x.first && detect_C_stringize_op(x.first,x.second);
+	return x.first && detect_C_stringize_op(x.first,x.second);
 }
 
 template<>
 inline bool robust_token_is_char<'['>(const POD_pair<const char*,size_t>& x)
 {
-	return NULL!=x.first && detect_C_left_bracket_op(x.first,x.second);
+	return x.first && detect_C_left_bracket_op(x.first,x.second);
 }
 
 template<>
 inline bool robust_token_is_char<']'>(const POD_pair<const char*,size_t>& x)
 {
-	return NULL!=x.first && detect_C_right_bracket_op(x.first,x.second);
+	return x.first && detect_C_right_bracket_op(x.first,x.second);
 }
 
 template<>
 inline bool robust_token_is_char<'{'>(const POD_pair<const char*,size_t>& x)
 {
-	return NULL!=x.first && detect_C_left_brace_op(x.first,x.second);
+	return x.first && detect_C_left_brace_op(x.first,x.second);
 }
 
 template<>
 inline bool robust_token_is_char<'}'>(const POD_pair<const char*,size_t>& x)
 {
-	return NULL!=x.first && detect_C_right_brace_op(x.first,x.second);
+	return x.first && detect_C_right_brace_op(x.first,x.second);
 }
 
 template<char c> inline bool robust_token_is_char(const parse_tree& x)
@@ -1826,7 +1824,7 @@ static bool paren_is_bad_news(const weak_token& lhs, const weak_token& rhs)
 
 static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	const size_t starting_errors = zcc_errors.err_count();
 	bool already_errored = false;
@@ -1879,14 +1877,14 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 
 static bool C99_ControlExpressionContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	return C99_CoreControlExpressionContextFreeErrorCount(tokenlist,tokenlist_len,hard_start,hard_end);
 }
 
 static bool CPP_ControlExpressionContextFreeErrorCount(const weak_token* tokenlist,size_t tokenlist_len,bool hard_start,bool hard_end)
 {
-	assert(NULL!=tokenlist);
+	assert(tokenlist);
 	assert(0<tokenlist_len);
 	return C99_CoreControlExpressionContextFreeErrorCount(tokenlist,tokenlist_len,hard_start,hard_end);
 }
@@ -2075,7 +2073,7 @@ static const char* const c99_symbolic_escapes = C99_SYMBOLIC_ESCAPES;
 
 static size_t LengthOfEscapedCString(const char* src, size_t src_len)
 {
-	assert(NULL!=src);
+	assert(src);
 	assert(0<src_len);
 	size_t actual_size = src_len;
 	size_t i = 0;
@@ -2152,7 +2150,7 @@ static size_t LengthOfEscapedCString(const char* src, size_t src_len)
 
 static size_t LengthOfEscapedCString(const my_UNICODE* src, size_t src_len)
 {	//! \todo synchronize with EscapeCString
-	assert(NULL!=src);
+	assert(src);
 	assert(0<src_len);
 	size_t actual_size = src_len;
 	size_t i = 0;
@@ -2166,8 +2164,7 @@ static size_t LengthOfEscapedCString(const my_UNICODE* src, size_t src_len)
 				continue;
 				};
 			if (!C_IsPrintableChar(src[i]))
-				{
-				// note that octal escaping can only go up to 511, which is a problem if our CHAR_BIT exceeds 9 
+				{	// note that octal escaping can only go up to 511, which is a problem if our CHAR_BIT exceeds 9 
 				my_UNICODE tmp = src[i];
 				bool must_escape = (1<src_len-i && strchr(list_hexadecimal_digits,src[i+1]));
 				//! \todo fix to handle target CHAR_BIT different than ours
@@ -2229,7 +2226,7 @@ static size_t LengthOfEscapedCString(const my_UNICODE* src, size_t src_len)
 
 static void EscapeCString(char* dest, const char* src, size_t src_len)
 {	// \todo fix ASCII dependency.
-	assert(NULL!=src);
+	assert(src);
 	assert(0<src_len);
 	size_t i = 0;
 	do	{
@@ -2254,8 +2251,7 @@ static void EscapeCString(char* dest, const char* src, size_t src_len)
 		// however, octal isn't that user friendly; we clearly want to octal-escape only through 7
 		// \bug need test cases
 		if (!C_IsPrintableChar(src[i]))
-			{
-			// note that octal escaping can only go up to 511, which is a problem if our CHAR_BIT exceeds 9 
+			{	// note that octal escaping can only go up to 511, which is a problem if our CHAR_BIT exceeds 9 
 			unsigned char tmp = src[i];
 			bool must_escape = (1<src_len-i && strchr(list_hexadecimal_digits,src[i+1]));
 			*(dest++) = '\\';
@@ -2367,7 +2363,7 @@ static void EscapeCString(char* dest, const char* src, size_t src_len)
 
 static void EscapeCString(char* dest, const my_UNICODE* src, size_t src_len)
 {	// \todo fix ASCII dependency.
-	assert(NULL!=src);
+	assert(src);
 	assert(0<src_len);
 	size_t i = 0;
 	do	{
@@ -2392,8 +2388,7 @@ static void EscapeCString(char* dest, const my_UNICODE* src, size_t src_len)
 		// however, octal isn't that user friendly; we clearly want to octal-escape only through 7
 		// \bug need test cases
 		if (!C_IsPrintableChar(src[i]))
-			{
-			// note that octal escaping can only go up to 511, which is a problem if our CHAR_BIT exceeds 9 
+			{	// note that octal escaping can only go up to 511, which is a problem if our CHAR_BIT exceeds 9 
 			my_UNICODE tmp = src[i];
 			bool must_escape = (1<src_len-i && UCHAR_MAX>=src[i] && strchr(list_hexadecimal_digits,src[i+1]));
 			*(dest++) = '\\';
@@ -2489,14 +2484,14 @@ static void EscapeCString(char* dest, const my_UNICODE* src, size_t src_len)
 
 static size_t octal_escape_length(const char* const src, const size_t ub)
 {
-	assert(NULL!=src);
+	assert(src);
 	const size_t oct_len = strspn(src,C_OCTAL_DIGITS);
 	return (ub<oct_len) ? ub : oct_len;
 }
 
 static unsigned int eval_octal_escape(const char* src, size_t src_len)
 {
-	assert(NULL!=src);
+	assert(src);
 	assert(0<src_len && src_len<=3);
 	unsigned int tmp = 0;
 	do	{
@@ -2511,14 +2506,14 @@ static unsigned int eval_octal_escape(const char* src, size_t src_len)
 
 static size_t hex_escape_length(const char* const src, const size_t ub)
 {
-	assert(NULL!=src);
+	assert(src);
 	const size_t hex_len = strspn(src,C_HEXADECIMAL_DIGITS);
 	return (ub<hex_len) ? ub : hex_len;
 }
 
 static umaxint eval_hex_escape(const char* src, size_t src_len)
 {
-	assert(NULL!=src);
+	assert(src);
 	assert(0<src_len);
 	unsigned_var_int tmp(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
 #ifndef NDEBUG
@@ -2539,7 +2534,7 @@ static umaxint eval_hex_escape(const char* src, size_t src_len)
 // must remain synchronized with RobustEscapedCharLength_C
 static size_t EscapedCharLength_C(const char* src, size_t src_len)
 {
-	assert(NULL!=src);
+	assert(src);
 	assert(0<src_len);
 	if ('\\' != *src) return 1;
 	assert(1<src_len && '\0'!=src[1]);
@@ -2574,7 +2569,7 @@ static size_t EscapedCharLength_C(const char* src, size_t src_len)
 // must remain synchronized with EscapedCharLength_C
 static size_t RobustEscapedCharLength_C(const char* src, size_t src_len)
 {
-	assert(NULL!=src);
+	assert(src);
 	assert(0<src_len);
 	if ('\\' != *src) return 1;
 	if (1>=src_len || '\0'==src[1]) return 0;
@@ -2608,7 +2603,7 @@ static size_t RobustEscapedCharLength_C(const char* src, size_t src_len)
 
 static size_t LengthOfUnescapedCString(const char* src, size_t src_len)
 {
-	assert(NULL!=src);
+	assert(src);
 	assert(0<src_len);
 
 	size_t analyze_length = 0;
