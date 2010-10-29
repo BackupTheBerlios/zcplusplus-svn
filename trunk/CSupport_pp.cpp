@@ -1,4 +1,4 @@
-// CSupport.cpp
+// CSupport_pp.cpp
 // support for C/C++ parsing
 // (C)2009, 2010 Kenneth Boyd, license: MIT.txt
 
@@ -3243,9 +3243,9 @@ static bool is_C99_logical_OR_expression(const parse_tree& src)
 {
 	return (	robust_token_is_string<2>(src.index_tokens[0].token,"||")
 #ifndef NDEBUG
-			&&	NULL!=src.index_tokens[0].src_filename
+			&&	src.index_tokens[0].src_filename
 #endif
-			&&	NULL==src.index_tokens[1].token.first
+			&&	!src.index_tokens[1].token.first
 			&&	src.empty<0>()
 			&&	1==src.size<1>() && (PARSE_EXPRESSION & src.data<1>()->flags)
 			&&	1==src.size<2>() && (PARSE_EXPRESSION & src.data<2>()->flags));
@@ -3257,9 +3257,9 @@ static bool is_CPP_logical_OR_expression(const parse_tree& src)
 {
 	return (	(robust_token_is_string<2>(src.index_tokens[0].token,"||") || robust_token_is_string<2>(src.index_tokens[0].token,"or"))
 #ifndef NDEBUG
-			&&	NULL!=src.index_tokens[0].src_filename
+			&&	src.index_tokens[0].src_filename
 #endif
-			&&	NULL==src.index_tokens[1].token.first
+			&&	!src.index_tokens[1].token.first
 			&&	src.empty<0>()
 			&&	1==src.size<1>() && (PARSE_EXPRESSION & src.data<1>()->flags)
 			&&	1==src.size<2>() && (PARSE_EXPRESSION & src.data<2>()->flags));
@@ -3272,7 +3272,7 @@ static bool is_C99_conditional_operator_expression_strict(const parse_tree& src)
 {
 	return		robust_token_is_char<'?'>(src.index_tokens[0].token)
 			&&	robust_token_is_char<':'>(src.index_tokens[1].token)
-			&&	NULL!=src.index_tokens[0].src_filename && NULL!=src.index_tokens[1].src_filename
+			&&	src.index_tokens[0].src_filename && src.index_tokens[1].src_filename
 			&&	1==src.size<0>() && (PARSE_EXPRESSION & src.data<2>()->flags)
 			&&	1==src.size<1>() && (PARSE_LOGICOR_EXPRESSION & src.data<2>()->flags)
 			&&	1==src.size<2>() && (PARSE_CONDITIONAL_EXPRESSION & src.data<2>()->flags);		
@@ -3284,7 +3284,7 @@ static bool is_C99_conditional_operator_expression(const parse_tree& src)
 	return		robust_token_is_char<'?'>(src.index_tokens[0].token)
 			&&	robust_token_is_char<':'>(src.index_tokens[1].token)
 #ifndef NDEBUG
-			&&	NULL!=src.index_tokens[0].src_filename && NULL!=src.index_tokens[1].src_filename
+			&&	src.index_tokens[0].src_filename && src.index_tokens[1].src_filename
 #endif
 			&&	1==src.size<0>() && (PARSE_EXPRESSION & src.data<2>()->flags)
 			&&	1==src.size<1>() && (PARSE_EXPRESSION & src.data<2>()->flags)
@@ -3294,7 +3294,7 @@ static bool is_C99_conditional_operator_expression(const parse_tree& src)
 bool convert_to(umaxint& dest,const C_PPIntCore& src)
 {
 	assert(8==src.radix || 10==src.radix || 16==src.radix);
-	assert(NULL!=src.ptr && 0<src.digit_span);
+	assert(src.ptr && 0<src.digit_span);
 
 	const unsigned_var_int alt_radix(src.radix,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
 	unsigned_var_int strict_ub(0,unsigned_var_int::bytes_from_bits(VM_MAX_BIT_PLATFORM));
@@ -3388,8 +3388,7 @@ static bool _C99_intlike_literal_to_VM(umaxint& dest, const parse_tree& src SIG_
 }
 
 static bool _CPP_intlike_literal_to_VM(umaxint& dest, const parse_tree& src)
-{
-	//! \todo: similar code for handling LLONG_MIN as above.  Need that only for zcc; can't test in preprocessor as the true reserved word won't make it this far.
+{	//! \todo: similar code for handling LLONG_MIN as above.  Need that only for zcc; can't test in preprocessor as the true reserved word won't make it this far.
 	if (!src.is_atomic()) return false;
 	// intercept true, false
 	if 		(token_is_string<4>(src.index_tokens[0].token,"true"))
@@ -3411,7 +3410,7 @@ static bool _CPP_intlike_literal_to_VM(umaxint& dest, const parse_tree& src)
 static POD_pair<const parse_tree*,bool>
 _find_intlike_literal(const parse_tree* src SIG_CONST_TYPES)
 {
-	assert(NULL!=src);
+	assert(src);
 	POD_pair<const parse_tree*,bool> ret = {src,false};
 	while(converts_to_integer(ret.first->type_code ARG_TYPES))
 		{
@@ -3419,12 +3418,12 @@ _find_intlike_literal(const parse_tree* src SIG_CONST_TYPES)
 			{
 			ret.second = !ret.second;
 			ret.first = ret.first->data<2>();
-			assert(NULL!=ret.first);
+			assert(ret.first);
 			}
 		else if (is_C99_unary_operator_expression<'+'>(*ret.first))
 			{
 			ret.first = ret.first->data<2>();
-			assert(NULL!=ret.first);
+			assert(ret.first);
 			}
 		else
 			break;
@@ -3527,42 +3526,36 @@ static void _label_one_literal(parse_tree& src,const type_system& types)
 				size_t i = 0;
 				do	switch(types.int_priority[i])
 					{
-					case C_TYPE::INT:	{
-										if (no_signed || C_PPIntCore::L<=type_hint) continue;
-										if (tmp>target_machine->signed_max<virtual_machine::std_int_int>()) continue;
-										src.type_code.base_type_index = C_TYPE::INT;
-										return;
-										}
-					case C_TYPE::UINT:	{
-										if (no_unsigned || C_PPIntCore::L<=type_hint) continue;
-										if (tmp>target_machine->unsigned_max<virtual_machine::std_int_int>()) continue;
-										src.type_code.base_type_index = C_TYPE::UINT;
-										return;
-										}
-					case C_TYPE::LONG:	{
-										if (no_signed || C_PPIntCore::LL<=type_hint) continue;
-										if (tmp>target_machine->signed_max<virtual_machine::std_int_long>()) continue;
-										src.type_code.base_type_index = C_TYPE::LONG;
-										return;
-										}
-					case C_TYPE::ULONG:	{
-										if (no_unsigned || C_PPIntCore::LL<=type_hint) continue;
-										if (tmp>target_machine->unsigned_max<virtual_machine::std_int_long>()) continue;
-										src.type_code.base_type_index = C_TYPE::ULONG;
-										return;
-										}
-					case C_TYPE::LLONG:	{
-										if (no_signed) continue;
-										if (tmp>target_machine->signed_max<virtual_machine::std_int_long_long>()) continue;
-										src.type_code.base_type_index = C_TYPE::LLONG;
-										return;
-										}
-					case C_TYPE::ULLONG:{
-										if (no_unsigned) continue;
-										if (tmp>target_machine->unsigned_max<virtual_machine::std_int_long_long>()) continue;
-										src.type_code.base_type_index = C_TYPE::ULLONG;
-										return;
-										}
+					case C_TYPE::INT:
+						if (no_signed || C_PPIntCore::L<=type_hint) continue;
+						if (tmp>target_machine->signed_max<virtual_machine::std_int_int>()) continue;
+						src.type_code.base_type_index = C_TYPE::INT;
+						return;
+					case C_TYPE::UINT:
+						if (no_unsigned || C_PPIntCore::L<=type_hint) continue;
+						if (tmp>target_machine->unsigned_max<virtual_machine::std_int_int>()) continue;
+						src.type_code.base_type_index = C_TYPE::UINT;
+						return;
+					case C_TYPE::LONG:
+						if (no_signed || C_PPIntCore::LL<=type_hint) continue;
+						if (tmp>target_machine->signed_max<virtual_machine::std_int_long>()) continue;
+						src.type_code.base_type_index = C_TYPE::LONG;
+						return;
+					case C_TYPE::ULONG:
+						if (no_unsigned || C_PPIntCore::LL<=type_hint) continue;
+						if (tmp>target_machine->unsigned_max<virtual_machine::std_int_long>()) continue;
+						src.type_code.base_type_index = C_TYPE::ULONG;
+						return;
+					case C_TYPE::LLONG:
+						if (no_signed) continue;
+						if (tmp>target_machine->signed_max<virtual_machine::std_int_long_long>()) continue;
+						src.type_code.base_type_index = C_TYPE::LLONG;
+						return;
+					case C_TYPE::ULLONG:
+						if (no_unsigned) continue;
+						if (tmp>target_machine->unsigned_max<virtual_machine::std_int_long_long>()) continue;
+						src.type_code.base_type_index = C_TYPE::ULLONG;
+						return;
 					}
 				while(types.int_priority_size > ++i);
 				};
@@ -3579,8 +3572,7 @@ static void _label_one_literal(parse_tree& src,const type_system& types)
 			INFORM(" (C99 6.4.4.1p5/C++0x 2.13.1p3)");
 			zcc_errors.inc_error();
 			}
-		else{
-			//! \todo --do-what-i-mean should check for floating-point numerals that convert exactly to integers
+		else{	//! \todo --do-what-i-mean should check for floating-point numerals that convert exactly to integers
 			src.type_code.set_type(	(C_TESTFLAG_L & src.index_tokens[0].flags) ? C_TYPE::LDOUBLE : 
 									(C_TESTFLAG_F & src.index_tokens[0].flags) ? C_TYPE::FLOAT : C_TYPE::DOUBLE);
 			}
@@ -3635,8 +3627,7 @@ static void _label_literals(parse_tree& src,const type_system& types)
 				str_span.first += 2;
 				want_first_slideup = true;
 				}
-			else{
-				// more than two strings to psuedo-concatenate
+			else{	// more than two strings to psuedo-concatenate
 				POD_pair<size_t,size_t> scan = {str_span.first,str_span.first+2};
 				while(src.size<0>()>scan.second+1 && C_TESTFLAG_STRING_LITERAL==src.data<0>()[scan.second+1].index_tokens[0].flags) ++scan.second;
 				if (parse_tree::collapse_matched_pair(src,scan))
@@ -3725,7 +3716,7 @@ static bool _match_pairs(parse_tree& src)
 	size_t i = 0;
 	//! \todo optimize this loop
 	do	{
-		if (NULL!=src.data<0>()[i].index_tokens[1].token.first) continue;
+		if (src.data<0>()[i].index_tokens[1].token.first) continue;
 		if 		(token_is_char<')'>(src.data<0>()[i].index_tokens[0].token))
 			{
 			assert(0<paren_idx);
@@ -3912,8 +3903,7 @@ static bool inspect_potential_paren_primary_expression(parse_tree& src)
 static bool suppress_naked_brackets_and_braces(parse_tree& src,const char* const err_prefix,size_t err_len)
 {
 	if (!(PARSE_OBVIOUS & src.flags) && src.empty<1>() && src.empty<2>())
-		{
-		// top-level [ ] dies regardless of contents
+		{	// top-level [ ] dies regardless of contents
 		// not testable with preprocessor expression (not sure whether reachable with full source code)
 		if 		(robust_token_is_char<'['>(src.index_tokens[0].token))
 			{
@@ -6021,21 +6011,18 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, liter
 						{	// cancellation...safe
 						switch(cmp(lhs_test,rhs_test))
 						{
-						case -1:{
-								result_is_negative = rhs_negative;
-								rhs_test -= lhs_test;
-								lhs_test = rhs_test;
-								break;
-								}
-						case 0:	{
-								lhs_test.clear();
-								break;
-								}
-						case 1:	{
-								result_is_negative = lhs_negative;
-								lhs_test -= rhs_test;
-								break;
-								}
+						case -1:
+							result_is_negative = rhs_negative;
+							rhs_test -= lhs_test;
+							lhs_test = rhs_test;
+							break;
+						case 0:
+							lhs_test.clear();
+							break;
+						case 1:
+							result_is_negative = lhs_negative;
+							lhs_test -= rhs_test;
+							break;
 						};
 						}
 					else{	// augmentation: bounds-check
@@ -6055,8 +6042,7 @@ static bool eval_add_expression(parse_tree& src, const type_system& types, liter
 						}
 
 					if (result_is_negative)
-						{
-						// convert to parsed - literal
+						{	// convert to parsed - literal
 						parse_tree tmp;
 						VM_to_literal(tmp,lhs_test,src,types);
 
