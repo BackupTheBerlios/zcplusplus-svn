@@ -6155,21 +6155,18 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, liter
 						{	// cancellation: safe
 						switch(cmp(lhs_test,rhs_test))
 						{
-						case -1:{
-								result_is_negative = !lhs_negative;
-								rhs_test -= lhs_test;
-								lhs_test = rhs_test;
-								break;
-								}
-						case 0:	{
-								lhs_test.clear();
-								break;
-								}
-						case 1:	{
-								result_is_negative = lhs_negative;
-								lhs_test -= rhs_test;
-								break;
-								}
+						case -1:
+							result_is_negative = !lhs_negative;
+							rhs_test -= lhs_test;
+							lhs_test = rhs_test;
+							break;
+						case 0:
+							lhs_test.clear();
+							break;
+						case 1:
+							result_is_negative = lhs_negative;
+							lhs_test -= rhs_test;
+							break;
 						};
 						}
 					else{	// augmentation: need bounds check
@@ -6189,8 +6186,7 @@ static bool eval_sub_expression(parse_tree& src, const type_system& types, liter
 						}
 
 					if (result_is_negative)
-						{
-						// convert to parsed - literal
+						{	// convert to parsed - literal
 						parse_tree tmp;
 						VM_to_literal(tmp,lhs_test,src,types);
 						src.DeleteIdx<1>(0);
@@ -6554,8 +6550,7 @@ static bool eval_shift(parse_tree& src, const type_system& types, literal_conver
 			{
 			// note that incoming negative signed integers are not handled by this code path
 			if (C99_SHIFT_SUBTYPE_LEFT==src.subtype)
-				{
-				//! \todo but signed integers do go undefined in C if left-shifted too much; C++ accepts
+				{	//! \todo but signed integers do go undefined in C if left-shifted too much; C++ accepts
 #if 0
 				if (0==(src.type_code.base_type_index-C_TYPE::INT)%2 && target_machine->C_bit(machine_type)<=rhs_int.to_uint()+lhs_int.int_log2()+1)
 					simple_error(src," : result does not fit in LHS type; undefined behavior (C99 6.5.7p3)");
@@ -6738,27 +6733,21 @@ static bool eval_relation_expression(parse_tree& src, const type_system& types,i
 				}
 			};
 		if (use_unsigned_compare)
-			{
 			switch(src.subtype)
 			{
-			case C99_RELATION_SUBTYPE_LT:	{
-											result = (lhs_int<rhs_int) ? "1" : "0";
-											break;
-											}
-			case C99_RELATION_SUBTYPE_GT:	{
-											result = (lhs_int>rhs_int) ? "1" : "0";
-											break;
-											}
-			case C99_RELATION_SUBTYPE_LTE:	{
-											result = (lhs_int<=rhs_int) ? "1" : "0";
-											break;
-											}
-			case C99_RELATION_SUBTYPE_GTE:	{
-											result = (lhs_int>=rhs_int) ? "1" : "0";
-											break;
-											}
-			}
-			}
+			case C99_RELATION_SUBTYPE_LT:
+				result = (lhs_int<rhs_int) ? "1" : "0";
+				break;
+			case C99_RELATION_SUBTYPE_GT:
+				result = (lhs_int>rhs_int) ? "1" : "0";
+				break;
+			case C99_RELATION_SUBTYPE_LTE:
+				result = (lhs_int<=rhs_int) ? "1" : "0";
+				break;
+			case C99_RELATION_SUBTYPE_GTE:
+				result = (lhs_int>=rhs_int) ? "1" : "0";
+				break;
+			};
 		force_decimal_literal(src,result,types);
 		return true;
 		};
@@ -6772,32 +6761,29 @@ static bool C_CPP_relation_expression_core_syntax_ok(parse_tree& src,const type_
 	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power)+2*(0<src.data<2>()->type_code.pointer_power);
 	switch(ptr_case)
 	{
-	case 0:	{	// can't test from preprocessor
-			if (!converts_to_reallike(src.data<1>()->type_code.base_type_index ARG_TYPES) || !converts_to_reallike(src.data<2>()->type_code.base_type_index ARG_TYPES))
-				{
-				simple_error(src," compares non-real type(s) (C99 6.5.8p2/C++98 5.9p2)");
-				return false;
-				}
-			break;
+	case 0:	// can't test from preprocessor
+		if (!converts_to_reallike(src.data<1>()->type_code.base_type_index ARG_TYPES) || !converts_to_reallike(src.data<2>()->type_code.base_type_index ARG_TYPES))
+			{
+			simple_error(src," compares non-real type(s) (C99 6.5.8p2/C++98 5.9p2)");
+			return false;
 			}
-	case 1:	{	//! \todo need floating-point literal to test first half
-				//! \todo figure out how to test second half
-			if (!converts_to_integer(src.data<2>()->type_code ARG_TYPES) || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
-				{	// oops
-				simple_error(src," compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
-				return false;
-				}
-			break;
+		break;
+	case 1:	//! \todo need floating-point literal to test first half
+			//! \todo figure out how to test second half
+		if (!converts_to_integer(src.data<2>()->type_code ARG_TYPES) || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+			{	// oops
+			simple_error(src," compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
+			return false;
 			}
-	case 2:	{	//! \todo need floating-point literal to test first half
-				//! \todo figure out how to test second half
-			if (!converts_to_integer(src.data<1>()->type_code ARG_TYPES) || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
-				{	// oops
-				simple_error(src," compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
-				return false;
-				}
-			break;
+		break;
+	case 2:	//! \todo need floating-point literal to test first half
+			//! \todo figure out how to test second half
+		if (!converts_to_integer(src.data<1>()->type_code ARG_TYPES) || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
+			{	// oops
+			simple_error(src," compares pointer to something not an integer literal or pointer (C99 6.5.8p2/C++98 4.10p1,5.9p2)");
+			return false;
 			}
+		break;
 	}
 	return true;
 }
@@ -7021,30 +7007,27 @@ static bool C_CPP_equality_expression_syntax_ok_core(parse_tree& src,const type_
 	const unsigned int ptr_case = (0<src.data<1>()->type_code.pointer_power)+2*(0<src.data<2>()->type_code.pointer_power);
 	switch(ptr_case)
 	{
-	case 0:	{	// can't test from preprocessor
-			if (C_TYPE::VOID>=src.data<1>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index)
-				{
-				simple_error(src," can't use a void or indeterminately typed argument");
-				return false;
-				}
-			break;
+	case 0:	// can't test from preprocessor
+		if (C_TYPE::VOID>=src.data<1>()->type_code.base_type_index || C_TYPE::VOID>=src.data<2>()->type_code.base_type_index)
+			{
+			simple_error(src," can't use a void or indeterminately typed argument");
+			return false;
 			}
-	case 1:	{	// need floating-point literal to test from preprocessor
-			if (!converts_to_integer(src.data<2>()->type_code ARG_TYPES) || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
-				{	// oops
-				simple_error(src," compares pointer to something not an integer literal or pointer (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
-				return false;
-				}
-			break;
+		break;
+	case 1:	// need floating-point literal to test from preprocessor
+		if (!converts_to_integer(src.data<2>()->type_code ARG_TYPES) || !(PARSE_PRIMARY_EXPRESSION & src.data<2>()->flags))
+			{	// oops
+			simple_error(src," compares pointer to something not an integer literal or pointer (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
+			return false;
 			}
-	case 2:	{	// need floating-point literal to test from preprocessor
-			if (!converts_to_integer(src.data<1>()->type_code ARG_TYPES) || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
-				{	// oops
-				simple_error(src," compares pointer to something not an integer literal or pointer (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
-				return false;
-				}
-			break;
+		break;
+	case 2:	// need floating-point literal to test from preprocessor
+		if (!converts_to_integer(src.data<1>()->type_code ARG_TYPES) || !(PARSE_PRIMARY_EXPRESSION & src.data<1>()->flags))
+			{	// oops
+			simple_error(src," compares pointer to something not an integer literal or pointer (C99 6.5.9p5/C++98 4.10p1,5.10p1)");
+			return false;
 			}
+		break;
 	}
 	return true;
 }
@@ -7197,14 +7180,12 @@ static bool eval_bitwise_AND(parse_tree& src, const type_system& types, literal_
 		if (int_has_trapped(src,res_int)) return false;
 
 		if 		(res_int==lhs_int)
-			// lhs & rhs = lhs; conserve type
-			{
+			{	// lhs & rhs = lhs; conserve type
 			src.type_code.MoveInto(src.c_array<1>()->type_code);
 			src.eval_to_arg<1>(0);
 			}
 		else if (res_int==rhs_int)
-			// lhs & rhs = rhs; conserve type
-			{
+			{	// lhs & rhs = rhs; conserve type
 			src.type_code.MoveInto(src.c_array<2>()->type_code);
 			src.eval_to_arg<2>(0);
 			}
@@ -7553,14 +7534,12 @@ static bool eval_bitwise_OR(parse_tree& src, const type_system& types, literal_c
 		res_int |= rhs_int;
 //		res_int.mask_to(target_machine->C_bit(machine_type));	// shouldn't need this
 		if 		(res_int==lhs_int)
-			// lhs | rhs = lhs; conserve type
-			{
+			{	// lhs | rhs = lhs; conserve type
 			src.type_code.MoveInto(src.c_array<1>()->type_code);
 			src.eval_to_arg<1>(0);
 			}
 		else if (res_int==rhs_int)
-			// lhs | rhs = rhs; conserve type
-			{
+			{	// lhs | rhs = rhs; conserve type
 			src.type_code.MoveInto(src.c_array<2>()->type_code);
 			src.eval_to_arg<2>(0);
 			}
