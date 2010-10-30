@@ -1,4 +1,9 @@
+#/*cut-cpp*/
 // type_system.cpp
+#/*cut-cpp*/
+#/*cut-nocpp*/
+// type_system_pp.cpp
+#/*cut-nocpp*/
 // (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
 #/*cut-cpp*/
