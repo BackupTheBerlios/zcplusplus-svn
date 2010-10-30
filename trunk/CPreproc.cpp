@@ -2419,8 +2419,8 @@ CPreprocessor::find_system_include(const char* const src, char* const filepath_b
 	char image_filepath[FILENAME_MAX];
 	char test_filepath[FILENAME_MAX];
 
-	assert(!is_empty_string(src));
-	assert(NULL!=filepath_buf);
+	assert(src && *src);
+	assert(filepath_buf);
 	const size_t src_len = strlen(src);
 	// automatically fail anything that won't fit in FILENAME_MAX
 	//! \test Error_huge_path.hpp
@@ -2433,16 +2433,14 @@ CPreprocessor::find_system_include(const char* const src, char* const filepath_b
 		{
 		const char* parent_dir_candidate = strstr(src,"..");
 		if (src==parent_dir_candidate)
-			{
-			//! \test Error_chroot_jail1.hpp
+			{	//! \test Error_chroot_jail1.hpp
 			if (sizeof("..")-1==src_len) return false;
 			//! \test Error_chroot_jail2.hpp
 			if ('/'==src[sizeof("..")-1]) return false;
 			parent_dir_candidate = strstr(parent_dir_candidate+(sizeof("..")-1),"..");
 			}
-		while(NULL!=parent_dir_candidate && src_len>=(parent_dir_candidate-src)+(sizeof("..")-1))
-			{
-			//! \test Error_chroot_jail3.hpp
+		while(parent_dir_candidate && src_len>=(parent_dir_candidate-src)+(sizeof("..")-1))
+			{	//! \test Error_chroot_jail3.hpp
 			if ('/'==parent_dir_candidate[-1]) return false;
 			parent_dir_candidate = (src_len==parent_dir_candidate-src+(sizeof("..")-1)) ? NULL : strstr(parent_dir_candidate+(sizeof("..")-1),"..");
 			}
@@ -2469,14 +2467,13 @@ CPreprocessor::find_system_include(const char* const src, char* const filepath_b
 			std::replace(test_filepath+target_length,test_filepath+target_length+src_len,'/',ZAIMONI_PATH_SEP_CHAR);
 #endif
 			const char* const canonical_path = z_realpath(image_filepath,test_filepath);
-			if (NULL!=canonical_path && !access(canonical_path,F_OK))
+			if (canonical_path && !access(canonical_path,F_OK))
 				{
 				strcpy(filepath_buf,canonical_path);
 				return true;
 				}
 			}
 	while(STATIC_SIZE(actual_system_include_search) > ++i);
-
 	return false;	//! \test Error_include_nonexistent1.hpp
 }
 
@@ -2491,7 +2488,7 @@ CPreprocessor::find_system_include(const char* const src, char* const filepath_b
 int
 CPreprocessor::context_free_defined(const char* const x, size_t x_len) const
 {
-	assert(NULL!=x);
+	assert(x && *x);
 	assert(0<x_len);
 	if (0<=linear_find(x, x_len, macro_identifier_default, macro_identifier_default_count)) return 1;
 	// report "magic macros" as defined if the master preprocessor does
@@ -2503,7 +2500,7 @@ CPreprocessor::context_free_defined(const char* const x, size_t x_len) const
 static bool
 macro_is_defined(const char* const x, const size_t x_len, const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<char*>& macros_function)
 {
-	assert(NULL!=x);
+	assert(x && *x);
 	assert(0<x_len);
 #ifdef NDEBUG
 	return 0<=binary_find(x,x_len,macros_object) || 0<=binary_find(x,x_len,macros_function);
@@ -2580,19 +2577,18 @@ CPreprocessor::ifdef_ifndef_syntax_ok(Token<char>& x, const autovalarray_ptr<cha
 	//! \test Pass_macro_STDC.hpp
 	switch(context_free_defined(x.data()+critical_offset,token_len))
 	{
-	case 1:		{	// found it
-				x.replace_once(std::nothrow,0,x.size(),(PP::IFDEF==if_directive) ? "#if 1" : "#if 0");
-				PACK_DIRECTIVE(x.flags,PP::IF);
-				return true;
-				}
-	case -1:	{	// hard-locked, not defined : ergo, undefined
-				x.replace_once(std::nothrow,0,x.size(),(PP::IFDEF==if_directive) ? "#if 0" : "#if 1");
-				PACK_DIRECTIVE(x.flags,PP::IF);
-				return true;
-				}
+	case 1:	// found it
+		x.replace_once(std::nothrow,0,x.size(),(PP::IFDEF==if_directive) ? "#if 1" : "#if 0");
+		PACK_DIRECTIVE(x.flags,PP::IF);
+		return true;
+	case -1:	// hard-locked, not defined : ergo, undefined
+		x.replace_once(std::nothrow,0,x.size(),(PP::IFDEF==if_directive) ? "#if 0" : "#if 1");
+		PACK_DIRECTIVE(x.flags,PP::IF);
+		return true;
 	};
 
 	// exercised heavily by the standard library include tests
+	// MingW32 4.3.3 doesn't like factoring out the last two lines
 	if (macro_is_defined(x.data()+critical_offset, token_len,macros_object,macros_function))
 		{	// found it
 		x.replace_once(std::nothrow,0,x.size(),(PP::IFDEF==if_directive) ? "#if 1" : "#if 0");
@@ -2611,7 +2607,7 @@ static POD_pair<size_t,size_t> balanced_character_count(const char* const x, con
 	POD_pair<size_t,size_t> paren_depth = {0,0};
 	const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >::const_iterator iter_end = pretokenized.end();
 	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >::const_iterator iter = pretokenized.begin();
-	assert(NULL!=x);
+	assert(x);
 	if (iter!=iter_end)
 		do	if (1==iter->second)
 				{
@@ -2628,8 +2624,7 @@ static void _construct_matched_pairs(const Token<char>& x, const autovalarray_pt
 	POD_pair<size_t,size_t> depth = balanced_character_count(x.data(),pretokenized,l_match,r_match);	// pre-scan
 	DEBUG_STATEMENT(size_t err_count = 0;)
 	if (0<depth.first && 0<depth.second)
-		{
-		// reality-check: balanced parentheses
+		{	// reality-check: balanced parentheses
 		autovalarray_ptr_throws<size_t> lparen_fixedstack(depth.first);
 		autovalarray_ptr_throws<POD_pair<size_t,size_t> > parenpair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 		size_t balanced_paren = 0;
@@ -2685,8 +2680,7 @@ void construct_matched_pairs<'[',']'>(const Token<char>& x, const autovalarray_p
 	POD_pair<size_t,size_t> depth = balanced_character_count(x.data(),pretokenized,'[',']');	// pre-scan
 	DEBUG_STATEMENT(size_t err_count = 0;)
 	if (0<depth.first && 0<depth.second)
-		{
-		// reality-check: balanced parentheses
+		{	// reality-check: balanced parentheses
 		autovalarray_ptr_throws<size_t> lparen_fixedstack(depth.first);
 		autovalarray_ptr_throws<POD_pair<size_t,size_t> > parenpair_fixedstack(depth.first<depth.second ? depth.first : depth.second);
 		size_t balanced_paren = 0;
@@ -2772,7 +2766,7 @@ template<char c>
 static inline bool
 token_is_char(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
-	assert(NULL!=x);
+	assert(x);
 	return 1==lexed_token.second && c==x[lexed_token.first];
 }
 
@@ -2780,7 +2774,7 @@ template<>
 inline bool
 token_is_char<'#'>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
-	assert(NULL!=x);
+	assert(x);
 	return detect_C_stringize_op(x+lexed_token.first,lexed_token.second);
 }
 
@@ -2788,7 +2782,7 @@ template<>
 inline bool
 token_is_char<'['>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
-	assert(NULL!=x);
+	assert(x);
 	return detect_C_left_bracket_op(x+lexed_token.first,lexed_token.second);
 }
 
@@ -2796,7 +2790,7 @@ template<>
 inline bool
 token_is_char<']'>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
-	assert(NULL!=x);
+	assert(x);
 	return detect_C_right_bracket_op(x+lexed_token.first,lexed_token.second);
 }
 
@@ -2804,7 +2798,7 @@ template<>
 inline bool
 token_is_char<'{'>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
-	assert(NULL!=x);
+	assert(x);
 	return detect_C_left_brace_op(x+lexed_token.first,lexed_token.second);
 }
 
@@ -2812,7 +2806,7 @@ template<>
 inline bool
 token_is_char<'}'>(const char* const x, const POD_triple<size_t,size_t,lex_flags>& lexed_token)
 {
-	assert(NULL!=x);
+	assert(x);
 	return detect_C_right_brace_op(x+lexed_token.first,lexed_token.second);
 }
 
@@ -3096,8 +3090,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 	lang.line_lex(x.data()+critical_offset,x.size()-critical_offset,pretokenized);
 	STL_translate_first(critical_offset,pretokenized);	// coordinate fixup
 
-	// error the illegal preprocessing tokens here
-	{
+	{	// error the illegal preprocessing tokens here
 	const size_t old_err_count = zcc_errors.err_count();
 	i = pretokenized.size();
 	do	{
@@ -3366,13 +3359,13 @@ CPreprocessor::predefined_macro_replace_once(Token<char>& x, size_t& critical_of
 		const char* macro_value = NULL;
 		char buf[10];
 		char file_buf[MAX_PATH+2];
-		if (NULL!=macro_identifier_default[macro_index].second)
+		if (macro_identifier_default[macro_index].second)
 			// value known, substitute in
 			macro_value = macro_identifier_default[macro_index].second;
 		// special
 		else if (!strcmp(macro_identifier_default[macro_index].first,"__FILE__"))
 			{
-			assert(NULL!=x.src_filename);
+			assert(x.src_filename);
 			file_buf[0] = '"';
 			strcpy(file_buf+1,x.src_filename);
 			file_buf[1+strlen(x.src_filename)] = '"';
@@ -3509,7 +3502,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 	assert(0>object_macro_index || 0>function_macro_index);
 	if (0<=object_macro_index)
 		{
-		if (NULL==macros_object_expansion[object_macro_index])
+		if (!macros_object_expansion[object_macro_index])
 			{
 			_macro_replace(x,critical_offset,token_len,"");
 			return true;
@@ -3525,7 +3518,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 		Test.ltrim(critical_offset);
 		_macro_replace(Test,test_critical_offset,token_len,macros_object_expansion[object_macro_index]->data());
 		predefined_macro_replacement(Test,0);
-		if (NULL==used_macro_stack)
+		if (!used_macro_stack)
 			{
 			autovalarray_ptr<char*> macro_stack(1);
 			macro_stack[0] = _new_buffer_nonNULL_throws<char>(token_len);
@@ -3544,7 +3537,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 		};
 	if (0<=function_macro_index && x.size()>critical_offset+token_len && '('==x.data()[critical_offset+token_len])
 		{
-		assert(NULL!=macros_function_arglist[function_macro_index]);
+		assert(macros_function_arglist[function_macro_index]);
 		assert('('==macros_function_arglist[function_macro_index]->front());
 		assert(')'==macros_function_arglist[function_macro_index]->back());
 		const size_t formal_arg_span = macros_function_arglist[function_macro_index]->size();
@@ -3582,7 +3575,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 			x.flags |= INVALID_DIRECTIVE_FLAG;
 			return false;
 			}
-		if (NULL==macros_function_expansion[function_macro_index])
+		if (!macros_function_expansion[function_macro_index])
 			{
 			_macro_replace(x,critical_offset,token_len+arg_span,"");
 			return true;
@@ -3610,7 +3603,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 		size_t j = formal_arg_count;
 		do	{
 			--j;
-			assert(NULL!=formal_arguments[j]);
+			assert(formal_arguments[j]);
 			assert(0<formal_arguments[j]->size());
 			const size_t identifier_len = lang.UnfilteredNextToken(formal_arguments[j]->data(),identifier_flags);
 			assert(C_TESTFLAG_IDENTIFIER==identifier_flags);
@@ -3624,7 +3617,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 		if (formal_varadic) formal_arguments.back()->replace_once(0,formal_arguments.back()->size(),"__VA_ARGS__");
 		//! \todo should discard unused formal arguments and their parameter lists; not worth a warning, as there are a number of legitimate uses for discarding formal parameters
 		Token<char> Test(*macros_function_expansion[function_macro_index]);
-		if (NULL==used_macro_stack)
+		if (!used_macro_stack)
 			{
 			autovalarray_ptr<char*> macro_stack(1);
 			macro_stack[0] = _new_buffer_nonNULL_throws<char>(token_len);
@@ -3656,7 +3649,7 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
  */
 static bool _concatenate_single(Token<char>& x,const POD_triple<size_t,size_t,lex_flags>* pretokenized, LangConf& lang)
 {
-	assert(NULL!=pretokenized);
+	assert(pretokenized);
 	autovalarray_ptr_throws<char> new_token(pretokenized[0].second+pretokenized[2].second);
 	strncpy(new_token.c_array(),x.data()+pretokenized[0].first,pretokenized[0].second);
 	strncpy(new_token.c_array()+pretokenized[0].second,x.data()+pretokenized[2].first,pretokenized[2].second);
