@@ -10687,7 +10687,7 @@ static void CPP_notice_scope_glue(parse_tree& src)
 			if (0<forward_span)
 				{
 				char* tmp = _new_buffer<char>(ZAIMONI_LEN_WITH_NULL(resize_to));
-				if (NULL==tmp)
+				if (!tmp)
 					{
 					if (0==offset) throw std::bad_alloc();
 					src.DeleteNSlotsAt<0>(offset,src.size<0>()-offset);
@@ -10699,7 +10699,7 @@ static void CPP_notice_scope_glue(parse_tree& src)
 				do	strncat(tmp,src.data<0>()[i+j].index_tokens[0].token.first,src.data<0>()[i+j].index_tokens[0].token.second);
 				while(forward_span>= ++j);
 				const char* tmp2 = is_string_registered(tmp);
-				if (NULL==tmp2)
+				if (!tmp2)
 					{
 					src.c_array<0>()[i].grab_index_token_from_str_literal<0>(tmp,C_TESTFLAG_IDENTIFIER);	// well...not really, but it'll substitute for one
 					src.c_array<0>()[i].control_index_token<0>(true);
@@ -11479,12 +11479,10 @@ static bool check_for_typedef(type_spec& dest,const char* const src,const type_s
 static bool check_for_typedef(type_spec& dest,const char* const src,const char* const active_namespace,const type_system& types)
 {
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef_CPP(src,active_namespace);
-	if (tmp)
-		{	//! \todo C++: check for access control if source ends up being a class or struct
-		value_copy(dest,tmp->first);
-		return true;
-		}
-	return false;
+	if (!tmp) return false;
+	//! \todo C++: check for access control if source ends up being a class or struct
+	value_copy(dest,tmp->first);
+	return true;
 }
 
 //! \todo does this need to be in ParseTree.hpp?
@@ -11906,19 +11904,14 @@ static size_t C99_init_declarator_scanner(parse_tree& x, size_t i,type_spec& tar
 // very basic syntax check; defer real parsing to later
 static bool is_CPP0X_attribute(const parse_tree& x)
 {
-	if (   is_naked_bracket_pair(x)
-		&& 1==x.size<0>()
-		&& is_naked_bracket_pair(*x.data<0>()))
-		return true;
-	return false;
+	return is_naked_bracket_pair(x) && 1==x.size<0>()
+	    && is_naked_bracket_pair(*x.data<0>());
 }
 
 static bool is_CPP0X_ref_qualifier(const parse_tree& x)
 {
-	if (   robust_token_is_char<'&'>(x)
-		|| robust_token_is_string<2>(x,"&&"))
-		return true;
-	return false;
+	return robust_token_is_char<'&'>(x)
+	    || robust_token_is_string<2>(x,"&&");
 }
 
 // very basic syntax check; defer real parsing to later
