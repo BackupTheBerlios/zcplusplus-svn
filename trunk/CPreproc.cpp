@@ -268,26 +268,24 @@ CPreprocessor::CPreprocessor(const virtual_machine::CPUInfo& _target_machine, co
 {
 	switch(lang_code)
 	{
-	case Lang::C: {
-			macro_identifier_default = C99_macro_identifier_default;
-			macro_identifier_default_count = STATIC_SIZE(C99_macro_identifier_default);
-			break;
-		};
-	case Lang::CPlusPlus: {
-			macro_identifier_default = CPP0x_macro_identifier_default;
-			macro_identifier_default_count = STATIC_SIZE(CPP0x_macro_identifier_default);
-			break;
-		};
 	default: FATAL("Invalid language code");
+	case Lang::C:
+		macro_identifier_default = C99_macro_identifier_default;
+		macro_identifier_default_count = STATIC_SIZE(C99_macro_identifier_default);
+		break;
+	case Lang::CPlusPlus:
+		macro_identifier_default = CPP0x_macro_identifier_default;
+		macro_identifier_default_count = STATIC_SIZE(CPP0x_macro_identifier_default);
+//		break;
 	}
 	init_fixed_system_include_search();
 	// reality checks on the language
-	assert(NULL!=lang.EscapeStringLength);
-	assert(NULL!=lang.EscapeString);
-	assert(NULL!=lang.UnescapeStringLength);
-	assert(NULL!=lang.UnescapeString);
-	assert(NULL!=lang.pp_support);
-	assert(NULL!=lang.InvariantKeywords);
+	assert(lang.EscapeStringLength);
+	assert(lang.EscapeString);
+	assert(lang.UnescapeStringLength);
+	assert(lang.UnescapeString);
+	assert(lang.pp_support);
+	assert(lang.InvariantKeywords);
 	assert(0<lang.len_InvariantKeywords);
 }
 
@@ -1819,10 +1817,9 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 							};
 						}
 					}
-				else{	// replace predefined macros, if they are here
-						//! \test cpp/default/Preprocess_STDC_defines.hpp, cpp/default/Preprocess_STDC_defines.h
+				else	// replace predefined macros, if they are here
+					//! \test cpp/default/Preprocess_STDC_defines.hpp, cpp/default/Preprocess_STDC_defines.h
 					predefined_macro_replacement(*TokenList[i],0);
-					}
 				}
 			}
 		}
@@ -1861,45 +1858,42 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 		size_t filename_len = TokenList[include_where]->size()-(sizeof("#include <>")-1);
 		switch(TokenList[include_where]->data()[sizeof("#include ")-1])
 		{
-		case '"':	{	// local-include
-					if ('"'!=TokenList[include_where]->back())
-						{	//! \test Error_include_unterminated2.hpp
-						message_header(*TokenList[include_where]);
-						INC_INFORM(ERR_STR);
-						INFORM("#include \"... does not terminate properly; discarding and continuing (C99 6.10.2p3/C++98 16.2p3)");
-						TokenList.DeleteIdx(include_where);
-						zcc_errors.inc_error();
-						i = include_where;
-						if (i<TokenList.size()) goto RestartAfterInclude;
-						return;
-						};
-					local_include = true;
-					break;
-					}
-		case '<':	{	// system-include
-					if ('>'!=TokenList[include_where]->back())
-						{	//! \test Error_include_unterminated1.hpp
-						message_header(*TokenList[include_where]);
-						INC_INFORM(ERR_STR);
-						INFORM("#include <... does not terminate properly; discarding and continuing (C99 6.10.2p2/C++98 16.2p2)");
-						TokenList.DeleteIdx(include_where);
-						zcc_errors.inc_error();
-						i = include_where;
-						if (i<TokenList.size()) goto RestartAfterInclude;
-						return;
-						};
-					break;
-					}
-		default:	{	// neither
-					message_header(*TokenList[include_where]);
-					INC_INFORM(ERR_STR);
-					INFORM("#include has bad format; discarding and continuing (C99 6.10.2p2,3/C++98 16.2p2,3)");
-					TokenList.DeleteIdx(include_where);
-					zcc_errors.inc_error();
-					i = include_where;
-					if (i<TokenList.size()) goto RestartAfterInclude;
-					return;
-					}
+		case '"':	// local-include
+			if ('"'!=TokenList[include_where]->back())
+				{	//! \test Error_include_unterminated2.hpp
+				message_header(*TokenList[include_where]);
+				INC_INFORM(ERR_STR);
+				INFORM("#include \"... does not terminate properly; discarding and continuing (C99 6.10.2p3/C++98 16.2p3)");
+				TokenList.DeleteIdx(include_where);
+				zcc_errors.inc_error();
+				i = include_where;
+				if (i<TokenList.size()) goto RestartAfterInclude;
+				return;
+				};
+			local_include = true;
+			break;
+		case '<':	// system-include
+			if ('>'!=TokenList[include_where]->back())
+				{	//! \test Error_include_unterminated1.hpp
+				message_header(*TokenList[include_where]);
+				INC_INFORM(ERR_STR);
+				INFORM("#include <... does not terminate properly; discarding and continuing (C99 6.10.2p2/C++98 16.2p2)");
+				TokenList.DeleteIdx(include_where);
+				zcc_errors.inc_error();
+				i = include_where;
+				if (i<TokenList.size()) goto RestartAfterInclude;
+				return;
+				};
+			break;
+		default:	// neither
+			message_header(*TokenList[include_where]);
+			INC_INFORM(ERR_STR);
+			INFORM("#include has bad format; discarding and continuing (C99 6.10.2p2,3/C++98 16.2p2,3)");
+			TokenList.DeleteIdx(include_where);
+			zcc_errors.inc_error();
+			i = include_where;
+			if (i<TokenList.size()) goto RestartAfterInclude;
+			return;
 		};
 		// iterate through search path until something found matching
 		// need to map following
@@ -2019,27 +2013,24 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 #ifndef NDEBUG
 				default: FATAL("hardcoded_header_idx out of range");
 #endif
-				case 3:	{	// stdint.h/cstdint
+				case 3:	// stdint.h/cstdint
 					hardcoded_header = true;
 					C99_reject_keyword_macros(TokenList,include_where,look_for,lang,macros_object,macros_object_expansion,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion,macros_function_expansion_pre_eval);
 					if (0>binary_find("__STDINT_H__",sizeof("__STDINT_H__")-1,macros_object))	
 						create_stdint_header(IncludeTokenList,look_for);	// not included yet
 					break;
-					}
-				case 2:	{	// stddef.h/cstddef
+				case 2:	// stddef.h/cstddef
 					hardcoded_header = true;
 					C99_reject_keyword_macros(TokenList,include_where,look_for,lang,macros_object,macros_object_expansion,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion,macros_function_expansion_pre_eval);
 					if (0>binary_find("__STDDEF_H__",sizeof("__STDDEF_H__")-1,macros_object))	
 						create_stddef_header(IncludeTokenList,look_for);	// not included yet
 					break;
-					}
-				case 1:	{	// limits.h/climits
+				case 1:	// limits.h/climits
 					hardcoded_header = true;
 					C99_reject_keyword_macros(TokenList,include_where,look_for,lang,macros_object,macros_object_expansion,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion,macros_function_expansion_pre_eval);
 					if (0>binary_find("__LIMITS_H__",sizeof("__LIMITS_H__")-1,macros_object))	
 						create_limits_header(IncludeTokenList,look_for);	// not included yet
 					break;
-					}
 				case 0:;
 				}
 
@@ -2187,7 +2178,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 					strncpy(tmp,x+pretokenized[j].first,pretokenized[j].second);
 					if (!locked_macros.InsertSlotAt(locked_macros.size(),tmp))
 						{
-						_flush(tmp);
+						free(tmp);
 						throw std::bad_alloc();
 						}
 					}
@@ -2207,13 +2198,11 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 				{
 #ifndef NDEBUG
 				default:
-					{
 					INC_INFORM(ERR_STR);
 					INC_INFORM("unhandled STDC pragma ");
 					INFORM(pragma_STDC_keywords[STDC_pragma].first);
 					zcc_errors.inc_error();
 					return 0;
-					};
 #endif
 				case PRAGMA_STDC_FP_CONTRACT:
 				case PRAGMA_STDC_FENV_ACCESS:
@@ -2248,8 +2237,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 			&&	1==pretokenized[1].second && '('==x[pretokenized[1].first]
 			&&	1==pretokenized[3].second && ')'==x[pretokenized[3].first]
 			&&	C_TESTFLAG_STRING_LITERAL==pretokenized[2].third)
-			{
-			// hmm...do we need to unescape anything...
+			{	// hmm...do we need to unescape anything...
 			const bool wide_str = 'L'==x[pretokenized[2].first];
 			if (0<std::count(x+pretokenized[2].first,x+pretokenized[2].first+pretokenized[2].second,'\\'))
 				{	// no escapes
@@ -2257,12 +2245,11 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 
 				//! \todo change target, this only handles target CHAR_BIT<=host CHAR_BIT
 				const size_t tmp_len = lang.UnescapeStringLength(x+pretokenized[2].first,pretokenized[2].second);
-				char* tmp = _new_buffer<char>(ZAIMONI_LEN_WITH_NULL(tmp_len));
-				if (NULL!=tmp)
+				if (char* tmp = _new_buffer<char>(ZAIMONI_LEN_WITH_NULL(tmp_len)))
 					{
 					lang.UnescapeString(tmp,x+pretokenized[2].first,pretokenized[2].second);
 					INFORM(tmp,tmp_len);
-					_flush(tmp);
+					free(tmp);
 					return 0;
 					}
 				};
@@ -2305,11 +2292,7 @@ size_t
 CPreprocessor::tokenize_line(autovalarray_ptr<Token<char>* >& TokenList, size_t i) const
 {
 	assert(TokenList.size()>i);
-	if (TokenList[i]->empty())
-		{
-		TokenList.DeleteIdx(i);
-		return 0;
-		};
+	if (TokenList[i]->empty()) return TokenList.DeleteIdx(i),0; 
 
 	// Not really (it's a preprocessing directive), but we don't want to damage it here
 	if ('#'==TokenList[i]->front()) return 1;
@@ -2319,11 +2302,7 @@ CPreprocessor::tokenize_line(autovalarray_ptr<Token<char>* >& TokenList, size_t 
 
 	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	lang.line_lex(TokenList[i]->data(),TokenList[i]->size(),pretokenized);
-	if (pretokenized.empty())
-		{
-		TokenList.DeleteIdx(i);
-		return 0;
-		}
+	if (pretokenized.empty()) return TokenList.DeleteIdx(i),0;
 
 	size_t ub = pretokenized.size()-1;
 	if (0==ub)
@@ -2347,7 +2326,7 @@ CPreprocessor::tokenize_line(autovalarray_ptr<Token<char>* >& TokenList, size_t 
 				TokenListAlt[lb] = new Token<char>(tmp,pretokenized[lb].first,pretokenized[lb].second,pretokenized[lb].third);
 				complete_string_character_literal(*TokenListAlt[lb++]);
 				}
-			else{	// second token longer
+			else{	// first token longer
 				TokenListAlt[ub] = new Token<char>(tmp,pretokenized[ub].first,pretokenized[ub].second,pretokenized[ub].third);
 				complete_string_character_literal(*TokenListAlt[ub--]);
 				}
@@ -2383,16 +2362,16 @@ CPreprocessor::find_local_include(const char* const src, char* const filepath_bu
 	char image_filepath[FILENAME_MAX];
 	char test_filepath[FILENAME_MAX];
 
-	assert(!is_empty_string(src));
-	assert(!is_empty_string(local_root));
-	assert(NULL!=filepath_buf);
+	assert(src && *src);
+	assert(local_root && *local_root);
+	assert(filepath_buf);
 	const size_t src_len = strlen(src);
 
 	// automatically fail anything that won't fit in FILENAME_MAX
 	//! \test Error_huge_path.hpp
 	if (FILENAME_MAX<=src_len) return false;
 
-	if (NULL!=origin_dir)
+	if (origin_dir)
 		{
 		size_t target_length = strlen(origin_dir);
 		assert(FILENAME_MAX>target_length);
@@ -2416,7 +2395,7 @@ CPreprocessor::find_local_include(const char* const src, char* const filepath_bu
 #endif
 		}
 	const char* const canonical_path = z_realpath(image_filepath,test_filepath);
-	if (NULL!=canonical_path && !access(canonical_path,F_OK))
+	if (canonical_path && !access(canonical_path,F_OK))
 		{
 		strcpy(filepath_buf,canonical_path);
 		return true;
