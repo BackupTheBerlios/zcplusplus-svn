@@ -1,10 +1,7 @@
 // CPreproc.cpp
 // (C)2009,2010 Kenneth Boyd, license: MIT.txt
 
-#/*cut-cpp*/
 #include "CPreproc.hpp"
-#/*cut-cpp*/
-#include "CPreproc_pp.hpp"
 
 #include <limits.h>
 #include <time.h>
@@ -12,11 +9,8 @@
 #include <unistd.h>
 
 #include "AtomicString.h"
-#/*cut-cpp*/
 #include "CSupport.hpp"
 #include "_CSupport3.hpp"
-#/*cut-cpp*/
-#include "CSupport_pp.hpp"
 #include "C_PPDecimalInteger.hpp"
 #include "CPUInfo.hpp"
 #include "errors.hpp"
@@ -352,7 +346,6 @@ static const POD_pair<const char*,size_t> pragma_ZCC_keywords[]
 
 #define PRAGMA_ZCC_LOCK 0
 #define PRAGMA_ZCC_ENABLE_TYPEID 1
-#/*cut-cpp*/
 
 const POD_pair<const char*,size_t> pragma_relay_keywords[]
 	=	{	DICT_STRUCT("_ZCC_FP_CONTRACT_OFF"),
@@ -368,7 +361,6 @@ const POD_pair<const char*,size_t> pragma_relay_keywords[]
 		};
 
 BOOST_STATIC_ASSERT(PRAGMA_RELAY_KEYWORDS_STRICT_UB==STATIC_SIZE(pragma_relay_keywords));		
-#/*cut-cpp*/
 #undef DICT_STRUCT
 
 static void _init_weak_token(weak_token& dest, const Token<char>& x,const POD_triple<size_t,size_t,lex_flags>& pretoken)
@@ -1420,25 +1412,19 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 					if (PP::PRAGMA==directive_type)
 						{
 						const size_t critical_offset = valid_directives[directive_type].second+2;
-#/*cut-cpp*/
 						const unsigned int pragma_code =
-#/*cut-cpp*/
 						interpret_pragma(TokenList[i]->data()+critical_offset,TokenList[i]->size()-critical_offset,locked_macros);
-#/*cut-cpp*/
 						switch(pragma_code)
 						{
 						default:
-#/*cut-cpp*/
 						TokenList.DeleteIdx(i);
 						if (0==i) goto Restart;
 						--i;
 						continue;
-#/*cut-cpp*/
 						case RELAY_ZCC_ENABLE_TYPEID+1:
 							TokenList[i]->replace_once(0,TokenList[i]->size(),pragma_relay_keywords[pragma_code-1].first,pragma_relay_keywords[pragma_code-1].second);
 							continue;
 						}
-#/*cut-cpp*/
 						}
 					}
 				}
@@ -1684,11 +1670,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 						{	//! \test Pass_pragma_STDC.hpp
 						autovalarray_ptr_throws<char> pragma_string(lang.UnescapeStringLength(TokenList[i+2]->data()+1,TokenList[i+2]->size()-2));
 						lang.UnescapeString(pragma_string.c_array(),TokenList[i+2]->data()+1,TokenList[i+2]->size()-2);
-#/*cut-cpp*/
 						const unsigned int pragma_code =
-#/*cut-cpp*/
 						interpret_pragma(pragma_string.data(),pragma_string.size(),locked_macros);
-#/*cut-cpp*/
 						switch(pragma_code)
 						{
 						case RELAY_ZCC_ENABLE_TYPEID+1:
@@ -1696,7 +1679,6 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 							TokenList.DeleteNSlotsAt(3,i+1);
 							continue;
 						}
-#/*cut-cpp*/
 						};
 					TokenList.DeleteNSlotsAt(4,i);
 					if (0==i) goto Restart;
@@ -2184,13 +2166,10 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 		{
 		if (1<pretokenized.size())
 			{
-#/*cut-cpp*/
 			BOOST_STATIC_ASSERT(RELAY_ZCC_ENABLE_TYPEID==STATIC_SIZE(pragma_STDC_on_off_switch)*STATIC_SIZE(pragma_STDC_keywords));
-#/*cut-cpp*/
 			const errr ZCC_pragma =  linear_find_lencached(x+pretokenized[1].first, pretokenized[1].second, pragma_ZCC_keywords, STATIC_SIZE(pragma_ZCC_keywords));
 			switch(ZCC_pragma)
 			{
-#/*cut-cpp*/
 			// #pragma ZCC enable_typeid gets rewritten to the 
 			// reserved-to-the-implementation keyword 
 			// _ZCC_pragma_enable_typeid, which in turn turns off the syntax
@@ -2198,7 +2177,6 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 			// instantly break other compilers inadvertently using our 
 			// #include <typeinfo>
 			case PRAGMA_ZCC_ENABLE_TYPEID: return STATIC_SIZE(pragma_STDC_on_off_switch)*STATIC_SIZE(pragma_STDC_keywords)+1;				
-#/*cut-cpp*/
 			case PRAGMA_ZCC_LOCK:
 				{	//! \test Error_undef_locked_macro.hpp
 				size_t j = pretokenized.size();
@@ -4297,10 +4275,8 @@ CPreprocessor::hard_locked_macro(const char* const x,const size_t x_len) const
 // Macro names beginning with __STDC_ are reserved for future standardization.
 //! \bug should have positive test suite for named __STDC_ macros
 	if (7<=x_len && !strncmp(x,"__STDC_",sizeof("__STDC_")-1)) return true;
-#/*cut-cpp*/
 // Lock down our relay identifiers. to be safe
 	if (0<=linear_find_lencached(x,x_len,pragma_relay_keywords,STATIC_SIZE(pragma_relay_keywords))) return true;
-#/*cut-cpp*/
 // C++0x 17.4.3.2.2 simply prohibits all keywords as macros; prefer this to C++98.  C99/C0X is handled elsewhere, as it isn't so draconian.
 // follow C++0x when generalizing to non-standard languages, as that's more intuitive.
 	if (Lang::C!=lang_code && 0<=linear_find_lencached(x,x_len,lang.InvariantKeywords,lang.len_InvariantKeywords)) return true;
@@ -4807,3 +4783,4 @@ C++98 17.3.3.1.1p2 goes further and prohibits defining macros for any names decl
 C++98 17.3.3.1.1p1 prohibits undefining any macro defined in a library header (watch out for assert.h)
 C99 7.1.3p1,3 prohibit defining macros for any identifier declared in a library header
  */
+
