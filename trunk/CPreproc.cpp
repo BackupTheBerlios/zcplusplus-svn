@@ -3734,7 +3734,7 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 
 	// deal with empty-var ## operators
 	size_t j = actual_arguments.size();
-	do if (NULL==actual_arguments[--j])
+	do if (!actual_arguments[--j])
 			{	// have a genuinely empty argument
 			if (lang.line_lex_find(x.data(),x.size(),"##",sizeof("##")-1,pretokenized) || lang.line_lex_find(x.data(),x.size(),"%:%:",sizeof("%:%:")-1,pretokenized))
 				{
@@ -3748,7 +3748,7 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 							if (C_TESTFLAG_IDENTIFIER==pretokenized[k+1].third)
 								{
 								const errr j2 = linear_find_STL_deref2(x.data()+pretokenized[k+1].first,pretokenized[k+1].second,formal_arguments);
-								if (0<=j2 && NULL==actual_arguments[j2])
+								if (0<=j2 && !actual_arguments[j2])
 									{	// we matched an empty parameter (concatenation identity)
 									const size_t replace_start = pretokenized[k-1].first+pretokenized[k-1].second;
 									size_t replace_len = (pretokenized[k+1].first-replace_start)+pretokenized[k+1].second;
@@ -3761,7 +3761,7 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 							if (C_TESTFLAG_IDENTIFIER==pretokenized[k-1].third)
 								{	// don't need should_continue bypass for last check
 								const errr j2 = linear_find_STL_deref2(x.data()+pretokenized[k-1].first,pretokenized[k-1].second,formal_arguments);
-								if (0<=j2 && NULL==actual_arguments[j2])
+								if (0<=j2 && !actual_arguments[j2])
 									{
 									const size_t replace_start = (0<k) ? pretokenized[k-2].first+pretokenized[k-2].second : 0U;
 									size_t replace_len = (pretokenized[k].first-replace_start)+pretokenized[k].second;
@@ -3782,7 +3782,7 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 
 	// macro-replace all arguments
 	j = actual_arguments.size();
-	do	if (NULL!=actual_arguments[--j])
+	do	if (actual_arguments[--j])
 			intradirective_preprocess(*actual_arguments[j],0,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion,used_macro_stack);
 	while(0<j);
 
@@ -3794,23 +3794,23 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 	j = pretokenized.size();
 	do	{
 		--j;
-		const errr j2 = linear_find_STL_deref2(x.data()+pretokenized[j].first,pretokenized[j].second,formal_arguments);
+		errr j2 = linear_find_STL_deref2(x.data()+pretokenized[j].first,pretokenized[j].second,formal_arguments);
 		if (0<=j2)
 			{
-			assert(NULL!=actual_arguments[j2]);
+			assert(actual_arguments[j2]);
 			_macro_replace(x,pretokenized[j].first,pretokenized[j].second,actual_arguments[j2]->data());
 			lang.line_lex(x.data(),x.size(),pretokenized);
 			}
 		else if (detect_C_concatenation_op(x.data()+pretokenized[j].first,pretokenized[j].second))
 			{	// hmm...
-			const errr j3 = linear_find_STL_deref2(x.data()+pretokenized[j-1].first,pretokenized[j-1].second,formal_arguments);
-			if (0<=j3)
+			j2 = linear_find_STL_deref2(x.data()+pretokenized[j-1].first,pretokenized[j-1].second,formal_arguments);
+			if (0<=j2)
 				{	// oops....must do replacement *before* the ## concatenation
-				assert(NULL!=actual_arguments[j3]);
-				assert(!actual_arguments[j3]->empty());
+				assert(actual_arguments[j2]);
+				assert(!actual_arguments[j2]->empty());
 				autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized_alt;
-				lang.line_lex(actual_arguments[j3]->data(),actual_arguments[j3]->size(),pretokenized_alt);
-				_macro_replace(x,pretokenized[j-1].first,pretokenized[j-1].second,actual_arguments[j3]->data());
+				lang.line_lex(actual_arguments[j2]->data(),actual_arguments[j2]->size(),pretokenized_alt);
+				_macro_replace(x,pretokenized[j-1].first,pretokenized[j-1].second,actual_arguments[j2]->data());
 				lang.line_lex(x.data(),x.size(),pretokenized);
 				j += pretokenized_alt.size()-1;
 				assert(detect_C_concatenation_op(x.data()+pretokenized[j].first,pretokenized[j].second));
@@ -3951,8 +3951,7 @@ void CPreprocessor::die_on_pp_errors() const
 
 void
 CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<Token<char>*>& macros_object_expansion, const autovalarray_ptr<char*>& macros_function, const autovalarray_ptr<Token<char>*>& macros_function_arglist, const autovalarray_ptr<Token<char>*>& macros_function_expansion,const autovalarray_ptr<char*>& locked_macros) const
-{
-	// need whitespace tokens here to force pretty-printing
+{	// need whitespace tokens here to force pretty-printing
 	if (debug_mode)
 		{
 		const size_t list_size = TokenList.size();
@@ -3990,7 +3989,7 @@ CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,
 			{
 			INC_INFORM("#define ");
 			INC_INFORM(macros_object[i]);
-			if (NULL!=macros_object_expansion[i])
+			if (macros_object_expansion[i])
 				{
 				INC_INFORM(" ");
 				INFORM(macros_object_expansion[i]->data());
@@ -4006,7 +4005,7 @@ CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,
 			INC_INFORM("#define ");
 			INC_INFORM(macros_function[i]);
 			INC_INFORM(macros_function_arglist[i]->data());
-			if (NULL!=macros_function_expansion[i])
+			if (macros_function_expansion[i])
 				{
 				INC_INFORM(" ");
 				INFORM(macros_function_expansion[i]->data());
@@ -4037,15 +4036,12 @@ bool
 CPreprocessor::C99_VA_ARGS_flinch(const Token<char>& x, const size_t critical_offset) const
 {	//! \todo option to bypass this
 	assert(x.size()>critical_offset);
-	if (SIZE_MAX!=lang.lex_find(x.data()+critical_offset,x.size()-critical_offset,"__VA_ARGS__",sizeof("__VA_ARGS__")-1))
-		{
-		message_header(x);
-		INC_INFORM(ERR_STR);
-		INFORM("identifier __VA_ARGS__ not allowed here.  Continuing. (C99 6.10.3p5/C++0x 16.3p5)");
-		zcc_errors.inc_error();
-		return true;
-		}
-	return false;
+	if (SIZE_MAX==lang.lex_find(x.data()+critical_offset,x.size()-critical_offset,"__VA_ARGS__",sizeof("__VA_ARGS__")-1)) return false;
+	message_header(x);
+	INC_INFORM(ERR_STR);
+	INFORM("identifier __VA_ARGS__ not allowed here.  Continuing. (C99 6.10.3p5/C++0x 16.3p5)");
+	zcc_errors.inc_error();
+	return true;
 }
 
 void
@@ -4081,11 +4077,7 @@ bool CPreprocessor::discard_leading_trailing_concatenate_op(Token<char>& x)
 		INC_INFORM(ERR_STR);
 		INFORM("concatenation operator ## ending a macro replacement list: removing and continuing (C99 6.10.3.3p1/C++98 16.3.3p1)");
 		zcc_errors.inc_error();
-		if (1==pretokenized.size())
-			{
-			x.reset();
-			return true;
-			}
+		if (1==pretokenized.size()) return x.reset(),true;
 		pretokenized.DeleteIdx(pretokenized.size()-1);
 		x.lslice(pretokenized.back().first+pretokenized.back().second);
 		}
@@ -4096,11 +4088,7 @@ bool CPreprocessor::discard_leading_trailing_concatenate_op(Token<char>& x)
 		INC_INFORM(ERR_STR);
 		INFORM("concatenation operator ## starting a macro replacement list: removing and continuing (C99 6.10.3.3p1/C++98 16.3.3p1)");
 		zcc_errors.inc_error();
-		if (1==pretokenized.size())
-			{
-			x.reset();
-			return true;
-			}
+		if (1==pretokenized.size()) return x.reset(),true;
 		x.ltrim(pretokenized[1].first);
 		// XXX leave data structures in an inconsistent state: they'll be immediately destructed anyway
 		}
@@ -4111,7 +4099,7 @@ void
 CPreprocessor::use_line_directive_and_discard(autovalarray_ptr<Token<char>* >& TokenList, const size_t i)
 {
 	assert(i<TokenList.size());
-	assert(NULL!=TokenList[i]);
+	assert(TokenList[i]);
 	assert(!strncmp(TokenList[i]->data(),"#line ",sizeof("#line ")-1));
 	if (TokenList[i]->flags & INVALID_DIRECTIVE_FLAG)
 		{
@@ -4122,8 +4110,7 @@ CPreprocessor::use_line_directive_and_discard(autovalarray_ptr<Token<char>* >& T
 	lex_flags first_token_flags;
 	lex_flags second_token_flags;
 	size_t critical_offset = sizeof("#line ")-1;
-	// C99: check for decimal integer literal, then optional string literal; error if this is not found
-	{
+	{	// C99: check for decimal integer literal, then optional string literal; error if this is not found
 	const size_t first_token_len = lang.UnfilteredNextToken(TokenList[i]->data()+critical_offset,first_token_flags);
 	if (     C_TESTFLAG_PP_NUMERAL!=first_token_flags
 		||	!C_PPDecimalInteger::is(TokenList[i]->data()+critical_offset,first_token_len,line_number)
@@ -4391,12 +4378,9 @@ bool CPreprocessor::require_padding(char lhs, char rhs) const
 	// word-chars glue to word-chars
 	// symbol-chars glue to symbol-chars
 	// universal-char-names will glue as well as normal word-chars
-	if (lang.IsWordChar(lhs))
-		{
-		if ('\\'==rhs || lang.IsWordChar(rhs)) return true;
-		return false;
-		};
-	return !lang.IsWordChar(rhs);
+	const bool rhs_word_char = lang.IsWordChar(rhs);
+	if (lang.IsWordChar(lhs)) return '\\'==rhs || rhs_word_char;
+	return !rhs_word_char;
 }
 
 /*! 
@@ -4436,15 +4420,11 @@ CPreprocessor::nonrecursive_macro_replacement_list(const char* const x) const
 size_t
 CPreprocessor::function_macro_invocation_argspan(const char* const src,const size_t src_span,size_t& arg_count) const
 {
-	assert(!is_empty_string(src));
+	assert(src);
 	assert('('==src[0]);
 	assert(src_span==strlen(src));
 	if (2>src_span) return 0;
-	if (')'==src[1])
-		{
-		arg_count = 0;
-		return 2;
-		}
+	if (')'==src[1]) return arg_count = 0,2; 
 	lex_flags scratch_flags;
 	size_t test_arg_count = 1;
 	size_t paren_depth = 1;
@@ -4482,7 +4462,7 @@ CPreprocessor::function_macro_invocation_argspan(const char* const src,const siz
 void
 CPreprocessor::stringize(autovalarray_ptr<char>& dest,const Token<char>* const & src)
 {
-	if (NULL==src || src->empty())
+	if (!src || src->empty())
 		{	// empty string
 		dest.resize(2);
 		strcpy(dest.c_array(),"\"\"");
@@ -4548,11 +4528,7 @@ CPreprocessor::flush_bad_stringize(Token<char>& x, const Token<char>& arglist)
 			INC_INFORM(ERR_STR);
 			INFORM("# terminates macro replacement list; truncating and continuing (C99 6.10.3.2p1/C++98 16.3.2p1)");
 			zcc_errors.inc_error();
-			if (1==pretokenized.size())
-				{
-				x.reset();
-				return true;
-				};
+			if (1==pretokenized.size()) return x.reset(),true;
 			pretokenized.DeleteIdx(pretokenized.size()-1);
 			};
 		remove_ws_from_token(x,pretokenized);
