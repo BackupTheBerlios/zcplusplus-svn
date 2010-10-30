@@ -1,4 +1,9 @@
+#/*cut-cpp*/
 // CSupport.cpp
+#/*cut-cpp*/
+#/*cut-nocpp*/
+// CSupport_pp.cpp
+#/*cut-nocpp*/
 // support for C/C++ parsing
 // (C)2009, 2010 Kenneth Boyd, license: MIT.txt
 
