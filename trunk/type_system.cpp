@@ -259,6 +259,23 @@ type_system::get_id_enum_CPP(const char* alias,const char* active_namespace) con
 	return _get_id_enum_CPP(alias);
 }
 
+void type_system::use_type(type_index id)
+{
+	assert(core_types_size+dynamic_types.size()>=id);
+	if (core_types_size>=id) return;
+	if (SIZE_MAX==dynamic_types[id-=(core_types_size+1)].fourth) return;
+	++dynamic_types[id].fourth;
+}
+
+void type_system::unuse_type(type_index id)
+{
+	assert(core_types_size+dynamic_types.size()>=id);
+	if (core_types_size>=id) return;
+	if (SIZE_MAX==dynamic_types[id-=(core_types_size+1)].fourth) return;
+	assert(0<dynamic_types[id].fourth);
+	--dynamic_types[id].fourth;
+}
+
 const char* type_system::_name(size_t id) const
 {
 	if (0==id) return "(?)";

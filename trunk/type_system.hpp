@@ -60,20 +60,14 @@ public:
 		return _get_id_enum(x);
 		}
 	type_index get_id_enum_CPP(const char* alias,const char* active_namespace) const;
-	void use_type(type_index id)
+	void use_type(type_index id);
+	void unuse_type(type_index id);
+	size_t use_count(type_index id) const
 		{
 		assert(core_types_size+dynamic_types.size()>=id);
-		if (core_types_size>=id) return;
-		if (SIZE_MAX==dynamic_types[id-=core_types_size].fourth) return;
-		++dynamic_types[id].fourth;
-		};
-	void unuse_type(type_index id)
-		{
-		assert(core_types_size+dynamic_types.size()>=id);
-		if (core_types_size>=id) return;
-		if (SIZE_MAX==dynamic_types[id-=core_types_size].fourth) return;
-		--dynamic_types[id].fourth;
-		};
+		if (core_types_size>=id) return SIZE_MAX;
+		return dynamic_types[id-core_types_size].fourth;
+		}
 	const char* name(type_index id) const
 		{
 		assert(core_types_size+dynamic_types.size()>=id);
