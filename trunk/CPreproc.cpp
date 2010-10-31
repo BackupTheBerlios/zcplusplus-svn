@@ -28,6 +28,7 @@
 #include "Zaimoni.STL/search.hpp"
 #include "Zaimoni.STL/OS/mutex.hpp"
 #include "Zaimoni.STL/Pure.C/format_util.h"
+#include "Zaimoni.STL/Perl_localize.hpp"
 
 #include "DebugCSupport.h"
 
@@ -685,7 +686,7 @@ bool CPreprocessor::preprocess(autovalarray_ptr<Token<char>* >& TokenList)
 	autovalarray_ptr<Token<char>*> macros_function_expansion_pre_eval;
 	autovalarray_ptr<POD_triple<const char*, const char*,uintptr_t> > include_file_index;
 	autovalarray_ptr<POD_pair<const char*,autovalarray_ptr<Token<char>*>* > > include_file_cache;
-	const type_system min_types((Lang::C==lang_code) ? C_atomic_types : CPP_atomic_types,(Lang::C==lang_code) ? C_TYPE_MAX : CPP_TYPE_MAX,C_int_priority+C_PP_INT_PRIORITY_ORIGIN,C_INT_PRIORITY_SIZE-C_PP_INT_PRIORITY_ORIGIN);
+	type_system min_types((Lang::C==lang_code) ? C_atomic_types : CPP_atomic_types,(Lang::C==lang_code) ? C_TYPE_MAX : CPP_TYPE_MAX,C_int_priority+C_PP_INT_PRIORITY_ORIGIN,C_INT_PRIORITY_SIZE-C_PP_INT_PRIORITY_ORIGIN);
 
 	// this is subject to the Y10K bug, per standard.
 	// construct __DATE__, __TIME__ macro targets
@@ -713,6 +714,7 @@ bool CPreprocessor::preprocess(autovalarray_ptr<Token<char>* >& TokenList)
 	while(iter!=iter_end) detailed_UNICODE_syntax(**iter++);
 	}
 
+	zaimoni::Perl::localize<type_system*> lock_types(parse_tree::types,&min_types);
 	_preprocess(TokenList, locked_macros, macros_object, macros_object_expansion, macros_object_expansion_pre_eval, macros_function, macros_function_arglist, macros_function_expansion, macros_function_expansion_pre_eval, include_file_index, include_file_cache, min_types);
 
 	// need whitespace tokens here to force pretty-printing
