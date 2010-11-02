@@ -22,7 +22,8 @@ OTHER_INCLUDEDIR = -I /MingWin.aux/Headers.lib
 C_MACROS = 
 CXX_MACROS = -D__STDC_LIMIT_MACROS
 
-# build rules
+# maintainer-mode build rules for derived files
+# PYTHON variable does require configuration when moved to another machine
 PYTHON = c:\Python26\python
 SELECTIVE_CUT = tools\selective_cut.py
 SUPPRESS_CUT = tools\suppress_cut.py
@@ -62,6 +63,10 @@ CSupport.cpp: CSupport.cpp.in
 	$(PYTHON) $(SELECTIVE_CUT) nocpp CSupport.cpp.alt2 CSupport.cpp.alt 
 	if cmp -s CSupport.cpp CSupport.cpp.alt; then rm CSupport.cpp.alt ; else mv CSupport.cpp.alt CSupport.cpp; fi
 	rm CSupport.cpp.alt2
+
+type_spec_pp.cpp: type_spec.cpp
+	$(PYTHON) $(SELECTIVE_CUT) cpp type_spec.cpp type_spec_pp.cpp.alt 
+	if cmp -s type_spec_pp.cpp type_spec_pp.cpp.alt; then rm type_spec_pp.cpp.alt ; else mv type_spec_pp.cpp.alt type_spec_pp.cpp; fi
 	
 type_system_pp.hpp: type_system.hpp.in
 	$(PYTHON) $(SELECTIVE_CUT) cpp type_system.hpp.in type_system_pp.hpp.alt2 

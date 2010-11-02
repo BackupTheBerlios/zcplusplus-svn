@@ -2,10 +2,6 @@
 // (C)2009, 2010 Kenneth Boyd, license: MIT.txt
 
 #include "type_spec.hpp"
-#/*cut-cpp*/
-#include "ParseTree.hpp"
-#include "type_system.hpp"
-#/*cut-cpp*/
 
 #include "Zaimoni.STL/MetaRAM2.hpp"
 using namespace zaimoni;
@@ -85,13 +81,6 @@ void value_copy(type_spec& dest,const type_spec& src)
 		dest = tmp;
 		}
 	else{	// non-enlarging doesn't throw
-#/*cut-cpp*/
-		if (parse_tree::types)
-			{
-			parse_tree::types->unuse_type(dest.base_type_index);
-			parse_tree::types->use_type(src.base_type_index);
-			}
-#/*cut-cpp*/
 		dest.base_type_index = src.base_type_index;
 		dest.set_pointer_power(src.pointer_power);
 		if (dest.q_vector.size()==src.q_vector.size())
@@ -134,13 +123,6 @@ bool type_spec::dereference(type_spec& dest) const
 #endif
 	if (0==pointer_power) return false;
 	assert(lvalue & q_vector.data()[pointer_power-1]);	// result of dereference is a C/C++ lvalue; problem is elsewhere if this triggers
-#/*cut-cpp*/
-	if (parse_tree::types)
-		{
-		parse_tree::types->unuse_type(dest.base_type_index);
-		parse_tree::types->use_type(base_type_index);
-		}
-#/*cut-cpp*/
 	dest.base_type_index = base_type_index; 
 	dest.set_pointer_power(pointer_power-1); // lost a level of indirection
 	memmove(dest.q_vector.c_array(),q_vector.data(),dest.q_vector.size());
@@ -167,9 +149,6 @@ void type_spec::destroy()
 	FREE_AND_NULL(extent_vector);
 	q_vector.resize(1);
 	q_vector.front() = '\0';
-#/*cut-cpp*/
-	if (parse_tree::types) parse_tree::types->unuse_type(base_type_index);
-#/*cut-cpp*/
 	base_type_index = 0;
 	pointer_power = 0;
 }
@@ -182,13 +161,6 @@ void type_spec::set_type(size_t _base_type_index)
 	FREE_AND_NULL(extent_vector);
 	q_vector.resize(1);
 	q_vector.front() = '\0';
-#/*cut-cpp*/
-	if (parse_tree::types)
-		{
-		parse_tree::types->unuse_type(base_type_index);
-		parse_tree::types->use_type(_base_type_index);
-		};
-#/*cut-cpp*/
 	base_type_index = _base_type_index;
 	pointer_power = 0;
 }
