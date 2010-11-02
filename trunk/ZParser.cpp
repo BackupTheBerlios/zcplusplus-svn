@@ -174,7 +174,7 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 	assert(ParsedList[0]->syntax_ok());
 #endif
 	die_on_parse_errors();
-	lang.pp_support->ContextParse(*ParsedList[0],types);
+	lang.pp_support->ContextParse(*ParsedList[0]);
 #ifndef ZAIMONI_FORCE_ISO
 	assert(ParsedList[0]->syntax_ok());
 #endif
