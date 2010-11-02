@@ -284,7 +284,31 @@ void type_system::unuse_type(type_index id)
 	if (core_types_size>=id) return;
 	if (SIZE_MAX==dynamic_types[id-=(core_types_size+1)].fourth) return;
 	assert(0<dynamic_types[id].fourth);
-	--dynamic_types[id].fourth;
+	if (0== --dynamic_types[id].fourth && dynamic_types.size()-1==id)
+		{	// type use count down to zero
+		switch(dynamic_types[id].third.second)
+		{
+#if 0
+		case DYNAMIC_FUNCTYPE:
+			delete dynamic_types[id].third.first.first;
+			dynamic_types[id].third.first.first = NULL;
+			break;
+#endif
+		case DYNAMIC_STRUCTDECL:
+			delete dynamic_types[id].third.first.second;
+			dynamic_types[id].third.first.second = NULL;
+			break;
+		case DYNAMIC_C_STRUCTDEF:
+			delete dynamic_types[id].third.first.third;
+			dynamic_types[id].third.first.third = NULL;
+			break;
+		case DYNAMIC_ENUMDEF:
+			delete dynamic_types[id].third.first.fourth;
+			dynamic_types[id].third.first.fourth = NULL;
+			break;
+		}
+		dynamic_types.DeleteIdx(id);		
+		}
 }
 #/*cut-cpp*/
 
