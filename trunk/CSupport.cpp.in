@@ -1221,6 +1221,12 @@ static void message_header(const C_union_struct_def& src)
 	assert(src.filename() && *src.filename());
 	message_header(src.filename(),src.loc().first);
 }
+
+static void message_header(const zaimoni::POD_pair<const char*,zaimoni::POD_pair<size_t,size_t> >& src)
+{
+	assert(src.first && *src.first);
+	message_header(src.first,src.second.first);
+}
 #/*cut-cpp*/
 
 // balanced character count
@@ -12604,21 +12610,20 @@ static bool record_enum_values(parse_tree& src, const type_system::type_index en
 		{
 		char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[0].token.first,active_namespace,"::") : NULL;
 		const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[0].token.first;
-		{
-		const type_system::enumerator_info* tmp = parse_tree::types->get_enumerator(fullname);
-		if (tmp)
+		if (const type_system::enumerator_info* fatal_def = parse_tree::types->get_enumerator(fullname))
 			{	// --do-what-i-mean could recover if the prior definition were identical
-				// C: note on C99/C1X 6.7.2.2p3 indicates autofail no matter where it was defined
+				// C: note on C99/C1X 6.7.2.2p3 indicates autofail no matter where it was defined (but scope matters)
 				// C++: One Definition Rule wipes out
 				//! \test decl.C99/Error_enum_multidef.h, decl.C99/Error_enum_multidef.hpp 
 			message_header(src.data<0>()[i].index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INFORM("enumerator is already defined (C99 6.7.2.2p3/C++98 3.2)");
+			message_header(fatal_def->second.second);
+			INFORM("prior definition here");
 			zcc_errors.inc_error();
 			free(namespace_name);
 			return false;
 			};
-		}
 		free(namespace_name);
 		}
 #if 0
@@ -12670,9 +12675,7 @@ static bool record_enum_values(parse_tree& src, const type_system::type_index en
 			{	// C++: One Definition Rule
 			};
 #endif
-		{
-		const zaimoni::POD_triple<type_spec,const char*,size_t>* const tmp = parse_tree::types->get_typedef_CPP(src.data<0>()[i].index_tokens[0].token.first,active_namespace); 
-		if (tmp)
+		if (const zaimoni::POD_triple<type_spec,const char*,size_t>* const tmp = parse_tree::types->get_typedef_CPP(src.data<0>()[i].index_tokens[0].token.first,active_namespace))
 			{	// C++: One Definition Rule
 				//! \test decl.C99/Error_enum_typedef.h, decl.C99/Error_enum_typedef.hpp 
 			message_header(src.data<0>()[i].index_tokens[0]);
@@ -12685,7 +12688,6 @@ static bool record_enum_values(parse_tree& src, const type_system::type_index en
 			zcc_errors.inc_error();
 			return false;
 			};
-		}
 
 		// The type and representation of an enumeration varies by language
 		// C: values are type int; actual representation can be decided after seeing all enumeration values.
@@ -13132,8 +13134,7 @@ C99_struct_specifier:
 			if (tmp)
 				{
 				assert(0<parse_tree::types->use_count(tmp));
-				const C_union_struct_def* const fatal_def = parse_tree::types->get_C_structdef(tmp);
-				if (fatal_def)
+				if (const C_union_struct_def* const fatal_def = parse_tree::types->get_C_structdef(tmp))
 					{	//! \test zcc/decl.C99/Error_union_multidef.h
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -13200,8 +13201,7 @@ C99_struct_specifier:
 			if (tmp)
 				{
 				assert(0<parse_tree::types->use_count(tmp));
-				const C_union_struct_def* const fatal_def = parse_tree::types->get_C_structdef(tmp);
-				if (fatal_def)
+				if (const C_union_struct_def* const fatal_def = parse_tree::types->get_C_structdef(tmp))
 					{	//! \test zcc/decl.C99/Error_struct_multidef.h
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -14014,8 +14014,7 @@ CPP_class_specifier:
 			const type_system::type_index tmp = parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
 			if (tmp)
 				{
-				const C_union_struct_def* const fatal_def = parse_tree::types->get_C_structdef(tmp);
-				if (fatal_def)
+				if (const C_union_struct_def* const fatal_def = parse_tree::types->get_C_structdef(tmp))
 					{	//! \test zcc/decl.C99/Error_union_multidef.hpp
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -14081,8 +14080,7 @@ CPP_class_specifier:
 			const type_system::type_index tmp = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
 			if (tmp)
 				{
-				const C_union_struct_def* const fatal_def = parse_tree::types->get_C_structdef(tmp);
-				if (fatal_def)
+				if (const C_union_struct_def* const fatal_def = parse_tree::types->get_C_structdef(tmp))
 					{	//! \test zcc/decl.C99/Error_struct_multidef.hpp
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -14148,8 +14146,7 @@ CPP_class_specifier:
 			const type_system::type_index tmp = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
 			if (tmp)
 				{
-				const C_union_struct_def* const fatal_def = parse_tree::types->get_C_structdef(tmp);
-				if (fatal_def)
+				if (const C_union_struct_def* const fatal_def = parse_tree::types->get_C_structdef(tmp))
 					{	//! \test zcc/decl.C99/Error_class_multidef.hpp
 					message_header(src.data<0>()[i].index_tokens[0]);
 					INC_INFORM(ERR_STR);
