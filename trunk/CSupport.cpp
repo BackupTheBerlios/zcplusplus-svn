@@ -12901,30 +12901,38 @@ static int notice_CPP_tag(const parse_tree& src)
 
 #undef ZCC_CORE_NOTICE_TAG
 
-static type_system::type_index _forward_declare_C_union(parse_tree& src, size_t& i, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
+static void _forward_declare_C_union(parse_tree& src, size_t& i, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
 {
+	parse_tree& tmp = src.c_array<0>()[i];
+#ifdef NDEBUG
+	tmp.type_code.set_type(parse_tree::types->register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_union));
+#else
 	const type_system::type_index tmp2 = parse_tree::types->register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_union);
 	assert(tmp2);
 	assert(parse_tree::types->get_id_union(src.data<0>()[i].index_tokens[1].token.first));
 	assert(parse_tree::types->get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
 	assert(parse_tree::types->get_structdecl(tmp2));
-	src.c_array<0>()[i].type_code.set_type(tmp2);
-	src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
+	tmp.type_code.set_type(tmp2);
+#endif
+	tmp.flags |= PARSE_UNION_TYPE;
 	_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
-	return tmp2;
 }
 
-static type_system::type_index _forward_declare_C_struct(parse_tree& src, size_t& i, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
+static void _forward_declare_C_struct(parse_tree& src, size_t& i, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
 {
+	parse_tree& tmp = src.c_array<0>()[i];
+#ifdef NDEBUG
+	tmp.type_code.set_type(parse_tree::types->register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_struct));
+#else
 	const type_system::type_index tmp2 = parse_tree::types->register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_struct);
 	assert(tmp2);
 	assert(parse_tree::types->get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
 	assert(parse_tree::types->get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
 	assert(parse_tree::types->get_structdecl(tmp2));
-	src.c_array<0>()[i].type_code.set_type(tmp2);
-	src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
+	tmp.type_code.set_type(tmp2);
+#endif
+	tmp.flags |= PARSE_CLASS_STRUCT_TYPE;
 	_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
-	return tmp2;
 }
 
 // will need: "function-type vector"
@@ -12963,6 +12971,7 @@ static void C99_ContextParse(parse_tree& src)
 			};
 		// XXX C allows mixing definitions and declaring variables at the same time, but this is a bit unusual
 		// check naked declarations first
+reparse:
 		const int tag_type = notice_C99_tag(src.data<0>()[i]);
 		if (tag_type)
 			{
@@ -12973,7 +12982,6 @@ static void C99_ContextParse(parse_tree& src)
 #endif
 			case UNION_NAME:
 			{
-C99_union_specifier:
 			const type_system::type_index tmp = parse_tree::types->get_id_union(src.data<0>()[i].index_tokens[1].token.first);
 			if (tmp)
 				{
@@ -13028,7 +13036,6 @@ C99_union_specifier:
 			break;
 			case STRUCT_NAME:
 			{
-C99_struct_specifier:
 			const type_system::type_index tmp = parse_tree::types->get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first);
 			if (tmp)
 				{
@@ -13107,18 +13114,18 @@ C99_struct_specifier:
 					// reduce to named-specifier
 					src.c_array<0>()[i].DeleteIdx<2>(0);
 					assert(is_C99_named_specifier(src.data<0>()[i],"union"));
-					goto C99_union_specifier;
+					goto reparse;
 					}
 				src.c_array<0>()[i].type_code.set_type(tmp);
 				src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
 				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
-				};
+				}
 			//! \bug C1X 6.7.2.3p2 states that conflicting enum or struct must error
 			// tentatively forward-declare immediately
 			//! \test zcc/decl.C99/Pass_union_forward_def.h
-			const type_system::type_index tmp2 = tmp ? 0 : _forward_declare_C_union(src,i,invariant_decl_scanner);
+			else _forward_declare_C_union(src,i,invariant_decl_scanner);
 			// parse the union and upgrade it to a full definition
-			const type_system::type_index vr_tmp = tmp ? tmp : tmp2;
+			const type_system::type_index vr_tmp = src.data<0>()[i].type_code.base_type_index;
 			const union_struct_decl* tmp3 = parse_tree::types->get_structdecl(vr_tmp);
 			assert(tmp3);
 			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
@@ -13166,18 +13173,18 @@ C99_struct_specifier:
 					// reduce to named-specifier
 					src.c_array<0>()[i].DeleteIdx<2>(0);
 					assert(is_C99_named_specifier(src.data<0>()[i],"struct"));
-					goto C99_struct_specifier;
+					goto reparse;
 					}
 				src.c_array<0>()[i].type_code.set_type(tmp);
 				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
 				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
-				};
+				}
 			//! \bug C1X 6.7.2.3p2 states that conflicting enum or union must error
 			// tentatively forward-declare immediately
 			//! \test zcc/decl.C99/Pass_struct_forward_def.h
-			const type_system::type_index tmp2 = tmp ? 0 : _forward_declare_C_struct(src,i,invariant_decl_scanner);
+			else _forward_declare_C_struct(src,i,invariant_decl_scanner);
 			// parse the union and upgrade it to a full definition
-			const type_system::type_index vr_tmp = tmp ? tmp : tmp2;
+			const type_system::type_index vr_tmp = src.data<0>()[i].type_code.base_type_index;
 			const union_struct_decl* tmp3 = parse_tree::types->get_structdecl(vr_tmp);
 			assert(tmp3);
 			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
@@ -13707,43 +13714,55 @@ static void CPP0X_flush_const_volatile_without_object(parse_tree& src)
 		}
 }
 
-static type_system::type_index _forward_declare_CPP_union(parse_tree& src, const char* const active_namespace, size_t& i, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
+static void _forward_declare_CPP_union(parse_tree& src, const char* const active_namespace, size_t& i, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
 {
+	parse_tree& tmp = src.c_array<0>()[i];
+#ifdef NDEBUG
+	tmp.type_code.set_type(parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union));
+#else
 	const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union);
 	assert(tmp2);
 	assert(parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace));
 	assert(parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
 	assert(parse_tree::types->get_structdecl(tmp2));
-	src.c_array<0>()[i].type_code.set_type(tmp2);
-	src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
+	tmp.type_code.set_type(tmp2);
+#endif
+	tmp.flags |= PARSE_UNION_TYPE;
 	_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
-	return tmp2;
 }
 
-static type_system::type_index _forward_declare_CPP_struct(parse_tree& src, const char* const active_namespace, size_t& i, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
+static void _forward_declare_CPP_struct(parse_tree& src, const char* const active_namespace, size_t& i, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
 {
+	parse_tree& tmp = src.c_array<0>()[i];
+#ifdef NDEBUG
+	tmp.type_code.set_type(parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_struct));
+#else
 	const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_struct);
 	assert(tmp2);
 	assert(parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace));
 	assert(parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
 	assert(parse_tree::types->get_structdecl(tmp2));
-	src.c_array<0>()[i].type_code.set_type(tmp2);
-	src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
+	tmp.type_code.set_type(tmp2);
+#endif
+	tmp.flags |= PARSE_CLASS_STRUCT_TYPE;
 	_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
-	return tmp2;
 }
 
-static type_system::type_index _forward_declare_CPP_class(parse_tree& src, const char* const active_namespace, size_t& i, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
+static void _forward_declare_CPP_class(parse_tree& src, const char* const active_namespace, size_t& i, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
 {
+	parse_tree& tmp = src.c_array<0>()[i];
+#ifdef NDEBUG
+	tmp.type_code.set_type(parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class));
+#else
 	const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class);
 	assert(tmp2);
 	assert(parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace));
 	assert(parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
 	assert(parse_tree::types->get_structdecl(tmp2));
-	src.c_array<0>()[i].type_code.set_type(tmp2);
-	src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
+	tmp.type_code.set_type(tmp2);
+#endif
+	tmp.flags |= PARSE_CLASS_STRUCT_TYPE;
 	_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
-	return tmp2;
 }
 
 // handle namespaces or else
@@ -13789,6 +13808,7 @@ static void CPP_ParseNamespace(parse_tree& src,const char* const active_namespac
 			};
 		// XXX C++ allows mixing definitions and declaring variables at the same time, but this is a bit unusual
 		// check naked declarations first; handle namespaces later
+reparse:
 		const int tag_type = notice_CPP_tag(src.data<0>()[i]);
 		if (tag_type)
 			{
@@ -13799,16 +13819,17 @@ static void CPP_ParseNamespace(parse_tree& src,const char* const active_namespac
 #endif
 			case UNION_NAME:
 			{
-CPP_union_specifier:
 			const type_system::type_index tmp = parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
 			if (tmp)
 				{
+				assert(0<parse_tree::types->use_count(tmp));
 				src.c_array<0>()[i].type_code.set_type(tmp);
 				src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
 				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
 				}
-			//! \bug [find citation] states that conflicting enum, struct, or class must error
+			//! \bug One Definition Rule states that conflicting enum, struct, or class must error
 			// tentatively forward-declare immediately
+			//! \test zcc/decl.C99/Pass_union_forward_def.hpp
 			else _forward_declare_CPP_union(src,active_namespace,i,invariant_decl_scanner);
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
@@ -13858,15 +13879,15 @@ CPP_union_specifier:
 			break;
 			case STRUCT_NAME:
 			{
-CPP_struct_specifier:				
 			const type_system::type_index tmp = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
 			if (tmp)
 				{
+				assert(0<parse_tree::types->use_count(tmp));
 				src.c_array<0>()[i].type_code.set_type(tmp);
 				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
 				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
 				}
-			//! \bug [find citation] states that conflicting enum, struct, or class must error
+			//! \bug One Definition Rule states that conflicting enum, struct, or class must error
 			// tentatively forward-declare immediately
 			//! \test zcc/decl.C99/Pass_union_forward_def.hpp
 			else _forward_declare_CPP_struct(src,active_namespace,i,invariant_decl_scanner);
@@ -13919,15 +13940,15 @@ CPP_struct_specifier:
 			break;
 			case CLASS_NAME:
 			{
-CPP_class_specifier:
 			const type_system::type_index tmp = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
 			if (tmp)
 				{
+				assert(0<parse_tree::types->use_count(tmp));
 				src.c_array<0>()[i].type_code.set_type(tmp);
 				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
 				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
 				}
-			//! \bug [find citation] states that conflicting enum, struct, or class must error
+			//! \bug One Definition Rule states that conflicting enum, struct, or class must error
 			// tentatively forward-declare immediately
 			//! \test zcc/decl.C99/Pass_union_forward_def.hpp
 			else _forward_declare_CPP_class(src,active_namespace,i,invariant_decl_scanner);
@@ -13996,18 +14017,18 @@ CPP_class_specifier:
 					// reduce to named-specifier
 					src.c_array<0>()[i].DeleteIdx<2>(0);
 					assert(is_C99_named_specifier(src.data<0>()[i],"union"));
-					goto CPP_union_specifier;
+					goto reparse;
 					}					
 				src.c_array<0>()[i].type_code.set_type(tmp);
 				src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
 				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
-				};
-			//! \bug [find citation] states that conflicting enum, struct, or class must error
+				}
+			//! \bug One Definition Rule states that conflicting enum, struct, or class must error
 			// tentatively forward-declare immediately
 			//! \test zcc/decl.C99/Pass_union_forward_def.hpp
-			const type_system::type_index tmp2 = tmp ? 0 : _forward_declare_CPP_union(src,active_namespace,i,invariant_decl_scanner);
+			else _forward_declare_CPP_union(src,active_namespace,i,invariant_decl_scanner);
 			// parse the union and upgrade it to a full definition
-			const type_system::type_index vr_tmp = tmp ? tmp : tmp2;
+			const type_system::type_index vr_tmp = src.data<0>()[i].type_code.base_type_index;
 			const union_struct_decl* tmp3 = parse_tree::types->get_structdecl(vr_tmp);
 			assert(tmp3);
 			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
@@ -14054,18 +14075,18 @@ CPP_class_specifier:
 					// reduce to named-specifier
 					src.c_array<0>()[i].DeleteIdx<2>(0);
 					assert(is_C99_named_specifier(src.data<0>()[i],"struct"));
-					goto CPP_struct_specifier;
+					goto reparse;
 					}					
 				src.c_array<0>()[i].type_code.set_type(tmp);
 				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
 				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
-				};
-			//! \bug [find citation] states that conflicting enum, struct, or class must error
+				}
+			//! \bug One Definition Rule states that conflicting enum, struct, or class must error
 			// tentatively forward-declare immediately
 			//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
-			const type_system::type_index tmp2 = tmp ? 0 : _forward_declare_CPP_struct(src,active_namespace,i,invariant_decl_scanner);
+			else _forward_declare_CPP_struct(src,active_namespace,i,invariant_decl_scanner);
 			// parse the union and upgrade it to a full definition
-			const type_system::type_index vr_tmp = tmp ? tmp : tmp2;
+			const type_system::type_index vr_tmp = src.data<0>()[i].type_code.base_type_index;
 			const union_struct_decl* tmp3 = parse_tree::types->get_structdecl(vr_tmp);
 			assert(tmp3);
 			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
@@ -14112,18 +14133,18 @@ CPP_class_specifier:
 					// reduce to named-specifier
 					src.c_array<0>()[i].DeleteIdx<2>(0);
 					assert(is_C99_named_specifier(src.data<0>()[i],"class"));
-					goto CPP_class_specifier;
+					goto reparse;
 					}					
 				src.c_array<0>()[i].type_code.set_type(tmp);
 				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
 				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
-				};
-			//! \bug [find citation] states that conflicting enum, struct, or class must error
+				}
+			//! \bug One Definition Rule states that conflicting enum, struct, or class must error
 			// tentatively forward-declare immediately
 			//! \test zcc/decl.C99/Pass_class_forward_def.hpp
-			const type_system::type_index tmp2 = tmp ? 0 : _forward_declare_CPP_class(src,active_namespace,i,invariant_decl_scanner);
+			else _forward_declare_CPP_class(src,active_namespace,i,invariant_decl_scanner);
 			// parse the union and upgrade it to a full definition
-			const type_system::type_index vr_tmp = tmp ? tmp : tmp2;
+			const type_system::type_index vr_tmp = src.data<0>()[i].type_code.base_type_index;
 			const union_struct_decl* tmp3 = parse_tree::types->get_structdecl(vr_tmp);
 			assert(tmp3);
 			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
