@@ -86,7 +86,7 @@ void value_copy(type_spec& dest,const type_spec& src)
 		}
 	else{	// non-enlarging doesn't throw
 #/*cut-cpp*/
-		if (parse_tree::types)
+		if (parse_tree::types && src.base_type_index!=dest.base_type_index)
 			{
 			parse_tree::types->unuse_type(dest.base_type_index);
 			parse_tree::types->use_type(src.base_type_index);
@@ -135,7 +135,7 @@ bool type_spec::dereference(type_spec& dest) const
 	if (0==pointer_power) return false;
 	assert(lvalue & q_vector.data()[pointer_power-1]);	// result of dereference is a C/C++ lvalue; problem is elsewhere if this triggers
 #/*cut-cpp*/
-	if (parse_tree::types)
+	if (parse_tree::types && base_type_index!=dest.base_type_index)
 		{
 		parse_tree::types->unuse_type(dest.base_type_index);
 		parse_tree::types->use_type(base_type_index);
@@ -183,7 +183,7 @@ void type_spec::set_type(size_t _base_type_index)
 	q_vector.resize(1);
 	q_vector.front() = '\0';
 #/*cut-cpp*/
-	if (parse_tree::types)
+	if (parse_tree::types && base_type_index!=_base_type_index)
 		{
 		parse_tree::types->unuse_type(base_type_index);
 		parse_tree::types->use_type(_base_type_index);

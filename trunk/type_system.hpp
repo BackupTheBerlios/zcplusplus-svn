@@ -66,7 +66,7 @@ public:
 		{
 		assert(core_types_size+dynamic_types.size()>=id);
 		if (core_types_size>=id) return SIZE_MAX;
-		return dynamic_types[id-core_types_size].fourth;
+		return dynamic_types[id-(core_types_size+1)].fourth;
 		}
 	const char* name(type_index id) const
 		{
