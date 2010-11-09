@@ -13148,7 +13148,37 @@ reparse:
 				src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
 				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
 				}
-			//! \bug C1X 6.7.2.3p2 states that conflicting enum or struct must error
+			// C1X 6.7.2.3p2 states that conflicting enum or struct must error
+			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first))
+				{	//! \test zcc/decl.C99/Error_struct_as_union.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("union ");
+				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
+				INFORM(" declared as struct (C99 6.7.2.3p2)");
+				zcc_errors.inc_error();
+				src.c_array<0>()[i].set_index_token_from_str_literal<0>("struct");
+				src.c_array<0>()[i].DeleteIdx<2>(0);
+				assert(is_C99_named_specifier(src.data<0>()[i],"struct"));
+				goto reparse;
+				}
+			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum(src.data<0>()[i].index_tokens[1].token.first))
+				{	//! \test zcc/decl.C99/Error_enum_as_union.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("union ");
+				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
+				INFORM(" declared as enumeration (C99 6.7.2.3p2)");
+				const enum_def* const tmp2 = parse_tree::types->get_enum_def(fatal_def);
+				assert(tmp2);
+				message_header(*tmp2);
+				INFORM("prior definition here");
+				zcc_errors.inc_error();
+				src.c_array<0>()[i].set_index_token_from_str_literal<0>("enum");
+				src.c_array<0>()[i].DeleteIdx<2>(0);
+				assert(is_C99_named_specifier(src.data<0>()[i],"enum"));
+				goto reparse;
+				}
 			// tentatively forward-declare immediately
 			//! \test zcc/decl.C99/Pass_union_forward_def.h
 			else _forward_declare_C_union(src,i,invariant_decl_scanner);
@@ -14080,7 +14110,37 @@ reparse:
 				src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
 				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
 				}
-			//! \bug One Definition Rule states that conflicting enum, struct, or class must error
+			// One Definition Rule states that conflicting enum, struct, or class must error
+			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
+				{	//! \test zcc/decl.C99/Error_struct_as_union.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("union ");
+				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
+				INFORM(" declared as struct or class (C++98 One Definition Rule)");
+				zcc_errors.inc_error();
+				src.c_array<0>()[i].set_index_token_from_str_literal<0>("struct");
+				src.c_array<0>()[i].DeleteIdx<2>(0);
+				assert(is_C99_named_specifier(src.data<0>()[i],"struct"));
+				goto reparse;
+				}
+			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
+				{	//! \test zcc/decl.C99/Error_enum_as_union.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("union ");
+				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
+				INFORM(" declared as enumeration (C++98 One Definition Rule)");
+				const enum_def* const tmp2 = parse_tree::types->get_enum_def(fatal_def);
+				assert(tmp2);
+				message_header(*tmp2);
+				INFORM("prior definition here");
+				zcc_errors.inc_error();
+				src.c_array<0>()[i].set_index_token_from_str_literal<0>("enum");
+				src.c_array<0>()[i].DeleteIdx<2>(0);
+				assert(is_C99_named_specifier(src.data<0>()[i],"enum"));
+				goto reparse;
+				}
 			// tentatively forward-declare immediately
 			//! \test zcc/decl.C99/Pass_union_forward_def.hpp
 			else _forward_declare_CPP_union(src,active_namespace,i,invariant_decl_scanner);
