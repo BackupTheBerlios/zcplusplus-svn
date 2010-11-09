@@ -1162,7 +1162,7 @@ static void message_header(const enum_def& src)
 }
 
 /* XXX this may belong with C_union_struct_def XXX */
-static void message_header(const C_union_struct_def& src)
+static void message_header(const union_struct_decl& src)
 {
 	assert(src.filename() && *src.filename());
 	message_header(src.filename(),src.loc().first);
@@ -12905,9 +12905,9 @@ static void _forward_declare_C_union(parse_tree& src, size_t& i, kleene_star_cor
 {
 	parse_tree& tmp = src.c_array<0>()[i];
 #ifdef NDEBUG
-	tmp.type_code.set_type(parse_tree::types->register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_union));
+	tmp.type_code.set_type(parse_tree::types->register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename));
 #else
-	const type_system::type_index tmp2 = parse_tree::types->register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_union);
+	const type_system::type_index tmp2 = parse_tree::types->register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 	assert(tmp2);
 	assert(parse_tree::types->get_id_union(src.data<0>()[i].index_tokens[1].token.first));
 	assert(parse_tree::types->get_id_union(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
@@ -12922,9 +12922,9 @@ static void _forward_declare_C_struct(parse_tree& src, size_t& i, kleene_star_co
 {
 	parse_tree& tmp = src.c_array<0>()[i];
 #ifdef NDEBUG
-	tmp.type_code.set_type(parse_tree::types->register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_struct));
+	tmp.type_code.set_type(parse_tree::types->register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename));
 #else
-	const type_system::type_index tmp2 = parse_tree::types->register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_struct);
+	const type_system::type_index tmp2 = parse_tree::types->register_structdecl(src.data<0>()[i].index_tokens[1].token.first,union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 	assert(tmp2);
 	assert(parse_tree::types->get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first));
 	assert(parse_tree::types->get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==tmp2);
@@ -13136,7 +13136,7 @@ reparse:
 					INC_INFORM("'union ");
 					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 					INFORM("' already defined (C99 6.7.2.3p1)");
-					message_header(*fatal_def);
+					message_header(fatal_def->_decl);
 					INFORM("prior definition here");
 					zcc_errors.inc_error();
 					// reduce to named-specifier
@@ -13225,7 +13225,7 @@ reparse:
 					INC_INFORM("'struct ");
 					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 					INFORM("' already defined (C99 6.7.2.3p1)");
-					message_header(*fatal_def);
+					message_header(fatal_def->_decl);
 					INFORM("prior definition here");
 					zcc_errors.inc_error();
 					// reduce to named-specifier
@@ -13274,7 +13274,7 @@ reparse:
 			case UNION_ANON_DEF:
 			{	// anonymous types cannot be matched
 			// tentatively forward-declare immediately
-			const type_system::type_index tmp2 = parse_tree::types->register_structdecl("<unknown>",union_struct_decl::decl_union);
+			const type_system::type_index tmp2 = parse_tree::types->register_structdecl("<unknown>",union_struct_decl::decl_union,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
 			assert(tmp2);
 			assert(parse_tree::types->get_structdecl(tmp2));
 
@@ -13320,7 +13320,7 @@ reparse:
 			case STRUCT_ANON_DEF:
 			{	// anonymous types cannot be matched
 			// tentatively forward-declare immediately
-			const type_system::type_index tmp2 = parse_tree::types->register_structdecl("<unknown>",union_struct_decl::decl_struct);
+			const type_system::type_index tmp2 = parse_tree::types->register_structdecl("<unknown>",union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
 			assert(tmp2);
 			assert(parse_tree::types->get_structdecl(tmp2));
 
@@ -13777,9 +13777,9 @@ static void _forward_declare_CPP_union(parse_tree& src, const char* const active
 {
 	parse_tree& tmp = src.c_array<0>()[i];
 #ifdef NDEBUG
-	tmp.type_code.set_type(parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union));
+	tmp.type_code.set_type(parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename));
 #else
-	const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union);
+	const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 	assert(tmp2);
 	assert(parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace));
 	assert(parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
@@ -13794,9 +13794,9 @@ static void _forward_declare_CPP_struct(parse_tree& src, const char* const activ
 {
 	parse_tree& tmp = src.c_array<0>()[i];
 #ifdef NDEBUG
-	tmp.type_code.set_type(parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_struct));
+	tmp.type_code.set_type(parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename));
 #else
-	const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_struct);
+	const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 	assert(tmp2);
 	assert(parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace));
 	assert(parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
@@ -13811,9 +13811,9 @@ static void _forward_declare_CPP_class(parse_tree& src, const char* const active
 {
 	parse_tree& tmp = src.c_array<0>()[i];
 #ifdef NDEBUG
-	tmp.type_code.set_type(parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class));
+	tmp.type_code.set_type(parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename));
 #else
-	const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class);
+	const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 	assert(tmp2);
 	assert(parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace));
 	assert(parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
@@ -14098,7 +14098,7 @@ reparse:
 					INC_INFORM("'union ");
 					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 					INFORM("' already defined (C++98 3.2p1)");
-					message_header(*fatal_def);
+					message_header(fatal_def->_decl);
 					INFORM("prior definition here");
 					zcc_errors.inc_error();
 					// reduce to named-specifier
@@ -14186,7 +14186,7 @@ reparse:
 					INC_INFORM("'struct ");
 					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 					INFORM("' already defined (C++98 3.2p1)");
-					message_header(*fatal_def);
+					message_header(fatal_def->_decl);
 					INFORM("prior definition here");
 					zcc_errors.inc_error();
 					// reduce to named-specifier
@@ -14246,7 +14246,7 @@ reparse:
 					INC_INFORM("'class ");
 					INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 					INFORM("' already defined (C++98 3.2p1)");
-					message_header(*fatal_def);
+					message_header(fatal_def->_decl);
 					INFORM("prior definition here");
 					zcc_errors.inc_error();
 					// reduce to named-specifier
@@ -14295,7 +14295,7 @@ reparse:
 			case UNION_ANON_DEF:
 			{	// anonymous types cannot be matched
 			// tentatively forward-declare immediately
-			const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP("<unknown>",active_namespace,union_struct_decl::decl_union);
+			const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP("<unknown>",active_namespace,union_struct_decl::decl_union,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
 			assert(tmp2);
 
 			//! \test zcc/decl.C99/Pass_union_forward_def.hpp
@@ -14342,7 +14342,7 @@ reparse:
 			case STRUCT_ANON_DEF:
 			{	// anonymous types cannot be matched
 			// tentatively forward-declare immediately
-			const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP("<unknown>",active_namespace,union_struct_decl::decl_struct);
+			const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP("<unknown>",active_namespace,union_struct_decl::decl_struct,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
 			assert(tmp2);
 			assert(parse_tree::types->get_structdecl(tmp2));
 			src.c_array<0>()[i].type_code.set_type(tmp2);
@@ -14387,7 +14387,7 @@ reparse:
 			case CLASS_ANON_DEF:
 			{	// anonymous types cannot be matched
 			// tentatively forward-declare immediately
-			const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP("<unknown>",active_namespace,union_struct_decl::decl_class);
+			const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP("<unknown>",active_namespace,union_struct_decl::decl_class,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
 			assert(tmp2);
 			assert(parse_tree::types->get_structdecl(tmp2));
 			src.c_array<0>()[i].type_code.set_type(tmp2);

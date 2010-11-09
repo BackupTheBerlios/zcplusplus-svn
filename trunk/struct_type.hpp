@@ -11,6 +11,8 @@ class union_struct_decl
 private:
 	const char* _tag;	// NULL or ends in :: for anonymous
 	unsigned char _keyword;
+	zaimoni::POD_pair<size_t,size_t> _logical_line;
+	const char* _src_filename;
 public:
 	enum keywords {
 		decl_none = 0,
@@ -19,7 +21,16 @@ public:
 		decl_class = 3		// default private access in C++; entries are in sequence (calculating layout requires target information)
 	};
 
-	union_struct_decl(keywords keyword, const char* tag) : _tag((tag && *tag ? tag : NULL)),_keyword((assert(keyword),keyword)) {};
+	union_struct_decl(keywords keyword, const char* tag,const zaimoni::POD_pair<size_t,size_t>& logical_line,const char* src_filename)
+	: _tag((tag && *tag ? tag : NULL)),
+	  _keyword((assert(keyword),keyword)),
+	  _logical_line(logical_line),
+	  _src_filename(((src_filename && *src_filename) ? src_filename : NULL)) {};
+	union_struct_decl(const union_struct_decl& src,const zaimoni::POD_pair<size_t,size_t>& logical_line,const char* src_filename)
+	: _tag(src._tag),
+	  _keyword(src._keyword),
+	  _logical_line(logical_line),
+	  _src_filename(((src_filename && *src_filename) ? src_filename : NULL)) {};	  
 	// defaults ok for: copy constructor, destructor, assignment operator
 
 	const char* tag() const {return _tag;};
@@ -27,13 +38,13 @@ public:
 	friend bool operator==(const union_struct_decl& lhs,const union_struct_decl& rhs) {
 		return lhs._tag==rhs._tag && lhs._keyword==rhs._keyword;
 	};
+
+	const char* filename() const {return _src_filename;};
+	zaimoni::POD_pair<size_t,size_t> loc() const {return _logical_line;};
 };
 
 class C_union_struct_def
 {
-private:
-	zaimoni::POD_pair<size_t,size_t> _logical_line;
-	const char* _src_filename;
 public:
 	union_struct_decl _decl;
 	zaimoni::autovalarray_ptr_throws<type_spec> data_field_spec;
@@ -44,10 +55,6 @@ public:
 	C_union_struct_def(const C_union_struct_def& src);
 	~C_union_struct_def();
 	const C_union_struct_def& operator=(const C_union_struct_def& src);
-
-	const char* filename() const {return _src_filename;};
-	zaimoni::POD_pair<size_t,size_t> loc() const {return _logical_line;};
-
 #ifndef NDEBUG
 	bool syntax_ok() const;
 #endif

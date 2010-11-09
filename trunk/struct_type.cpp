@@ -5,17 +5,13 @@
 #include "Zaimoni.STL/Pure.C/auto_int.h"
 
 C_union_struct_def::C_union_struct_def(const union_struct_decl& src,const zaimoni::POD_pair<size_t,size_t>& logical_line,const char* src_filename)
-:	_logical_line(logical_line),
-	_src_filename(((src_filename && *src_filename) ? src_filename : NULL)),
-	_decl(src)
+:	_decl(src,logical_line,src_filename)
 {
 	assert(syntax_ok());
 }
 
 C_union_struct_def::C_union_struct_def(union_struct_decl::keywords keyword, const char* tag,const zaimoni::POD_pair<size_t,size_t>& logical_line, const char* src_filename)
-:	_logical_line(logical_line),
-	_src_filename(((src_filename && *src_filename) ? src_filename : NULL)),
-	_decl(keyword,tag)
+:	_decl(keyword,tag,logical_line,src_filename)
 {
 	assert(syntax_ok());
 }
@@ -78,8 +74,6 @@ const C_union_struct_def& C_union_struct_def::operator=(const C_union_struct_def
 		}
 
 	_decl = src._decl;
-	_logical_line = src._logical_line;
-	_src_filename = src._src_filename;
 	assert(syntax_ok());
 	return *this;
 }

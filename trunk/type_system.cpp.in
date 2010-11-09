@@ -745,7 +745,7 @@ type_system::type_index type_system::register_functype_CPP(const char* name, con
 	return register_functype(name,src);
 }
 
-type_system::type_index type_system::register_structdecl(const char* const alias, int keyword)
+type_system::type_index type_system::register_structdecl(const char* const alias, int keyword,const zaimoni::POD_pair<size_t,size_t>& logical_line,const char* src_filename)
 {
 	assert(alias && *alias);
 	const size_t dynamic_types_size = dynamic_types.size();
@@ -755,7 +755,7 @@ type_system::type_index type_system::register_structdecl(const char* const alias
 		FATAL("Host implementation limit exceeded: cannot record union/struct type used in program");
 
 	dynamic_type_format tmp = {alias,strlen(alias),{{NULL},DYNAMIC_STRUCTDECL}};
-	tmp.third.first.second = new union_struct_decl((union_struct_decl::keywords)keyword,alias);
+	tmp.third.first.second = new union_struct_decl((union_struct_decl::keywords)keyword,alias,logical_line,src_filename);
 
 	if (!dynamic_types.InsertSlotAt(dynamic_types_size,tmp))
 		{
@@ -765,7 +765,7 @@ type_system::type_index type_system::register_structdecl(const char* const alias
 	return dynamic_types_size+1+core_types_size;
 }
 
-type_system::type_index type_system::register_structdecl_CPP(const char* name, const char* const active_namespace, int keyword)
+type_system::type_index type_system::register_structdecl_CPP(const char* name, const char* const active_namespace, int keyword,const zaimoni::POD_pair<size_t,size_t>& logical_line,const char* src_filename)
 {
 	assert(name && *name);
 
@@ -773,7 +773,7 @@ type_system::type_index type_system::register_structdecl_CPP(const char* name, c
 	if (active_namespace && *active_namespace)
 		name = construct_canonical_name_and_aliasing_CPP(name,strlen(name),active_namespace,strlen(active_namespace));
 
-	return register_structdecl(name,keyword);
+	return register_structdecl(name,keyword,logical_line,src_filename);
 }
 
 type_system::type_index type_system::register_C_structdef(const char* const alias, zaimoni::POD_pair<size_t,size_t> logical_line, const char* const src_filename, int keyword)
