@@ -12993,11 +12993,16 @@ reparse:
 			// C1X 6.7.2.3p2 states that conflicting enum or struct must error
 			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first))
 				{	//! \test zcc/decl.C99/Error_struct_as_union.h
+					//! \test zcc/decl.C99/Error_struct_as_union3.h
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("union ");
 				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
 				INFORM(" declared as struct (C99 6.7.2.3p2)");
+				const union_struct_decl* const tmp2 = parse_tree::types->get_structdecl(fatal_def);
+				assert(tmp2);
+				message_header(*tmp2);
+				INFORM("prior definition here");
 				zcc_errors.inc_error();
 				src.c_array<0>()[i].set_index_token_from_str_literal<0>("struct");
 				assert(is_C99_named_specifier(src.data<0>()[i],"struct"));
@@ -13150,12 +13155,17 @@ reparse:
 				}
 			// C1X 6.7.2.3p2 states that conflicting enum or struct must error
 			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first))
-				{	//! \test zcc/decl.C99/Error_struct_as_union.h
+				{	//! \test zcc/decl.C99/Error_struct_as_union2.h
+					//! \test zcc/decl.C99/Error_struct_as_union4.h
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("union ");
 				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
 				INFORM(" declared as struct (C99 6.7.2.3p2)");
+				const union_struct_decl* const tmp2 = parse_tree::types->get_structdecl(fatal_def);
+				assert(tmp2);
+				message_header(*tmp2);
+				INFORM("prior definition here");
 				zcc_errors.inc_error();
 				src.c_array<0>()[i].set_index_token_from_str_literal<0>("struct");
 				src.c_array<0>()[i].DeleteIdx<2>(0);
@@ -13675,16 +13685,8 @@ static void render_type(const type_spec& src,const type_system& types, const cha
 
 	if (types.get_enum_def(src.base_type_index))
 		INC_INFORM("enum ");
-	else{
-		zaimoni::POD_pair<const union_struct_decl*,const C_union_struct_def*> tmp;
-		tmp.first = types.get_structdecl(src.base_type_index);
-		if (tmp.first) INC_INFORM(text_from_keyword(*tmp.first));
-		else{
-			tmp.second = types.get_C_structdef(src.base_type_index);
-			if (tmp.second)
-				INC_INFORM(text_from_keyword(tmp.second->_decl));
-			}
-		}
+	else if (const union_struct_decl* tmp = types.get_structdecl(src.base_type_index))
+		INC_INFORM(text_from_keyword(*tmp));
 	INC_INFORM(type_name ? type_name : "<unresolved type>");
 
 	while(0<start_ptr_scan--)
@@ -13889,11 +13891,20 @@ reparse:
 			// One Definition Rule states that conflicting enum, struct, or class must error
 			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
 				{	//! \test zcc/decl.C99/Error_struct_as_union.hpp
+					//! \test zcc/decl.C99/Error_struct_as_union3.hpp
+					//! \test zcc/decl.C99/Error_class_as_union.hpp
+					//! \test zcc/decl.C99/Error_class_as_union3.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("union ");
 				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
-				INFORM(" declared as struct or class (C++98 One Definition Rule)");
+				INFORM(" declared as ");
+				const union_struct_decl* const tmp2 = parse_tree::types->get_structdecl(fatal_def);
+				assert(tmp2);
+				INC_INFORM(text_from_keyword(*tmp2));
+				INFORM(" (C++98 One Definition Rule)");
+				message_header(*tmp2);
+				INFORM("prior definition here");
 				zcc_errors.inc_error();
 				src.c_array<0>()[i].set_index_token_from_str_literal<0>("struct");
 				assert(is_C99_named_specifier(src.data<0>()[i],"struct"));
@@ -14112,12 +14123,21 @@ reparse:
 				}
 			// One Definition Rule states that conflicting enum, struct, or class must error
 			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
-				{	//! \test zcc/decl.C99/Error_struct_as_union.hpp
+				{	//! \test zcc/decl.C99/Error_struct_as_union2.hpp
+					//! \test zcc/decl.C99/Error_struct_as_union4.hpp
+					//! \test zcc/decl.C99/Error_class_as_union2.hpp
+					//! \test zcc/decl.C99/Error_class_as_union4.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("union ");
 				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
-				INFORM(" declared as struct or class (C++98 One Definition Rule)");
+				INFORM(" declared as ");
+				const union_struct_decl* const tmp2 = parse_tree::types->get_structdecl(fatal_def);
+				assert(tmp2);
+				INC_INFORM(text_from_keyword(*tmp2));
+				INFORM(" (C++98 One Definition Rule)");
+				message_header(*tmp2);
+				INFORM("prior definition here");
 				zcc_errors.inc_error();
 				src.c_array<0>()[i].set_index_token_from_str_literal<0>("struct");
 				src.c_array<0>()[i].DeleteIdx<2>(0);
@@ -14151,7 +14171,7 @@ reparse:
 			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 			//! \todo record field structure, etc.
 			parse_tree::types->upgrade_decl_to_def(vr_tmp,tmp4);
-			assert(parse_tree::types->get_id_union(src.data<0>()[i].index_tokens[1].token.first)==vr_tmp);
+			assert(parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==vr_tmp);
 			assert(parse_tree::types->get_C_structdef(vr_tmp));
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
@@ -14211,7 +14231,7 @@ reparse:
 			//! \todo record field structure, etc.
 			parse_tree::types->upgrade_decl_to_def(vr_tmp,tmp4);
 			assert(2 && 0<parse_tree::types->use_count(vr_tmp));
-			assert(parse_tree::types->get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==vr_tmp);
+			assert(parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==vr_tmp);
 			assert(parse_tree::types->get_C_structdef(vr_tmp));
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
@@ -14269,7 +14289,7 @@ reparse:
 			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
 			//! \todo record field structure, etc.
 			parse_tree::types->upgrade_decl_to_def(vr_tmp,tmp4);
-			assert(parse_tree::types->get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first)==vr_tmp);
+			assert(parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==vr_tmp);
 			assert(parse_tree::types->get_C_structdef(vr_tmp));
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))

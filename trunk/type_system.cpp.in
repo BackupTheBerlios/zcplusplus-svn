@@ -858,6 +858,9 @@ const union_struct_decl* type_system::get_structdecl(type_system::type_index i) 
 	i -= core_types_size;
 	if (dynamic_types.size()<= --i) return NULL;
 	const dynamic_type_format& tmp = dynamic_types[i];
+	// struct_def also has a struct_decl member
+	if (DYNAMIC_C_STRUCTDEF==tmp.third.second)
+		return &tmp.third.first.third->_decl;
 	if (DYNAMIC_STRUCTDECL!=tmp.third.second) return NULL;
 	return tmp.third.first.second;
 }
