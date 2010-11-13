@@ -1,0 +1,10 @@
+SUFFIXES h hpp
+// using union as struct
+// (C)2010 Kenneth Boyd, license: MIT.txt
+
+union bad_test {
+	int x_factor;
+};
+
+struct bad_test;
+
