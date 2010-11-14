@@ -14240,7 +14240,7 @@ reparse:
 				goto reparse;
 				}
 			// tentatively forward-declare immediately
-			//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+			//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
 			else _forward_declare_CPP_struct(src,active_namespace,i,invariant_decl_scanner);
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
@@ -14300,7 +14300,6 @@ reparse:
 				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
 				}
 			// One Definition Rule states that conflicting enum, struct, or class must error
-			//! \bug need cited test cases
 			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
 				{	//! \test zcc/decl.C99/Error_union_as_class.hpp
 					//! \test zcc/decl.C99/Error_union_as_class3.hpp
@@ -14335,7 +14334,7 @@ reparse:
 				goto reparse;
 				}
 			// tentatively forward-declare immediately
-			//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+			//! \test zcc/decl.C99/Pass_class_forward_def.hpp
 			else _forward_declare_CPP_class(src,active_namespace,i,invariant_decl_scanner);
 			if (   1<src.size<0>()-i
 				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
@@ -14599,8 +14598,7 @@ reparse:
 				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
 				}
 			// One Definition Rule states that conflicting enum, struct, or class must error
-			//! \bug need cited test cases
-			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
+			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
 				{	//! \test zcc/decl.C99/Error_union_as_class2.hpp
 					//! \test zcc/decl.C99/Error_union_as_class4.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
