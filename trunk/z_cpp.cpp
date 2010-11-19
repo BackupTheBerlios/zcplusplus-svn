@@ -41,7 +41,8 @@ static const POD_triple<const char*, size_t, const char*> option_map_string[]
 		};
 
 static const POD_triple<const char*, size_t, const char*> option_map_int[]
-=	{	{ "-fmax-errors",		intopt::error_ub, 					"how many errors are too many (default 100)\n"},	// GFortran compatibility
+=	{	{ "-fmax-errors",		intopt::error_ub, 	"how many errors are too many (default 100)\n"},	// GFortran compatibility
+		{ "-ferror-limit",		intopt::error_ub, 	"how many errors are too many (default 100)\n"},	// CLang compatibility
 		{"--target-char-bit",	intopt::target_char_bit,	"target CHAR_BIT\n"},
 		{"--target-sizeof-short",	intopt::target_short_size,	"target sizeof(short), sizeof(unsigned short)\n"},
 		{"--target-sizeof-int",	intopt::target_int_size,	"target sizeof(int), sizeof(unsigned int)\n"},
