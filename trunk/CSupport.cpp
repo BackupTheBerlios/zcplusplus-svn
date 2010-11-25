@@ -13451,8 +13451,8 @@ reparse:
 			break;
 			case ENUM_NAME:
 			{	// C99 6.7.2.3: allowed only after name is defined
+			// XXX C: enums are int, but the optimizers will want to know
 			type_system::type_index tmp = parse_tree::types->get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	// C: enums are int (although we'd like to extend this a bit)
 			if (!tmp)
 				{	//! \test zcc/decl.C99/Error_enum_undef.h
 				message_header(src.data<0>()[i].index_tokens[0]);
@@ -13461,8 +13461,10 @@ reparse:
 				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 				INFORM("' must refer to completely defined enum (C99 6.7.2.3p2)");
 				zcc_errors.inc_error();
+				src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	// C: enums are int (although we'd like to extend this a bit)
 				src.c_array<0>()[i].flags |= parse_tree::INVALID;
 				}
+			else src.c_array<0>()[i].type_code.set_type(tmp);
 			}
 			break;
 			case ENUM_NAMED_DEF:
@@ -14659,7 +14661,6 @@ reparse:
 			case ENUM_NAME:
 			{
 			type_system::type_index tmp = parse_tree::types->get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
-			src.c_array<0>()[i].type_code.set_type(tmp);	// C++: enums are own type
 			if (!tmp)
 				{	// this belongs elsewhere
 					//! \test zcc/decl.C99/Error_enum_undef.hpp
@@ -14669,8 +14670,10 @@ reparse:
 				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 				INFORM("' must refer to completely defined enum (C++98/C++0X 3.1p2, C++98 7.1.5.3p2-4/C++0X 7.1.6.3p2)");
 				zcc_errors.inc_error();
+				src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	// fail over to int, like C
 				src.c_array<0>()[i].flags |= parse_tree::INVALID;
 				}
+			else src.c_array<0>()[i].type_code.set_type(tmp);	// C++: enums are own type
 			//! \todo we should reject plain enum test; anyway (no-variable definition, not a forward-declare exemption)
 			}
 			break;
