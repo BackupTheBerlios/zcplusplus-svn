@@ -13596,9 +13596,9 @@ reparse:
 			case ENUM_NAME:
 			{	// C99 6.7.2.3: allowed only after name is defined
 			// XXX C: enums are int, but the optimizers will want to know
-			type_system::type_index tmp = parse_tree::types->get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
-			if (!tmp)
-				{	//! \test zcc/decl.C99/Error_enum_undef.h
+			if (type_system::type_index tmp = parse_tree::types->get_id_enum(src.data<0>()[i].index_tokens[1].token.first))
+				 src.c_array<0>()[i].type_code.set_type(tmp);
+			else{	//! \test zcc/decl.C99/Error_enum_undef.h
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("'enum ");
@@ -13607,21 +13607,19 @@ reparse:
 				zcc_errors.inc_error();
 				src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	// C: enums are int (although we'd like to extend this a bit)
 				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-				}
-			else src.c_array<0>()[i].type_code.set_type(tmp);
+				};
 			}
 			break;
 			case ENUM_NAMED_DEF:
 			{	// can only define once
-			const type_system::type_index tmp = parse_tree::types->get_id_enum(src.data<0>()[i].index_tokens[1].token.first);
-			if (tmp)
+			if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum(src.data<0>()[i].index_tokens[1].token.first))
 				{	//! \test zcc/decl.C99/Error_enum_multidef.h
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("'enum ");
 				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
 				INFORM("' already defined (C99 6.7.2.3p1)");
-				const enum_def* const tmp2 = parse_tree::types->get_enum_def(tmp);
+				const enum_def* const tmp2 = parse_tree::types->get_enum_def(fatal_def);
 				assert(tmp2);
 				message_header(*tmp2);
 				INFORM("prior definition here");
@@ -13629,7 +13627,45 @@ reparse:
 				// now it's gone
 				src.DeleteNSlotsAt<0>(1,i);
 				continue;
-				};
+				}
+			// C1X 6.7.2.3p2 states that conflicting union or struct must error
+			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_union(src.data<0>()[i].index_tokens[1].token.first))
+				{	//! \test zcc/decl.C99/Error_union_as_enum.h
+					//! \test zcc/decl.C99/Error_union_as_enum2.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("struct ");
+				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
+				INFORM(" declared as union (C99 6.7.2.3p2)");
+				const union_struct_decl* const tmp2 = parse_tree::types->get_structdecl(fatal_def);
+				assert(tmp2);
+				message_header(*tmp2);
+				INFORM("prior definition here");
+				zcc_errors.inc_error();
+				src.c_array<0>()[i].set_index_token_from_str_literal<0>("union");
+				src.c_array<0>()[i].DeleteIdx<2>(0);
+				assert(is_C99_named_specifier(src.data<0>()[i],"union"));
+				goto reparse;
+				}
+			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class(src.data<0>()[i].index_tokens[1].token.first))
+				{	//! \test zcc/decl.C99/Error_struct_as_enum.h
+					//! \test zcc/decl.C99/Error_struct_as_enum2.h
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("union ");
+				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
+				INFORM(" declared as struct (C99 6.7.2.3p2)");
+				const union_struct_decl* const tmp2 = parse_tree::types->get_structdecl(fatal_def);
+				assert(tmp2);
+				message_header(*tmp2);
+				INFORM("prior definition here");
+				zcc_errors.inc_error();
+				src.c_array<0>()[i].set_index_token_from_str_literal<0>("struct");
+				src.c_array<0>()[i].DeleteIdx<2>(0);
+				assert(is_C99_named_specifier(src.data<0>()[i],"struct"));
+				goto reparse;
+				}
+				
 			// enum-specifier doesn't have a specific declaration mode
 			//! \test zcc/decl.C99/Pass_enum_def.h
 			const type_system::type_index tmp2 = parse_tree::types->register_enum_def(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
@@ -13646,7 +13682,7 @@ reparse:
 			{	// enum-specifier doesn't have a specific declaration mode
 				//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
 			const type_system::type_index tmp = parse_tree::types->register_enum_def("<unknown>",src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-			src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	// C: enums are int (although we'd like to extend this a bit)
+			src.c_array<0>()[i].type_code.set_type(tmp);	// C: enums are int (although we'd like to extend this a bit)
 			if (!record_enum_values(*src.c_array<0>()[i].c_array<2>(),tmp,NULL,false,C99_echo_reserved_keyword,C99_intlike_literal_to_VM,C99_CondenseParseTree,C99_EvalParseTree))
 				{
 				INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
@@ -14117,7 +14153,7 @@ reparse:
 				INC_INFORM(ERR_STR);
 				INC_INFORM("union ");
 				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
-				INFORM(" declared as ");
+				INC_INFORM(" declared as ");
 				const union_struct_decl* const tmp2 = parse_tree::types->get_structdecl(fatal_def);
 				assert(tmp2);
 				INC_INFORM(text_from_keyword(*tmp2));
@@ -14416,7 +14452,7 @@ reparse:
 				INC_INFORM(ERR_STR);
 				INC_INFORM("union ");
 				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
-				INFORM(" declared as ");
+				INC_INFORM(" declared as ");
 				const union_struct_decl* const tmp2 = parse_tree::types->get_structdecl(fatal_def);
 				assert(tmp2);
 				INC_INFORM(text_from_keyword(*tmp2));
@@ -14804,9 +14840,9 @@ reparse:
 			break;
 			case ENUM_NAME:
 			{
-			type_system::type_index tmp = parse_tree::types->get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
-			if (!tmp)
-				{	// this belongs elsewhere
+			if (const type_system::type_index tmp = parse_tree::types->get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
+				 src.c_array<0>()[i].type_code.set_type(tmp);	// C++: enums are own type
+			else{	// this belongs elsewhere
 					//! \test zcc/decl.C99/Error_enum_undef.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
@@ -14817,24 +14853,19 @@ reparse:
 				src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	// fail over to int, like C
 				src.c_array<0>()[i].flags |= parse_tree::INVALID;
 				}
-			else src.c_array<0>()[i].type_code.set_type(tmp);	// C++: enums are own type
 			//! \todo we should reject plain enum test; anyway (no-variable definition, not a forward-declare exemption)
 			}
 			break;
 			case ENUM_NAMED_DEF:
 			{	// can only define once
-			char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[1].token.first,active_namespace,"::") : NULL;
-			const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[1].token.first;
-			type_system::type_index tmp = parse_tree::types->get_id_enum(fullname);
-			if (tmp)
+			if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
 				{	//! \test zcc/decl.C99/Error_enum_multidef.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("'enum ");
-				INC_INFORM(fullname);
-				free(namespace_name);
+				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
 				INFORM("' already defined (C++98 3.2p1)");
-				const enum_def* const tmp2 = parse_tree::types->get_enum_def(tmp);
+				const enum_def* const tmp2 = parse_tree::types->get_enum_def(fatal_def);
 				assert(tmp2);
 				message_header(*tmp2);
 				INFORM("prior definition here");
@@ -14842,8 +14873,48 @@ reparse:
 				// now it's gone
 				src.DeleteNSlotsAt<0>(1,i);
 				continue;
-				};
-			free(namespace_name);
+				}
+			// One Definition Rule states that conflicting enum, struct, or class must error
+			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
+				{	//! \test zcc/decl.C99/Error_union_as_enum.hpp
+					//! \test zcc/decl.C99/Error_union_as_enum2.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("struct ");
+				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
+				INFORM(" declared as union (C++98 One Definition Rule)");
+				const union_struct_decl* const tmp2 = parse_tree::types->get_structdecl(fatal_def);
+				assert(tmp2);
+				message_header(*tmp2);
+				INFORM("prior definition here");
+				zcc_errors.inc_error();
+				src.c_array<0>()[i].set_index_token_from_str_literal<0>("union");
+				src.c_array<0>()[i].DeleteIdx<2>(0);
+				assert(is_C99_named_specifier(src.data<0>()[i],"union"));
+				goto reparse;
+				}
+			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
+				{	//! \test zcc/decl.C99/Error_struct_as_enum.hpp
+					//! \test zcc/decl.C99/Error_struct_as_enum2.hpp
+					//! \test zcc/decl.C99/Error_class_as_enum.hpp
+					//! \test zcc/decl.C99/Error_class_as_enum2.hpp
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("union ");
+				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
+				INC_INFORM(" declared as ");
+				const union_struct_decl* const tmp2 = parse_tree::types->get_structdecl(fatal_def);
+				assert(tmp2);
+				INC_INFORM(text_from_keyword(*tmp2));
+				INFORM(" (C++98 One Definition Rule)");
+				message_header(*tmp2);
+				INFORM("prior definition here");
+				zcc_errors.inc_error();
+				src.c_array<0>()[i].set_index_token_from_str_literal<0>("struct");
+				src.c_array<0>()[i].DeleteIdx<2>(0);
+				assert(is_C99_named_specifier(src.data<0>()[i],"struct"));
+				goto reparse;
+				}
 			//! \test zcc/decl.C99/Pass_enum_def.hpp
 			// enum-specifier doesn't have a specific declaration mode
 			const type_system::type_index tmp2 = parse_tree::types->register_enum_def_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
