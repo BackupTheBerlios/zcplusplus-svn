@@ -13480,9 +13480,9 @@ reparse:
 				message_header(*tmp2);
 				INFORM("prior definition here");
 				zcc_errors.inc_error();
-				// now it's gone
-				src.DeleteNSlotsAt<0>(1,i);
-				continue;
+				src.c_array<0>()[i].DeleteIdx<2>(0);
+				assert(is_C99_named_specifier(src.data<0>()[i],"enum"));
+				goto reparse;
 				}
 			// C1X 6.7.2.3p2 states that conflicting union or struct must error
 			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_union(src.data<0>()[i].index_tokens[1].token.first))
@@ -14726,9 +14726,9 @@ reparse:
 				message_header(*tmp2);
 				INFORM("prior definition here");
 				zcc_errors.inc_error();
-				// now it's gone
-				src.DeleteNSlotsAt<0>(1,i);
-				continue;
+				src.c_array<0>()[i].DeleteIdx<2>(0);
+				assert(is_C99_named_specifier(src.data<0>()[i],"enum"));
+				goto reparse;
 				}
 			// One Definition Rule states that conflicting enum, struct, or class must error
 			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
