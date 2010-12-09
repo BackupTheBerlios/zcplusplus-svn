@@ -3,4 +3,4 @@
 // (C)2009 Kenneth Boyd, license: MIT.txt
 
 enum good_test {
-}
+};

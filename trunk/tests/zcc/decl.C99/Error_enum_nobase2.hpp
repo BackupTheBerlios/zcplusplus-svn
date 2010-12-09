@@ -8,7 +8,7 @@
 enum bad_enum {
 	x = -1,
 	y = UINTMAX_MAX
-}
+};
 #else
 #error test not meaningful for exotic target (INT_MAX==UINTMAX_MAX)
 #endif

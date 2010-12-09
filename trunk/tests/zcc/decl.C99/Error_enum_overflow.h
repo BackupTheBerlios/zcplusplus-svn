@@ -7,4 +7,4 @@
 enum bad_enum {
 	x = INT_MAX,
 	y
-}
+};
