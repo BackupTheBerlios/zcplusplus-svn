@@ -5,5 +5,5 @@
 enum bad_test {
 	x_factor = ,
 	x_factor2 = 1
-}
+};
 

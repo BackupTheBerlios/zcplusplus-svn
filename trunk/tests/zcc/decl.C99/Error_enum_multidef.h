@@ -4,9 +4,9 @@
 
 enum bad_test {
 	x_factor = 1
-}
+};
 
 enum bad_test {
 	x_factor = 1
-}
+};
 

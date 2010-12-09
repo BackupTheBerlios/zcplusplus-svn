@@ -4,5 +4,5 @@ SUFFIXES h hpp
 
 enum {
 	x_factor = 1
-}
+};
 

@@ -4,5 +4,5 @@
 
 enum {
 	x_factor = 1
-}
+};
 

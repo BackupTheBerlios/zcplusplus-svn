@@ -4,5 +4,5 @@ SUFFIXES h hpp
 
 enum bad_test {
 	unsigned int = 1
-}
+};
 

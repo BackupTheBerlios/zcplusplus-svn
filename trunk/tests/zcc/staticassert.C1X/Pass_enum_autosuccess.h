@@ -6,7 +6,7 @@ enum test {
 	zero,
 	one,
 	two
-}
+};
 
 _Static_Assert(neg_one,"automatic success has failed");
 _Static_Assert(one,"automatic success has failed");

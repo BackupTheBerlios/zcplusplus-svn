@@ -7,7 +7,7 @@ enum test {
 	zero,
 	one,
 	two
-}
+};
 
 STATIC_ASSERT(neg_one,"automatic success has failed");
 STATIC_ASSERT(one,"automatic success has failed");

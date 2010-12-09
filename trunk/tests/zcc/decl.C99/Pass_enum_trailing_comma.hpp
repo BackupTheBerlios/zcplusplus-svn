@@ -4,5 +4,5 @@
 
 enum weird_test {
 	x_factor = 1,
-}
+};
 

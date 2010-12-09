@@ -6,5 +6,5 @@ typedef int x_factor;
 
 enum bad_test {
 	x_factor = 1
-}
+};
 

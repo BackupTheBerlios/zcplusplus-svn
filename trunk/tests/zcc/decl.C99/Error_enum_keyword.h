@@ -4,5 +4,5 @@
 
 enum bad_test {
 	return = 1
-}
+};
 
