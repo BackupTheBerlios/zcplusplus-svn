@@ -13004,6 +13004,7 @@ static void C99_ContextParse(parse_tree& src)
 		{
 rescan:
 		size_t j = 0;
+		pre_invariant_decl_scanner.clear(); // there's a lot of rescanning paths, so conserve lines of code
 		while(pre_invariant_decl_scanner(src.data<0>()[i+j++]) && src.size<0>()-i > j);
 		if (!pre_invariant_decl_scanner.empty())
 			{	// if we ran out of tokens, bad
@@ -13023,7 +13024,7 @@ rescan:
 				return;
 				};
 			//! \todo naked identifier beyond could be an already-existing typedef which would trigger a rescan
-			//! \todo ; means decl terminates w/o identifier which is an error 
+			//! \todo ; means decl terminates w/o identifier 
 			//! \todo if there are unparsed tags, scan for them and parse
 			size_t k = 0;
 			do	switch(pre_invariant_decl_scanner[k]-STATIC_SIZE(C99_nontype_decl_specifier_list))
@@ -13034,25 +13035,45 @@ rescan:
 				case STRUCT_NAME: break;
 				case STRUCT_NAMED_DEF: break;
 				case STRUCT_ANON_DEF: break;
-				case ENUM_NAME: break;
+				case ENUM_NAME:
+				{	// C99 6.7.2.3: allowed only after name is defined
+				// XXX C: enums are int, but the optimizers will want to know
+				parse_tree& tmp2 = src.c_array<0>()[i+k];
+				if (type_system::type_index tmp = parse_tree::types->get_id_enum(tmp2.index_tokens[1].token.first))
+					{
+					tmp2.type_code.set_type(tmp);
+					tmp2.flags |= PARSE_ENUM_TYPE;
+					}
+				else{	//! \test zcc/decl.C99/Error_enum_undef.h
+					message_header(tmp2.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("'enum ");
+					INC_INFORM(tmp2.index_tokens[1].token.first,tmp2.index_tokens[1].token.second);
+					INFORM("' must refer to completely defined enum (C99 6.7.2.3p2)");
+					zcc_errors.inc_error();
+					tmp2.type_code.set_type(C_TYPE::INT);	// C: enums are int (although we'd like to extend this a bit)
+					tmp2.flags |= (parse_tree::INVALID | PARSE_PRIMARY_TYPE);
+					};
+				goto rescan;
+				}
 				case ENUM_NAMED_DEF: break;
 				case ENUM_ANON_DEF:
 				{	// enum-specifier doesn't have a specific declaration mode
 					//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
-				const type_system::type_index tmp = parse_tree::types->register_enum_def("<unknown>",src.data<0>()[i+k].index_tokens[0].logical_line,src.data<0>()[i+k].index_tokens[0].src_filename);
-				src.c_array<0>()[i+k].type_code.set_type(tmp);	// C: enums are int (although we'd like to extend this a bit)
-				src.c_array<0>()[i+k].flags |= PARSE_ENUM_TYPE;
-				if (!record_enum_values(*src.c_array<0>()[i+k].c_array<2>(),tmp,NULL,false,C99_echo_reserved_keyword,C99_intlike_literal_to_VM,C99_CondenseParseTree,C99_EvalParseTree))
+				parse_tree& tmp2 = src.c_array<0>()[i+k]; 
+				const type_system::type_index tmp = parse_tree::types->register_enum_def("<unknown>",tmp2.index_tokens[0].logical_line,tmp2.index_tokens[0].src_filename);
+				tmp2.type_code.set_type(tmp);	// C: enums are int (although we'd like to extend this a bit)
+				tmp2.flags |= PARSE_ENUM_TYPE;
+				if (!record_enum_values(*tmp2.c_array<2>(),tmp,NULL,false,C99_echo_reserved_keyword,C99_intlike_literal_to_VM,C99_CondenseParseTree,C99_EvalParseTree))
 					{
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 					return;
 					}
-				pre_invariant_decl_scanner.clear();
 				goto rescan;
 				}
 				}
 			while(pre_invariant_decl_scanner.size()> ++k);
-			pre_invariant_decl_scanner.clear();
+			pre_invariant_decl_scanner.clear();	// RAM efficiency
 			};
 		}
 		// check naked declarations first
@@ -13534,23 +13555,7 @@ reparse:
 				}
 			}
 			break;
-			case ENUM_NAME:
-			{	// C99 6.7.2.3: allowed only after name is defined
-			// XXX C: enums are int, but the optimizers will want to know
-			if (type_system::type_index tmp = parse_tree::types->get_id_enum(src.data<0>()[i].index_tokens[1].token.first))
-				 src.c_array<0>()[i].type_code.set_type(tmp);
-			else{	//! \test zcc/decl.C99/Error_enum_undef.h
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM("'enum ");
-				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
-				INFORM("' must refer to completely defined enum (C99 6.7.2.3p2)");
-				zcc_errors.inc_error();
-				src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	// C: enums are int (although we'd like to extend this a bit)
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-				};
-			}
-			break;
+			case ENUM_NAME: break;	/* already handled */
 			case ENUM_NAMED_DEF:
 			{	// can only define once
 			if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum(src.data<0>()[i].index_tokens[1].token.first))
@@ -14043,6 +14048,7 @@ static void CPP_ParseNamespace(parse_tree& src,const char* const active_namespac
 		{
 rescan:
 		size_t j = 0;
+		pre_invariant_decl_scanner.clear(); // there's a lot of rescanning paths, so conserve lines of code
 		while(pre_invariant_decl_scanner(src.data<0>()[i+j++]) && src.size<0>()-i > j);
 		if (!pre_invariant_decl_scanner.empty())
 			{	// if we ran out of tokens, bad
@@ -14065,7 +14071,7 @@ rescan:
 				return;
 				};
 			//! \todo naked identifier beyond could be an already-existing typedef which would trigger a rescan
-			//! \todo ; means decl terminates w/o identifier which is an error 
+			//! \todo ; means decl terminates w/o identifier 
 			//! \todo if there are unparsed tags, scan for them and parse
 			size_t k = 0;
 			do	switch(pre_invariant_decl_scanner[k]-STATIC_SIZE(CPP0X_nontype_decl_specifier_list))
@@ -14079,25 +14085,45 @@ rescan:
 				case CLASS_NAME: break;
 				case CLASS_NAMED_DEF: break;
 				case CLASS_ANON_DEF: break;
-				case ENUM_NAME: break;
+				case ENUM_NAME:
+				{
+				parse_tree& tmp2 =  src.c_array<0>()[i+k];
+				if (const type_system::type_index tmp = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+					{
+					tmp2.type_code.set_type(tmp);	// C++: enums are own type
+					tmp2.flags |= PARSE_ENUM_TYPE;
+					}
+				else{	// this belongs elsewhere
+					//! \test zcc/decl.C99/Error_enum_undef.hpp
+					message_header(tmp2.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("'enum ");
+					INC_INFORM(src.data<0>()[i+k].index_tokens[1].token.first,src.data<0>()[i+k].index_tokens[1].token.second);
+					INFORM("' must refer to completely defined enum (C++98/C++0X 3.1p2, C++98 7.1.5.3p2-4/C++0X 7.1.6.3p2)");
+					zcc_errors.inc_error();
+					tmp2.type_code.set_type(C_TYPE::INT);	// fail over to int, like C
+					tmp2.flags |= (parse_tree::INVALID | PARSE_PRIMARY_TYPE);
+					}
+				goto rescan;
+				}
 				case ENUM_NAMED_DEF: break;
 				case ENUM_ANON_DEF:
 				{	// enum-specifier doesn't have a specific declaration mode
 					//! \test zcc/decl.C99/Pass_anonymous_enum_def.hpp
-				const type_system::type_index tmp = parse_tree::types->register_enum_def_CPP("<unknown>",active_namespace,src.data<0>()[i+k].index_tokens[0].logical_line,src.data<0>()[i+k].index_tokens[0].src_filename);
-				src.c_array<0>()[i+k].type_code.set_type(tmp);	// C++: enums are own type
-				src.c_array<0>()[i+k].flags |= PARSE_ENUM_TYPE;
-				if (!record_enum_values(*src.c_array<0>()[i+k].c_array<2>(),tmp,active_namespace,true,CPP_echo_reserved_keyword,CPP_intlike_literal_to_VM,CPP_CondenseParseTree,CPP_EvalParseTree))
+				parse_tree& tmp2 = src.c_array<0>()[i+k]; 
+				const type_system::type_index tmp = parse_tree::types->register_enum_def_CPP("<unknown>",active_namespace,tmp2.index_tokens[0].logical_line,tmp2.index_tokens[0].src_filename);
+				tmp2.type_code.set_type(tmp);	// C++: enums are own type
+				tmp2.flags |= PARSE_ENUM_TYPE;
+				if (!record_enum_values(*tmp2.c_array<2>(),tmp,active_namespace,true,CPP_echo_reserved_keyword,CPP_intlike_literal_to_VM,CPP_CondenseParseTree,CPP_EvalParseTree))
 					{
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 					return;
 					}
-				pre_invariant_decl_scanner.clear();
 				goto rescan;
 				}
 				}
 			while(pre_invariant_decl_scanner.size()> ++k);
-			pre_invariant_decl_scanner.clear();
+			pre_invariant_decl_scanner.clear();	// RAM efficiency
 			};
 		}
 		// check naked declarations first; handle namespaces later
@@ -14815,24 +14841,7 @@ reparse:
 				}
 			}
 			break;
-			case ENUM_NAME:
-			{
-			if (const type_system::type_index tmp = parse_tree::types->get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
-				 src.c_array<0>()[i].type_code.set_type(tmp);	// C++: enums are own type
-			else{	// this belongs elsewhere
-					//! \test zcc/decl.C99/Error_enum_undef.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM("'enum ");
-				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first,src.data<0>()[i].index_tokens[1].token.second);
-				INFORM("' must refer to completely defined enum (C++98/C++0X 3.1p2, C++98 7.1.5.3p2-4/C++0X 7.1.6.3p2)");
-				zcc_errors.inc_error();
-				src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	// fail over to int, like C
-				src.c_array<0>()[i].flags |= parse_tree::INVALID;
-				}
-			//! \todo we should reject plain enum test; anyway (no-variable definition, not a forward-declare exemption)
-			}
-			break;
+			case ENUM_NAME: break;	/* already handled */
 			case ENUM_NAMED_DEF:
 			{	// can only define once
 			if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
