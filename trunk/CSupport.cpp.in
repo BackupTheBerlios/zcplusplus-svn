@@ -13147,28 +13147,32 @@ static void C99_ContextParse(parse_tree& src)
 		// pre-scan for declaration-like items
 		{
 rescan:
-		size_t j = 0;
 		pre_invariant_decl_scanner.clear(); // there's a lot of rescanning paths, so conserve lines of code
-		while(pre_invariant_decl_scanner(src.data<0>()[i+j++]) && src.size<0>()-i > j);
-		if (!pre_invariant_decl_scanner.empty())
-			{	// if we ran out of tokens, bad
-			if (src.size<0>()-i <= pre_invariant_decl_scanner.size())
+		{	// wouldn't work for unnamed function parameters
+		const size_t strict_ub = src.size<0>()-i;
+		const parse_tree* const origin = src.data<0>()+i;
+		while(pre_invariant_decl_scanner(origin[pre_invariant_decl_scanner.size()]))
+			// if we ran out of tokens, bad
+			if (strict_ub <= pre_invariant_decl_scanner.size())
 				{	// unterminated declaration, top-level
 				//! \test zcc/decl.C99/Error_extern_scope.h
 				//! \test zcc/decl.C99/Error_static_scope.h
 				//! \test zcc/decl.C99/Error_typedef_scope.h
 				//! \test zcc/decl.C99/Error_register_scope.h
 				//! \test zcc/decl.C99/Error_auto_scope.h
-				message_header(src.data<0>()[i].index_tokens[0]);
+				message_header(origin->index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("declaration cut off by end of scope (C99 6.7p1)");
 				zcc_errors.inc_error();
 				// remove from parse
-				src.DeleteNSlotsAt<0>(src.size<0>()-i,i);
+				src.DeleteNSlotsAt<0>(strict_ub,i);
 				return;
 				};
+		}
+		if (!pre_invariant_decl_scanner.empty())
+			{
 #/*cut-nocpp*/
-			const bool semicolon_terminated_decl = src.size<0>()-i > j && robust_token_is_char<';'>(src.data<0>()[i+j]); 
+			const bool semicolon_terminated_decl = robust_token_is_char<';'>(src.data<0>()[i+pre_invariant_decl_scanner.empty()]); 
 #/*cut-nocpp*/
 			//! \todo naked identifier beyond could be an already-existing typedef which would trigger a rescan
 			//! \todo ; means decl terminates w/o identifier 
@@ -14197,12 +14201,13 @@ static void CPP_ParseNamespace(parse_tree& src,const char* const active_namespac
 		// pre-scan for declaration-like items
 		{
 rescan:
-		size_t j = 0;
 		pre_invariant_decl_scanner.clear(); // there's a lot of rescanning paths, so conserve lines of code
-		while(pre_invariant_decl_scanner(src.data<0>()[i+j++]) && src.size<0>()-i > j);
-		if (!pre_invariant_decl_scanner.empty())
-			{	// if we ran out of tokens, bad
-			if (src.size<0>()-i <= pre_invariant_decl_scanner.size())
+		{	// wouldn't work for unnamed function parameters
+		const size_t strict_ub = src.size<0>()-i;
+		const parse_tree* const origin = src.data<0>()+i;
+		while(pre_invariant_decl_scanner(origin[pre_invariant_decl_scanner.size()]))
+			// if we ran out of tokens, bad
+			if (strict_ub <= pre_invariant_decl_scanner.size())
 				{	// unterminated declaration, top-level
 				//! \test zcc/decl.C99/Error_extern_scope.hpp
 				//! \test zcc/decl.C99/Error_static_scope.hpp
@@ -14212,16 +14217,19 @@ rescan:
 				//! \test zcc/decl.C99/Error_virtual_scope.hpp
 				//! \test zcc/decl.C99/Error_friend_scope.hpp
 				//! \test zcc/decl.C99/Error_explicit_scope.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
+				message_header(origin->index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("declaration cut off by end of scope (C++98 7p1)");
 				zcc_errors.inc_error();
 				// remove from parse
-				src.DeleteNSlotsAt<0>(src.size<0>()-i,i);
+				src.DeleteNSlotsAt<0>(strict_ub,i);
 				return;
 				};
+		}
+		if (!pre_invariant_decl_scanner.empty())
+			{
 #/*cut-nocpp*/
-			const bool semicolon_terminated_decl = src.size<0>()-i > j && robust_token_is_char<';'>(src.data<0>()[i+j]); 
+			const bool semicolon_terminated_decl = robust_token_is_char<';'>(src.data<0>()[i+pre_invariant_decl_scanner.size()]); 
 #/*cut-nocpp*/
 			//! \todo naked identifier beyond could be an already-existing typedef which would trigger a rescan
 			//! \todo ; means decl terminates w/o identifier 
