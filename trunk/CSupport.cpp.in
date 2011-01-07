@@ -13206,8 +13206,9 @@ rescan:
 					tmp2.type_code.set_type(C_TYPE::INT);	// C: enums are int (although we'd like to extend this a bit)
 					tmp2.flags |= (parse_tree::INVALID | PARSE_PRIMARY_TYPE);
 					};
-				goto rescan;
+				pre_invariant_decl_scanner.reclassify(k,STATIC_SIZE(C99_nontype_decl_specifier_list));
 				}
+				break;
 				case ENUM_NAMED_DEF:
 				{	// can only define once
 				parse_tree& tmp2 = src.c_array<0>()[i+k]; 
@@ -13225,7 +13226,8 @@ rescan:
 					zcc_errors.inc_error();
 					tmp2.DeleteIdx<2>(0);
 					assert(is_C99_named_specifier(tmp2,"enum"));
-					goto rescan;
+					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(C99_nontype_decl_specifier_list)+ENUM_NAME);
+					continue;
 					}
 				// C1X 6.7.2.3p2 states that conflicting union or struct must error
 				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_union(tmp2.index_tokens[1].token.first))
@@ -13276,6 +13278,7 @@ rescan:
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 					return;
 					}
+				pre_invariant_decl_scanner.reclassify(k,STATIC_SIZE(C99_nontype_decl_specifier_list));
 				}
 				break;
 				case ENUM_ANON_DEF:
@@ -13290,7 +13293,7 @@ rescan:
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 					return;
 					}
-				goto rescan;
+				pre_invariant_decl_scanner.reclassify(k,STATIC_SIZE(C99_nontype_decl_specifier_list));
 				}
 				}
 			while(pre_invariant_decl_scanner.size()> ++k);
@@ -14260,14 +14263,15 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("'enum ");
-					INC_INFORM(src.data<0>()[i+k].index_tokens[1].token.first,src.data<0>()[i+k].index_tokens[1].token.second);
+					INC_INFORM(tmp2.index_tokens[1].token.first,tmp2.index_tokens[1].token.second);
 					INFORM("' must refer to completely defined enum (C++98/C++0X 3.1p2, C++98 7.1.5.3p2-4/C++0X 7.1.6.3p2)");
 					zcc_errors.inc_error();
 					tmp2.type_code.set_type(C_TYPE::INT);	// fail over to int, like C
 					tmp2.flags |= (parse_tree::INVALID | PARSE_PRIMARY_TYPE);
-					}
-				goto rescan;
+					};
+				pre_invariant_decl_scanner.reclassify(k,STATIC_SIZE(CPP0X_nontype_decl_specifier_list));
 				}
+				break;
 				case ENUM_NAMED_DEF:
 				{	// can only define once
 				parse_tree& tmp2 = src.c_array<0>()[i+k]; 
@@ -14285,7 +14289,8 @@ rescan:
 					zcc_errors.inc_error();
 					tmp2.DeleteIdx<2>(0);
 					assert(is_C99_named_specifier(tmp2,"enum"));
-					goto rescan;
+					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+ENUM_NAME);
+					continue;
 					}
 				// One Definition Rule states that conflicting enum, struct, or class must error
 				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_union_CPP(tmp2.index_tokens[1].token.first,active_namespace))
@@ -14339,6 +14344,7 @@ rescan:
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 					return;
 					}
+				pre_invariant_decl_scanner.reclassify(k,STATIC_SIZE(CPP0X_nontype_decl_specifier_list));
 				}
 				break;
 				case ENUM_ANON_DEF:
@@ -14353,7 +14359,7 @@ rescan:
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 					return;
 					}
-				goto rescan;
+				pre_invariant_decl_scanner.reclassify(k,STATIC_SIZE(CPP0X_nontype_decl_specifier_list));
 				}
 				}
 			while(pre_invariant_decl_scanner.size()> ++k);

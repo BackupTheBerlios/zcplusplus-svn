@@ -27,6 +27,14 @@ public:
 	size_t empty() const {return result_scan.empty();};
 	size_t size() const {return result_scan.size();};
 	size_t operator[](size_t i) const {assert(size()>i);return result_scan[i];};
+	void reclassify(const size_t i,const size_t new_value)
+		{
+		assert(size()>i);
+		assert(_strict_ub>new_value);
+		if (new_value==result_scan[i]) return;
+		--_detect_count[result_scan[i]];
+		++_detect_count[result_scan[i] = new_value];
+		};
 	size_t front() const {return result_scan.front();};
 	size_t back() const {return result_scan.back();};
 	void clear()
