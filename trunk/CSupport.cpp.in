@@ -13268,6 +13268,46 @@ rescan:
 			//! \todo naked identifier beyond could be an already-existing typedef which would trigger a rescan
 			//! \todo ; means decl terminates w/o identifier 
 			//! \todo if there are unparsed tags, scan for them and parse
+			{	// check for too many types now
+			size_t typecount = pre_invariant_decl_scanner.count(STATIC_SIZE(C99_nontype_decl_specifier_list));
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(C99_nontype_decl_specifier_list)+UNION_NAME);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(C99_nontype_decl_specifier_list)+UNION_NAMED_DEF);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(C99_nontype_decl_specifier_list)+UNION_ANON_DEF);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(C99_nontype_decl_specifier_list)+STRUCT_NAME);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(C99_nontype_decl_specifier_list)+STRUCT_NAMED_DEF);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(C99_nontype_decl_specifier_list)+STRUCT_ANON_DEF);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(C99_nontype_decl_specifier_list)+ENUM_NAME);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(C99_nontype_decl_specifier_list)+ENUM_NAMED_DEF);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(C99_nontype_decl_specifier_list)+ENUM_ANON_DEF);
+			if (1<typecount)
+				{
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("declaration trying to attribute more than one type");
+				zcc_errors.inc_error();
+				// flush the extra types by how annoying they are to the parser
+				// names and already-parsed types go first
+				size_t k = pre_invariant_decl_scanner.size();
+				assert(0<k);
+				do	switch(pre_invariant_decl_scanner[--k])
+					{
+					case STATIC_SIZE(C99_nontype_decl_specifier_list)+UNION_NAME:
+					case STATIC_SIZE(C99_nontype_decl_specifier_list)+STRUCT_NAME:
+					case STATIC_SIZE(C99_nontype_decl_specifier_list)+ENUM_NAME:
+					case STATIC_SIZE(C99_nontype_decl_specifier_list):
+						src.DeleteIdx<0>(i+k);
+						pre_invariant_decl_scanner.DeleteIdx(k);
+						--typecount;
+					}
+				while(0<k && 1<typecount);
+				if (1<typecount)
+					{	// cascading errors: cauterize now
+					INFORM("must discard definition to reduce declaration to one type: stopping to prevent spurious errors");
+					return;
+					}
+				}
+			}
+
 			size_t k = 0;
 			do	switch(pre_invariant_decl_scanner[k]-STATIC_SIZE(C99_nontype_decl_specifier_list))
 				{
@@ -14345,6 +14385,50 @@ rescan:
 			//! \todo naked identifier beyond could be an already-existing typedef which would trigger a rescan
 			//! \todo ; means decl terminates w/o identifier 
 			//! \todo if there are unparsed tags, scan for them and parse
+			{	// check for too many types now
+			size_t typecount = pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list));
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAME);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAMED_DEF);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_ANON_DEF);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+STRUCT_NAME);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+STRUCT_NAMED_DEF);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+STRUCT_ANON_DEF);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+CLASS_NAME);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+CLASS_NAMED_DEF);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+CLASS_ANON_DEF);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+ENUM_NAME);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+ENUM_NAMED_DEF);
+			typecount += pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+ENUM_ANON_DEF);
+			if (1<typecount)
+				{
+				message_header(src.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INFORM("declaration trying to attribute more than one type (C++98 7.1.5p2; C++0X 7.1.6p2)");
+				zcc_errors.inc_error();
+				// flush the extra types by how annoying they are to the parser
+				// names and already-parsed types go first
+				size_t k = pre_invariant_decl_scanner.size();
+				assert(0<k);
+				do	switch(pre_invariant_decl_scanner[--k])
+					{
+					case STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAME:
+					case STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+STRUCT_NAME:
+					case STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+CLASS_NAME:
+					case STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+ENUM_NAME:
+					case STATIC_SIZE(CPP0X_nontype_decl_specifier_list):
+						src.DeleteIdx<0>(i+k);
+						pre_invariant_decl_scanner.DeleteIdx(k);
+						--typecount;
+					}
+				while(0<k && 1<typecount);
+				if (1<typecount)
+					{	// cascading errors: cauterize now
+					INFORM("must discard definition to reduce declaration to one type: stopping to prevent spurious errors");
+					return;
+					}
+				}
+			}
+
 			size_t k = 0;
 			do	switch(pre_invariant_decl_scanner[k]-STATIC_SIZE(CPP0X_nontype_decl_specifier_list))
 				{
