@@ -10651,6 +10651,97 @@ void record_qualifier_or_warn(parse_tree& src,unsigned char qualify,size_t type_
 		}
 }
 
+static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t& i,size_t& k,kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner,const char* const warn_const,const char* const warn_volatile)
+{
+	size_t offset = 0;
+	bool have_warned_too_many_types = false;
+	bool have_warned_about_const = false;
+	bool have_warned_about_volatile = false;
+
+	assert(src.size<0>()>i);
+	assert(src.size<0>()-i>=invariant_decl_scanner.size());
+	assert(invariant_decl_scanner.size()>k);
+	assert(PARSE_TYPE & src.data<0>()[i+k].flags);
+	while(k>offset)
+		switch(invariant_decl_scanner[offset])
+		{
+		case C99_CPP_CONST_IDX:
+			//! \test decl.C99/Warn_dup_const.h
+			//! \test decl.C99/Warn_dup_const.hpp
+			//! \test decl.C99/Warn_dup_const2.h
+			//! \test decl.C99/Warn_dup_const2.hpp
+			record_qualifier_or_warn(src,type_spec::_const,i+k,i+offset,have_warned_about_const,warn_const);
+			src.DeleteIdx<0>(i-- +offset);
+			invariant_decl_scanner.DeleteIdx(offset);
+			continue;
+		case C99_CPP_VOLATILE_IDX:
+			//! \test decl.C99/Warn_dup_volatile.h
+			//! \test decl.C99/Warn_dup_volatile.hpp
+			//! \test decl.C99/Warn_dup_volatile2.h
+			//! \test decl.C99/Warn_dup_volatile2.hpp
+			record_qualifier_or_warn(src,type_spec::_volatile,i+k,i+offset,have_warned_about_volatile,warn_volatile);
+			src.DeleteIdx<0>(i-- +offset);
+			invariant_decl_scanner.DeleteIdx(offset);
+			continue;
+		default:
+			if (invariant_decl_scanner.strict_ub()-1==invariant_decl_scanner[offset-1])
+				{
+				if (!have_warned_too_many_types)
+					{
+					message_header(src.data<0>()[i+offset].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("multiple types in decl-specifier sequence, discarding extra types");
+					zcc_errors.inc_error();
+					have_warned_too_many_types = true;
+					}
+				src.DeleteIdx<0>(i-- +offset);
+				invariant_decl_scanner.DeleteIdx(offset);
+				continue;
+				}
+			++offset;
+		}
+
+	offset = k+1;
+	while(invariant_decl_scanner.size()>offset)
+		switch(invariant_decl_scanner[offset])
+		{
+		case C99_CPP_CONST_IDX:
+			//! \test decl.C99/Warn_dup_const2.h
+			//! \test decl.C99/Warn_dup_const2.hpp
+			//! \test decl.C99/Warn_dup_const3.h
+			//! \test decl.C99/Warn_dup_const3.hpp
+			record_qualifier_or_warn(src,type_spec::_const,i+k,i+offset,have_warned_about_const,warn_const);
+			src.DeleteIdx<0>(i+offset);
+			invariant_decl_scanner.DeleteIdx(offset);
+			continue;
+		case C99_CPP_VOLATILE_IDX:
+			//! \test decl.C99/Warn_dup_volatile2.h
+			//! \test decl.C99/Warn_dup_volatile2.hpp
+			//! \test decl.C99/Warn_dup_volatile3.h
+			//! \test decl.C99/Warn_dup_volatile3.hpp
+			record_qualifier_or_warn(src,type_spec::_volatile,i+k,i+offset,have_warned_about_volatile,warn_volatile);
+			src.DeleteIdx<0>(i+offset);
+			invariant_decl_scanner.DeleteIdx(offset);
+			continue;
+		default:
+			if (invariant_decl_scanner.strict_ub()-1==invariant_decl_scanner[offset-1])
+				{
+				if (!have_warned_too_many_types)
+					{
+					message_header(src.data<0>()[i+offset].index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("multiple types in decl-specifier sequence, discarding extra types");
+					zcc_errors.inc_error();
+					have_warned_too_many_types = true;
+					}
+				src.DeleteIdx<0>(i-- +offset);
+				invariant_decl_scanner.DeleteIdx(offset);
+				continue;
+				}
+			++offset;
+		}
+}
+
 static void _condense_const_volatile_onto_type(parse_tree& src,size_t& i,kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner,const char* const warn_const,const char* const warn_volatile)
 {
 	size_t offset = 0;
@@ -14231,9 +14322,7 @@ rescan:
 		}
 		if (!pre_invariant_decl_scanner.empty())
 			{
-#/*cut-nocpp*/
 			const bool semicolon_terminated_decl = robust_token_is_char<';'>(src.data<0>()[i+pre_invariant_decl_scanner.size()]); 
-#/*cut-nocpp*/
 			//! \todo naked identifier beyond could be an already-existing typedef which would trigger a rescan
 			//! \todo ; means decl terminates w/o identifier 
 			//! \todo if there are unparsed tags, scan for them and parse
@@ -14248,7 +14337,55 @@ rescan:
 				case STRUCT_ANON_DEF: break;
 				case CLASS_NAME: break;
 				case CLASS_NAMED_DEF: break;
-				case CLASS_ANON_DEF: break;
+				case CLASS_ANON_DEF:
+				{	// anonymous types cannot be matched
+				// tentatively forward-declare immediately
+				const type_system::type_index tmp = parse_tree::types->register_structdecl_CPP("<unknown>",active_namespace,union_struct_decl::decl_class,src.data<0>()[i+k].index_tokens[0].logical_line,src.data<0>()[i+k].index_tokens[0].src_filename);
+				assert(tmp);
+				assert(parse_tree::types->get_structdecl(tmp));
+				{
+				parse_tree& tmp2 =  src.c_array<0>()[i+k];				
+				tmp2.type_code.set_type(tmp);
+				tmp2.flags |= PARSE_CLASS_STRUCT_TYPE;
+				}
+				pre_invariant_decl_scanner.reclassify(k,STATIC_SIZE(CPP0X_nontype_decl_specifier_list));
+				_condense_const_volatile_onto_type_preparsed(src,i,k,pre_invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+
+				// parse the union and upgrade it to a full definition
+				const union_struct_decl* tmp3 = parse_tree::types->get_structdecl(tmp);
+				assert(tmp3);
+				const parse_tree& tmp2 =  src.data<0>()[i+k];				
+				C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,tmp2.index_tokens[0].logical_line,tmp2.index_tokens[0].src_filename);
+				//! \todo record field structure, etc.
+				parse_tree::types->upgrade_decl_to_def(tmp,tmp4);
+				assert(parse_tree::types->get_C_structdef(tmp));
+
+				if (semicolon_terminated_decl)
+					{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
+					//! \test decl.C99/Error_class_anon_def_const.hpp
+					//! \test decl.C99/Error_class_anon_def_const2.hpp
+					//! \test decl.C99/Error_class_anon_def_volatile.hpp
+					//! \test decl.C99/Error_class_anon_def_volatile2.hpp
+					//! \test decl.C99/Error_class_anon_def_const_volatile.hpp
+					//! \test decl.C99/Error_class_anon_def_const_volatile2.hpp
+					//! \test decl.C99/Error_class_anon_def_const_volatile3.hpp
+					//! \test decl.C99/Error_class_anon_def_const_volatile4.hpp
+					//! \test decl.C99/Error_class_anon_def_const_volatile5.hpp
+					//! \test decl.C99/Error_class_anon_def_const_volatile6.hpp
+					CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i+k]);
+					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+					//! \test zcc/decl.C99/Warn_inaccessible_class.hpp
+					message_header(tmp2.index_tokens[0]);
+					INC_INFORM(WARN_STR);
+					INFORM("unreferenceable anonymous class declaration");
+					if (bool_options[boolopt::warnings_are_errors])
+						zcc_errors.inc_error();
+					// remove from parse
+					src.DeleteNSlotsAt<0>(i+pre_invariant_decl_scanner.size(),i);
+					goto rescan;
+					}
+				}
+				break;
 				//! \bug the enums aren't handling const/volatile qualification
 				case ENUM_NAME:
 				{
@@ -15036,51 +15173,7 @@ reparse:
 				}
 			}
 			break;
-			case CLASS_ANON_DEF:
-			{	// anonymous types cannot be matched
-			// tentatively forward-declare immediately
-			const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP("<unknown>",active_namespace,union_struct_decl::decl_class,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-			assert(tmp2);
-			assert(parse_tree::types->get_structdecl(tmp2));
-			src.c_array<0>()[i].type_code.set_type(tmp2);
-			src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
-			_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
-
-			// parse the union and upgrade it to a full definition
-			const union_struct_decl* tmp3 = parse_tree::types->get_structdecl(tmp2);
-			assert(tmp3);
-			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-			//! \todo record field structure, etc.
-			parse_tree::types->upgrade_decl_to_def(tmp2,tmp4);
-			assert(parse_tree::types->get_C_structdef(tmp2));
-
-			if (	1<src.size<0>()-i
-				&& 	robust_token_is_char<';'>(src.data<0>()[i+1]))
-				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-				//! \test decl.C99/Error_class_anon_def_const.hpp
-				//! \test decl.C99/Error_class_anon_def_const2.hpp
-				//! \test decl.C99/Error_class_anon_def_volatile.hpp
-				//! \test decl.C99/Error_class_anon_def_volatile2.hpp
-				//! \test decl.C99/Error_class_anon_def_const_volatile.hpp
-				//! \test decl.C99/Error_class_anon_def_const_volatile2.hpp
-				//! \test decl.C99/Error_class_anon_def_const_volatile3.hpp
-				//! \test decl.C99/Error_class_anon_def_const_volatile4.hpp
-				//! \test decl.C99/Error_class_anon_def_const_volatile5.hpp
-				//! \test decl.C99/Error_class_anon_def_const_volatile6.hpp
-				CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i]);
-				//! \todo do not warn for -Wno-OOAO/-Wno-DRY
-				//! \test zcc/decl.C99/Warn_inaccessible_class.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(WARN_STR);
-				INFORM("unreferenceable anonymous class declaration");
-				if (bool_options[boolopt::warnings_are_errors])
-					zcc_errors.inc_error();
-				// remove from parse
-				src.DeleteNSlotsAt<0>(2,i);
-				continue;
-				}
-			}
-			break;
+			case CLASS_ANON_DEF: break;	/* already handled */
 			case ENUM_NAME: break;	/* already handled */
 			case ENUM_NAMED_DEF: break;	/* already handled */
 			case ENUM_ANON_DEF: break;	/* already handled */
