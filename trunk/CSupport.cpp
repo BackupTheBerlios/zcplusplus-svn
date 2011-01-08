@@ -14125,23 +14125,6 @@ static void _forward_declare_CPP_struct(parse_tree& src, const char* const activ
 	_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
 }
 
-static void _forward_declare_CPP_class(parse_tree& src, const char* const active_namespace, size_t& i, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
-{
-	parse_tree& tmp = src.c_array<0>()[i];
-#ifdef NDEBUG
-	tmp.type_code.set_type(parse_tree::types->register_structdecl_CPP(tmp.index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class,tmp.index_tokens[1].logical_line,tmp.index_tokens[1].src_filename));
-#else
-	const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP(tmp.index_tokens[1].token.first,active_namespace,union_struct_decl::decl_class,tmp.index_tokens[1].logical_line,tmp.index_tokens[1].src_filename);
-	assert(tmp2);
-	assert(parse_tree::types->get_id_struct_class_CPP(tmp.index_tokens[1].token.first,active_namespace));
-	assert(parse_tree::types->get_id_struct_class_CPP(tmp.index_tokens[1].token.first,active_namespace)==tmp2);
-	assert(parse_tree::types->get_structdecl(tmp2));
-	tmp.type_code.set_type(tmp2);
-#endif
-	tmp.flags |= PARSE_CLASS_STRUCT_TYPE;
-	_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
-}
-
 static void _forward_declare_CPP_class_preparsed(parse_tree& src, const char* const active_namespace, size_t& i, size_t& k, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
 {
 	parse_tree& tmp = src.c_array<0>()[i+k];
@@ -14280,6 +14263,12 @@ rescan:
 					return;
 					}
 				}
+			//! \bug check for pre-existing typedefs if no types
+			if (0>=typecount)
+				{
+				pre_invariant_decl_scanner.clear();	// RAM efficiency
+				goto reparse;
+				}
 			}
 
 			size_t k = 0;
@@ -14291,7 +14280,105 @@ rescan:
 				case STRUCT_NAME: break;
 				case STRUCT_NAMED_DEF: break;
 				case STRUCT_ANON_DEF: break;
-				case CLASS_NAME: break;
+				case CLASS_NAME:
+				{
+				const type_system::type_index tmp = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i+k].index_tokens[1].token.first,active_namespace);
+				{
+				parse_tree& tmp2 = src.c_array<0>()[i+k];
+				if (tmp)
+					{
+					assert(0<parse_tree::types->use_count(tmp));
+					tmp2.type_code.set_type(tmp);
+					tmp2.flags |= PARSE_CLASS_STRUCT_TYPE;
+					_condense_const_volatile_onto_type_preparsed(src,i,k,pre_invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+					}
+				// One Definition Rule states that conflicting enum, struct, or class must error
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_union_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+					{	//! \test zcc/decl.C99/Error_union_as_class.hpp
+						//! \test zcc/decl.C99/Error_union_as_class3.hpp
+					message_header(tmp2.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("class ");
+					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INFORM(" declared as union (C++98 One Definition Rule)");
+					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
+					assert(tmp3);
+					message_header(*tmp3);
+					INFORM("prior definition here");
+					zcc_errors.inc_error();
+					tmp2.set_index_token_from_str_literal<0>("union");
+					assert(is_C99_named_specifier(tmp2,"union"));
+					goto rescan;
+					}
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+					{	//! \test zcc/decl.C99/Error_enum_as_class.hpp
+					message_header(tmp2.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("class ");
+					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INFORM(" declared as enumeration (C++98 One Definition Rule)");
+					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
+					assert(tmp3);
+					message_header(*tmp3);
+					INFORM("prior definition here");
+					zcc_errors.inc_error();
+					tmp2.set_index_token_from_str_literal<0>("enum");
+					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+ENUM_NAME);
+					continue;
+					}
+				// tentatively forward-declare immediately
+				//! \test zcc/decl.C99/Pass_class_forward_def.hpp
+				else _forward_declare_CPP_class_preparsed(src,active_namespace,i,k,pre_invariant_decl_scanner);
+				}
+				parse_tree& tmp2 = src.c_array<0>()[i+k];
+				if (semicolon_terminated_decl)
+					{	// check for forward-declaration here
+					//! \test decl.C99/Error_class_forward_def_const.hpp
+					//! \test decl.C99/Error_class_forward_def_const2.hpp
+					//! \test decl.C99/Error_class_forward_def_const3.hpp
+					//! \test decl.C99/Error_class_forward_def_const4.hpp
+					//! \test decl.C99/Error_class_forward_def_volatile.hpp
+					//! \test decl.C99/Error_class_forward_def_volatile2.hpp
+					//! \test decl.C99/Error_class_forward_def_volatile3.hpp
+					//! \test decl.C99/Error_class_forward_def_volatile4.hpp
+					//! \test decl.C99/Error_class_forward_def_const_volatile.hpp
+					//! \test decl.C99/Error_class_forward_def_const_volatile2.hpp
+					//! \test decl.C99/Error_class_forward_def_const_volatile3.hpp
+					//! \test decl.C99/Error_class_forward_def_const_volatile4.hpp
+					//! \test decl.C99/Error_class_forward_def_const_volatile5.hpp
+					//! \test decl.C99/Error_class_forward_def_const_volatile6.hpp
+					//! \test decl.C99/Error_class_forward_def_const_volatile7.hpp
+					//! \test decl.C99/Error_class_forward_def_const_volatile8.hpp
+					//! \test decl.C99/Error_class_forward_def_const_volatile9.hpp
+					//! \test decl.C99/Error_class_forward_def_const_volatile10.hpp
+					//! \test decl.C99/Error_class_forward_def_const_volatile11.hpp
+					//! \test decl.C99/Error_class_forward_def_const_volatile12.hpp
+					CPP0X_flush_const_volatile_without_object(tmp2);
+					if (tmp)
+						{	// but if already (forward-)declared then this is a no-op
+							// think this is common enough to not warrant OAOO/DRY treatment
+						//! \test zcc/decl.C99/Pass_class_forward_def.hpp
+						// remove from parse
+						src.DeleteNSlotsAt<0>(1+pre_invariant_decl_scanner.size(),i);
+						goto restart_master_loop;
+						}
+					// forward-declare
+					//! \test zcc/decl.C99/Pass_class_forward_def.hpp
+					i += 1+pre_invariant_decl_scanner.size();
+					goto restart_master_loop;
+					}
+				else if (!tmp)
+					{	// used without at least forward-declaring
+						//! \bug needs test cases
+					message_header(tmp2.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("used without at least forward-declaring");
+					zcc_errors.inc_error();
+					}
+				i += pre_invariant_decl_scanner.size();
+				goto restart_master_loop;
+				}
+//				break;
 				case CLASS_NAMED_DEF:
 				{	// can only define once
 				const type_system::type_index tmp = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i+k].index_tokens[1].token.first,active_namespace);
@@ -14384,10 +14471,11 @@ rescan:
 					CPP0X_flush_const_volatile_without_object(tmp2);
 					// accept definition
 					//! \test zcc/decl.C99/Pass_class_forward_def.hpp
-					continue;
 					}
+				i += semicolon_terminated_decl+pre_invariant_decl_scanner.size();
+				goto restart_master_loop;
 				}
-				break;
+//				break;
 				case CLASS_ANON_DEF:
 				{	// anonymous types cannot be matched
 				// tentatively forward-declare immediately
@@ -14435,9 +14523,12 @@ rescan:
 					src.DeleteNSlotsAt<0>(1+pre_invariant_decl_scanner.size(),i);
 					goto restart_master_loop;
 					}
+				i += pre_invariant_decl_scanner.size();
+				goto restart_master_loop;
 				}
-				break;
+//				break;
 				//! \bug the enums aren't handling const/volatile qualification
+				//! \bug the enums aren't noticing semicolon termination
 				case ENUM_NAME:
 				{
 				parse_tree& tmp2 =  src.c_array<0>()[i+k];
@@ -14457,9 +14548,10 @@ rescan:
 					tmp2.type_code.set_type(C_TYPE::INT);	// fail over to int, like C
 					tmp2.flags |= (parse_tree::INVALID | PARSE_PRIMARY_TYPE);
 					};
-				pre_invariant_decl_scanner.reclassify(k,STATIC_SIZE(CPP0X_nontype_decl_specifier_list));
+				i += semicolon_terminated_decl+pre_invariant_decl_scanner.size();
+				goto restart_master_loop;
 				}
-				break;
+//				break;
 				case ENUM_NAMED_DEF:
 				{	// can only define once
 				parse_tree& tmp2 = src.c_array<0>()[i+k]; 
@@ -14511,14 +14603,20 @@ rescan:
 					INC_INFORM(" declared as ");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
-					INC_INFORM(text_from_keyword(*tmp3));
+					const char* const text = text_from_keyword(*tmp3);
+					INC_INFORM(text);
 					INFORM(" (C++98 One Definition Rule)");
 					message_header(*tmp3);
 					INFORM("prior definition here");
 					zcc_errors.inc_error();
-					tmp2.set_index_token_from_str_literal<0>("struct");
+					tmp2.set_index_token_from_str_literal<0>(text);
 					tmp2.DeleteIdx<2>(0);
-					assert(is_C99_named_specifier(tmp2,"struct"));
+					assert(is_C99_named_specifier(tmp2,text_from_keyword(*tmp3)));
+					if (!strcmp("class",text))
+						{
+						pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+CLASS_NAME);
+						continue;
+						}
 					goto rescan;
 					}
 				//! \test zcc/decl.C99/Pass_enum_def.hpp
@@ -14532,9 +14630,10 @@ rescan:
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 					return;
 					}
-				pre_invariant_decl_scanner.reclassify(k,STATIC_SIZE(CPP0X_nontype_decl_specifier_list));
+				i += semicolon_terminated_decl+pre_invariant_decl_scanner.size();
+				goto restart_master_loop;
 				}
-				break;
+//				break;
 				case ENUM_ANON_DEF:
 				{	// enum-specifier doesn't have a specific declaration mode
 					//! \test zcc/decl.C99/Pass_anonymous_enum_def.hpp
@@ -14547,7 +14646,8 @@ rescan:
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 					return;
 					}
-				pre_invariant_decl_scanner.reclassify(k,STATIC_SIZE(CPP0X_nontype_decl_specifier_list));
+				i += semicolon_terminated_decl+pre_invariant_decl_scanner.size();
+				goto restart_master_loop;
 				}
 				}
 			while(pre_invariant_decl_scanner.size()> ++k);
@@ -14755,100 +14855,7 @@ reparse:
 				}
 			}
 			break;
-			case CLASS_NAME:
-			{
-			const type_system::type_index tmp = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
-			if (tmp)
-				{
-				assert(0<parse_tree::types->use_count(tmp));
-				src.c_array<0>()[i].type_code.set_type(tmp);
-				src.c_array<0>()[i].flags |= PARSE_CLASS_STRUCT_TYPE;
-				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
-				}
-			// One Definition Rule states that conflicting enum, struct, or class must error
-			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
-				{	//! \test zcc/decl.C99/Error_union_as_class.hpp
-					//! \test zcc/decl.C99/Error_union_as_class3.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM("class ");
-				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
-				INFORM(" declared as union (C++98 One Definition Rule)");
-				const union_struct_decl* const tmp2 = parse_tree::types->get_structdecl(fatal_def);
-				assert(tmp2);
-				message_header(*tmp2);
-				INFORM("prior definition here");
-				zcc_errors.inc_error();
-				src.c_array<0>()[i].set_index_token_from_str_literal<0>("union");
-				assert(is_C99_named_specifier(src.data<0>()[i],"union"));
-				goto reparse;
-				}
-			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
-				{	//! \test zcc/decl.C99/Error_enum_as_class.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM("class ");
-				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
-				INFORM(" declared as enumeration (C++98 One Definition Rule)");
-				const enum_def* const tmp2 = parse_tree::types->get_enum_def(fatal_def);
-				assert(tmp2);
-				message_header(*tmp2);
-				INFORM("prior definition here");
-				zcc_errors.inc_error();
-				src.c_array<0>()[i].set_index_token_from_str_literal<0>("enum");
-				assert(is_C99_named_specifier(src.data<0>()[i],"enum"));
-				goto reparse;
-				}
-			// tentatively forward-declare immediately
-			//! \test zcc/decl.C99/Pass_class_forward_def.hpp
-			else _forward_declare_CPP_class(src,active_namespace,i,invariant_decl_scanner);
-			if (   1<src.size<0>()-i
-				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
-				{	// check for forward-declaration here
-				//! \test decl.C99/Error_class_forward_def_const.hpp
-				//! \test decl.C99/Error_class_forward_def_const2.hpp
-				//! \test decl.C99/Error_class_forward_def_const3.hpp
-				//! \test decl.C99/Error_class_forward_def_const4.hpp
-				//! \test decl.C99/Error_class_forward_def_volatile.hpp
-				//! \test decl.C99/Error_class_forward_def_volatile2.hpp
-				//! \test decl.C99/Error_class_forward_def_volatile3.hpp
-				//! \test decl.C99/Error_class_forward_def_volatile4.hpp
-				//! \test decl.C99/Error_class_forward_def_const_volatile.hpp
-				//! \test decl.C99/Error_class_forward_def_const_volatile2.hpp
-				//! \test decl.C99/Error_class_forward_def_const_volatile3.hpp
-				//! \test decl.C99/Error_class_forward_def_const_volatile4.hpp
-				//! \test decl.C99/Error_class_forward_def_const_volatile5.hpp
-				//! \test decl.C99/Error_class_forward_def_const_volatile6.hpp
-				//! \test decl.C99/Error_class_forward_def_const_volatile7.hpp
-				//! \test decl.C99/Error_class_forward_def_const_volatile8.hpp
-				//! \test decl.C99/Error_class_forward_def_const_volatile9.hpp
-				//! \test decl.C99/Error_class_forward_def_const_volatile10.hpp
-				//! \test decl.C99/Error_class_forward_def_const_volatile11.hpp
-				//! \test decl.C99/Error_class_forward_def_const_volatile12.hpp
-				CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i]);
-				if (tmp)
-					{	// but if already (forward-)declared then this is a no-op
-						// think this is common enough to not warrant OAOO/DRY treatment
-					//! \test zcc/decl.C99/Pass_class_forward_def.hpp
-					// remove from parse
-					src.DeleteNSlotsAt<0>(2,i);
-					continue;					
-					}
-				// forward-declare
-				//! \test zcc/decl.C99/Pass_class_forward_def.hpp
-				i += 2;
-				continue;
-				}
-			else if (!tmp)
-				{	// used without at least forward-declaring
-					//! \bug needs test cases
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INFORM("used without at least forward-declaring");
-				zcc_errors.inc_error();
-				}
-			}
-			break;
+			case CLASS_NAME: break;	/* already handled */
 			case UNION_NAMED_DEF:
 			{	// can only define once
 			const type_system::type_index tmp = parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
