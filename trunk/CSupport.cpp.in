@@ -14532,7 +14532,7 @@ rescan:
 					{
 					if (const C_union_struct_def* const fatal_def = parse_tree::types->get_C_structdef(tmp))
 						{	//! \test zcc/decl.C99/Error_struct_multidef.hpp
-						message_header(src.data<0>()[i+k].index_tokens[0]);
+						message_header(tmp2.index_tokens[0]);
 						INC_INFORM(ERR_STR);
 						INC_INFORM("'struct ");
 						INC_INFORM(tmp2.index_tokens[1].token.first,tmp2.index_tokens[1].token.second);
@@ -14585,7 +14585,7 @@ rescan:
 					zcc_errors.inc_error();
 					tmp2.set_index_token_from_str_literal<0>("enum");
 					tmp2.DeleteIdx<2>(0);
-					assert(is_C99_named_specifier(src.data<0>()[i+k],"enum"));
+					assert(is_C99_named_specifier(tmp2,"enum"));
 					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+ENUM_NAME);
 					continue;
 					}
@@ -14781,7 +14781,7 @@ rescan:
 					{
 					if (const C_union_struct_def* const fatal_def = parse_tree::types->get_C_structdef(tmp))
 						{	//! \test zcc/decl.C99/Error_class_multidef.hpp
-						message_header(src.data<0>()[i+k].index_tokens[0]);
+						message_header(tmp2.index_tokens[0]);
 						INC_INFORM(ERR_STR);
 						INC_INFORM("'class ");
 						INC_INFORM(tmp2.index_tokens[1].token.first,tmp2.index_tokens[1].token.second);
@@ -14889,7 +14889,7 @@ rescan:
 				// parse the union and upgrade it to a full definition
 				const union_struct_decl* tmp3 = parse_tree::types->get_structdecl(tmp);
 				assert(tmp3);
-				const parse_tree& tmp2 =  src.data<0>()[i+k];				
+				parse_tree& tmp2 =  src.c_array<0>()[i+k];				
 				C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,tmp2.index_tokens[0].logical_line,tmp2.index_tokens[0].src_filename);
 				//! \todo record field structure, etc.
 				parse_tree::types->upgrade_decl_to_def(tmp,tmp4);
@@ -14907,7 +14907,7 @@ rescan:
 					//! \test decl.C99/Error_class_anon_def_const_volatile4.hpp
 					//! \test decl.C99/Error_class_anon_def_const_volatile5.hpp
 					//! \test decl.C99/Error_class_anon_def_const_volatile6.hpp
-					CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i+k]);
+					CPP0X_flush_const_volatile_without_object(tmp2);
 					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
 					//! \test zcc/decl.C99/Warn_inaccessible_class.hpp
 					message_header(tmp2.index_tokens[0]);
