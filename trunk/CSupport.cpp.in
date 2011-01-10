@@ -13223,7 +13223,6 @@ static void C99_ContextParse(parse_tree& src)
 	// ask GCC: struct/class/union/enum collides with each other (both C and C++), does not collide with namespace
 	// think we can handle this as "disallow conflicting definitions"
 	kleene_star<STATIC_SIZE(C99_nontype_decl_specifier_list)+1,size_t (*)(const parse_tree&)> invariant_decl_scanner(C99_type_or_invariant_decl_specifier);
-	kleene_star<STATIC_SIZE(C99_nontype_decl_specifier_list)+1+9,size_t (*)(const parse_tree&)> pre_invariant_decl_scanner(C99_type_or_invariant_decl_specifier_or_tag);
 	size_t i = 0;
 	while(i<src.size<0>())
 		{
@@ -13238,7 +13237,7 @@ static void C99_ContextParse(parse_tree& src)
 		// pre-scan for declaration-like items
 		{
 rescan:
-		pre_invariant_decl_scanner.clear(); // there's a lot of rescanning paths, so conserve lines of code
+		kleene_star<STATIC_SIZE(C99_nontype_decl_specifier_list)+1+9,size_t (*)(const parse_tree&)> pre_invariant_decl_scanner(C99_type_or_invariant_decl_specifier_or_tag);
 		{	// wouldn't work for unnamed function parameters
 		const size_t strict_ub = src.size<0>()-i;
 		const parse_tree* const origin = src.data<0>()+i;
@@ -13337,7 +13336,7 @@ rescan:
 					tmp2.type_code.set_type(C_TYPE::INT);	// C: enums are int (although we'd like to extend this a bit)
 					tmp2.flags |= (parse_tree::INVALID | PARSE_PRIMARY_TYPE);
 					};
-				pre_invariant_decl_scanner.reclassify(k,STATIC_SIZE(C99_nontype_decl_specifier_list));
+				goto reparse;
 				}
 				break;
 				case ENUM_NAMED_DEF:
@@ -13409,9 +13408,9 @@ rescan:
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 					return;
 					}
-				pre_invariant_decl_scanner.reclassify(k,STATIC_SIZE(C99_nontype_decl_specifier_list));
+				goto reparse;
 				}
-				break;
+//				break;
 				case ENUM_ANON_DEF:
 				{	// enum-specifier doesn't have a specific declaration mode
 					//! \test zcc/decl.C99/Pass_anonymous_enum_def.h
@@ -13424,11 +13423,10 @@ rescan:
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 					return;
 					}
-				pre_invariant_decl_scanner.reclassify(k,STATIC_SIZE(C99_nontype_decl_specifier_list));
+				goto reparse;
 				}
 				}
 			while(pre_invariant_decl_scanner.size()> ++k);
-			pre_invariant_decl_scanner.clear();	// RAM efficiency
 			};
 		}
 		// check naked declarations first
