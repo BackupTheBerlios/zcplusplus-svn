@@ -14176,7 +14176,6 @@ static void CPP_ParseNamespace(parse_tree& src,const char* const active_namespac
 		}
 
 	kleene_star<STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+1,size_t (*)(const parse_tree&)> invariant_decl_scanner(CPP0X_type_or_invariant_decl_specifier);
-	kleene_star<STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+1+12,size_t (*)(const parse_tree&)> pre_invariant_decl_scanner(CPP0X_type_or_invariant_decl_specifier_or_tag);
 	size_t i = 0;
 restart_master_loop:
 	while(i<src.size<0>())
@@ -14189,12 +14188,12 @@ restart_master_loop:
 			continue;
 			};
 		// XXX C++ allows mixing definitions and declaring variables at the same time, but this is a bit unusual
-		// pre-scan for declaration-like items
+		// check naked declarations first; handle namespaces later
 		{
+		kleene_star<STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+1+12,size_t (*)(const parse_tree&)> pre_invariant_decl_scanner(CPP0X_type_or_invariant_decl_specifier_or_tag);
 		{	// wouldn't work for unnamed function parameters
 		const size_t strict_ub = src.size<0>()-i;
 		const parse_tree* const origin = src.data<0>()+i;
-		pre_invariant_decl_scanner.clear();	// fail-safe
 		while(pre_invariant_decl_scanner(origin[pre_invariant_decl_scanner.size()]))
 			// if we ran out of tokens, bad
 			if (strict_ub <= pre_invariant_decl_scanner.size())
@@ -15143,32 +15142,7 @@ restart_master_loop:
 			while(pre_invariant_decl_scanner.size()> ++k);
 			};
 		}
-		// check naked declarations first; handle namespaces later
 reparse:
-		pre_invariant_decl_scanner.clear();	// just in case; RAM conservation
-		const int tag_type = notice_CPP_tag(src.data<0>()[i]);
-		if (tag_type)
-			{
-			switch(tag_type)
-			{	//! \todo deal with indentation violations later
-#ifndef NDEBUG
-			default: _fatal_code("return value of notice_C99_tag out of range",3);
-#endif
-			case UNION_NAME: break;	/* already handled */
-			case STRUCT_NAME: break;	/* already handled */
-			case CLASS_NAME: break;	/* already handled */
-			case UNION_NAMED_DEF: break;	/* already handled */
-			case STRUCT_NAMED_DEF: break;	/* already handled */
-			case CLASS_NAMED_DEF: break;	/* already handled */
-			case UNION_ANON_DEF: break;	/* already handled */
-			case STRUCT_ANON_DEF: break;	/* already handled */
-			case CLASS_ANON_DEF: break;	/* already handled */
-			case ENUM_NAME: break;	/* already handled */
-			case ENUM_NAMED_DEF: break;	/* already handled */
-			case ENUM_ANON_DEF: break;	/* already handled */
-			}
-			};
-
 		// namespace scanner
 		// need some scheme to handle unnamed namespaces (probably alphabetical counter after something illegal so unmatchable)
 		// C++0X has inline namespaces; ignore these for now (well, maybe not: consuming the inline will prevent problems)
