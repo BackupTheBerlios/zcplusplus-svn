@@ -14091,23 +14091,6 @@ static void CPP0X_flush_const_volatile_without_object(parse_tree& src)
 		}
 }
 
-static void _forward_declare_CPP_union(parse_tree& src, const char* const active_namespace, size_t& i, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
-{
-	parse_tree& tmp = src.c_array<0>()[i];
-#ifdef NDEBUG
-	tmp.type_code.set_type(parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename));
-#else
-	const type_system::type_index tmp2 = parse_tree::types->register_structdecl_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace,union_struct_decl::decl_union,src.data<0>()[i].index_tokens[1].logical_line,src.data<0>()[i].index_tokens[1].src_filename);
-	assert(tmp2);
-	assert(parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace));
-	assert(parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace)==tmp2);
-	assert(parse_tree::types->get_structdecl(tmp2));
-	tmp.type_code.set_type(tmp2);
-#endif
-	tmp.flags |= PARSE_UNION_TYPE;
-	_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
-}
-
 static void _forward_declare_CPP_union_preparsed(parse_tree& src, const char* const active_namespace, size_t& i, size_t& k, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
 {
 	parse_tree& tmp = src.c_array<0>()[i+k];
@@ -14208,11 +14191,10 @@ restart_master_loop:
 		// XXX C++ allows mixing definitions and declaring variables at the same time, but this is a bit unusual
 		// pre-scan for declaration-like items
 		{
-rescan:
-		pre_invariant_decl_scanner.clear(); // there's a lot of rescanning paths, so conserve lines of code
 		{	// wouldn't work for unnamed function parameters
 		const size_t strict_ub = src.size<0>()-i;
 		const parse_tree* const origin = src.data<0>()+i;
+		pre_invariant_decl_scanner.clear();	// fail-safe
 		while(pre_invariant_decl_scanner(origin[pre_invariant_decl_scanner.size()]))
 			// if we ran out of tokens, bad
 			if (strict_ub <= pre_invariant_decl_scanner.size())
@@ -14290,7 +14272,108 @@ rescan:
 			size_t k = 0;
 			do	switch(pre_invariant_decl_scanner[k]-STATIC_SIZE(CPP0X_nontype_decl_specifier_list))
 				{
-				case UNION_NAME: break;
+				case UNION_NAME:
+				{
+				const type_system::type_index tmp = parse_tree::types->get_id_union_CPP(src.data<0>()[i+k].index_tokens[1].token.first,active_namespace);
+				{
+				parse_tree& tmp2 = src.c_array<0>()[i+k];					
+				if (tmp)
+					{
+					assert(0<parse_tree::types->use_count(tmp));
+					tmp2.type_code.set_type(tmp);
+					tmp2.flags |= PARSE_UNION_TYPE;
+					_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+					}
+				// One Definition Rule states that conflicting enum, struct, or class must error
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+					{	//! \test zcc/decl.C99/Error_struct_as_union.hpp
+						//! \test zcc/decl.C99/Error_struct_as_union3.hpp
+						//! \test zcc/decl.C99/Error_class_as_union.hpp
+						//! \test zcc/decl.C99/Error_class_as_union3.hpp
+					message_header(tmp2.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("union ");
+					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(" declared as ");
+					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
+					assert(tmp3);
+					const char* const text = text_from_keyword(*tmp3);
+					INC_INFORM(text);
+					INFORM(" (C++98 One Definition Rule)");
+					message_header(*tmp3);
+					INFORM("prior definition here");
+					zcc_errors.inc_error();
+					tmp2.set_index_token_from_str_literal<0>(text);
+					assert(is_C99_named_specifier(tmp2,text));
+					pre_invariant_decl_scanner.reclassify(k--,strcmp("class",text) ? STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+STRUCT_NAME : STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+CLASS_NAME);
+					continue;
+					}
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+					{	//! \test zcc/decl.C99/Error_enum_as_union.hpp
+					message_header(tmp2.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INC_INFORM("union ");
+					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INFORM(" declared as enumeration (C++98 One Definition Rule)");
+					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
+					assert(tmp3);
+					message_header(*tmp3);
+					INFORM("prior definition here");
+					zcc_errors.inc_error();
+					tmp2.set_index_token_from_str_literal<0>("enum");
+					assert(is_C99_named_specifier(tmp2,"enum"));
+					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+ENUM_NAME);
+					continue;
+					}
+				// tentatively forward-declare immediately
+				//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+				else _forward_declare_CPP_union_preparsed(src,active_namespace,i,k,pre_invariant_decl_scanner);
+				}
+				parse_tree& tmp2 = src.c_array<0>()[i+k];					
+				if (semicolon_terminated_decl)
+					{	// check for forward-declaration here
+					//! \test decl.C99/Error_union_forward_def_const.hpp
+					//! \test decl.C99/Error_union_forward_def_const2.hpp
+					//! \test decl.C99/Error_union_forward_def_const3.hpp
+					//! \test decl.C99/Error_union_forward_def_const4.hpp
+					//! \test decl.C99/Error_union_forward_def_volatile.hpp
+					//! \test decl.C99/Error_union_forward_def_volatile2.hpp
+					//! \test decl.C99/Error_union_forward_def_volatile3.hpp
+					//! \test decl.C99/Error_union_forward_def_volatile4.hpp
+					//! \test decl.C99/Error_union_forward_def_const_volatile.hpp
+					//! \test decl.C99/Error_union_forward_def_const_volatile2.hpp
+					//! \test decl.C99/Error_union_forward_def_const_volatile3.hpp
+					//! \test decl.C99/Error_union_forward_def_const_volatile4.hpp
+					//! \test decl.C99/Error_union_forward_def_const_volatile5.hpp
+					//! \test decl.C99/Error_union_forward_def_const_volatile6.hpp
+					//! \test decl.C99/Error_union_forward_def_const_volatile7.hpp
+					//! \test decl.C99/Error_union_forward_def_const_volatile8.hpp
+					//! \test decl.C99/Error_union_forward_def_const_volatile9.hpp
+					//! \test decl.C99/Error_union_forward_def_const_volatile10.hpp
+					//! \test decl.C99/Error_union_forward_def_const_volatile11.hpp
+					//! \test decl.C99/Error_union_forward_def_const_volatile12.hpp
+					CPP0X_flush_const_volatile_without_object(tmp2);
+					if (tmp)
+						{	// but if already (forward-)declared then this is a no-op
+							// think this is common enough to not warrant OAOO/DRY treatment
+						//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+						// remove from parse
+						src.DeleteNSlotsAt<0>(1+pre_invariant_decl_scanner.size(),i);
+						goto restart_master_loop;
+						};
+					//! \test zcc/decl.C99/Pass_union_forward_def.hpp
+					}
+				else if (!tmp)
+					{	// used without at least forward-declaring
+						//! \bug needs test cases
+					message_header(tmp2.index_tokens[0]);
+					INC_INFORM(ERR_STR);
+					INFORM("used without at least forward-declaring");
+					zcc_errors.inc_error();
+					}
+				goto reparse;
+				}
+//				break;
 				case UNION_NAMED_DEF:
 				{	// can only define once
 				const type_system::type_index tmp = parse_tree::types->get_id_union_CPP(src.data<0>()[i+k].index_tokens[1].token.first,active_namespace);
@@ -14311,7 +14394,8 @@ rescan:
 						// reduce to named-specifier
 						tmp2.DeleteIdx<2>(0);
 						assert(is_C99_named_specifier(tmp2,"union"));
-						goto rescan;
+						pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAME);
+						continue;
 						}					
 					tmp2.type_code.set_type(tmp);
 					tmp2.flags |= PARSE_UNION_TYPE;
@@ -14472,7 +14556,8 @@ rescan:
 					zcc_errors.inc_error();
 					tmp2.set_index_token_from_str_literal<0>("union");
 					assert(is_C99_named_specifier(tmp2,"union"));
-					goto rescan;
+					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAME);
+					continue;
 					}
 				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_enum_as_struct.hpp
@@ -14587,7 +14672,8 @@ rescan:
 					tmp2.set_index_token_from_str_literal<0>("union");
 					tmp2.DeleteIdx<2>(0);
 					assert(is_C99_named_specifier(tmp2,"union"));
-					goto rescan;
+					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAME);
+					continue;
 					}
 				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_enum_as_struct2.hpp
@@ -14717,7 +14803,8 @@ rescan:
 					zcc_errors.inc_error();
 					tmp2.set_index_token_from_str_literal<0>("union");
 					assert(is_C99_named_specifier(tmp2,"union"));
-					goto rescan;
+					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAME);
+					continue;
 					}
 				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_enum_as_class.hpp
@@ -14773,8 +14860,6 @@ rescan:
 						}
 					// forward-declare
 					//! \test zcc/decl.C99/Pass_class_forward_def.hpp
-					i += 1+pre_invariant_decl_scanner.size();
-					goto restart_master_loop;
 					}
 				else if (!tmp)
 					{	// used without at least forward-declaring
@@ -14833,7 +14918,8 @@ rescan:
 					tmp2.set_index_token_from_str_literal<0>("union");
 					tmp2.DeleteIdx<2>(0);
 					assert(is_C99_named_specifier(tmp2,"union"));
-					goto rescan;
+					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAME);
+					continue;
 					}
 				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_enum_as_class2.hpp
@@ -14998,7 +15084,8 @@ rescan:
 					tmp2.set_index_token_from_str_literal<0>("union");
 					tmp2.DeleteIdx<2>(0);
 					assert(is_C99_named_specifier(tmp2,"union"));
-					goto rescan;
+					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAME);
+					continue;
 					}
 				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_struct_as_enum.hpp
@@ -15058,6 +15145,7 @@ rescan:
 		}
 		// check naked declarations first; handle namespaces later
 reparse:
+		pre_invariant_decl_scanner.clear();	// just in case; RAM conservation
 		const int tag_type = notice_CPP_tag(src.data<0>()[i]);
 		if (tag_type)
 			{
@@ -15066,103 +15154,7 @@ reparse:
 #ifndef NDEBUG
 			default: _fatal_code("return value of notice_C99_tag out of range",3);
 #endif
-			case UNION_NAME:
-			{
-			const type_system::type_index tmp = parse_tree::types->get_id_union_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace);
-			if (tmp)
-				{
-				assert(0<parse_tree::types->use_count(tmp));
-				src.c_array<0>()[i].type_code.set_type(tmp);
-				src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
-				_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
-				}
-			// One Definition Rule states that conflicting enum, struct, or class must error
-			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
-				{	//! \test zcc/decl.C99/Error_struct_as_union.hpp
-					//! \test zcc/decl.C99/Error_struct_as_union3.hpp
-					//! \test zcc/decl.C99/Error_class_as_union.hpp
-					//! \test zcc/decl.C99/Error_class_as_union3.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM("union ");
-				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
-				INC_INFORM(" declared as ");
-				const union_struct_decl* const tmp2 = parse_tree::types->get_structdecl(fatal_def);
-				assert(tmp2);
-				INC_INFORM(text_from_keyword(*tmp2));
-				INFORM(" (C++98 One Definition Rule)");
-				message_header(*tmp2);
-				INFORM("prior definition here");
-				zcc_errors.inc_error();
-				src.c_array<0>()[i].set_index_token_from_str_literal<0>("struct");
-				assert(is_C99_named_specifier(src.data<0>()[i],"struct"));
-				goto reparse;
-				}
-			else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(src.data<0>()[i].index_tokens[1].token.first,active_namespace))
-				{	//! \test zcc/decl.C99/Error_enum_as_union.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM("union ");
-				INC_INFORM(src.data<0>()[i].index_tokens[1].token.first);
-				INFORM(" declared as enumeration (C++98 One Definition Rule)");
-				const enum_def* const tmp2 = parse_tree::types->get_enum_def(fatal_def);
-				assert(tmp2);
-				message_header(*tmp2);
-				INFORM("prior definition here");
-				zcc_errors.inc_error();
-				src.c_array<0>()[i].set_index_token_from_str_literal<0>("enum");
-				assert(is_C99_named_specifier(src.data<0>()[i],"enum"));
-				goto reparse;
-				}
-			// tentatively forward-declare immediately
-			//! \test zcc/decl.C99/Pass_union_forward_def.hpp
-			else _forward_declare_CPP_union(src,active_namespace,i,invariant_decl_scanner);
-			if (   1<src.size<0>()-i
-				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
-				{	// check for forward-declaration here
-				//! \test decl.C99/Error_union_forward_def_const.hpp
-				//! \test decl.C99/Error_union_forward_def_const2.hpp
-				//! \test decl.C99/Error_union_forward_def_const3.hpp
-				//! \test decl.C99/Error_union_forward_def_const4.hpp
-				//! \test decl.C99/Error_union_forward_def_volatile.hpp
-				//! \test decl.C99/Error_union_forward_def_volatile2.hpp
-				//! \test decl.C99/Error_union_forward_def_volatile3.hpp
-				//! \test decl.C99/Error_union_forward_def_volatile4.hpp
-				//! \test decl.C99/Error_union_forward_def_const_volatile.hpp
-				//! \test decl.C99/Error_union_forward_def_const_volatile2.hpp
-				//! \test decl.C99/Error_union_forward_def_const_volatile3.hpp
-				//! \test decl.C99/Error_union_forward_def_const_volatile4.hpp
-				//! \test decl.C99/Error_union_forward_def_const_volatile5.hpp
-				//! \test decl.C99/Error_union_forward_def_const_volatile6.hpp
-				//! \test decl.C99/Error_union_forward_def_const_volatile7.hpp
-				//! \test decl.C99/Error_union_forward_def_const_volatile8.hpp
-				//! \test decl.C99/Error_union_forward_def_const_volatile9.hpp
-				//! \test decl.C99/Error_union_forward_def_const_volatile10.hpp
-				//! \test decl.C99/Error_union_forward_def_const_volatile11.hpp
-				//! \test decl.C99/Error_union_forward_def_const_volatile12.hpp
-				CPP0X_flush_const_volatile_without_object(src.c_array<0>()[i]);
-				if (tmp)
-					{	// but if already (forward-)declared then this is a no-op
-						// think this is common enough to not warrant OAOO/DRY treatment
-					//! \test zcc/decl.C99/Pass_union_forward_def.hpp
-					// remove from parse
-					src.DeleteNSlotsAt<0>(2,i);
-					continue;					
-					};
-				//! \test zcc/decl.C99/Pass_union_forward_def.hpp
-				i += 2;
-				continue;
-				}
-			else if (!tmp)
-				{	// used without at least forward-declaring
-					//! \bug needs test cases
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INFORM("used without at least forward-declaring");
-				zcc_errors.inc_error();
-				}
-			}
-			break;
+			case UNION_NAME: break;	/* already handled */
 			case STRUCT_NAME: break;	/* already handled */
 			case CLASS_NAME: break;	/* already handled */
 			case UNION_NAMED_DEF: break;	/* already handled */
