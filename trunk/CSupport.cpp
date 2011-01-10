@@ -13162,7 +13162,7 @@ rescan:
 					}
 				}
 			//! \bug check for pre-existing typedefs if no types
-			if (0>=typecount || 0<pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)))
+			if (0>=typecount || 0<pre_invariant_decl_scanner.count(STATIC_SIZE(C99_nontype_decl_specifier_list)))
 				goto reparse;
 			}
 
@@ -13171,7 +13171,56 @@ rescan:
 				{
 				case UNION_NAME: break;
 				case UNION_NAMED_DEF: break;
-				case UNION_ANON_DEF: break;
+				case UNION_ANON_DEF:
+				{	// anonymous types cannot be matched
+				// tentatively forward-declare immediately
+				const type_system::type_index tmp = parse_tree::types->register_structdecl("<unknown>",union_struct_decl::decl_union,src.data<0>()[i+k].index_tokens[0].logical_line,src.data<0>()[i+k].index_tokens[0].src_filename);
+				assert(tmp);
+				assert(parse_tree::types->get_structdecl(tmp));
+				
+				{
+				parse_tree& tmp2 = src.c_array<0>()[i+k];
+				tmp2.type_code.set_type(tmp);
+				tmp2.flags |= PARSE_UNION_TYPE;
+				}
+				_condense_const_volatile_onto_type_preparsed(src,i,k,pre_invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
+
+				// parse the union and upgrade it to a full definition
+				const union_struct_decl* tmp3 = parse_tree::types->get_structdecl(tmp);
+				assert(tmp3);
+				parse_tree& tmp2 = src.c_array<0>()[i+k];
+				C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,tmp2.index_tokens[0].logical_line,tmp2.index_tokens[0].src_filename);
+				//! \todo record field structure, etc.
+				parse_tree::types->upgrade_decl_to_def(tmp,tmp4);
+				assert(parse_tree::types->get_C_structdef(tmp));
+
+				if (semicolon_terminated_decl)
+					{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
+					//! \test decl.C99/Warn_union_anon_def_const.h
+					//! \test decl.C99/Warn_union_anon_def_const2.h
+					//! \test decl.C99/Warn_union_anon_def_volatile.h
+					//! \test decl.C99/Warn_union_anon_def_volatile2.h
+					//! \test decl.C99/Warn_union_anon_def_const_volatile.h
+					//! \test decl.C99/Warn_union_anon_def_const_volatile2.h
+					//! \test decl.C99/Warn_union_anon_def_const_volatile3.h
+					//! \test decl.C99/Warn_union_anon_def_const_volatile4.h
+					//! \test decl.C99/Warn_union_anon_def_const_volatile5.h
+					//! \test decl.C99/Warn_union_anon_def_const_volatile6.h
+					C99_flush_const_volatile_without_object(tmp2);
+					//! \todo do not warn for -Wno-OOAO/-Wno-DRY
+					//! \test zcc/decl.C99/Warn_inaccessible_union.h
+					message_header(tmp2.index_tokens[0]);
+					INC_INFORM(WARN_STR);
+					INFORM("unreferenceable anonymous union declaration");
+					if (bool_options[boolopt::warnings_are_errors])
+						zcc_errors.inc_error();
+					// remove from parse
+					src.DeleteNSlotsAt<0>(1+pre_invariant_decl_scanner.size(),i);
+					goto restart_master_loop;
+					}
+				goto reparse;
+				}
+//				break;
 				case STRUCT_NAME:
 				{
 				const type_system::type_index tmp = parse_tree::types->get_id_struct_class(src.data<0>()[i+k].index_tokens[1].token.first);
@@ -13732,52 +13781,7 @@ reparse:
 			}
 			break;
 			case STRUCT_NAMED_DEF: break;	/* already handled */
-			case UNION_ANON_DEF:
-			{	// anonymous types cannot be matched
-			// tentatively forward-declare immediately
-			const type_system::type_index tmp2 = parse_tree::types->register_structdecl("<unknown>",union_struct_decl::decl_union,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-			assert(tmp2);
-			assert(parse_tree::types->get_structdecl(tmp2));
-
-			src.c_array<0>()[i].type_code.set_type(tmp2);
-			src.c_array<0>()[i].flags |= PARSE_UNION_TYPE;
-			_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
-
-			// parse the union and upgrade it to a full definition
-			const union_struct_decl* tmp3 = parse_tree::types->get_structdecl(tmp2);
-			assert(tmp3);
-			C_union_struct_def* tmp4 = new C_union_struct_def(*tmp3,src.data<0>()[i].index_tokens[0].logical_line,src.data<0>()[i].index_tokens[0].src_filename);
-			//! \todo record field structure, etc.
-			parse_tree::types->upgrade_decl_to_def(tmp2,tmp4);
-			assert(parse_tree::types->get_C_structdef(tmp2));
-
-			if (   1<src.size<0>()-i
-				&& robust_token_is_char<';'>(src.data<0>()[i+1]))
-				{	// unreferenceable declaration without static/extern/typedef...warn and optimize away
-				//! \test decl.C99/Warn_union_anon_def_const.h
-				//! \test decl.C99/Warn_union_anon_def_const2.h
-				//! \test decl.C99/Warn_union_anon_def_volatile.h
-				//! \test decl.C99/Warn_union_anon_def_volatile2.h
-				//! \test decl.C99/Warn_union_anon_def_const_volatile.h
-				//! \test decl.C99/Warn_union_anon_def_const_volatile2.h
-				//! \test decl.C99/Warn_union_anon_def_const_volatile3.h
-				//! \test decl.C99/Warn_union_anon_def_const_volatile4.h
-				//! \test decl.C99/Warn_union_anon_def_const_volatile5.h
-				//! \test decl.C99/Warn_union_anon_def_const_volatile6.h
-				C99_flush_const_volatile_without_object(src.c_array<0>()[i]);
-				//! \todo do not warn for -Wno-OOAO/-Wno-DRY
-				//! \test zcc/decl.C99/Warn_inaccessible_union.h
-				message_header(src.data<0>()[i].index_tokens[0]);
-				INC_INFORM(WARN_STR);
-				INFORM("unreferenceable anonymous union declaration");
-				if (bool_options[boolopt::warnings_are_errors])
-					zcc_errors.inc_error();
-				// remove from parse
-				src.DeleteNSlotsAt<0>(2,i);
-				continue;
-				}
-			}
-			break;
+			case UNION_ANON_DEF: break;	/* already handled */
 			case STRUCT_ANON_DEF: break;	/* already handled */
 			case ENUM_NAME: break;	/* already handled */
 			case ENUM_NAMED_DEF: break;	/* already handled */
