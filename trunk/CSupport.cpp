@@ -14265,11 +14265,8 @@ rescan:
 					}
 				}
 			//! \bug check for pre-existing typedefs if no types
-			if (0>=typecount)
-				{
-				pre_invariant_decl_scanner.clear();	// RAM efficiency
+			if (0>=typecount || 0<pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)))
 				goto reparse;
-				}
 			}
 
 			size_t k = 0;
@@ -14325,8 +14322,7 @@ rescan:
 					src.DeleteNSlotsAt<0>(1+pre_invariant_decl_scanner.size(),i);
 					goto restart_master_loop;
 					}
-				i += pre_invariant_decl_scanner.size();
-				goto restart_master_loop;
+				goto reparse;
 				}
 //				break;
 				case STRUCT_NAME:
@@ -14423,8 +14419,7 @@ rescan:
 					INFORM("used without at least forward-declaring");
 					zcc_errors.inc_error();
 					}
-				i += semicolon_terminated_decl+pre_invariant_decl_scanner.size();
-				goto restart_master_loop;
+				goto reparse;
 				}
 //				break;
 				case STRUCT_NAMED_DEF:
@@ -14523,8 +14518,7 @@ rescan:
 					// accept definition
 					//! \test zcc/decl.C99/Pass_struct_forward_def.hpp
 					}
-				i += semicolon_terminated_decl+pre_invariant_decl_scanner.size();
-				goto restart_master_loop;
+				goto reparse;
 				}
 //				break;
 				case STRUCT_ANON_DEF:
@@ -14573,8 +14567,7 @@ rescan:
 					src.DeleteNSlotsAt<0>(1+pre_invariant_decl_scanner.size(),i);
 					goto restart_master_loop;
 					}
-				i += pre_invariant_decl_scanner.size();
-				goto restart_master_loop;
+				goto reparse;
 				}
 //				break;
 				case CLASS_NAME:
@@ -14672,8 +14665,7 @@ rescan:
 					INFORM("used without at least forward-declaring");
 					zcc_errors.inc_error();
 					}
-				i += pre_invariant_decl_scanner.size();
-				goto restart_master_loop;
+				goto reparse;
 				}
 //				break;
 				case CLASS_NAMED_DEF:
@@ -14772,8 +14764,7 @@ rescan:
 					// accept definition
 					//! \test zcc/decl.C99/Pass_class_forward_def.hpp
 					}
-				i += semicolon_terminated_decl+pre_invariant_decl_scanner.size();
-				goto restart_master_loop;
+				goto reparse;
 				}
 //				break;
 				case CLASS_ANON_DEF:
@@ -14848,8 +14839,7 @@ rescan:
 					tmp2.type_code.set_type(C_TYPE::INT);	// fail over to int, like C
 					tmp2.flags |= (parse_tree::INVALID | PARSE_PRIMARY_TYPE);
 					};
-				i += semicolon_terminated_decl+pre_invariant_decl_scanner.size();
-				goto restart_master_loop;
+				goto reparse;
 				}
 //				break;
 				case ENUM_NAMED_DEF:
@@ -14926,8 +14916,7 @@ rescan:
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 					return;
 					}
-				i += semicolon_terminated_decl+pre_invariant_decl_scanner.size();
-				goto restart_master_loop;
+				goto reparse;
 				}
 //				break;
 				case ENUM_ANON_DEF:
@@ -14942,12 +14931,10 @@ rescan:
 					INFORM("enumeration not fully parsed: stopping to prevent spurious errors");
 					return;
 					}
-				i += semicolon_terminated_decl+pre_invariant_decl_scanner.size();
-				goto restart_master_loop;
+				goto reparse;
 				}
 				}
 			while(pre_invariant_decl_scanner.size()> ++k);
-			pre_invariant_decl_scanner.clear();	// RAM efficiency
 			};
 		}
 		// check naked declarations first; handle namespaces later
