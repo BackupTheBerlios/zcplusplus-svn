@@ -14438,7 +14438,7 @@ restart_master_loop:
 					assert(0<parse_tree::types->use_count(tmp));
 					tmp2.type_code.set_type(tmp);
 					tmp2.flags |= PARSE_UNION_TYPE;
-					_condense_const_volatile_onto_type(src,i,invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
+					_condense_const_volatile_onto_type_preparsed(src,i,k,pre_invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
 					}
 				// One Definition Rule states that conflicting enum, struct, or class must error
 				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP(tmp2.index_tokens[1].token.first,active_namespace))
