@@ -13172,52 +13172,56 @@ restart_master_loop:
 				case UNION_NAME:
 				{
 				const type_system::type_index tmp = parse_tree::types->get_id_union(src.data<0>()[i+k].index_tokens[1].token.first);
+				{
+				parse_tree& tmp2 = src.c_array<0>()[i+k];
 				if (tmp)
 					{
 					assert(0<parse_tree::types->use_count(tmp));
-					src.c_array<0>()[i+k].type_code.set_type(tmp);
-					src.c_array<0>()[i+k].flags |= PARSE_UNION_TYPE;
+					tmp2.type_code.set_type(tmp);
+					tmp2.flags |= PARSE_UNION_TYPE;
 					_condense_const_volatile_onto_type_preparsed(src,i,k,pre_invariant_decl_scanner,"removing redundant const type qualifier (C99 6.7.3p4)","removing redundant volatile type qualifier (C99 6.7.3p4)");
 					}
 				// C1X 6.7.2.3p2 states that conflicting enum or struct must error
-				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class(src.data<0>()[i+k].index_tokens[1].token.first))
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class(tmp2.index_tokens[1].token.first))
 					{	//! \test zcc/decl.C99/Error_struct_as_union.h
 						//! \test zcc/decl.C99/Error_struct_as_union3.h
-					message_header(src.data<0>()[i+k].index_tokens[0]);
+					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("union ");
-					INC_INFORM(src.data<0>()[i+k].index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1].token.first);
 					INFORM(" declared as struct (C99 6.7.2.3p2)");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
 					message_header(*tmp3);
 					INFORM("prior definition here");
 					zcc_errors.inc_error();
-					src.c_array<0>()[i+k].set_index_token_from_str_literal<0>("struct");
-					assert(is_C99_named_specifier(src.data<0>()[i+k],"struct"));
+					tmp2.set_index_token_from_str_literal<0>("struct");
+					assert(is_C99_named_specifier(tmp2,"struct"));
 					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(C99_nontype_decl_specifier_list)+STRUCT_NAME);
 					continue;
 					}
-				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum(src.data<0>()[i+k].index_tokens[1].token.first))
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum(tmp2.index_tokens[1].token.first))
 					{	//! \test zcc/decl.C99/Error_enum_as_union.h
-					message_header(src.data<0>()[i+k].index_tokens[0]);
+					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("union ");
-					INC_INFORM(src.data<0>()[i+k].index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1].token.first);
 					INFORM(" declared as enumeration (C99 6.7.2.3p2)");
 					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
 					assert(tmp3);
 					message_header(*tmp3);
 					INFORM("prior definition here");
 					zcc_errors.inc_error();
-					src.c_array<0>()[i+k].set_index_token_from_str_literal<0>("enum");
-					assert(is_C99_named_specifier(src.data<0>()[i+k],"enum"));
+					tmp2.set_index_token_from_str_literal<0>("enum");
+					assert(is_C99_named_specifier(tmp2,"enum"));
 					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(C99_nontype_decl_specifier_list)+ENUM_NAME);
 					continue;
 					}
 				// tentatively forward-declare immediately
 				//! \test zcc/decl.C99/Pass_union_forward_def.h
 				else _forward_declare_C_union_preparsed(src,i,k,pre_invariant_decl_scanner);
+				}
+				parse_tree& tmp2 = src.c_array<0>()[i+k];
 				if (semicolon_terminated_decl)
 					{	// check for forward-declaration here (C99 6.7.2.3)
 					//! \test decl.C99/Warn_union_forward_def_const.h
@@ -13240,7 +13244,7 @@ restart_master_loop:
 					//! \test decl.C99/Warn_union_forward_def_const_volatile10.h
 					//! \test decl.C99/Warn_union_forward_def_const_volatile11.h
 					//! \test decl.C99/Warn_union_forward_def_const_volatile12.h
-					C99_flush_const_volatile_without_object(src.c_array<0>()[i+k]);
+					C99_flush_const_volatile_without_object(tmp2);
 					if (tmp)
 						{	// but if already (forward-)declared then this is a no-op
 							// think this is common enough to not warrant OAOO/DRY treatment
@@ -13256,7 +13260,7 @@ restart_master_loop:
 				else if (!tmp)
 					{	// used without at least forward-declaring
 						//! \bug needs test cases
-					message_header(src.data<0>()[i+k].index_tokens[0]);
+					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("used without at least forward-declaring");
 					zcc_errors.inc_error();
@@ -13777,27 +13781,7 @@ restart_master_loop:
 			};
 		}
 		// check naked declarations first
-reparse:
-		const int tag_type = notice_C99_tag(src.data<0>()[i]);
-		if (tag_type)
-			{
-			switch(tag_type)
-			{	//! \todo deal with indentation violations later
-#ifndef NDEBUG
-			default: _fatal_code("return value of notice_C99_tag out of range",3);
-#endif
-			case UNION_NAME: break;	/* already handled */
-			case STRUCT_NAME: break;	/* already handled */
-			case UNION_NAMED_DEF: break;	/* already handled */
-			case STRUCT_NAMED_DEF: break;	/* already handled */
-			case UNION_ANON_DEF: break;	/* already handled */
-			case STRUCT_ANON_DEF: break;	/* already handled */
-			case ENUM_NAME: break;	/* already handled */
-			case ENUM_NAMED_DEF: break;	/* already handled */
-			case ENUM_ANON_DEF: break;	/* already handled */
-			}
-			}
-			
+reparse:			
 		// general declaration scanner 
 		// we intercept typedefs as part of general variable declaration detection (weird storage qualifier)
 		// intercept declarations as follows
