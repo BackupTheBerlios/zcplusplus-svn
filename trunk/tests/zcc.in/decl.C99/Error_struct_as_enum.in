@@ -1,0 +1,9 @@
+SUFFIXES h hpp
+// using struct as enum
+// (C)2010 Kenneth Boyd, license: MIT.txt
+
+struct bad_test;
+
+enum bad_test {
+	x_factor = 1
+};
