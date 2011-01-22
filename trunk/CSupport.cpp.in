@@ -14098,16 +14098,17 @@ reparse:
 					};
 				// ,: iterate
 				// anything else: error
-				if (!robust_token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset]))
-					{
+				if (!robust_token_is_char<','>(src.data<0>()[i+decl_count+decl_offset]))
+					{	//! \test decl.C99/Error_enum_runon_def.h
 					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("declaration disoriented by missing , (C99 6.7p1)");
-					// find the next semicolon
-					size_t j = i+decl_count+decl_offset;
-					while(!robust_token_is_char<';'>(src.data<0>()[j]) && src.size<0>()> ++j);
-					src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
-					continue;
+					zcc_errors.inc_error();
+					// remove everything starting here through next semicolon
+					src.DeleteNSlotsAt<0>(span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>()),i+decl_count+decl_offset);
+					src.c_array<0>()[i+decl_count+decl_offset].flags |= parse_tree::GOOD_LINE_BREAK;
+					++decl_offset;
+					break;
 					}
 				++decl_offset;
 				}
@@ -15654,15 +15655,17 @@ reparse:
 					};
 				// ,: iterate
 				// anything else: error
-				if (!robust_token_is_char<';'>(src.data<0>()[i+decl_count+decl_offset]))
-					{
+				if (!robust_token_is_char<','>(src.data<0>()[i+decl_count+decl_offset]))
+					{	//! \test decl.C99/Error_enum_runon_def.hpp
 					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("declaration disoriented by missing , (C++98 7p1)");
-					// find the next semicolon
-					const size_t span = span_to_semicolon(src.begin<0>()+(i+decl_count+decl_offset),src.end<0>());
-					src.DeleteNSlotsAt<0>(span,i+decl_count+decl_offset);
-					continue;
+					zcc_errors.inc_error();
+					// remove everything starting here through next semicolon
+					src.DeleteNSlotsAt<0>(span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>()),i+decl_count+decl_offset);
+					src.c_array<0>()[i+decl_count+decl_offset].flags |= parse_tree::GOOD_LINE_BREAK;
+					++decl_offset;
+					break;
 					}
 				++decl_offset;
 				}
