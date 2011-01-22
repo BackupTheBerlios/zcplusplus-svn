@@ -13080,7 +13080,6 @@ static void C99_ContextParse(parse_tree& src)
 	// note that typedefs and struct/union declarations/definitions create new types; if this happens we are no longer context-free (so second pass with context-based parsing)
 	// ask GCC: struct/class/union/enum collides with each other (both C and C++), does not collide with namespace
 	// think we can handle this as "disallow conflicting definitions"
-	kleene_star<STATIC_SIZE(C99_nontype_decl_specifier_list)+1,size_t (*)(const parse_tree&)> invariant_decl_scanner(C99_type_or_invariant_decl_specifier);
 	size_t i = 0;
 restart_master_loop:
 	while(i<src.size<0>())
@@ -14188,7 +14187,6 @@ static void CPP_ParseNamespace(parse_tree& src,const char* const active_namespac
 		return;
 		}
 
-	kleene_star<STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+1,size_t (*)(const parse_tree&)> invariant_decl_scanner(CPP0X_type_or_invariant_decl_specifier);
 	size_t i = 0;
 restart_master_loop:
 	while(i<src.size<0>())
