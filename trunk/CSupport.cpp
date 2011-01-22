@@ -13837,16 +13837,17 @@ reparse:
 				assert(0<initdecl_span || !initdecl_identifier);
 				if (0==initdecl_span)
 					{	// no declarator where expected
+					//! \todo test suite/Jan. 22 2011 does not exercise.  Is this dead code?
 					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("declarator missing (C99 6.7p1)");
 					zcc_errors.inc_error();
 					// find the next semicolon
-					const size_t j = i+decl_count+decl_offset+span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>());
+					const size_t remove_these = span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>());
 					if (have_we_parsed_yet)
-						src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
+						src.DeleteNSlotsAt<0>(remove_these,i+decl_count+decl_offset);
 					else
-						src.DeleteNSlotsAt<0>((j-i)+(src.size<0>()>j),i);
+						src.DeleteNSlotsAt<0>(remove_these+decl_count+decl_offset+(src.size<0>()>i+remove_these+decl_count+decl_offset),i);
 					break;
 					};
 				if (!initdecl_identifier)
@@ -13862,12 +13863,12 @@ reparse:
 						assert(!have_we_parsed_yet);
 						src.DeleteNSlotsAt<0>(decl_count+decl_offset+initdecl_span,i);
 						}
-					else{
-						const size_t j = i+decl_count+decl_offset+span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>());
+					else{	//! \todo test suite/Jan. 22 2011 does not exercise.  Is this dead code?
+						const size_t remove_these = span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>());
 						if (have_we_parsed_yet)
-							src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
+							src.DeleteNSlotsAt<0>(remove_these,i+decl_count+decl_offset);
 						else
-							src.DeleteNSlotsAt<0>((j-i)+1,i);
+							src.DeleteNSlotsAt<0>(remove_these+decl_count+decl_offset+(src.size<0>()>i+remove_these+decl_count+decl_offset),i);
 						}
 					break;
 					};
@@ -15339,16 +15340,17 @@ reparse:
 				assert(0<initdecl_span || !initdecl_identifier);
 				if (0==initdecl_span)
 					{	// no declarator where expected
+					//! \todo test suite/Jan. 22 2011 does not exercise.  Is this dead code?
 					message_header(src.data<0>()[i+decl_count+decl_offset].index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INFORM("declarator missing (C++98 7p1)");
 					zcc_errors.inc_error();
 					// find the next semicolon
-					const size_t j = i+decl_count+decl_offset+span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>());
+					const size_t remove_these = span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>());
 					if (have_we_parsed_yet)
-						src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
+						src.DeleteNSlotsAt<0>(remove_these,i+decl_count+decl_offset);
 					else
-						src.DeleteNSlotsAt<0>((j-i)+(src.size<0>()>j),i);
+						src.DeleteNSlotsAt<0>(remove_these+decl_count+decl_offset+(src.size<0>()>i+remove_these+decl_count+decl_offset),i);
 					break;
 					};
 				if (!initdecl_identifier)
@@ -15364,12 +15366,12 @@ reparse:
 						assert(!have_we_parsed_yet);
 						src.DeleteNSlotsAt<0>(decl_count+decl_offset+initdecl_span,i);
 						}
-					else{
-						const size_t j = i+decl_count+decl_offset+span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>());
+					else{	//! \todo test suite/Jan. 22 2011 does not exercise.  Is this dead code?
+						const size_t remove_these = span_to_semicolon(src.data<0>()+i+decl_count+decl_offset,src.end<0>());
 						if (have_we_parsed_yet)
-							src.DeleteNSlotsAt<0>(j-(i+decl_count+decl_offset),i+decl_count+decl_offset-1);
+							src.DeleteNSlotsAt<0>(remove_these,i+decl_count+decl_offset);
 						else
-							src.DeleteNSlotsAt<0>((j-i)+1,i);
+							src.DeleteNSlotsAt<0>(remove_these+decl_count+decl_offset+(src.size<0>()>i+remove_these+decl_count+decl_offset),i);
 						}
 					break;
 					};
