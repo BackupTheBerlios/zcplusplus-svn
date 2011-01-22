@@ -11623,6 +11623,11 @@ public:
 	bool operator()(const parse_tree& x)
 		{
 		BOOST_STATIC_ASSERT(CHAR_BIT*sizeof(uintmax_t)>=STATIC_SIZE(C99_decl_specifiers));
+		if (!base_type.base_type_index && (PARSE_TYPE & x.flags))
+			{
+			value_copy(base_type,x.type_code);
+			return true;
+			}
 		if (!x.is_atomic()) return false;
 		const errr Idx = linear_find(x.index_tokens[0].token.first,x.index_tokens[0].token.second,C99_decl_specifiers,STATIC_SIZE(C99_decl_specifiers));
 		if (0<=Idx)
@@ -11633,13 +11638,10 @@ public:
 			};
 		// not a decl-specifier; bail out if we already have a type
 		if (base_type.base_type_index) return false;
-		if (PARSE_TYPE & x.flags)
-			{
-			value_copy(base_type,x.type_code);
-			return true;
-			}
 		// handle typedefs
-		if (check_for_typedef(base_type,x.index_tokens[0].token.first,types)) return true;
+		if (   !C99_echo_reserved_keyword(x.index_tokens[0].token.first,x.index_tokens[0].token.second)
+			&& (C_TESTFLAG_IDENTIFIER & x.index_tokens[0].flags))
+			return check_for_typedef(base_type,x.index_tokens[0].token.first,types);
 		return false;
 		};
 	bool analyze_flags_global(parse_tree& x, size_t i, size_t& decl_count)
@@ -11704,6 +11706,8 @@ public:
 	uintmax_t get_flags() const {return flags;};
 	//! \throw std::bad_alloc
 	void value_copy_type(type_spec& dest) const {value_copy(dest,base_type);};
+	const enum_def* is_enumeration() const {assert(0==base_type.pointer_power); return types.get_enum_def(base_type.base_type_index);};
+	bool is_type() const {return base_type.base_type_index;};
 };
 
 class CPP0X_decl_specifier_scanner
@@ -11727,6 +11731,11 @@ public:
 		{
 		BOOST_STATIC_ASSERT(CHAR_BIT*sizeof(uintmax_t)>=STATIC_SIZE(CPP0X_decl_specifiers));
 		assert(x.size<0>()>i);
+		if (!base_type.base_type_index && (PARSE_TYPE & x.data<0>()[i].flags))
+			{
+			value_copy(base_type,x.data<0>()[i].type_code);
+			return true;
+			}
 		if (!x.data<0>()[i].is_atomic()) return false;
 		const errr Idx = linear_find(x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second,CPP0X_decl_specifiers,STATIC_SIZE(CPP0X_decl_specifiers));
 		if (0<=Idx)
@@ -11737,20 +11746,12 @@ public:
 			};
 		// not a decl-specifier; bail out if we already have a type
 		if (base_type.base_type_index) return false;
-		if (PARSE_TYPE & x.data<0>()[i].flags)
-			{
-			value_copy(base_type,x.data<0>()[i].type_code);
-			return true;
-			}
-		{	// handle typedefs
+		// handle typedefs
 		// determine what fully-qualified name would be
-		if (   x.data<0>()[i].is_atomic()
-			&& !(PARSE_TYPE & x.data<0>()[i].flags)
-			&& !CPP_echo_reserved_keyword(x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second)
+		if (   !CPP_echo_reserved_keyword(x.data<0>()[i].index_tokens[0].token.first,x.data<0>()[i].index_tokens[0].token.second)
 			&& (C_TESTFLAG_IDENTIFIER & x.data<0>()[i].index_tokens[0].flags))
 			// shove Koenig lookup into type_system
 			return check_for_typedef(base_type,x.data<0>()[i].index_tokens[0].token.first,active_namespace,types);
-		}
 		return false;
 		};
 	bool analyze_flags_global(parse_tree& x, size_t i, size_t& decl_count)
@@ -11849,6 +11850,8 @@ public:
 	uintmax_t get_flags() const {return flags;};
 	//! \throw std::bad_alloc
 	void value_copy_type(type_spec& dest) const {value_copy(dest,base_type);};
+	const enum_def* is_enumeration() const {assert(0==base_type.pointer_power); return types.get_enum_def(base_type.base_type_index);};
+	bool is_type() const {return base_type.base_type_index;};
 };
 
 static size_t C99_cv_qualifier_span(parse_tree& x, size_t i,type_spec& target_type)
@@ -13802,11 +13805,17 @@ reparse:
 			assert(src.size<0>()-i>decl_count);	// unterminated declaration handled above
 			if (robust_token_is_char<';'>(src.data<0>()[i+decl_count]))
 				{	// C99 7p2 error: must declare something
-					//! \test zcc/decl.C99/Error_extern_semicolon.h
-					//! \test zcc/decl.C99/Error_static_semicolon.h
-					//! \test zcc/decl.C99/Error_typedef_semicolon.h
-					//! \test zcc/decl.C99/Error_register_semicolon.h
-					//! \test zcc/decl.C99/Error_auto_semicolon.h
+				if (   declFind.is_enumeration()	// but a raw enumeration is fine
+					|| (1==decl_count && declFind.is_type()))	// as is a forward-declare
+					{
+					i += decl_count+1;
+					continue;
+					}
+				//! \test zcc/decl.C99/Error_extern_semicolon.h
+				//! \test zcc/decl.C99/Error_static_semicolon.h
+				//! \test zcc/decl.C99/Error_typedef_semicolon.h
+				//! \test zcc/decl.C99/Error_register_semicolon.h
+				//! \test zcc/decl.C99/Error_auto_semicolon.h
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("declaration must declare something (C99 6.7p2)");
@@ -15294,14 +15303,20 @@ reparse:
 			assert(src.size<0>()-i>decl_count);	/* unterminated declarations already handled */
 			if (robust_token_is_char<';'>(src.data<0>()[i+decl_count]))
 				{	// must declare something
-					//! \test zcc/decl.C99/Error_extern_semicolon.hpp
-					//! \test zcc/decl.C99/Error_static_semicolon.hpp
-					//! \test zcc/decl.C99/Error_typedef_semicolon.hpp
-					//! \test zcc/decl.C99/Error_register_semicolon.hpp
-					//! \test zcc/decl.C99/Error_mutable_semicolon.hpp
-					//! \test zcc/decl.C99/Error_virtual_semicolon.hpp
-					//! \test zcc/decl.C99/Error_friend_semicolon.hpp
-					//! \test zcc/decl.C99/Error_explicit_semicolon.hpp
+				if (   declFind.is_enumeration()	// but a raw enumeration is fine
+					|| (1==decl_count && declFind.is_type()))	// as is a forward-declare
+					{
+					i += decl_count+1;
+					continue;
+					}
+				//! \test zcc/decl.C99/Error_extern_semicolon.hpp
+				//! \test zcc/decl.C99/Error_static_semicolon.hpp
+				//! \test zcc/decl.C99/Error_typedef_semicolon.hpp
+				//! \test zcc/decl.C99/Error_register_semicolon.hpp
+				//! \test zcc/decl.C99/Error_mutable_semicolon.hpp
+				//! \test zcc/decl.C99/Error_virtual_semicolon.hpp
+				//! \test zcc/decl.C99/Error_friend_semicolon.hpp
+				//! \test zcc/decl.C99/Error_explicit_semicolon.hpp
 				message_header(src.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("declaration must declare something (C++98 7p4)");
