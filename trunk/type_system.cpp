@@ -259,6 +259,22 @@ type_system::get_id_enum_CPP(const char* alias,const char* active_namespace) con
 	return _get_id_enum_CPP(alias);
 }
 
+// for checking for pre-existing type system definitions
+type_system::type_index
+type_system::get_id_enum_CPP_exact(const char* alias,const char* active_namespace) const
+{
+	assert(alias && *alias);
+	assert(!strstr(alias,"::"));
+	
+	if (active_namespace && *active_namespace)
+		{	// ok..march up to global
+		char* tmp_alias = namespace_concatenate(alias,active_namespace,"::");
+		const type_index tmp2 = is_string_registered(tmp_alias) ? _get_id_enum(tmp_alias) : 0;
+		return (free(tmp_alias),tmp2);
+		}
+	return _get_id_enum(alias);
+}
+
 void type_system::use_type(type_index id)
 {
 	assert(core_types_size+dynamic_types.size()>=id);

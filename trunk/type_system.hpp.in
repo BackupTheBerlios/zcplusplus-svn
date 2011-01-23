@@ -75,6 +75,7 @@ public:
 		return _get_id_enum(x);
 		}
 	type_index get_id_enum_CPP(const char* alias,const char* active_namespace) const;
+	type_index get_id_enum_CPP_exact(const char* alias,const char* active_namespace) const;
 	void use_type(type_index id);
 	void unuse_type(type_index id);
 	size_t use_count(type_index id) const

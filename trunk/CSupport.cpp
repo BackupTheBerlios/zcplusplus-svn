@@ -14216,6 +14216,7 @@ restart_master_loop:
 		{	// wouldn't work for unnamed function parameters
 		const size_t strict_ub = src.size<0>()-i;
 		const parse_tree* const origin = src.data<0>()+i;
+rescan:
 		while(pre_invariant_decl_scanner(origin[pre_invariant_decl_scanner.size()]))
 			// if we ran out of tokens, bad
 			if (strict_ub <= pre_invariant_decl_scanner.size())
@@ -14236,6 +14237,54 @@ restart_master_loop:
 				src.DeleteNSlotsAt<0>(strict_ub,i);
 				return;
 				};
+		// more generally, we should recover any type-id; haven't checked how much we can do here
+		// this doesn't generalize fully to C
+		// do not have namespace available in CPP0X_type_or_invariant_decl_specifier_or_tag so can't punt there (unsure if this is worth a global)
+		// identifier might be type name: recover
+		if (0==pre_invariant_decl_scanner.count(STATIC_SIZE(CPP0X_nontype_decl_specifier_list)))
+			{
+			parse_tree& tmp2 = src.c_array<0>()[i+pre_invariant_decl_scanner.size()];					
+			if (tmp2.is_atomic() && (tmp2.index_tokens[0].flags & C_TESTFLAG_IDENTIFIER))
+				{
+				{
+				type_system::type_index tmp = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[0].token.first,active_namespace);
+				if (tmp)
+					{	// is an enum
+					tmp2.grab_index_token_from<1,0>(tmp2);
+					tmp2.set_index_token_from_str_literal<0>("enum");
+					assert(is_C99_named_specifier(tmp2,"enum"));
+					goto rescan;
+#if 0
+					}
+				else if (tmp = parse_tree::types->get_id_union_CPP(pre_invariant_decl_scanner.size()].index_tokens[0],active_namespace))
+					{	// is a union
+					tmp2.grab_index_token_from<1,0>(tmp2);
+					tmp2.set_index_token_from_str_literal<0>("union");
+					assert(is_C99_named_specifier(tmp2,"union"));
+					goto rescan;
+					}
+				else if (tmp = parse_tree::types->get_id_struct_class_CPP(pre_invariant_decl_scanner.size()].index_tokens[0],active_namespace))
+					{	// is a struct/class
+					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(tmp);
+					assert(tmp3);
+					const char* const text = text_from_keyword(*tmp3);
+					tmp2.grab_index_token_from<1,0>(tmp2);
+					tmp2.set_index_token_from_str_literal<0>(text);
+					assert(is_C99_named_specifier(tmp2,text));
+					goto rescan;
+#endif
+					};
+				}
+#if 0
+				{
+				const zaimoni::POD_triple<type_spec,const char*,size_t>* const tmp = parse_tree::types->get_typedef_CPP(pre_invariant_decl_scanner.size()].index_tokens[0],active_namespace);
+				if (tmp)
+					{
+					}
+				}
+#endif
+				}
+			}
 		}
 		if (!pre_invariant_decl_scanner.empty())
 			{
@@ -14329,7 +14378,7 @@ restart_master_loop:
 					pre_invariant_decl_scanner.reclassify(k--,strcmp("class",text) ? STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+STRUCT_NAME : STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+CLASS_NAME);
 					continue;
 					}
-				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP_exact(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_enum_as_union.hpp
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -14448,7 +14497,7 @@ restart_master_loop:
 					pre_invariant_decl_scanner.reclassify(k--,strcmp("class",text) ? STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+STRUCT_NAME : STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+CLASS_NAME);
 					continue;
 					}
-				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP_exact(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_enum_as_union.hpp
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -14581,7 +14630,7 @@ restart_master_loop:
 					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAME);
 					continue;
 					}
-				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP_exact(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_enum_as_struct.hpp
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -14698,7 +14747,7 @@ restart_master_loop:
 					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAME);
 					continue;
 					}
-				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP_exact(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_enum_as_struct2.hpp
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -14829,7 +14878,7 @@ restart_master_loop:
 					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAME);
 					continue;
 					}
-				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP_exact(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_enum_as_class.hpp
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -14945,7 +14994,7 @@ restart_master_loop:
 					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAME);
 					continue;
 					}
-				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP_exact(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_enum_as_class2.hpp
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -15074,7 +15123,7 @@ restart_master_loop:
 				case ENUM_NAMED_DEF:
 				{	// can only define once
 				parse_tree& tmp2 = src.c_array<0>()[i+k]; 
-				if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+				if (const type_system::type_index fatal_def = parse_tree::types->get_id_enum_CPP_exact(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_enum_multidef.hpp
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
@@ -15138,7 +15187,7 @@ restart_master_loop:
 				//! \test zcc/decl.C99/Pass_enum_def.hpp
 				// enum-specifier doesn't have a specific declaration mode
 				const type_system::type_index tmp3 = parse_tree::types->register_enum_def_CPP(tmp2.index_tokens[1].token.first,active_namespace,tmp2.index_tokens[1].logical_line,tmp2.index_tokens[1].src_filename);
-				assert(parse_tree::types->get_id_enum_CPP(tmp2.index_tokens[1].token.first,active_namespace)==tmp3);
+				assert(parse_tree::types->get_id_enum_CPP_exact(tmp2.index_tokens[1].token.first,active_namespace)==tmp3);
 				tmp2.type_code.set_type(tmp3);	// C++: enums are own type
 				tmp2.flags |= PARSE_ENUM_TYPE;
 				if (!record_enum_values(*tmp2.c_array<2>(),tmp3,active_namespace,true,CPP_echo_reserved_keyword,CPP_intlike_literal_to_VM,CPP_CondenseParseTree,CPP_EvalParseTree))
