@@ -1,6 +1,6 @@
 // decl.C99\Pass_enum_def.hpp
 // using singly defined enum
-// (C)2009,2010 Kenneth Boyd, license: MIT.txt
+// (C)2009,2011 Kenneth Boyd, license: MIT.txt
 
 enum good_test {
 	x_factor = 1

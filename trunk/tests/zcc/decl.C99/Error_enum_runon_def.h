@@ -1,6 +1,6 @@
 // decl.C99\Error_enum_runon_def.h
 // using singly defined enum
-// (C)2010 Kenneth Boyd, license: MIT.txt
+// (C)2011 Kenneth Boyd, license: MIT.txt
 
 enum bad_test {
 	x_factor = 1
