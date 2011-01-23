@@ -1,0 +1,11 @@
+SUFFIXES h hpp
+// using singly defined union
+// (C)2011 Kenneth Boyd, license: MIT.txt
+
+union bad_test {
+	int x_factor;
+};
+
+// ringing the changes on extern
+extern union bad_test x1
+extern const union bad_test x2;

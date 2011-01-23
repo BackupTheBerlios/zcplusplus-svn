@@ -10536,6 +10536,7 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 			//! \test decl.C99/Warn_dup_const2.hpp
 			record_qualifier_or_warn(src,type_spec::_const,i+k,i+offset,have_warned_about_const,warn_const);
 			src.DeleteIdx<0>(i-- +offset);
+			assert(PARSE_TYPE & src.data<0>()[i+k].flags);
 			invariant_decl_scanner.DeleteIdx(offset);
 			continue;
 		case C99_CPP_VOLATILE_IDX:
@@ -10545,10 +10546,11 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 			//! \test decl.C99/Warn_dup_volatile2.hpp
 			record_qualifier_or_warn(src,type_spec::_volatile,i+k,i+offset,have_warned_about_volatile,warn_volatile);
 			src.DeleteIdx<0>(i-- +offset);
+			assert(PARSE_TYPE & src.data<0>()[i+k].flags);
 			invariant_decl_scanner.DeleteIdx(offset);
 			continue;
 		default:
-			if (invariant_decl_scanner.strict_ub()-1==invariant_decl_scanner[offset-1])
+			if (0<offset && invariant_decl_scanner.strict_ub()-1==invariant_decl_scanner[offset-1])
 				{
 				if (!have_warned_too_many_types)
 					{
@@ -10559,6 +10561,7 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 					have_warned_too_many_types = true;
 					}
 				src.DeleteIdx<0>(i-- +offset);
+				assert(PARSE_TYPE & src.data<0>()[i+k].flags);
 				invariant_decl_scanner.DeleteIdx(offset);
 				continue;
 				}
@@ -10576,6 +10579,7 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 			//! \test decl.C99/Warn_dup_const3.hpp
 			record_qualifier_or_warn(src,type_spec::_const,i+k,i+offset,have_warned_about_const,warn_const);
 			src.DeleteIdx<0>(i+offset);
+			assert(PARSE_TYPE & src.data<0>()[i+k].flags);
 			invariant_decl_scanner.DeleteIdx(offset);
 			continue;
 		case C99_CPP_VOLATILE_IDX:
@@ -10585,6 +10589,7 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 			//! \test decl.C99/Warn_dup_volatile3.hpp
 			record_qualifier_or_warn(src,type_spec::_volatile,i+k,i+offset,have_warned_about_volatile,warn_volatile);
 			src.DeleteIdx<0>(i+offset);
+			assert(PARSE_TYPE & src.data<0>()[i+k].flags);
 			invariant_decl_scanner.DeleteIdx(offset);
 			continue;
 		default:
@@ -10599,6 +10604,7 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 					have_warned_too_many_types = true;
 					}
 				src.DeleteIdx<0>(i-- +offset);
+				assert(PARSE_TYPE & src.data<0>()[i+k].flags);
 				invariant_decl_scanner.DeleteIdx(offset);
 				continue;
 				}
