@@ -13038,7 +13038,7 @@ static size_t CPP0X_type_or_invariant_decl_specifier_or_tag(const parse_tree& x)
 
 static void _forward_declare_C_union_preparsed(parse_tree& src, size_t& i, size_t& k, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
 {
-	parse_tree& tmp = src.c_array<0>()[i];
+	parse_tree& tmp = src.c_array<0>()[i+k];
 #ifdef NDEBUG
 	tmp.type_code.set_type(parse_tree::types->register_structdecl(tmp.index_tokens[1].token.first,union_struct_decl::decl_union,tmp.index_tokens[1].logical_line,tmp.index_tokens[1].src_filename));
 #else
@@ -13056,7 +13056,7 @@ static void _forward_declare_C_union_preparsed(parse_tree& src, size_t& i, size_
 
 static void _forward_declare_C_struct_preparsed(parse_tree& src, size_t& i, size_t& k, kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner)
 {
-	parse_tree& tmp = src.c_array<0>()[i];
+	parse_tree& tmp = src.c_array<0>()[i+k];
 #ifdef NDEBUG
 	tmp.type_code.set_type(parse_tree::types->register_structdecl(tmp.index_tokens[1].token.first,union_struct_decl::decl_struct,tmp.index_tokens[1].logical_line,tmp.index_tokens[1].src_filename));
 #else
