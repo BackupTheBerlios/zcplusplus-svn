@@ -99,6 +99,22 @@ type_system::get_id_union_CPP(const char* alias,const char* active_namespace) co
 	return _get_id_union_CPP(alias);
 }
 
+// for checking for pre-existing type system definitions
+type_system::type_index
+type_system::get_id_union_CPP_exact(const char* alias,const char* active_namespace) const
+{
+	assert(alias && *alias);
+	assert(!strstr(alias,"::"));
+	
+	if (active_namespace && *active_namespace)
+		{	// ok..march up to global
+		char* tmp_alias = namespace_concatenate(alias,active_namespace,"::");
+		const type_index tmp2 = is_string_registered(tmp_alias) ? _get_id_union(tmp_alias) : 0;
+		return (free(tmp_alias),tmp2);
+		}
+	return _get_id_union(alias);
+}
+
 type_system::type_index
 type_system::_get_id_struct_class(const char* const x) const
 {

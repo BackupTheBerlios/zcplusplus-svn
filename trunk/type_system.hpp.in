@@ -63,6 +63,7 @@ public:
 		return _get_id_union(x);
 		}
 	type_index get_id_union_CPP(const char* alias,const char* active_namespace) const;
+	type_index get_id_union_CPP_exact(const char* alias,const char* active_namespace) const;
 	type_index get_id_struct_class(const char* x) const
 		{
 		assert(x && *x);
