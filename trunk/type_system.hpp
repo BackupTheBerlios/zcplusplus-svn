@@ -55,6 +55,7 @@ public:
 		return _get_id_struct_class(x);
 		}
 	type_index get_id_struct_class_CPP(const char* alias,const char* active_namespace) const;
+	type_index get_id_struct_class_CPP_exact(const char* alias,const char* active_namespace) const;
 	type_index get_id_enum(const char* x) const
 		{
 		assert(x && *x);

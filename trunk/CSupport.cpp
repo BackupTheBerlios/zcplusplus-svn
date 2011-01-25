@@ -13996,9 +13996,9 @@ static const char* text_from_keyword(const union_struct_decl& x)
 	switch(x.keyword())
 	{
 	default: _fatal_code("invalid state",3); 
-	case union_struct_decl::decl_union: return "union ";
-	case union_struct_decl::decl_struct: return "struct ";
-	case union_struct_decl::decl_class: return "class ";
+	case union_struct_decl::decl_union: return "union";
+	case union_struct_decl::decl_struct: return "struct";
+	case union_struct_decl::decl_class: return "class";
 	}				
 }
 
@@ -14273,7 +14273,6 @@ rescan:
 					tmp2.set_index_token_from_str_literal<0>("union");
 					assert(is_C99_named_specifier(tmp2,"union"));
 					goto rescan;
-#if 0
 					}
 				else if (tmp = parse_tree::types->get_id_struct_class_CPP(tmp2.index_tokens[0].token.first,active_namespace))
 					{	// is a struct/class
@@ -14284,7 +14283,6 @@ rescan:
 					tmp2.set_index_token_from_str_literal<0>(text);
 					assert(is_C99_named_specifier(tmp2,text));
 					goto rescan;
-#endif
 					};
 				}
 #if 0
@@ -14367,7 +14365,7 @@ rescan:
 					_condense_const_volatile_onto_type_preparsed(src,i,k,pre_invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
 					}
 				// One Definition Rule states that conflicting enum, struct, or class must error
-				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP_exact(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_struct_as_union.hpp
 						//! \test zcc/decl.C99/Error_struct_as_union3.hpp
 						//! \test zcc/decl.C99/Error_class_as_union.hpp
@@ -14485,7 +14483,7 @@ rescan:
 					_condense_const_volatile_onto_type_preparsed(src,i,k,pre_invariant_decl_scanner,"removing redundant const cv-qualifier (C++0X 7.1.6.1p1)","removing redundant volatile cv-qualifier (C++0X 7.1.6.1p1)");
 					}
 				// One Definition Rule states that conflicting enum, struct, or class must error
-				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP_exact(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_struct_as_union2.hpp
 						//! \test zcc/decl.C99/Error_struct_as_union4.hpp
 						//! \test zcc/decl.C99/Error_class_as_union2.hpp
@@ -14712,7 +14710,7 @@ rescan:
 //				break;
 				case STRUCT_NAMED_DEF:
 				{	// can only define once
-				const type_system::type_index tmp = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i+k].index_tokens[1].token.first,active_namespace);
+				const type_system::type_index tmp = parse_tree::types->get_id_struct_class_CPP_exact(src.data<0>()[i+k].index_tokens[1].token.first,active_namespace);
 				{
 				parse_tree& tmp2 = src.c_array<0>()[i+k];
 				if (tmp)
@@ -14959,7 +14957,7 @@ rescan:
 //				break;
 				case CLASS_NAMED_DEF:
 				{	// can only define once
-				const type_system::type_index tmp = parse_tree::types->get_id_struct_class_CPP(src.data<0>()[i+k].index_tokens[1].token.first,active_namespace);
+				const type_system::type_index tmp = parse_tree::types->get_id_struct_class_CPP_exact(src.data<0>()[i+k].index_tokens[1].token.first,active_namespace);
 				{
 				parse_tree& tmp2 =  src.c_array<0>()[i+k];				
 				if (tmp)
@@ -15172,7 +15170,7 @@ rescan:
 					pre_invariant_decl_scanner.reclassify(k--,STATIC_SIZE(CPP0X_nontype_decl_specifier_list)+UNION_NAME);
 					continue;
 					}
-				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP(tmp2.index_tokens[1].token.first,active_namespace))
+				else if (const type_system::type_index fatal_def = parse_tree::types->get_id_struct_class_CPP_exact(tmp2.index_tokens[1].token.first,active_namespace))
 					{	//! \test zcc/decl.C99/Error_struct_as_enum.hpp
 						//! \test zcc/decl.C99/Error_struct_as_enum2.hpp
 						//! \test zcc/decl.C99/Error_class_as_enum.hpp
