@@ -1,5 +1,5 @@
 // weak_token.hpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2011 Kenneth Boyd, license: MIT.txt
 
 #ifndef WEAK_TOKEN_HPP
 #define WEAK_TOKEN_HPP
@@ -25,6 +25,11 @@ struct weak_token
 		src_filename = NULL;
 		}
 };
+
+// if we're already getting INC_INFORM from Zaimoni.STL/Logging.h then provide our own
+#ifdef ZAIMONI_LOGGING_H
+inline void INC_INFORM(const weak_token& src) {_inc_inform(src.token.first,src.token.second);}
+#endif
 
 namespace boost {
 

@@ -1795,7 +1795,7 @@ static bool paren_is_bad_news(const weak_token& lhs, const weak_token& rhs)
 		{
 		message_header(rhs);
 		INC_INFORM(ERR_STR);
-		INC_INFORM(lhs.token.first,lhs.token.second);
+		INC_INFORM(lhs);
 		INFORM(" denies [ ] its left argument (C99 6.5.2p1/C++98 5.2p1)");
 		zcc_errors.inc_error();
 		};
@@ -1805,9 +1805,9 @@ static bool paren_is_bad_news(const weak_token& lhs, const weak_token& rhs)
 			{
 			message_header(rhs);
 			INC_INFORM(ERR_STR);
-			INC_INFORM(rhs.token.first,rhs.token.second);
+			INC_INFORM(rhs);
 			INC_INFORM(" denies ");
-			INC_INFORM(lhs.token.first,lhs.token.second);
+			INC_INFORM(lhs);
 			INFORM(" its right argument (C99 6.5.3p1/C++98 5.3p1)");
 			zcc_errors.inc_error();
 			}
@@ -1818,9 +1818,9 @@ static bool paren_is_bad_news(const weak_token& lhs, const weak_token& rhs)
 			{
 			message_header(lhs);
 			INC_INFORM(ERR_STR);
-			INC_INFORM(lhs.token.first,lhs.token.second);
+			INC_INFORM(lhs);
 			INC_INFORM(" denies ");
-			INC_INFORM(rhs.token.first,rhs.token.second);
+			INC_INFORM(rhs);
 			INFORM(" its left argument");
 			zcc_errors.inc_error();
 			}
@@ -1857,7 +1857,7 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 			//! \test if.C99/Error_control21.h, if.C99/Error_control21.hpp
 		message_header(tokenlist[0]);
 		INC_INFORM(ERR_STR);
-		INC_INFORM(tokenlist[0].token.first,tokenlist[0].token.second);
+		INC_INFORM(tokenlist[0]);
 		INFORM((1==tokenlist_len && hard_end && right_paren_asphyxiates(tokenlist[0])) ? " as only token doesn't have either of its arguments (C99 6.5.3p1/C++98 5.3p1)"
 				: " as first token doesn't have its left argument (C99 6.5.3p1/C++98 5.3p1)");
 		zcc_errors.inc_error();
@@ -1873,7 +1873,7 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 			//! \test if.C99/Error_control10.h, if.C99/Error_control10.hpp
 		message_header(tokenlist[tokenlist_len-1]);
 		INC_INFORM(ERR_STR);
-		INC_INFORM(tokenlist[tokenlist_len-1].token.first,tokenlist[tokenlist_len-1].token.second);
+		INC_INFORM(tokenlist[tokenlist_len-1]);
 		INFORM(" as last token doesn't have its right argument (C99 6.5.3p1/C++98 5.3p1)");
 		zcc_errors.inc_error();
 		}
@@ -13202,7 +13202,7 @@ restart_master_loop:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("union ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as struct (C99 6.7.2.3p2)");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
@@ -13219,7 +13219,7 @@ restart_master_loop:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("union ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as enumeration (C99 6.7.2.3p2)");
 					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
 					assert(tmp3);
@@ -13295,7 +13295,7 @@ restart_master_loop:
 						message_header(tmp2.index_tokens[0]);
 						INC_INFORM(ERR_STR);
 						INC_INFORM("'union ");
-						INC_INFORM(tmp2.index_tokens[1].token.first,tmp2.index_tokens[1].token.second);
+						INC_INFORM(tmp2.index_tokens[1]);
 						INFORM("' already defined (C99 6.7.2.3p1)");
 						message_header(fatal_def->_decl);
 						INFORM("prior definition here");
@@ -13317,7 +13317,7 @@ restart_master_loop:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("union ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as struct (C99 6.7.2.3p2)");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
@@ -13335,7 +13335,7 @@ restart_master_loop:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("union ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as enumeration (C99 6.7.2.3p2)");
 					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
 					assert(tmp3);
@@ -13450,7 +13450,7 @@ restart_master_loop:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("struct ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as union (C99 6.7.2.3p2)");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
@@ -13467,7 +13467,7 @@ restart_master_loop:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("struct ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as enumeration (C99 6.7.2.3p2)");
 					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
 					assert(tmp3);
@@ -13543,7 +13543,7 @@ restart_master_loop:
 						message_header(tmp2.index_tokens[0]);
 						INC_INFORM(ERR_STR);
 						INC_INFORM("'struct ");
-						INC_INFORM(tmp2.index_tokens[1].token.first,tmp2.index_tokens[1].token.second);
+						INC_INFORM(tmp2.index_tokens[1]);
 						INFORM("' already defined (C99 6.7.2.3p1)");
 						message_header(fatal_def->_decl);
 						INFORM("prior definition here");
@@ -13565,7 +13565,7 @@ restart_master_loop:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("struct ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as union (C99 6.7.2.3p2)");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
@@ -13583,7 +13583,7 @@ restart_master_loop:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("struct ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as enumeration (C99 6.7.2.3p2)");
 					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
 					assert(tmp3);
@@ -13693,7 +13693,7 @@ restart_master_loop:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("'enum ");
-					INC_INFORM(tmp2.index_tokens[1].token.first,tmp2.index_tokens[1].token.second);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM("' must refer to completely defined enum (C99 6.7.2.3p2)");
 					zcc_errors.inc_error();
 					tmp2.type_code.set_type(C_TYPE::INT);	// C: enums are int (although we'd like to extend this a bit)
@@ -13710,7 +13710,7 @@ restart_master_loop:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("'enum ");
-					INC_INFORM(tmp2.index_tokens[1].token.first,tmp2.index_tokens[1].token.second);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM("' already defined (C99 6.7.2.3p1)");
 					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
 					assert(tmp3);
@@ -13729,7 +13729,7 @@ restart_master_loop:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("struct ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as union (C99 6.7.2.3p2)");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
@@ -13748,7 +13748,7 @@ restart_master_loop:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("union ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as struct (C99 6.7.2.3p2)");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
@@ -14103,7 +14103,7 @@ bool CPP_hook_INC_INFORM(const parse_tree& src)
 	if (is_CPP_namespace(src) && robust_token_is_string<9>(src.index_tokens[1].token,"<unknown>"))
 		{	// make anonymous namespaces look like authentic source code
 		// first index token
-		INC_INFORM(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
+		INC_INFORM(src.index_tokens[0]);
 		INC_INFORM(' ');
 		// postfix data
 		INC_INFORM(*src.data<2>());
@@ -14267,14 +14267,14 @@ rescan:
 					assert(is_C99_named_specifier(tmp2,"enum"));
 					goto rescan;
 					}
-				else if (tmp = parse_tree::types->get_id_union_CPP(tmp2.index_tokens[0].token.first,active_namespace))
+				else if ((tmp = parse_tree::types->get_id_union_CPP(tmp2.index_tokens[0].token.first,active_namespace)))
 					{	// is a union
 					tmp2.grab_index_token_from<1,0>(tmp2);
 					tmp2.set_index_token_from_str_literal<0>("union");
 					assert(is_C99_named_specifier(tmp2,"union"));
 					goto rescan;
 					}
-				else if (tmp = parse_tree::types->get_id_struct_class_CPP(tmp2.index_tokens[0].token.first,active_namespace))
+				else if ((tmp = parse_tree::types->get_id_struct_class_CPP(tmp2.index_tokens[0].token.first,active_namespace)))
 					{	// is a struct/class
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(tmp);
 					assert(tmp3);
@@ -14373,7 +14373,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("union ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INC_INFORM(" declared as ");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
@@ -14393,7 +14393,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("union ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as enumeration (C++98 One Definition Rule)");
 					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
 					assert(tmp3);
@@ -14467,7 +14467,7 @@ rescan:
 						message_header(tmp2.index_tokens[0]);
 						INC_INFORM(ERR_STR);
 						INC_INFORM("'union ");
-						INC_INFORM(tmp2.index_tokens[1].token.first,tmp2.index_tokens[1].token.second);
+						INC_INFORM(tmp2.index_tokens[1]);
 						INFORM("' already defined (C++98 3.2p1)");
 						message_header(fatal_def->_decl);
 						INFORM("prior definition here");
@@ -14491,7 +14491,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("union ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INC_INFORM(" declared as ");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
@@ -14512,7 +14512,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("union ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as enumeration (C++98 One Definition Rule)");
 					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
 					assert(tmp3);
@@ -14628,7 +14628,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("struct ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as union (C++98 One Definition Rule)");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
@@ -14645,7 +14645,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("struct ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as enumeration (C++98 One Definition Rule)");
 					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
 					assert(tmp3);
@@ -14720,7 +14720,7 @@ rescan:
 						message_header(tmp2.index_tokens[0]);
 						INC_INFORM(ERR_STR);
 						INC_INFORM("'struct ");
-						INC_INFORM(tmp2.index_tokens[1].token.first,tmp2.index_tokens[1].token.second);
+						INC_INFORM(tmp2.index_tokens[1]);
 						INFORM("' already defined (C++98 3.2p1)");
 						message_header(fatal_def->_decl);
 						const char* const text = text_from_keyword(fatal_def->_decl);
@@ -14744,7 +14744,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("struct ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as union (C++98 One Definition Rule)");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
@@ -14762,7 +14762,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("struct ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as enumeration (C++98 One Definition Rule)");
 					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
 					assert(tmp3);
@@ -14876,7 +14876,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("class ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as union (C++98 One Definition Rule)");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
@@ -14893,7 +14893,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("class ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as enumeration (C++98 One Definition Rule)");
 					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
 					assert(tmp3);
@@ -14967,7 +14967,7 @@ rescan:
 						message_header(tmp2.index_tokens[0]);
 						INC_INFORM(ERR_STR);
 						INC_INFORM("'class ");
-						INC_INFORM(tmp2.index_tokens[1].token.first,tmp2.index_tokens[1].token.second);
+						INC_INFORM(tmp2.index_tokens[1]);
 						INFORM("' already defined (C++98 3.2p1)");
 						message_header(fatal_def->_decl);
 						const char* const text = text_from_keyword(fatal_def->_decl);
@@ -14991,7 +14991,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("class ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as union (C++98 One Definition Rule)");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
@@ -15009,7 +15009,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("class ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as enumeration (C++98 One Definition Rule)");
 					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
 					assert(tmp3);
@@ -15121,7 +15121,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("'enum ");
-					INC_INFORM(tmp2.index_tokens[1].token.first,tmp2.index_tokens[1].token.second);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM("' must refer to completely defined enum (C++98/C++0X 3.1p2, C++98 7.1.5.3p2-4/C++0X 7.1.6.3p2)");
 					zcc_errors.inc_error();
 					tmp2.type_code.set_type(C_TYPE::INT);	// fail over to int, like C
@@ -15138,7 +15138,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("'enum ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM("' already defined (C++98 3.2p1)");
 					const enum_def* const tmp3 = parse_tree::types->get_enum_def(fatal_def);
 					assert(tmp3);
@@ -15157,7 +15157,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("struct ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INFORM(" declared as union (C++98 One Definition Rule)");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);
@@ -15178,7 +15178,7 @@ rescan:
 					message_header(tmp2.index_tokens[0]);
 					INC_INFORM(ERR_STR);
 					INC_INFORM("union ");
-					INC_INFORM(tmp2.index_tokens[1].token.first);
+					INC_INFORM(tmp2.index_tokens[1]);
 					INC_INFORM(" declared as ");
 					const union_struct_decl* const tmp3 = parse_tree::types->get_structdecl(fatal_def);
 					assert(tmp3);

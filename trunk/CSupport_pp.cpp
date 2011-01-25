@@ -1568,7 +1568,7 @@ static bool paren_is_bad_news(const weak_token& lhs, const weak_token& rhs)
 		{
 		message_header(rhs);
 		INC_INFORM(ERR_STR);
-		INC_INFORM(lhs.token.first,lhs.token.second);
+		INC_INFORM(lhs);
 		INFORM(" denies [ ] its left argument (C99 6.5.2p1/C++98 5.2p1)");
 		zcc_errors.inc_error();
 		};
@@ -1578,9 +1578,9 @@ static bool paren_is_bad_news(const weak_token& lhs, const weak_token& rhs)
 			{
 			message_header(rhs);
 			INC_INFORM(ERR_STR);
-			INC_INFORM(rhs.token.first,rhs.token.second);
+			INC_INFORM(rhs);
 			INC_INFORM(" denies ");
-			INC_INFORM(lhs.token.first,lhs.token.second);
+			INC_INFORM(lhs);
 			INFORM(" its right argument (C99 6.5.3p1/C++98 5.3p1)");
 			zcc_errors.inc_error();
 			}
@@ -1591,9 +1591,9 @@ static bool paren_is_bad_news(const weak_token& lhs, const weak_token& rhs)
 			{
 			message_header(lhs);
 			INC_INFORM(ERR_STR);
-			INC_INFORM(lhs.token.first,lhs.token.second);
+			INC_INFORM(lhs);
 			INC_INFORM(" denies ");
-			INC_INFORM(rhs.token.first,rhs.token.second);
+			INC_INFORM(rhs);
 			INFORM(" its left argument");
 			zcc_errors.inc_error();
 			}
@@ -1630,7 +1630,7 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 			//! \test if.C99/Error_control21.h, if.C99/Error_control21.hpp
 		message_header(tokenlist[0]);
 		INC_INFORM(ERR_STR);
-		INC_INFORM(tokenlist[0].token.first,tokenlist[0].token.second);
+		INC_INFORM(tokenlist[0]);
 		INFORM((1==tokenlist_len && hard_end && right_paren_asphyxiates(tokenlist[0])) ? " as only token doesn't have either of its arguments (C99 6.5.3p1/C++98 5.3p1)"
 				: " as first token doesn't have its left argument (C99 6.5.3p1/C++98 5.3p1)");
 		zcc_errors.inc_error();
@@ -1646,7 +1646,7 @@ static bool C99_CoreControlExpressionContextFreeErrorCount(const weak_token* tok
 			//! \test if.C99/Error_control10.h, if.C99/Error_control10.hpp
 		message_header(tokenlist[tokenlist_len-1]);
 		INC_INFORM(ERR_STR);
-		INC_INFORM(tokenlist[tokenlist_len-1].token.first,tokenlist[tokenlist_len-1].token.second);
+		INC_INFORM(tokenlist[tokenlist_len-1]);
 		INFORM(" as last token doesn't have its right argument (C99 6.5.3p1/C++98 5.3p1)");
 		zcc_errors.inc_error();
 		}
@@ -2853,9 +2853,10 @@ bool CCharLiteralIsFalse(const char* x,size_t x_len)
 #define PARSE_PRIMARY_TYPE ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-19))
 #define PARSE_UNION_TYPE ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-20))
 #define PARSE_CLASS_STRUCT_TYPE ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-21))
+#define PARSE_ENUM_TYPE ((lex_flags)(1)<<(sizeof(lex_flags)*CHAR_BIT-22))
 
 // check for collision with lowest three bits
-BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>=20);
+BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>=22);
 
 /* nonstrict expression types */
 #define PARSE_POSTFIX_EXPRESSION (PARSE_PRIMARY_EXPRESSION | PARSE_STRICT_POSTFIX_EXPRESSION)
@@ -2877,7 +2878,7 @@ BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>
 #define PARSE_EXPRESSION (PARSE_PRIMARY_EXPRESSION | PARSE_STRICT_POSTFIX_EXPRESSION | PARSE_STRICT_UNARY_EXPRESSION | PARSE_STRICT_CAST_EXPRESSION | PARSE_STRICT_PM_EXPRESSION | PARSE_STRICT_MULT_EXPRESSION | PARSE_STRICT_ADD_EXPRESSION | PARSE_STRICT_SHIFT_EXPRESSION | PARSE_STRICT_RELATIONAL_EXPRESSION | PARSE_STRICT_EQUALITY_EXPRESSION | PARSE_STRICT_BITAND_EXPRESSION | PARSE_STRICT_BITXOR_EXPRESSION | PARSE_STRICT_BITOR_EXPRESSION | PARSE_STRICT_LOGICAND_EXPRESSION | PARSE_STRICT_LOGICOR_EXPRESSION | PARSE_STRICT_CONDITIONAL_EXPRESSION | PARSE_STRICT_ASSIGNMENT_EXPRESSION | PARSE_STRICT_COMMA_EXPRESSION)
 
 /* nonstrict type categories */
-#define PARSE_TYPE (PARSE_PRIMARY_TYPE | PARSE_UNION_TYPE | PARSE_CLASS_STRUCT_TYPE)
+#define PARSE_TYPE (PARSE_PRIMARY_TYPE | PARSE_UNION_TYPE | PARSE_CLASS_STRUCT_TYPE | PARSE_ENUM_TYPE)
 
 /* already-parsed */
 #define PARSE_OBVIOUS (PARSE_EXPRESSION | PARSE_TYPE | parse_tree::INVALID)

@@ -1,5 +1,5 @@
 // ParseTree.cpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2011 Kenneth Boyd, license: MIT.txt
 
 #include "ParseTree.hpp"
 
@@ -475,10 +475,10 @@ void INC_INFORM(const parse_tree& src)
 		sp = false;
 		};
 	// first index token
-	if (NULL!=src.index_tokens[0].token.first)
+	if (src.index_tokens[0].token.first)
 		{
 		if (sp) INC_INFORM(' ');
-		INC_INFORM(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
+		INC_INFORM(src.index_tokens[0]);
 		sp = true;
 		}
 	// infix data
@@ -501,10 +501,10 @@ void INC_INFORM(const parse_tree& src)
 		sp = false;
 		};
 	// second index token
-	if (NULL!=src.index_tokens[1].token.first)
+	if (src.index_tokens[1].token.first)
 		{
 		if (sp) INC_INFORM(' ');
-		INC_INFORM(src.index_tokens[1].token.first,src.index_tokens[1].token.second);
+		INC_INFORM(src.index_tokens[1]);
 		sp = true;
 		}
 	// postfix data

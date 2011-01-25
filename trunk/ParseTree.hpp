@@ -1,13 +1,13 @@
 // ParseTree.hpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2011 Kenneth Boyd, license: MIT.txt
 
 #ifndef PARSETREE_HPP
 #define PARSETREE_HPP 1
 
 #include "type_spec.hpp"
 
-#include "weak_token.hpp"
 #include "Zaimoni.STL/MetaRAM2.hpp"
+#include "weak_token.hpp"
 
 // KBB: this really should be a class rather than a struct; it would benefit from having a proper destructor.
 // Unfortunately, new/delete and realloc don't mix -- and this type can have multiple lists of tokens underneath it....
