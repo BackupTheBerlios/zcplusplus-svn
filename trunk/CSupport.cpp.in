@@ -14181,7 +14181,10 @@ static void render_type(const type_spec& src,const type_system& types, const cha
 	if (types.get_enum_def(src.base_type_index))
 		INC_INFORM("enum ");
 	else if (const union_struct_decl* tmp = types.get_structdecl(src.base_type_index))
+		{
 		INC_INFORM(text_from_keyword(*tmp));
+		INC_INFORM(' ');
+		}
 	INC_INFORM(type_name ? type_name : "<unresolved type>");
 
 	while(0<start_ptr_scan--)
