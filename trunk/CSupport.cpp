@@ -15268,33 +15268,30 @@ reparse:
 				assert(is_CPP_namespace(src.data<0>()[i]));
 
 				if (active_namespace)
-					{
-					char* new_active_namespace = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(strlen(active_namespace)+11 /*sizeof("::<unknown>")-1*/));
-					strcpy(new_active_namespace,active_namespace);
-					strcat(new_active_namespace,"::<unknown>");
-					strcat(new_active_namespace,"");
+					{	//! \todo exception-unsafe; fix
+					char* const new_active_namespace = type_system::namespace_concatenate("<unknown>",active_namespace,"::");
 					CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[0],new_active_namespace);
 					free(new_active_namespace);
 					}
-				else{
-					CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[0],"<unknown>");
-					}
+				else CPP_ParseNamespace(src.c_array<0>()[i].c_array<2>()[0],"<unknown>");
 				++i;
 				continue;
 				}
+			{
+			parse_tree* const origin = src.c_array<0>()+i;
 			const bool namespace_has_body = (	3<=src.size<0>()-i
-											&&	robust_token_is_char<'{'>(src.data<0>()[i+2].index_tokens[0].token)
-											&&	robust_token_is_char<'}'>(src.data<0>()[i+2].index_tokens[1].token));
+											&&	robust_token_is_char<'{'>(origin[2].index_tokens[0].token)
+											&&	robust_token_is_char<'}'>(origin[2].index_tokens[1].token));
 			// next token must be an atomic identifier
 			// already-parsed primary types are no good, neither are reserved keywords
-			if (	!src.data<0>()[i+1].is_atomic()
-				|| 	!(C_TESTFLAG_IDENTIFIER & src.data<0>()[i+1].index_tokens[0].flags)
-				||	(PARSE_TYPE & src.data<0>()[i+1].flags)
-				||	CPP_echo_reserved_keyword(src.data<0>()[i+1].index_tokens[0].token.first,src.data<0>()[i+1].index_tokens[0].token.second))
+			if (	!origin[1].is_atomic()
+				|| 	!(C_TESTFLAG_IDENTIFIER & origin[1].index_tokens[0].flags)
+				||	(PARSE_TYPE & origin[1].flags)
+				||	CPP_echo_reserved_keyword(origin[1].index_tokens[0].token.first,origin[1].index_tokens[0].token.second))
 				{	//! \test zcc/namespace.CPP/Error_badname1.hpp
 					//! \test zcc/namespace.CPP/Error_badname2.hpp
 					//! \test zcc/namespace.CPP/Error_badname3.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
+				message_header(origin->index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("named namespace declaration must use non-reserved identifier (C++98 7.3.1p1, 7.3.2p1)");
 				zcc_errors.inc_error();
@@ -15303,10 +15300,10 @@ reparse:
 				};
 			if (!namespace_has_body)
 				{	//! \test zcc/namespace.CPP/Error_premature2.hpp
-				message_header(src.data<0>()[i].index_tokens[0]);
+				message_header(origin->index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INC_INFORM("'namespace ");
-				INC_INFORM(src.data<0>()[i+1]);
+				INC_INFORM(origin[1]);
 				INFORM("' definition needs a body (C++98 7.3.1p1)");
 				zcc_errors.inc_error();
 				src.DeleteNSlotsAt<0>(2,i);
@@ -15317,11 +15314,12 @@ reparse:
 			// namespace name: postfix arg 1
 			// namespace definition body: postfix arg 2
 			// the namespace name is likely to be reused: atomic string target
-			register_token<0>(src.c_array<0>()[i+1]);
-			src.c_array<0>()[i].resize<2>(1);
-			src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+1]);
-			src.c_array<0>()[i].grab_index_token_location_from<1,0>(src.data<0>()[i+1]);	// inject it at where the namespace body starts
-			src.c_array<0>()[i+2].OverwriteInto(src.c_array<0>()[i].c_array<2>()[0]);
+			register_token<0>(origin[1]);
+			origin->resize<2>(1);
+			origin->grab_index_token_from<1,0>(origin[1]);
+			origin->grab_index_token_location_from<1,0>(origin[1]);	// inject it at where the namespace body starts
+			origin[2].OverwriteInto(origin->c_array<2>()[0]);
+			}
 			src.DeleteNSlotsAt<0>(2,i+1);
 			src.c_array<0>()[i].flags |= parse_tree::GOOD_LINE_BREAK;
 			assert(is_CPP_namespace(src.data<0>()[i]));
