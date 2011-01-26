@@ -533,18 +533,11 @@ parse_tree_class::parse_tree_class(const parse_tree& src,size_t begin,size_t end
 	assert(begin<src.size(dest_idx));
 	assert(end<=src.size(dest_idx));
 	this->clear();
-	if (begin<end)
-		{
-		if (begin+1==end)
-			value_copy(*this,src.data(dest_idx)[begin]);
-		else{
-			size_t i = end-begin;
-			if (!resize(dest_idx,end-begin)) throw std::bad_alloc();
-			do	{
-				--i;
-				value_copy(c_array(dest_idx)[i],src.data(dest_idx)[i+begin]);
-				}
-			while(0<i);
-			}
-		}
+	if (begin>=end) return;
+	const size_t i = end-begin;
+	if (1==i) value_copy(*this,src.data(dest_idx)[begin]);
+	else{
+		if (!resize(dest_idx,i)) throw std::bad_alloc();
+		zaimoni::autotransform_n<void (*)(parse_tree&,const parse_tree&)>(c_array(dest_idx),src.data(dest_idx)+begin,i,value_copy);
+		}	
 }
