@@ -71,27 +71,19 @@ bool parse_tree::syntax_ok() const
 	return true;
 }
 
+template<class iter,class src>
+bool entangled_with(src& x,iter begin,iter end)
+{
+	while(begin!=end) if ((begin++)->entangled_with(x)) return true;
+	return false;
+}
+
 bool parse_tree::entangled_with(const type_spec& x) const
 {
 	if (x.entangled_with(type_code)) return true;
-	size_t i = 0;
-	while(size<0>()>i)
-		{
-		if (data<0>()[i].entangled_with(x)) return true;
-		++i;
-		}
-	i = 0;
-	while(size<1>()>i)
-		{
-		if (data<1>()[i].entangled_with(x)) return true;
-		++i;
-		}
-	i = 0;
-	while(size<2>()>i)
-		{
-		if (data<2>()[i].entangled_with(x)) return true;
-		++i;
-		}
+	if (::entangled_with(x,begin<0>(),end<0>())) return true;
+	if (::entangled_with(x,begin<1>(),end<1>())) return true;
+	if (::entangled_with(x,begin<2>(),end<2>())) return true;
 	return false;
 }
 
@@ -109,73 +101,27 @@ bool parse_tree::entangled_with(const parse_tree& x) const
 	if (args[2] && x.args[2] && args[2]==x.args[2]) return true;
 
 	size_t i = 0;
-	size_t j = 0;
 	while(size<0>()>i)
 		{
-		while(x.size<0>()>j)
-			{
-			if (data<0>()[i].entangled_with(x.data<0>()[j])) return true;
-			++j;
-			}
-		j = 0;
-		while(x.size<1>()>j)
-			{
-			if (data<0>()[i].entangled_with(x.data<1>()[j])) return true;
-			++j;
-			}
-		j = 0;
-		while(x.size<2>()>j)
-			{
-			if (data<0>()[i].entangled_with(x.data<2>()[j])) return true;
-			++j;
-			}
-		j = 0;
+		if (::entangled_with(data<0>()[i],x.begin<0>(),x.end<0>())) return true;
+		if (::entangled_with(data<0>()[i],x.begin<1>(),x.end<1>())) return true;
+		if (::entangled_with(data<0>()[i],x.begin<2>(),x.end<2>())) return true;
 		++i;
 		}
 	i = 0;
 	while(size<1>()>i)
 		{
-		while(x.size<0>()>j)
-			{
-			if (data<1>()[i].entangled_with(x.data<0>()[j])) return true;
-			++j;
-			}
-		j = 0;
-		while(x.size<1>()>j)
-			{
-			if (data<1>()[i].entangled_with(x.data<1>()[j])) return true;
-			++j;
-			}
-		j = 0;
-		while(x.size<2>()>j)
-			{
-			if (data<1>()[i].entangled_with(x.data<2>()[j])) return true;
-			++j;
-			}
-		j = 0;
+		if (::entangled_with(data<1>()[i],x.begin<0>(),x.end<0>())) return true;
+		if (::entangled_with(data<1>()[i],x.begin<1>(),x.end<1>())) return true;
+		if (::entangled_with(data<1>()[i],x.begin<2>(),x.end<2>())) return true;
 		++i;
 		}
 	i = 0;
 	while(size<2>()>i)
 		{
-		while(x.size<0>()>j)
-			{
-			if (data<2>()[i].entangled_with(x.data<0>()[j])) return true;
-			++j;
-			}
-		j = 0;
-		while(x.size<1>()>j)
-			{
-			if (data<2>()[i].entangled_with(x.data<1>()[j])) return true;
-			++j;
-			}
-		j = 0;
-		while(x.size<2>()>j)
-			{
-			if (data<2>()[i].entangled_with(x.data<2>()[j])) return true;
-			++j;
-			}
-		j = 0;
+		if (::entangled_with(data<2>()[i],x.begin<0>(),x.end<0>())) return true;
+		if (::entangled_with(data<2>()[i],x.begin<1>(),x.end<1>())) return true;
+		if (::entangled_with(data<2>()[i],x.begin<2>(),x.end<2>())) return true;
 		++i;
 		}
 	return false;
@@ -188,17 +134,11 @@ bool parse_tree::self_entangled() const
 	if (args[1] && args[2] && args[1]==args[2]) return true;
 
 	size_t i = 0;
-	size_t j = 0;
 	while(size<0>()>i)
 		{
 		if (data<0>()[i].self_entangled()) return true;
 		if (data<0>()[i].entangled_with(type_code)) return true;
-		while(i>j)
-			{
-			if (data<0>()[i].entangled_with(data<0>()[j])) return true;
-			++j;
-			}
-		j = 0;
+		if (0<i && ::entangled_with(data<0>()[i],begin<0>(),begin<0>()+i)) return true;
 		++i;
 		}
 	i = 0;
@@ -206,12 +146,7 @@ bool parse_tree::self_entangled() const
 		{
 		if (data<1>()[i].self_entangled()) return true;
 		if (data<1>()[i].entangled_with(type_code)) return true;
-		while(i>j)
-			{
-			if (data<1>()[i].entangled_with(data<1>()[j])) return true;
-			++j;
-			}
-		j = 0;
+		if (0<i && ::entangled_with(data<1>()[i],begin<1>(),begin<1>()+i)) return true;
 		++i;
 		}
 	i = 0;
@@ -219,12 +154,7 @@ bool parse_tree::self_entangled() const
 		{
 		if (data<2>()[i].self_entangled()) return true;
 		if (data<2>()[i].entangled_with(type_code)) return true;
-		while(i>j)
-			{
-			if (data<2>()[i].entangled_with(data<2>()[j])) return true;
-			++j;
-			}
-		j = 0;
+		if (0<i && ::entangled_with(data<2>()[i],begin<2>(),begin<2>()+i)) return true;
 		++i;
 		}
 	return false;
