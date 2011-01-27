@@ -10616,6 +10616,7 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 				}
 			++offset;
 		}
+#undef INVARIANT
 }
 
 static void _condense_const_volatile_onto_type(parse_tree& src,size_t& i,kleene_star_core<size_t (*)(const parse_tree&)>& invariant_decl_scanner,const char* const warn_const,const char* const warn_volatile)
