@@ -10853,17 +10853,18 @@ static void CPP_handle_pragma_relay(parse_tree& src)
 	bool typeid_is_ok = false;	// has to be enabled in #include <typeinfo>
 	size_t i = 0;
 	do	{
-		if (src.data<0>()[i].is_atomic())
+		parse_tree& tmp = src.c_array<0>()[i];
+		if (tmp.is_atomic())
 			{
-			const errr Idx = linear_find(src.data<0>()[i].index_tokens[0].token.first, src.data<0>()[i].index_tokens[0].token.second,pragma_relay_keywords,PRAGMA_RELAY_KEYWORDS_STRICT_UB);
+			const errr Idx = linear_find(tmp.index_tokens[0].token.first, tmp.index_tokens[0].token.second,pragma_relay_keywords,PRAGMA_RELAY_KEYWORDS_STRICT_UB);
 			if (0<=Idx)
 				{	// react to any relay keywords that actually mean anything here
 				if (RELAY_ZCC_ENABLE_TYPEID==Idx) typeid_is_ok = true;
 				src.DeleteIdx<0>(i);
 				}
-			else if (!typeid_is_ok && token_is_string<6>(src.data<0>()[i].index_tokens[0].token,"typeid"))
+			else if (!typeid_is_ok && token_is_string<6>(tmp.index_tokens[0].token,"typeid"))
 				//! \test staticassert.C1X/Error_typeid_no_typeinfo.hpp
-				simple_error(src.c_array<0>()[i]," requires #include <typeinfo> first (C++0X 5.2.8p6)");
+				simple_error(tmp," requires #include <typeinfo> first (C++0X 5.2.8p6)");
 			}
 		}
 	while(src.size<0>()> ++i);
