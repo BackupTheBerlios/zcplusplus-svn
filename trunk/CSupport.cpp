@@ -12571,9 +12571,11 @@ static bool record_enum_values(parse_tree& src, const type_system::type_index en
 		assert(!(PARSE_TYPE & src.data<0>()[i].flags));
 		assert(!echo_reserved_keyword(src.data<0>()[i].index_tokens[0].token.first,src.data<0>()[i].index_tokens[0].token.second));
 		{
-		char* namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[0].token.first,active_namespace,"::") : NULL;
-		const char* fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[0].token.first;
-		if (const type_system::enumerator_info* fatal_def = parse_tree::types->get_enumerator(fullname))
+		char* const namespace_name = active_namespace ? type_system::namespace_concatenate(src.data<0>()[i].index_tokens[0].token.first,active_namespace,"::") : NULL;
+		const char* const fullname = namespace_name ? namespace_name : src.data<0>()[i].index_tokens[0].token.first;
+		const type_system::enumerator_info* const fatal_def = parse_tree::types->get_enumerator(fullname);
+		free(namespace_name);
+		if (fatal_def)
 			{	// --do-what-i-mean could recover if the prior definition were identical
 				// C: note on C99/C1X 6.7.2.2p3 indicates autofail no matter where it was defined (but scope matters)
 				// C++: One Definition Rule wipes out
@@ -12584,10 +12586,8 @@ static bool record_enum_values(parse_tree& src, const type_system::type_index en
 			message_header(fatal_def->second.second);
 			INFORM("prior definition here");
 			zcc_errors.inc_error();
-			free(namespace_name);
 			return false;
 			};
-		free(namespace_name);
 		}
 #if 0
 		// next proposed function call is a bit handwavish right now...
