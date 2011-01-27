@@ -12395,30 +12395,32 @@ static void notice_enumerator_CPP(parse_tree& x,const type_system& types,const c
 static void C99_CPP_handle_static_assertion(parse_tree& src,PP_auxfunc& langinfo,const size_t i,const char* const err,const char* const active_namespace)
 {
 	assert(err && *err);
+	assert(src.size<0>()>i);
 	// find the next ';'
-	const size_t j = i+span_to_semicolon(src.data<0>()+i,src.end<0>());
+	const parse_tree* const origin = src.data<0>()+i;
+	const size_t j = i+span_to_semicolon(origin,src.end<0>());
 	if (src.size<0>()<=j)
 		{	//! \test zcc/staticassert.C99/Error_scope1.h, zcc/staticassert.C99/Error_scope1.hpp
 			//! \test zcc/staticassert.C99/Error_scope2.h, zcc/staticassert.C99/Error_scope2.hpp
-		message_header(src.data<0>()[i].index_tokens[0]);
+		message_header(origin->index_tokens[0]);
 		INC_INFORM(ERR_STR);
 		INFORM("static assertion cut off by end of scope");
 		zcc_errors.inc_error();
 		src.DeleteNSlotsAt<0>(j-i,i);
 		return;
 		};
-	if (   !is_naked_parentheses_pair(src.data<0>()[i+1])
-		|| 3>src.data<0>()[i+1].size<0>()
-		|| !robust_token_is_char<','>(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-2])
-		|| !src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].is_atomic()
-		|| C_TESTFLAG_STRING_LITERAL!=src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].flags)
+	if (   !is_naked_parentheses_pair(origin[1])
+		|| 3>origin[1].size<0>()
+		|| !robust_token_is_char<','>(origin[1].data<0>()[origin[1].size<0>()-2])
+		|| !origin[1].data<0>()[origin[1].size<0>()-1].is_atomic()
+		|| C_TESTFLAG_STRING_LITERAL!=origin[1].data<0>()[origin[1].size<0>()-1].index_tokens[0].flags)
 		{	//! \test zcc/staticassert.C99/Error_badarg1.h, zcc/staticassert.C99/Error_badarg1.hpp
 			//! \test zcc/staticassert.C99/Error_badarg2.h, zcc/staticassert.C99/Error_badarg2.hpp
 			//! \test zcc/staticassert.C99/Error_badarg3.h, zcc/staticassert.C99/Error_badarg3.hpp
 			//! \test zcc/staticassert.C99/Error_badarg5.h, zcc/staticassert.C99/Error_badarg5.hpp
 			//! \test zcc/staticassert.C99/Error_badarg6.h, zcc/staticassert.C99/Error_badarg6.hpp
 			//! \test zcc/staticassert.C99/Error_badarg7.h, zcc/staticassert.C99/Error_badarg7.hpp
-		message_header(src.data<0>()[i].index_tokens[0]);
+		message_header(origin->index_tokens[0]);
 		INC_INFORM(ERR_STR);
 		INFORM("malformed static assertion");
 		zcc_errors.inc_error();
@@ -12427,7 +12429,7 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,PP_auxfunc& langinfo
 		};
 	if (2!=j-i)
 		{	//! \test zcc/staticassert.C99/Error_badarg4.h, zcc/staticassert.C99/Error_badarg4.hpp
-		message_header(src.data<0>()[i].index_tokens[0]);
+		message_header(origin->index_tokens[0]);
 		INC_INFORM(ERR_STR);
 		INFORM("garbage between static assertion arguments and terminating ;");
 		zcc_errors.inc_error();
@@ -12437,14 +12439,14 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,PP_auxfunc& langinfo
 	// actually use the static assertion correctly.
 	parse_tree_class parsetree;
 	{
-	const size_t k = src.data<0>()[i+1].size<0>()-2;
+	const size_t k = origin[1].size<0>()-2;
 	if (!parsetree.resize<0>(k))
 		{
-		message_header(src.data<0>()[i].index_tokens[0]);
+		message_header(origin->index_tokens[0]);
 		INC_INFORM(ERR_STR);
 		_fatal("insufficient RAM to parse static assertion");
 		};
-	zaimoni::autotransform_n<void (*)(parse_tree&,const parse_tree&)>(parsetree.c_array<0>(),src.data<0>()[i+1].data<0>(),k,value_copy);
+	zaimoni::autotransform_n<void (*)(parse_tree&,const parse_tree&)>(parsetree.c_array<0>(),origin[1].data<0>(),k,value_copy);
 	// type all enumerators now to make life reasonable later on for the expression-parser
 	size_t enum_scan = k;
 	do	notice_enumerator_CPP(parsetree.c_array<0>()[--enum_scan],*parse_tree::types,active_namespace);
@@ -12463,7 +12465,7 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,PP_auxfunc& langinfo
 		if (!parsetree.is_atomic() && !(langinfo.EvalParseTree)(parsetree,*parse_tree::types))
 			{
 			parsetree.destroy();	// efficiency
-			message_header(src.data<0>()[i].index_tokens[0]);
+			message_header(origin->index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INFORM(err);
 			zcc_errors.inc_error();
@@ -12475,7 +12477,7 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,PP_auxfunc& langinfo
 		if (!parsetree.is_atomic())
 			{	//! \bug need test cases
 			parsetree.destroy();	// efficiency
-			message_header(src.data<0>()[i].index_tokens[0]);
+			message_header(origin->index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INFORM(err);
 			zcc_errors.inc_error();
@@ -12492,7 +12494,7 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,PP_auxfunc& langinfo
 		if (!(langinfo.LiteralConvertsToBool)(parsetree,is_true,*parse_tree::types))
 			{	//! \bug need test cases
 			parsetree.destroy();	// efficiency
-			message_header(src.data<0>()[i].index_tokens[0]);
+			message_header(origin->index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			INFORM(err);
 			zcc_errors.inc_error();
@@ -12503,11 +12505,11 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,PP_auxfunc& langinfo
 		//! \test zcc/staticassert.C1X/Pass_autosucceed.h, zcc/staticassert.C1X/Pass_autosucceed.hpp
 		if (!is_true)
 			{	//! \test zcc/staticassert.C1X/Error_autofail.h, zcc/staticassert.C1X/Error_autofail.hpp
-			message_header(src.data<0>()[i].index_tokens[0]);
+			message_header(origin->index_tokens[0]);
 			INC_INFORM(ERR_STR);
 			// hmm...really should unescape string before emitting
-			const size_t tmp_size = LengthOfCStringLiteral(src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.first,src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.second);
-			if (1U>=tmp_size || 'L'== *src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.first)
+			const size_t tmp_size = LengthOfCStringLiteral(origin[1].data<0>()[origin[1].size<0>()-1].index_tokens[0].token.first,origin[1].data<0>()[origin[1].size<0>()-1].index_tokens[0].token.second);
+			if (1U>=tmp_size || 'L'== *origin[1].data<0>()[origin[1].size<0>()-1].index_tokens[0].token.first)
 				{	//! \todo handle wide-strings later
 				INFORM("(static assertion failure)");
 				zcc_errors.inc_error();
@@ -12523,7 +12525,7 @@ static void C99_CPP_handle_static_assertion(parse_tree& src,PP_auxfunc& langinfo
 				src.DeleteNSlotsAt<0>(j-i+1,i);
 				return;
 				}
-			UnescapeCString(tmp,src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.first+1,src.data<0>()[i+1].data<0>()[src.data<0>()[i+1].size<0>()-1].index_tokens[0].token.second-2);
+			UnescapeCString(tmp,origin[1].data<0>()[origin[1].size<0>()-1].index_tokens[0].token.first+1,origin[1].data<0>()[origin[1].size<0>()-1].index_tokens[0].token.second-2);
 			INFORM(tmp);
 			free(tmp);
 			zcc_errors.inc_error();
@@ -12557,32 +12559,29 @@ cpp_enum_was_retyped:
 				goto cpp_enum_was_retyped;
 				}
 			}
-		else{
-			if (prior_value==target_machine->unsigned_max(test.machine_type))
-				{
-				if (C_TYPE::INTEGERLIKE == ++current_enumerator_type)	// smallest type that can handle this
-					{	// unsigned long long overflow, fact it's defined doesn't save us
-					//! \test decl.C99/Error_enum_overflow.hpp
-					message_header(src);
-					INC_INFORM(ERR_STR);
-					INFORM("default-initialization of enumerator requires uintmax_t overflow (C++0X 7.2p5)");
-					zcc_errors.inc_error();
-					return false;
-					}
-				goto cpp_enum_was_retyped;
+		else if (prior_value==target_machine->unsigned_max(test.machine_type))
+			{
+			if (C_TYPE::INTEGERLIKE == ++current_enumerator_type)	// smallest type that can handle this
+				{	// unsigned long long overflow, fact it's defined doesn't save us
+				//! \test decl.C99/Error_enum_overflow.hpp
+				message_header(src);
+				INC_INFORM(ERR_STR);
+				INFORM("default-initialization of enumerator requires uintmax_t overflow (C++0X 7.2p5)");
+				zcc_errors.inc_error();
+				return false;
 				}
+			goto cpp_enum_was_retyped;
 			}
 		}
-	else{	// C
-		if (prior_value==target_machine->signed_max<virtual_machine::std_int_int>())
-			{	// signed integer overflow
-				//! \test decl.C99/Error_enum_overflow.h
-			message_header(src);
-			INC_INFORM(ERR_STR);
-			INFORM("default-initialization of enumerator requires signed int overflow (C99 6.7.2.2p3)");
-			zcc_errors.inc_error();
-			return false;
-			}
+	// C
+	else if (prior_value==target_machine->signed_max<virtual_machine::std_int_int>())
+		{	// signed integer overflow
+			//! \test decl.C99/Error_enum_overflow.h
+		message_header(src);
+		INC_INFORM(ERR_STR);
+		INFORM("default-initialization of enumerator requires signed int overflow (C99 6.7.2.2p3)");
+		zcc_errors.inc_error();
+		return false;
 		}
 	return true;
 }
