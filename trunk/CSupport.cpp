@@ -11576,12 +11576,10 @@ void INFORM_separated_list(const char* const* x,size_t x_len, const char* const 
 static bool check_for_typedef(type_spec& dest,const char* const src,const type_system& types)
 {
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = types.get_typedef(src);
-	if (tmp)
-		{	//! \todo C++: check for access control if source ends up being a class or struct
-		value_copy(dest,tmp->first);
-		return true;
-		}
-	return false;
+	if (!tmp) return false;
+	//! \todo C++: check for access control if source ends up being a class or struct
+	value_copy(dest,tmp->first);
+	return true;
 }
 
 //! \todo should this be a type_system member?
