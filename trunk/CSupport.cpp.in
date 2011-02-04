@@ -2868,12 +2868,12 @@ bool LocateCCharacterLiteralAt(const char* const src, size_t src_len, size_t tar
 	return false;
 }
 
-void GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, char*& tmp)
+static char* GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx)
 {
 	assert(src);
 	assert(2<=src_len);
-	assert(!tmp);
 	assert(IsLegalCString(src,src_len));
+	char* tmp = NULL;
 	const size_t C_str_len = LengthOfCStringLiteral(src,src_len);
 	assert(C_str_len>target_idx);
 	const bool wide_str = ('L'==src[0]);
@@ -2891,7 +2891,7 @@ void GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, 
 		tmp = tmp2;
 		if (wide_str) *(tmp2++) = 'L';
 		strcpy(tmp2,"'\\0'");
-		return;
+		return tmp;
 		};
 
 	size_t i = 0;
@@ -2906,12 +2906,13 @@ void GetCCharacterLiteralAt(const char* src, size_t src_len, size_t target_idx, 
 			*(tmp2++) = '\'';
 			strncpy(tmp2,src+i,step);
 			*(tmp2 += step) = '\'';
-			return;
+			return tmp;
 			}
 		i += step;
 		++j;
 		}
 	while(src_len > i);
+	return tmp;
 }
 
 /*! 
@@ -7794,10 +7795,8 @@ static bool C_string_literal_equal_content(const parse_tree& lhs, const parse_tr
 		size_t i = 0;
 		while(i<lhs_len-1)
 			{
-			char* lhs_lit = NULL;
-			char* rhs_lit = NULL;
-			GetCCharacterLiteralAt(lhs.index_tokens[0].token.first,lhs.index_tokens[0].token.second,i,lhs_lit);
-			GetCCharacterLiteralAt(rhs.index_tokens[0].token.first,rhs.index_tokens[0].token.second,i,rhs_lit);
+			char* const lhs_lit = GetCCharacterLiteralAt(lhs.index_tokens[0].token.first,lhs.index_tokens[0].token.second,i);
+			char* const rhs_lit = GetCCharacterLiteralAt(rhs.index_tokens[0].token.first,rhs.index_tokens[0].token.second,i);
 			const uintmax_t lhs_val = EvalCharacterLiteral(lhs_lit,strlen(lhs_lit));
 			const uintmax_t rhs_val = EvalCharacterLiteral(rhs_lit,strlen(rhs_lit));
 			free(lhs_lit);
@@ -11108,9 +11107,8 @@ static void eval_string_literal_deref(parse_tree& src,const type_system& types,c
 			}
 		return;
 		};
-	char* tmp2 = NULL;
 	assert(tmp.representable_as_uint());
-	GetCCharacterLiteralAt(str_lit.first,str_lit.second,tmp.to_uint(),tmp2);
+	char* tmp2 = GetCCharacterLiteralAt(str_lit.first,str_lit.second,tmp.to_uint());
 	assert(tmp2);
 	src.destroy();	// str_lit goes invalid here, don't use again
 	src.grab_index_token_from<0>(tmp2,C_TESTFLAG_CHAR_LITERAL);
