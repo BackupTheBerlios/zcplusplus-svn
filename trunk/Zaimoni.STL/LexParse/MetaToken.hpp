@@ -84,6 +84,7 @@ public:
 	virtual void prefix_chop(size_t prefix) {ltrim(prefix);};	// override to help out TokenSource
 
 	void TransferOutAndNULL(T*& dest) {_token.TransferOutAndNULL(dest);};
+	T* release() {return _token.release();};
 
 	// STL interfaces
 	const T* data() const {return _token.data();};

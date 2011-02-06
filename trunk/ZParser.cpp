@@ -134,9 +134,7 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 				parse_tree& tmp = ParsedList[0]->c_array<0>()[old_parsed_size];
 				if (!init_parse_tree_from_token(tmp,tmp_front,pretokenized[0],lang))
 					{
-					char* tmp2 = NULL; //! \bug adjust API, should be able to add qualifications safely
-					tmp_front.TransferOutAndNULL(tmp2);
-					tmp.index_tokens[0].token.first = tmp2;
+					tmp.index_tokens[0].token.first = tmp_front.release();
 					tmp.control_index_token<0>(true);
 					}
 				}
