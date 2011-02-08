@@ -1,6 +1,6 @@
 @REM not sure how far below WinXP this will run
 @REM runs regression tests for z_cpp.exe
-@REM (C)2009 Kenneth Boyd, license: MIT.txt
+@REM (C)2009,2011 Kenneth Boyd, license: MIT.txt
 
 @setlocal
 @set BAD_PASS=0
@@ -9,14 +9,14 @@
 @set FAILED=0
 @set BAD_FAIL_NAME=LastRejected:
 @set ACCEPT_TEST=0
-@set CPP=..\..\z_cpp
-@set CPP_ISO=..\..\z_cpp --pedantic
-@set CPP_SIGNMAG_NOTRAP=..\..\z_cpp --int-sign-magnitude
-@set CPP_SIGNMAG_TRAP=..\..\z_cpp --int-sign-magnitude --int-traps
-@set CPP_ONESCOMP_NOTRAP=..\..\z_cpp --int-ones-complement
-@set CPP_ONESCOMP_TRAP=..\..\z_cpp --int-ones-complement --int-traps
-@set CPP_TWOSCOMP_NOTRAP=..\..\z_cpp --int-twos-complement
-@set CPP_TWOSCOMP_TRAP=..\..\z_cpp --int-twos-complement --int-traps
+@set CPP=..\..\bin\z_cpp
+@set CPP_ISO=..\..\bin\z_cpp --pedantic
+@set CPP_SIGNMAG_NOTRAP=..\..\bin\z_cpp --int-sign-magnitude
+@set CPP_SIGNMAG_TRAP=..\..\bin\z_cpp --int-sign-magnitude --int-traps
+@set CPP_ONESCOMP_NOTRAP=..\..\bin\z_cpp --int-ones-complement
+@set CPP_ONESCOMP_TRAP=..\..\bin\z_cpp --int-ones-complement --int-traps
+@set CPP_TWOSCOMP_NOTRAP=..\..\bin\z_cpp --int-twos-complement
+@set CPP_TWOSCOMP_TRAP=..\..\bin\z_cpp --int-twos-complement --int-traps
 
 @echo Checking ISO error requirements
 @echo ====

@@ -1,6 +1,7 @@
 #!/bin/sh
 # runs regression tests for z_cpp.exe
-# (C)2009 Kenneth Boyd, license: MIT.txt
+# (C)2009,2011 Kenneth Boyd, license: MIT.txt
+# Note: namespace.CPP, compat subdirectories have no C files
 
 ASSERT_FAILED=0
 ASSERT_FAIL_NAME=
@@ -16,10 +17,10 @@ function run_tests {
 	local FAILED=0
 	local BAD_FAIL_NAME=
 	local ACCEPT_TEST=0
-	local CPP=../../zcc
-	local CPP_ISO="../../zcc --pedantic"
-	local CPP_BACKPORT="../../zcc -Wbackport"
-	local CPP_COMPAT="../../zcc -Wc-c++-compat"
+	local CPP=../../bin/zcc
+	local CPP_ISO="../../bin/zcc --pedantic"
+	local CPP_BACKPORT="../../bin/zcc -Wbackport"
+	local CPP_COMPAT="../../bin/zcc -Wc-c++-compat"
 
 	echo Checking ISO error requirements
 	echo ====

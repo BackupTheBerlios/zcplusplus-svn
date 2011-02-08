@@ -1,6 +1,7 @@
 @REM not sure how far below WinXP this will run
 @REM runs regression tests for z_cpp.exe
-@REM (C)2009 Kenneth Boyd, license: MIT.txt
+@REM (C)2009,2011 Kenneth Boyd, license: MIT.txt
+@REM Note: namespace.CPP, compat subdirectories have no C files
 
 @setlocal
 @set BAD_PASS=0
@@ -9,10 +10,10 @@
 @set FAILED=0
 @set BAD_FAIL_NAME=LastRejected:
 @set ACCEPT_TEST=0
-@set CPP=..\..\zcc
-@set CPP_ISO=..\..\zcc --pedantic
-@set CPP_BACKPORT=..\..\zcc -Wbackport
-@set CPP_COMPAT=..\..\zcc -Wc-c++-compat
+@set CPP=..\..\bin\zcc
+@set CPP_ISO=..\..\bin\zcc --pedantic
+@set CPP_BACKPORT=..\..\bin\zcc -Wbackport
+@set CPP_COMPAT=..\..\bin\zcc -Wc-c++-compat
 
 @echo Checking ISO error requirements
 @echo ====

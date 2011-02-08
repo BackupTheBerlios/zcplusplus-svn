@@ -1,6 +1,6 @@
 #!/bin/sh
 # runs only C99 regression tests for z_cpp.exe
-# (C)2009 Kenneth Boyd, license: MIT.txt
+# (C)2009,2011 Kenneth Boyd, license: MIT.txt
 ASSERT_FAILED=0
 ASSERT_FAIL_NAME=
 
@@ -15,7 +15,7 @@ function run_tests {
 	local FAILED=0
 	local BAD_FAIL_NAME=
 	local ACCEPT_TEST=0
-	local CPP="../../z_cpp --pedantic"
+	local CPP="../../bin/z_cpp --pedantic"
 
 	echo Checking ISO error requirements
 	echo ====

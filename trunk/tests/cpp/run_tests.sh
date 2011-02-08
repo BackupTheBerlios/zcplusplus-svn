@@ -1,6 +1,6 @@
 #!/bin/sh
 # runs regression tests for z_cpp.exe
-# (C)2009 Kenneth Boyd, license: MIT.txt
+# (C)2009,2011 Kenneth Boyd, license: MIT.txt
 
 ASSERT_FAILED=0
 ASSERT_FAIL_NAME=
@@ -16,14 +16,14 @@ function run_tests {
 	local FAILED=0
 	local BAD_FAIL_NAME=
 	local ACCEPT_TEST=0
-	local CPP=../../z_cpp
-	local CPP_ISO="../../z_cpp --pedantic"
-	local CPP_SIGNMAG_NOTRAP="../../z_cpp --int-sign-magnitude"
-	local CPP_SIGNMAG_TRAP="../../z_cpp --int-sign-magnitude --int-traps"
-	local CPP_ONESCOMP_NOTRAP="../../z_cpp --int-ones-complement"
-	local CPP_ONESCOMP_TRAP="../../z_cpp --int-ones-complement --int-traps"
-	local CPP_TWOSCOMP_NOTRAP="../../z_cpp --int-twos-complement"
-	local CPP_TWOSCOMP_TRAP="../../z_cpp --int-twos-complement --int-traps"
+	local CPP=../../bin/z_cpp
+	local CPP_ISO="../../bin/z_cpp --pedantic"
+	local CPP_SIGNMAG_NOTRAP="../../bin/z_cpp --int-sign-magnitude"
+	local CPP_SIGNMAG_TRAP="../../bin/z_cpp --int-sign-magnitude --int-traps"
+	local CPP_ONESCOMP_NOTRAP="../../bin/z_cpp --int-ones-complement"
+	local CPP_ONESCOMP_TRAP="../../bin/z_cpp --int-ones-complement --int-traps"
+	local CPP_TWOSCOMP_NOTRAP="../../bin/z_cpp --int-twos-complement"
+	local CPP_TWOSCOMP_TRAP="../../bin/z_cpp --int-twos-complement --int-traps"
 
 	echo Checking ISO error requirements
 	echo ====

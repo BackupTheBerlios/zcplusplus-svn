@@ -1,16 +1,16 @@
 SUFFIXES h hpp
 DESC runs regression tests for z_cpp.exe
-DESC (C)2009 Kenneth Boyd, license: MIT.txt
+DESC (C)2009,2011 Kenneth Boyd, license: MIT.txt
 
 PROLOG
-VAR CPP ../../z_cpp
-VAR CPP_ISO ../../z_cpp --pedantic
-VAR CPP_SIGNMAG_NOTRAP ../../z_cpp --int-sign-magnitude
-VAR CPP_SIGNMAG_TRAP ../../z_cpp --int-sign-magnitude --int-traps
-VAR CPP_ONESCOMP_NOTRAP ../../z_cpp --int-ones-complement
-VAR CPP_ONESCOMP_TRAP ../../z_cpp --int-ones-complement --int-traps
-VAR CPP_TWOSCOMP_NOTRAP ../../z_cpp --int-twos-complement
-VAR CPP_TWOSCOMP_TRAP ../../z_cpp --int-twos-complement --int-traps
+VAR CPP ../../bin/z_cpp
+VAR CPP_ISO ../../bin/z_cpp --pedantic
+VAR CPP_SIGNMAG_NOTRAP ../../bin/z_cpp --int-sign-magnitude
+VAR CPP_SIGNMAG_TRAP ../../bin/z_cpp --int-sign-magnitude --int-traps
+VAR CPP_ONESCOMP_NOTRAP ../../bin/z_cpp --int-ones-complement
+VAR CPP_ONESCOMP_TRAP ../../bin/z_cpp --int-ones-complement --int-traps
+VAR CPP_TWOSCOMP_NOTRAP ../../bin/z_cpp --int-twos-complement
+VAR CPP_TWOSCOMP_TRAP ../../bin/z_cpp --int-twos-complement --int-traps
 
 ECHO Checking ISO error requirements
 ERROR CPP_ISO Error*

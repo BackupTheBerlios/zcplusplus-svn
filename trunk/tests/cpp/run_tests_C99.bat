@@ -1,6 +1,6 @@
 @REM not sure how far below WinXP this will run
 @REM runs only C99 regression tests for z_cpp.exe
-@REM (C)2009 Kenneth Boyd, license: MIT.txt
+@REM (C)2009,2011 Kenneth Boyd, license: MIT.txt
 @setlocal
 @set BAD_PASS=0
 @set BAD_PASS_NAME=LastAccepted:
@@ -8,7 +8,7 @@
 @set FAILED=0
 @set BAD_FAIL_NAME=LastRejected:
 @set ACCEPT_TEST=0
-@set CPP=..\..\z_cpp --pedantic
+@set CPP=..\..\bin\z_cpp --pedantic
 
 @echo Checking ISO error requirements
 @echo ====

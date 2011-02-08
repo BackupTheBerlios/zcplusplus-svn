@@ -1,12 +1,13 @@
 SUFFIXES h hpp
 DESC runs regression tests for z_cpp.exe
-DESC (C)2009 Kenneth Boyd, license: MIT.txt
+DESC (C)2009,2011 Kenneth Boyd, license: MIT.txt
+DESC Note: namespace.CPP, compat subdirectories have no C files
 
 PROLOG
-VAR CPP ../../zcc
-VAR CPP_ISO ../../zcc --pedantic
-VAR CPP_BACKPORT ../../zcc -Wbackport
-VAR CPP_COMPAT ../../zcc -Wc-c++-compat
+VAR CPP ../../bin/zcc
+VAR CPP_ISO ../../bin/zcc --pedantic
+VAR CPP_BACKPORT ../../bin/zcc -Wbackport
+VAR CPP_COMPAT ../../bin/zcc -Wc-c++-compat
 
 ECHO Checking ISO error requirements
 ERROR CPP_ISO decl.C99/Error*
