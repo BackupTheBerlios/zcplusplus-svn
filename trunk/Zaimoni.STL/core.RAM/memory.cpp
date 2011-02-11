@@ -898,66 +898,63 @@ std::new_handler ZaimoniNewHandler = NULL;
 void* operator new(size_t NewSize) throw (std::bad_alloc)
 {
 	void* Tmp = calloc(1,NewSize);
-	while(NULL==Tmp && NULL!=ZaimoniNewHandler)
-		{
-		ZaimoniNewHandler();
-		Tmp = calloc(1,NewSize);
-		}
-	if (NULL==Tmp) throw std::bad_alloc();
+	if (ZaimoniNewHandler)
+		while(!Tmp) Tmp = (ZaimoniNewHandler(),calloc(1,NewSize));
+
+	if (!Tmp) throw std::bad_alloc();
 	return Tmp;
 }
 
 void* operator new[](std::size_t NewSize) throw (std::bad_alloc)
 {
 	void* Tmp = calloc(1,NewSize);
-	while(NULL==Tmp && NULL!=ZaimoniNewHandler)
-		{
-		ZaimoniNewHandler();
-		Tmp = calloc(1,NewSize);
-		}
-	if (NULL==Tmp) throw std::bad_alloc();
+	if (ZaimoniNewHandler)
+		while(!Tmp) Tmp = (ZaimoniNewHandler(),calloc(1,NewSize));
+
+	if (!Tmp) throw std::bad_alloc();
 	return Tmp;
 }
 
-void* operator new(size_t NewSize, const std::nothrow_t& tracer) throw ()
+void* operator new(size_t NewSize, const std::nothrow_t&) throw ()
 {
 	void* Tmp = calloc(1,NewSize);
-	while(NULL==Tmp && NULL!=ZaimoniNewHandler)
-		{
-		ZaimoniNewHandler();
-		Tmp = calloc(1,NewSize);
-		}
-	return Tmp;
-}
-
-void*
-operator new[](std::size_t NewSize, const std::nothrow_t& tracer) throw ()
-{
-	void* Tmp = calloc(1,NewSize);
-	try	{
-		while(NULL==Tmp && NULL!=ZaimoniNewHandler)
-			{
-			ZaimoniNewHandler();
-			Tmp = calloc(1,NewSize);
+	if (ZaimoniNewHandler)
+		try	{
+			while(!Tmp) Tmp = (ZaimoniNewHandler(),calloc(1,NewSize));
 			}
-		}
-	catch(const std::bad_alloc&)
-		{
-		return NULL;
-		}
+		catch(const std::bad_alloc&)
+			{
+			return NULL;
+			}
+
+	return Tmp;
+}
+
+void* operator new[](std::size_t NewSize, const std::nothrow_t&) throw ()
+{
+	void* Tmp = calloc(1,NewSize);
+	if (ZaimoniNewHandler)
+		try	{
+			while(!Tmp) Tmp = (ZaimoniNewHandler(),calloc(1,NewSize));
+			}
+		catch(const std::bad_alloc&)
+			{
+			return NULL;
+			}
+
 	return Tmp;
 }
 
 void operator delete(void* Target) throw ()
 {/* FORMALLY CORRECT: 4/16/98, Kenneth Boyd */ free(Target);}
 
-void operator delete(void* Target, const std::nothrow_t& tracer) throw ()
+void operator delete(void* Target, const std::nothrow_t&) throw ()
 {/* FORMALLY CORRECT: 4/16/98, Kenneth Boyd */ free(Target);}
 
 void operator delete[](void* Target) throw()
 {/* FORMALLY CORRECT: 9/27/2005, Kenneth Boyd */ free(Target);}
 
-void operator delete[](void* Target, const std::nothrow_t& tracer) throw()
+void operator delete[](void* Target, const std::nothrow_t&) throw()
 {/* FORMALLY CORRECT: 9/27/2005, Kenneth Boyd */ free(Target);}
 
 #endif
