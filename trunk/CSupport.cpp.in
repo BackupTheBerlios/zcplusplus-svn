@@ -962,7 +962,8 @@ static const POD_pair<const char*,size_t> C99_decl_specifiers[] =
 		DICT_STRUCT("static"),
 		DICT_STRUCT("extern"),
 		DICT_STRUCT("inline"),
-		DICT_STRUCT("auto")
+		DICT_STRUCT("auto"),
+		DICT_STRUCT("_Thread_Local")	// C1X, but in reserved class of identifiers
 	};
 
 // we implement C++0X, not C++98.  auto as storage specifier is pretty much a waste of source code anyway.
@@ -971,13 +972,13 @@ static const POD_pair<const char*,size_t> CPP0X_decl_specifiers[] =
 	{	DICT_STRUCT("typedef"),
 		DICT_STRUCT("const"),
 		DICT_STRUCT("volatile"),
-		DICT_STRUCT("thread_local"),
+		DICT_STRUCT("mutable"),
 		DICT_STRUCT("register"),
 		DICT_STRUCT("static"),
 		DICT_STRUCT("extern"),
 		DICT_STRUCT("inline"),
 		DICT_STRUCT("constexpr"),
-		DICT_STRUCT("mutable"),
+		DICT_STRUCT("thread_local"),
 		DICT_STRUCT("virtual"),
 		DICT_STRUCT("explicit"),
 		DICT_STRUCT("friend")
@@ -990,8 +991,9 @@ static const POD_pair<const char*,size_t> CPP0X_decl_specifiers[] =
 #define C99_CPP0X_DECLSPEC_STATIC (1ULL<<5)
 #define C99_CPP0X_DECLSPEC_EXTERN (1ULL<<6)
 #define C99_CPP0X_DECLSPEC_INLINE (1ULL<<7)
+#define C99_CPP0X_DECLSPEC_THREAD_LOCAL (1ULL<<9)
 #define C99_DECLSPEC_AUTO (1ULL<<8)
-#define CPP_DECLSPEC_MUTABLE (1ULL<<9)
+#define CPP_DECLSPEC_MUTABLE (1ULL<<3)
 #define CPP_DECLSPEC_VIRTUAL (1ULL<<10)
 #define CPP_DECLSPEC_EXPLICIT (1ULL<<11)
 #define CPP_DECLSPEC_FRIEND (1ULL<<12)
