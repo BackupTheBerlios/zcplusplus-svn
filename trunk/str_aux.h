@@ -1,4 +1,5 @@
 // str_aux.h
+// (C)2009,2011 Kenneth Boyd, license: MIT.txt 
 
 #ifndef STR_AUX_H
 #define STR_AUX_H 1
@@ -29,6 +30,15 @@ size_t count_disjoint_substring_instances(const char* src,const char* match);
  * \param index_stack_size size of above array
  */
 void report_disjoint_substring_instances(const char* src,const char* match,const char** index_stack,size_t index_stack_size);
+
+/**
+ * copies the C string pointed to by src of length src_len, to a calloc'ed 
+ * buffer suitable for freeing.
+ *
+ * \return non-NULL copy of string.  C++ implementation throws std::bad_alloc;
+ * C implementation terminates with exit code EXIT_FAILURE.
+ */
+char* C_make_string(const char* src,size_t src_len);
 
 #ifdef __cplusplus
 }	/* extern "C" */

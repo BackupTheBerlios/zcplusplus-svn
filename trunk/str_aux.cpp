@@ -1,9 +1,15 @@
 // str_aux.cpp
+// (C)2009,2011 Kenneth Boyd, license: MIT.txt 
 
 #include "str_aux.h"
 
 #include <string.h>
 #include "Zaimoni.STL/Logging.h"
+
+#ifdef __cplusplus
+#include "Zaimoni.STL/Compiler.h"
+#include "Zaimoni.STL/MetaRAM2.hpp"
+#endif
 
 EXTERN_C size_t count_disjoint_substring_instances(const char* const src,const char* const match)
 {
@@ -42,5 +48,17 @@ EXTERN_C void report_disjoint_substring_instances(const char* const src,const ch
 		test = (test-src<=can_fit_threshold) ? strstr(test+match_len,match) : NULL;
 		};
 	assert(0<n);
+}
+
+EXTERN_C char* C_make_string(const char* src,size_t src_len)
+{
+	assert(src);
+#ifdef __cplusplus
+	char* const tmp = zaimoni::_new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(src_len));
+#else
+	char* const tmp = (char*)calloc(1,ZAIMONI_LEN_WITH_NULL(src_len));
+	if (!tmp) _fatal("FATAL: RAM exhaustion");
+#endif
+	memmove(tmp,src,src_len);
 }
 
