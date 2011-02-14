@@ -3,6 +3,8 @@
 
 #include "ParseTree.hpp"
 
+#include "str_aux.h"
+
 using namespace zaimoni;
 
 bool (*parse_tree::hook_INC_INFORM)(const parse_tree&) = NULL;
@@ -314,16 +316,12 @@ void value_copy(parse_tree& dest, const parse_tree& src)
 	tmp.index_tokens[1] = src.index_tokens[1];
 	if (src.own_index_token<0>())
 		{
-		char* tmp2 = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(tmp.index_tokens[0].token.second));
-		memmove(tmp2,src.index_tokens[0].token.first,src.index_tokens[0].token.second);
-		tmp.index_tokens[0].token.first = tmp2;
+		tmp.index_tokens[0].token.first = C_make_string(src.index_tokens[0].token.first,src.index_tokens[0].token.second);
 		tmp.control_index_token<0>(true);
 		};
 	if (src.own_index_token<1>())
 		{
-		char* tmp2 = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(tmp.index_tokens[1].token.second));
-		memmove(tmp2,src.index_tokens[1].token.first,src.index_tokens[1].token.second);
-		tmp.index_tokens[1].token.first = tmp2;
+		tmp.index_tokens[1].token.first = C_make_string(src.index_tokens[1].token.first,src.index_tokens[1].token.second);
 		tmp.control_index_token<1>(true);
 		};
 	tmp.flags = src.flags;

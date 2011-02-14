@@ -1,5 +1,5 @@
 // CPreproc.cpp
-// (C)2009,2010 Kenneth Boyd, license: MIT.txt
+// (C)2009-2011 Kenneth Boyd, license: MIT.txt
 
 #include "CPreproc.hpp"
 
@@ -19,6 +19,7 @@
 #include "langroute.hpp"
 #include "load_src.hpp"
 #include "ParseTree.hpp"
+#include "str_aux.h"
 #include "type_system.hpp"
 #include "weak_token.hpp"
 #include "_version.h"
@@ -1194,9 +1195,7 @@ ObjectLikeMacroEmptyString:
 							macros_object.insertNSlotsAt(1,object_macro_insertion_index);
 							macros_object_expansion.insertNSlotsAt(1,object_macro_insertion_index);
 							macros_object_expansion_pre_eval.insertNSlotsAt(1,object_macro_insertion_index);
-							macros_object[object_macro_insertion_index] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
-							strncpy(macros_object[object_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
-							ZAIMONI_NULL_TERMINATE(macros_object[object_macro_insertion_index][first_token_len]);
+							macros_object[object_macro_insertion_index] = C_make_string(TokenList[i]->data()+critical_offset,first_token_len);
 							}
 						else if (lang.IsWS_NotFirst(TokenList[i]->data()[critical_offset+first_token_len]))
 							{	// object-like, not empty string
@@ -1243,10 +1242,8 @@ ObjectLikeMacroEmptyString:
 							macros_object.insertNSlotsAt(1,object_macro_insertion_index);
 							macros_object_expansion.insertNSlotsAt(1,object_macro_insertion_index);
 							macros_object_expansion_pre_eval.insertNSlotsAt(1,object_macro_insertion_index);
-							macros_object[object_macro_insertion_index] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
-
-							strncpy(macros_object[object_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
-							ZAIMONI_NULL_TERMINATE(macros_object[object_macro_insertion_index][first_token_len]);
+							macros_object[object_macro_insertion_index] = C_make_string(TokenList[i]->data()+critical_offset,first_token_len);
+							
 							macros_object_expansion_pre_eval[object_macro_insertion_index] = new Token<char>(expansion);
 							macros_object_expansion[object_macro_insertion_index] = new Token<char>;
 							expansion.MoveInto(*macros_object_expansion[object_macro_insertion_index]);
@@ -1320,10 +1317,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								macros_function_arglist.insertNSlotsAt(1,function_macro_insertion_index);
 								macros_function_expansion.insertNSlotsAt(1,function_macro_insertion_index);
 								macros_function_expansion_pre_eval.insertNSlotsAt(1,function_macro_insertion_index);
-								macros_function[function_macro_insertion_index] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
-
-								strncpy(macros_function[function_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
-								ZAIMONI_NULL_TERMINATE(macros_function[function_macro_insertion_index][first_token_len]);
+								macros_function[function_macro_insertion_index] = C_make_string(TokenList[i]->data()+critical_offset,first_token_len);
+								
 								macros_function_arglist[function_macro_insertion_index] = new Token<char>;
 								arglist.MoveInto(*macros_function_arglist[function_macro_insertion_index]);
 
@@ -1365,10 +1360,8 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 							macros_function_arglist.insertNSlotsAt(1,function_macro_insertion_index);
 							macros_function_expansion.insertNSlotsAt(1,function_macro_insertion_index);
 							macros_function_expansion_pre_eval.insertNSlotsAt(1,function_macro_insertion_index);
-							macros_function[function_macro_insertion_index] = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(first_token_len));
+							macros_function[function_macro_insertion_index] = C_make_string(TokenList[i]->data()+critical_offset,first_token_len);
 
-							strncpy(macros_function[function_macro_insertion_index],TokenList[i]->data()+critical_offset,first_token_len);
-							ZAIMONI_NULL_TERMINATE(macros_function[function_macro_insertion_index][first_token_len]);
 							macros_function_arglist[function_macro_insertion_index] = new Token<char>;
 							macros_function_expansion[function_macro_insertion_index] = new Token<char>;
 							macros_function_expansion_pre_eval[function_macro_insertion_index] = new Token<char>(expansion);
@@ -2176,8 +2169,7 @@ CPreprocessor::interpret_pragma(const char* const x, size_t x_len, autovalarray_
 				while(2<j)
 					{
 					if (C_TESTFLAG_IDENTIFIER!=pretokenized[--j].third) continue;
-					char* tmp = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[j].second));
-					strncpy(tmp,x+pretokenized[j].first,pretokenized[j].second);
+					char* tmp = C_make_string(x+pretokenized[j].first,pretokenized[j].second);
 					if (!locked_macros.InsertSlotAt(locked_macros.size(),tmp))
 						{
 						free(tmp);
@@ -3009,8 +3001,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 					}
 
 				char buf[FILENAME_MAX];
-				char* const look_for = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[i+2].second-2));
-				strncpy(look_for,x.data()+pretokenized[i+2].first+1,pretokenized[i+2].second-2);
+				char* const look_for = C_make_string(x.data()+pretokenized[i+2].first+1,pretokenized[i+2].second-2);
 				if (strchr(look_for,'"'))
 					{
 					message_header(x);
@@ -3043,8 +3034,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 							continue;
 							}
 						char buf[FILENAME_MAX];
-						char* const look_for = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(pretokenized[j].first-pretokenized[i+2].first+pretokenized[j].second-2));
-						strncpy(look_for,x.data()+pretokenized[i+2].first+1,pretokenized[j].first-pretokenized[i+2].first+pretokenized[j].second-2);
+						char* const look_for = C_make_string(x.data()+pretokenized[i+2].first+1,pretokenized[j].first-pretokenized[i+2].first+pretokenized[j].second-2);
 						if (strchr(look_for,'<'))
 							{
 							message_header(x);
@@ -3523,14 +3513,12 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 		if (!used_macro_stack)
 			{
 			autovalarray_ptr<char*> macro_stack(1);
-			macro_stack[0] = _new_buffer_nonNULL_throws<char>(token_len);
-			memmove(macro_stack[0],x.data()+critical_offset,token_len);
+			macro_stack[0] = C_make_string(x.data()+critical_offset,token_len);
 			intradirective_preprocess(Test,0,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion,&macro_stack);
 			}
 		else{
 			used_macro_stack->insertNSlotsAt(1,used_macro_stack->size());
-			used_macro_stack->back() = _new_buffer_nonNULL_throws<char>(token_len);
-			memmove(used_macro_stack->back(),x.data()+critical_offset,token_len);
+			used_macro_stack->back() = C_make_string(x.data()+critical_offset,token_len);
 			intradirective_preprocess(Test,0,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion,used_macro_stack);
 			used_macro_stack->DeleteIdx(used_macro_stack->size()-1);
 			}
@@ -3622,16 +3610,12 @@ CPreprocessor::dynamic_macro_replace_once(Token<char>& x, size_t& critical_offse
 		if (!used_macro_stack)
 			{
 			autovalarray_ptr<char*> macro_stack(1);
-			macro_stack[0] = _new_buffer_nonNULL_throws<char>(token_len);
-			memmove(macro_stack[0],x.data()+critical_offset,token_len);
-
+			macro_stack[0] = C_make_string(x.data()+critical_offset,token_len);
 			dynamic_function_macro_prereplace_once(macros_object, macros_object_expansion, macros_function, macros_function_arglist, macros_function_expansion, &macro_stack, formal_arguments, actual_arguments, Test);
 			}
 		else{
 			used_macro_stack->insertNSlotsAt(1,used_macro_stack->size());
-			used_macro_stack->back() = _new_buffer_nonNULL_throws<char>(token_len);
-			memmove(used_macro_stack->back(),x.data()+critical_offset,token_len);
-
+			used_macro_stack->back() = C_make_string(x.data()+critical_offset,token_len); 
 			dynamic_function_macro_prereplace_once(macros_object, macros_object_expansion, macros_function, macros_function_arglist, macros_function_expansion, used_macro_stack, formal_arguments, actual_arguments, Test);
 			used_macro_stack->DeleteIdx(used_macro_stack->size()-1);
 			}

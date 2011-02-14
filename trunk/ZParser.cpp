@@ -1,5 +1,5 @@
 // ZParser.cpp
-// (C)2009, 2010 Kenneth Boyd, license: MIT.txt
+// (C)2009-2011 Kenneth Boyd, license: MIT.txt
 
 #include "ZParser.hpp"
 
@@ -10,6 +10,7 @@
 #include "errcount.hpp"
 #include "langroute.hpp"
 #include "ParseTree.hpp"
+#include "str_aux.h"
 #include "type_system.hpp"
 
 #include "Zaimoni.STL/AutoPtr.hpp"
@@ -145,9 +146,7 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 					POD_triple<size_t,size_t,lex_flags>& tmp3 = pretokenized[i];
 					if (!init_parse_tree_from_token(tmp,tmp_front,tmp3,lang))
 					    {
-						char* tmp2 = _new_buffer_nonNULL_throws<char>(ZAIMONI_LEN_WITH_NULL(tmp3.second));
-						memmove(tmp2,tmp_front.data()+tmp3.first,tmp3.second);
-						tmp.index_tokens[0].token.first = tmp2;
+						tmp.index_tokens[0].token.first = C_make_string(tmp_front.data()+tmp3.first,tmp3.second);
 						tmp.control_index_token<0>(true);
 						}
 					}
