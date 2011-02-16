@@ -39,20 +39,25 @@ using namespace zaimoni;
 #define ERR_STR "error: "
 #define WARN_STR "warning: "
 
-#define INSTALL_TO "\\CPP_App\\Z.C++"
+// define this to hard-code an install path
+//#define INSTALL_TO "\\CPP_App\\Z.C++"
 
 //! \todo this should be language-sensitive; LangConf not a good location
 static const char* const fixed_system_include_search[] = {
+#ifdef INSTALL_TO
 	// C++-only install paths
 	INSTALL_TO ZAIMONI_PATH_SEP "lib" ZAIMONI_PATH_SEP "zc++-" ZCC_VERSION ZAIMONI_PATH_SEP "include",
 	INSTALL_TO ZAIMONI_PATH_SEP "lib" ZAIMONI_PATH_SEP "zc++" ZAIMONI_PATH_SEP "include",
+#endif	
 	// C++-only relative paths
 	".." ZAIMONI_PATH_SEP "lib" ZAIMONI_PATH_SEP "zc++-" ZCC_VERSION ZAIMONI_PATH_SEP "include",
 	".." ZAIMONI_PATH_SEP "lib" ZAIMONI_PATH_SEP "zc++" ZAIMONI_PATH_SEP "include",
+#ifdef INSTALL_TO
 	// install path
 	INSTALL_TO ZAIMONI_PATH_SEP "lib" ZAIMONI_PATH_SEP "zcc-" ZCC_VERSION ZAIMONI_PATH_SEP "include",
 	INSTALL_TO ZAIMONI_PATH_SEP "lib" ZAIMONI_PATH_SEP "zcc" ZAIMONI_PATH_SEP "include",
 	INSTALL_TO ZAIMONI_PATH_SEP "include",
+#endif	
 	// relative paths
 	".." ZAIMONI_PATH_SEP "lib" ZAIMONI_PATH_SEP "zcc-" ZCC_VERSION ZAIMONI_PATH_SEP "include",
 	".." ZAIMONI_PATH_SEP "lib" ZAIMONI_PATH_SEP "zcc" ZAIMONI_PATH_SEP "include",
@@ -60,16 +65,20 @@ static const char* const fixed_system_include_search[] = {
 };
 
 static const char* actual_system_include_search[] =	{
+#ifdef INSTALL_TO
 	// C++-only install paths
 	NULL,
 	NULL,
+#endif	
 	// C++-only relative paths
 	NULL,
 	NULL,
+#ifdef INSTALL_TO
 	// install path
 	NULL,
 	NULL,
 	NULL,
+#endif	
 	// relative paths
 	NULL,
 	NULL,
@@ -78,9 +87,11 @@ static const char* actual_system_include_search[] =	{
 
 BOOST_STATIC_ASSERT(STATIC_SIZE(fixed_system_include_search)==STATIC_SIZE(actual_system_include_search));
 
+#ifdef INSTALL_TO
 #define START_CPP_ONLY_PATHS 4
-
-#undef INSTALL_TO
+#else
+#define START_CPP_ONLY_PATHS 2
+#endif
 
 static bool fixed_system_include_exists_init = false;
 
