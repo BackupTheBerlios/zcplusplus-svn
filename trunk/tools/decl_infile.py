@@ -6,6 +6,7 @@
 
 # target files
 target_files = ['Pass_enum_def.in', 'Pass_struct_def.in', 'Pass_union_def.in']
+target_files2 = ['Pass_struct_def_decl.in']
 
 invariant_header_lines = [
 'SUFFIXES h hpp\n'
@@ -15,11 +16,13 @@ invariant_header_lines = [
 
 context = {	'Pass_enum_def.in':'// using singly defined enum\n',
 			'Pass_struct_def.in':'// using singly defined struct\n',
-			'Pass_union_def.in':'// using singly defined union\n'}
+			'Pass_union_def.in':'// using singly defined union\n',
+			'Pass_struct_def_decl.in':'// using singly defined struct\n'}
 
 global_define = {	'Pass_enum_def.in':'\nenum good_test {\n\tx_factor = 1\n};\n\n',
 					'Pass_struct_def.in':'\nstruct good_test {\n\tint x_factor\n};\n\n',
-					'Pass_union_def.in':'\nunion good_test {\n\tint x_factor\n};\n\n'}
+					'Pass_union_def.in':'\nunion good_test {\n\tint x_factor\n};\n\n',
+					'Pass_struct_def_decl.in':'\nstruct good_test {\n\tint x_factor\n} y;\n\n'}
 
 section_comments = ['// ringing the changes on extern\n',
 "// ringing the changes on static\n// (don't test static const -- no chance to initialize before use)\n",
@@ -39,7 +42,7 @@ def union_decl(i):
 	return "union good_test x"+i
 
 var_decl = {'Pass_enum_def.in':enum_decl, 'Pass_struct_def.in':struct_decl,
-			'Pass_union_def.in':union_decl}
+			'Pass_union_def.in':union_decl, 'Pass_struct_def_decl.in':struct_decl}
 
 def enum_def(i):
 	return 'enum good_test'+i+' { x_factor'+i+' = 1 } x_'+i
@@ -239,8 +242,56 @@ def SpawnTestCase(dest_file):
 
 	TargetFile.close()
 
+def SpawnTestCase2(dest_file):
+	# first part copied from SpawnTestCase
+	TargetFile = open(dest_file,'w')
+	for line in invariant_header_lines:
+		TargetFile.write(line)
+	TargetFile.write(context[dest_file])
+	TargetFile.write(global_define[dest_file])
+
+	TargetFile.write(section_comments[0])
+	for i in xrange(5):
+		TargetFile.write(test_qualifiers[i]+' '+var_decl[dest_file](str(i+1))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[1])
+	for i in xrange(4):
+		TargetFile.write(test_qualifiers[i+5]+' '+var_decl[dest_file](str(i+6))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[2])
+	for i in xrange(11):
+		TargetFile.write(test_qualifiers[i+9]+' '+var_decl[dest_file](str(i+10))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[3])
+	for i in xrange(10):
+		TargetFile.write(test_qualifiers[i+20]+' '+var_decl[dest_file](str(i+21))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[4])
+	for i in xrange(10):
+		TargetFile.write(test_qualifiers[i+30]+' '+var_decl[dest_file](str(i+31))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[5])
+	for i in xrange(28):
+		TargetFile.write(test_qualifiers[i+40]+' '+var_decl[dest_file](str(i+41))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[6])
+	for i in xrange(28):
+		TargetFile.write(test_qualifiers[i+68]+' '+var_decl[dest_file](str(i+69))+';\n')
+	TargetFile.write('\n')
+
+	# no define-declares
+	TargetFile.close()
+
 
 if __name__ == '__main__':
 	for filename in target_files:
 		SpawnTestCase(filename)
+	for filename in target_files2:
+		SpawnTestCase2(filename)
 
