@@ -1,0 +1,120 @@
+SUFFIXES h hpp
+OBJECTLIKE_MACRO THREAD_LOCAL _Thread_Local thread_local
+// (C)2009,2011 Kenneth Boyd, license: MIT.txt
+// using singly defined union
+
+union good_test {
+	int x_factor
+};
+
+// ringing the changes on extern
+extern union good_test x1;
+extern const union good_test x2;
+extern volatile union good_test x3;
+extern const volatile union good_test x4;
+extern volatile const union good_test x5;
+
+// ringing the changes on static
+// (don't test static const -- no chance to initialize before use)
+static union good_test x6;
+static volatile union good_test x7;
+static const volatile union good_test x8;
+static volatile const union good_test x9;
+
+// extern/static not in first postion is deprecated, but legal
+const extern union good_test x10;
+volatile extern union good_test x11;
+const extern volatile union good_test x12;
+const volatile extern union good_test x13;
+volatile extern const union good_test x14;
+volatile const extern union good_test x15;
+volatile static union good_test x16;
+const static volatile union good_test x17;
+const volatile static union good_test x18;
+volatile static const union good_test x19;
+volatile const static union good_test x20;
+
+// ringing the changes on THREAD_LOCAL extern
+extern THREAD_LOCAL union good_test x21;
+extern THREAD_LOCAL const union good_test x22;
+extern THREAD_LOCAL volatile union good_test x23;
+extern THREAD_LOCAL const volatile union good_test x24;
+extern THREAD_LOCAL volatile const union good_test x25;
+THREAD_LOCAL extern union good_test x26;
+THREAD_LOCAL extern const union good_test x27;
+THREAD_LOCAL extern volatile union good_test x28;
+THREAD_LOCAL extern const volatile union good_test x29;
+THREAD_LOCAL extern volatile const union good_test x30;
+
+// ringing the changes on THREAD_LOCAL static
+static THREAD_LOCAL union good_test x31;
+static THREAD_LOCAL const union good_test x32;
+static THREAD_LOCAL volatile union good_test x33;
+static THREAD_LOCAL const volatile union good_test x34;
+static THREAD_LOCAL volatile const union good_test x35;
+THREAD_LOCAL static union good_test x36;
+THREAD_LOCAL static const union good_test x37;
+THREAD_LOCAL static volatile union good_test x38;
+THREAD_LOCAL static const volatile union good_test x39;
+THREAD_LOCAL static volatile const union good_test x40;
+
+// THREAD_LOCAL extern not in first two postions is deprecated, but legal
+extern const THREAD_LOCAL union good_test x41;
+const extern THREAD_LOCAL union good_test x42;
+extern volatile THREAD_LOCAL union good_test x43;
+volatile extern THREAD_LOCAL union good_test x44;
+extern const THREAD_LOCAL volatile union good_test x45;
+extern const volatile THREAD_LOCAL union good_test x46;
+const extern THREAD_LOCAL volatile union good_test x47;
+const extern volatile THREAD_LOCAL union good_test x48;
+const volatile extern THREAD_LOCAL union good_test x49;
+extern volatile THREAD_LOCAL const union good_test x50;
+extern volatile const THREAD_LOCAL union good_test x51;
+volatile extern THREAD_LOCAL const union good_test x52;
+volatile extern const THREAD_LOCAL union good_test x53;
+volatile const extern THREAD_LOCAL union good_test x54;
+THREAD_LOCAL const extern union good_test x55;
+const THREAD_LOCAL extern union good_test x56;
+THREAD_LOCAL volatile extern union good_test x57;
+volatile THREAD_LOCAL extern union good_test x58;
+THREAD_LOCAL const extern volatile union good_test x59;
+THREAD_LOCAL const volatile extern union good_test x60;
+const THREAD_LOCAL extern volatile union good_test x61;
+const THREAD_LOCAL volatile extern union good_test x62;
+const volatile THREAD_LOCAL extern union good_test x63;
+THREAD_LOCAL volatile extern const union good_test x64;
+THREAD_LOCAL volatile const extern union good_test x65;
+volatile THREAD_LOCAL extern const union good_test x66;
+volatile THREAD_LOCAL const extern union good_test x67;
+volatile const THREAD_LOCAL extern union good_test x68;
+
+// THREAD_LOCAL static not in first two postions is deprecated, but legal
+static const THREAD_LOCAL union good_test x69;
+const static THREAD_LOCAL union good_test x70;
+static volatile THREAD_LOCAL union good_test x71;
+volatile static THREAD_LOCAL union good_test x72;
+static const THREAD_LOCAL volatile union good_test x73;
+static const volatile THREAD_LOCAL union good_test x74;
+const static THREAD_LOCAL volatile union good_test x75;
+const static volatile THREAD_LOCAL union good_test x76;
+const volatile static THREAD_LOCAL union good_test x77;
+static volatile THREAD_LOCAL const union good_test x78;
+static volatile const THREAD_LOCAL union good_test x79;
+volatile static THREAD_LOCAL const union good_test x80;
+volatile static const THREAD_LOCAL union good_test x81;
+volatile const static THREAD_LOCAL union good_test x82;
+THREAD_LOCAL const static union good_test x83;
+const THREAD_LOCAL static union good_test x84;
+THREAD_LOCAL volatile static union good_test x85;
+volatile THREAD_LOCAL static union good_test x86;
+THREAD_LOCAL const static volatile union good_test x87;
+THREAD_LOCAL const volatile static union good_test x88;
+const THREAD_LOCAL static volatile union good_test x89;
+const THREAD_LOCAL volatile static union good_test x90;
+const volatile THREAD_LOCAL static union good_test x91;
+THREAD_LOCAL volatile static const union good_test x92;
+THREAD_LOCAL volatile const static union good_test x93;
+volatile THREAD_LOCAL static const union good_test x94;
+volatile THREAD_LOCAL const static union good_test x95;
+volatile const THREAD_LOCAL static union good_test x96;
+

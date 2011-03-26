@@ -6,7 +6,7 @@
 
 # target files
 target_files = ['Pass_enum_def.in', 'Pass_struct_def.in', 'Pass_union_def.in']
-target_files2 = ['Pass_struct_def_decl.in']
+target_files2 = ['Pass_enum_def_decl.in', 'Pass_struct_def_decl.in', 'Pass_union_def_decl.in']
 
 invariant_header_lines = [
 'SUFFIXES h hpp\n'
@@ -17,12 +17,16 @@ invariant_header_lines = [
 context = {	'Pass_enum_def.in':'// using singly defined enum\n',
 			'Pass_struct_def.in':'// using singly defined struct\n',
 			'Pass_union_def.in':'// using singly defined union\n',
-			'Pass_struct_def_decl.in':'// using singly defined struct\n'}
+			'Pass_enum_def_decl.in':'// using singly defined enum\n',
+			'Pass_struct_def_decl.in':'// using singly defined struct\n',
+			'Pass_union_def_decl.in':'// using singly defined union\n'}
 
 global_define = {	'Pass_enum_def.in':'\nenum good_test {\n\tx_factor = 1\n};\n\n',
 					'Pass_struct_def.in':'\nstruct good_test {\n\tint x_factor\n};\n\n',
 					'Pass_union_def.in':'\nunion good_test {\n\tint x_factor\n};\n\n',
-					'Pass_struct_def_decl.in':'\nstruct good_test {\n\tint x_factor\n} y;\n\n'}
+					'Pass_enum_def_decl.in':'\nenum good_test {\n\tx_factor = 1\n} y;\n\n',
+					'Pass_struct_def_decl.in':'\nstruct good_test {\n\tint x_factor\n} y;\n\n',
+					'Pass_union_def_decl.in':'\nunion good_test {\n\tint x_factor\n};\n\n'}
 
 section_comments = ['// ringing the changes on extern\n',
 "// ringing the changes on static\n// (don't test static const -- no chance to initialize before use)\n",
@@ -42,7 +46,8 @@ def union_decl(i):
 	return "union good_test x"+i
 
 var_decl = {'Pass_enum_def.in':enum_decl, 'Pass_struct_def.in':struct_decl,
-			'Pass_union_def.in':union_decl, 'Pass_struct_def_decl.in':struct_decl}
+			'Pass_union_def.in':union_decl, 'Pass_enum_def_decl.in':enum_decl,
+			'Pass_struct_def_decl.in':struct_decl, 'Pass_union_def_decl.in':union_decl}
 
 def enum_def(i):
 	return 'enum good_test'+i+' { x_factor'+i+' = 1 } x_'+i
