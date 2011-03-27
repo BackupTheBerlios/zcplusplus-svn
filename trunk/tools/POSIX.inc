@@ -24,10 +24,14 @@ CXX_MACROS = -D__STDC_LIMIT_MACROS
 
 # maintainer-mode build rules for derived files
 # PYTHON variable does require configuration when moved to another machine
+# remember to use 'make all' when these rules are in effect 
 PYTHON = c:\Python26\python
+SED = sed
 SELECTIVE_CUT = tools\selective_cut.py
 SUPPRESS_CUT = tools\suppress_cut.py
 
+# source code
+# touch causes unnecessary build noise here
 CPreproc_pp.hpp: CPreproc.hpp
 	$(PYTHON) $(SELECTIVE_CUT) cpp CPreproc.hpp CPreproc_pp.hpp.alt 
 	if cmp -s CPreproc_pp.hpp CPreproc_pp.hpp.alt; then rm CPreproc_pp.hpp.alt ; else mv CPreproc_pp.hpp.alt CPreproc_pp.hpp; fi
@@ -50,7 +54,7 @@ CPreproc_autogen_pp.cpp: CPreproc_autogen.cpp
 
 CSupport_pp.hpp: CSupport.hpp
 	$(PYTHON) $(SELECTIVE_CUT) cpp CSupport.hpp CSupport_pp.hpp.alt 
-	if cmp -s CSupport_pp.hpp CSupport_pp.hpp.alt; then rm CSupport_pp.hpp.alt ; else mv CSupport_pp.hpp.alt CSupport_pp.hpp; fi
+	if cmp -s CSupport_pp.hpp CSupport_pp.hpp.alt; then rm CSupport_pp.hpp.alt; else mv CSupport_pp.hpp.alt CSupport_pp.hpp; fi
 
 CSupport_pp.cpp: CSupport.cpp.in
 	$(PYTHON) $(SELECTIVE_CUT) cpp CSupport.cpp.in CSupport_pp.cpp.alt2 
@@ -71,7 +75,7 @@ type_spec_pp.cpp: type_spec.cpp
 type_system_pp.hpp: type_system.hpp.in
 	$(PYTHON) $(SELECTIVE_CUT) cpp type_system.hpp.in type_system_pp.hpp.alt2 
 	$(PYTHON) $(SUPPRESS_CUT) nocpp type_system_pp.hpp.alt2 type_system_pp.hpp.alt 
-	if cmp -s type_system_pp.hpp type_system_pp.hpp.alt; then rm type_system_pp.hpp.alt ; else mv type_system_pp.hpp.alt type_system_pp.hpp; fi
+	if cmp -s type_system_pp.hpp type_system_pp.hpp.alt; then rm type_system_pp.hpp.alt; else mv type_system_pp.hpp.alt type_system_pp.hpp; fi
 	rm type_system_pp.hpp.alt2
 
 type_system.hpp: type_system.hpp.in
@@ -92,4 +96,15 @@ type_system.cpp: type_system.cpp.in
 	if cmp -s type_system.cpp type_system.cpp.alt; then rm type_system.cpp.alt ; else mv type_system.cpp.alt type_system.cpp; fi
 	rm type_system.cpp.alt2
 
+# test case support
+regenerate_tests: tests/zcc/decl.C99/Pass_class_def.hpp \
+	tests/zcc/decl.C99/Pass_class_def_decl.hpp
 
+tests/zcc/decl.C99/Pass_class_def.hpp: tests/zcc/decl.C99/Pass_struct_def.hpp
+	$(SED) -e s/struct/class/ tests/zcc/decl.C99/Pass_struct_def.hpp > tests/zcc/decl.C99/Pass_class_def.hpp.alt 
+	if cmp -s tests/zcc/decl.C99/Pass_class_def.hpp tests/zcc/decl.C99/Pass_class_def.hpp.alt; then rm tests/zcc/decl.C99/Pass_class_def.hpp.alt ; else mv tests/zcc/decl.C99/Pass_class_def.hpp.alt tests/zcc/decl.C99/Pass_class_def.hpp; fi
+
+tests/zcc/decl.C99/Pass_class_def_decl.hpp: tests/zcc/decl.C99/Pass_struct_def_decl.hpp
+	$(SED) -e s/struct/class/ tests/zcc/decl.C99/Pass_struct_def_decl.hpp > tests/zcc/decl.C99/Pass_class_def_decl.hpp.alt 
+	if cmp -s tests/zcc/decl.C99/Pass_class_def_decl.hpp tests/zcc/decl.C99/Pass_class_def_decl.hpp.alt; then rm tests/zcc/decl.C99/Pass_class_def_decl.hpp.alt ; else mv tests/zcc/decl.C99/Pass_class_def_decl.hpp.alt tests/zcc/decl.C99/Pass_class_def_decl.hpp; fi
+	
