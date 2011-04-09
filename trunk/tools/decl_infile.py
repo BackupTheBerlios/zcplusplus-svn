@@ -7,6 +7,7 @@
 # target files
 target_files = ['Pass_enum_def.in', 'Pass_struct_def.in', 'Pass_union_def.in']
 target_files2 = ['Pass_enum_def_decl.in', 'Pass_struct_def_decl.in', 'Pass_union_def_decl.in']
+target_files3 = ['Pass_enum_def2.hpp', 'Pass_struct_def2.hpp', 'Pass_union_def2.hpp']
 
 invariant_header_lines = [
 'SUFFIXES h hpp\n'
@@ -19,14 +20,20 @@ context = {	'Pass_enum_def.in':'// using singly defined enum\n',
 			'Pass_union_def.in':'// using singly defined union\n',
 			'Pass_enum_def_decl.in':'// using singly defined enum\n',
 			'Pass_struct_def_decl.in':'// using singly defined struct\n',
-			'Pass_union_def_decl.in':'// using singly defined union\n'}
+			'Pass_union_def_decl.in':'// using singly defined union\n',
+			'Pass_enum_def2.hpp':'// using singly defined enum\n',
+			'Pass_struct_def2.hpp':'// using singly defined struct\n',
+			'Pass_union_def2.hpp':'// using singly defined union\n'}
 
 global_define = {	'Pass_enum_def.in':'\nenum good_test {\n\tx_factor = 1\n};\n\n',
 					'Pass_struct_def.in':'\nstruct good_test {\n\tint x_factor\n};\n\n',
 					'Pass_union_def.in':'\nunion good_test {\n\tint x_factor\n};\n\n',
 					'Pass_enum_def_decl.in':'\nenum good_test {\n\tx_factor = 1\n} y;\n\n',
 					'Pass_struct_def_decl.in':'\nstruct good_test {\n\tint x_factor\n} y;\n\n',
-					'Pass_union_def_decl.in':'\nunion good_test {\n\tint x_factor\n};\n\n'}
+					'Pass_union_def_decl.in':'\nunion good_test {\n\tint x_factor\n};\n\n',
+					'Pass_enum_def2.hpp':'\nenum good_test {\n\tx_factor = 1\n};\n\n',
+					'Pass_struct_def2.hpp':'\nstruct good_test {\n\tint x_factor\n};\n\n',
+					'Pass_union_def2.hpp':'\nunion good_test {\n\tint x_factor\n};\n\n'}
 
 section_comments = ['// ringing the changes on extern\n',
 "// ringing the changes on static\n// (don't test static const -- no chance to initialize before use)\n",
@@ -45,9 +52,23 @@ def struct_decl(i):
 def union_decl(i):
 	return "union good_test x"+i
 
+def enum_decl_terse(i):
+	return "good_test x"+i
+
+def struct_decl_terse(i):
+	return "good_test x"+i
+
+def union_decl_terse(i):
+	return "good_test x"+i
+
 var_decl = {'Pass_enum_def.in':enum_decl, 'Pass_struct_def.in':struct_decl,
 			'Pass_union_def.in':union_decl, 'Pass_enum_def_decl.in':enum_decl,
-			'Pass_struct_def_decl.in':struct_decl, 'Pass_union_def_decl.in':union_decl}
+			'Pass_struct_def_decl.in':struct_decl, 'Pass_union_def_decl.in':union_decl,
+			'Pass_enum_def2.hpp':enum_decl, 'Pass_struct_def2.hpp':struct_decl,
+			'Pass_union_def2.hpp':union_decl}
+
+var_decl_terse = {	'Pass_enum_def2.hpp':enum_decl_terse, 'Pass_struct_def2.hpp':struct_decl_terse,
+					'Pass_union_def2.hpp':union_decl_terse}
 
 def enum_def(i):
 	return 'enum good_test'+i+' { x_factor'+i+' = 1 } x_'+i
@@ -59,7 +80,8 @@ def union_def(i):
 	return 'union good_test'+i+' { int x_factor'+i+'; } x_'+i
 
 var_def = {	'Pass_enum_def.in':enum_def, 'Pass_struct_def.in':struct_def,
-			'Pass_union_def.in':union_def}
+			'Pass_union_def.in':union_def, 'Pass_enum_def2.hpp':enum_def,
+			'Pass_struct_def2.hpp':struct_def, 'Pass_union_def2.hpp':union_def}
 
 test_qualifiers = [
 'extern',
@@ -293,10 +315,175 @@ def SpawnTestCase2(dest_file):
 	# no define-declares
 	TargetFile.close()
 
+def SpawnTestCase3(dest_file):
+	TargetFile = open(dest_file,'w')
+	TargetFile.write('// decl.C99/'+dest_file+'\n')
+
+	for line in invariant_header_lines[2:]:
+		TargetFile.write(line)
+	TargetFile.write(context[dest_file])
+	TargetFile.write(global_define[dest_file])
+
+	# restart
+	TargetFile.write('// this section checks that suppressing keyword works\n')
+	TargetFile.write(section_comments[0].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(5):
+		TargetFile.write(test_qualifiers[i].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+1))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[1].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(4):
+		TargetFile.write(test_qualifiers[i+5].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+6))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[2].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(11):
+		TargetFile.write(test_qualifiers[i+9].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+10))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[3].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(10):
+		TargetFile.write(test_qualifiers[i+20].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+21))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[4].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(10):
+		TargetFile.write(test_qualifiers[i+30].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+31))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[5].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(28):
+		TargetFile.write(test_qualifiers[i+40].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+41))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[6].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(28):
+		TargetFile.write(test_qualifiers[i+68].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+69))+';\n')
+	TargetFile.write('\n')
+
+	# need: normal decl, def_decl work in namespaces
+	TargetFile.write('// check that things work properly in namespaces\nnamespace test {\n')
+
+	TargetFile.write(global_define[dest_file])
+	TargetFile.write(section_comments[0].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(5):
+		TargetFile.write(test_qualifiers[i].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+1))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[1].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(4):
+		TargetFile.write(test_qualifiers[i+5].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+6))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[2].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(11):
+		TargetFile.write(test_qualifiers[i+9].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+10))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[3].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(10):
+		TargetFile.write(test_qualifiers[i+20].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+21))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[4].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(10):
+		TargetFile.write(test_qualifiers[i+30].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+31))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[5].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(28):
+		TargetFile.write(test_qualifiers[i+40].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+41))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[6].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(28):
+		TargetFile.write(test_qualifiers[i+68].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+69))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write('// define-declares\n')
+	TargetFile.write(section_comments[0].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(5):
+		TargetFile.write(test_qualifiers[i].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+1))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[1].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(4):
+		TargetFile.write(test_qualifiers[i+5].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+6))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[2].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(11):
+		TargetFile.write(test_qualifiers[i+9].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+10))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[3].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(10):
+		TargetFile.write(test_qualifiers[i+20].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+21))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[4].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(10):
+		TargetFile.write(test_qualifiers[i+30].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+31))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[5].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(28):
+		TargetFile.write(test_qualifiers[i+40].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+41))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[6].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(28):
+		TargetFile.write(test_qualifiers[i+68].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+69))+';\n')
+	TargetFile.write('\n')
+
+	# need: keyword suppression works in namespaces
+	TargetFile.write('}	// end namespace test\n\n// check that keyword suppression works in namespaces\nnamespace test2 {\n')
+	TargetFile.write(global_define[dest_file])
+
+	TargetFile.write(section_comments[0].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(5):
+		TargetFile.write(test_qualifiers[i].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+1))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[1].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(4):
+		TargetFile.write(test_qualifiers[i+5].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+6))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[2].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(11):
+		TargetFile.write(test_qualifiers[i+9].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+10))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[3].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(10):
+		TargetFile.write(test_qualifiers[i+20].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+21))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[4].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(10):
+		TargetFile.write(test_qualifiers[i+30].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+31))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[5].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(28):
+		TargetFile.write(test_qualifiers[i+40].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+41))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write(section_comments[6].replace('THREAD_LOCAL','thread_local'))
+	for i in xrange(28):
+		TargetFile.write(test_qualifiers[i+68].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+69))+';\n')
+	TargetFile.write('\n')
+
+	TargetFile.write('}	// end namespace test2\n')
+
+	TargetFile.close()
 
 if __name__ == '__main__':
 	for filename in target_files:
 		SpawnTestCase(filename)
 	for filename in target_files2:
 		SpawnTestCase2(filename)
+	for filename in target_files3:
+		SpawnTestCase3(filename)
 

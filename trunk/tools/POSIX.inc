@@ -98,7 +98,8 @@ type_system.cpp: type_system.cpp.in
 
 # test case support
 regenerate_tests: tests/zcc/decl.C99/Pass_class_def.hpp \
-	tests/zcc/decl.C99/Pass_class_def_decl.hpp
+	tests/zcc/decl.C99/Pass_class_def_decl.hpp \
+	tests/zcc/decl.C99/Pass_class_def2.hpp
 
 tests/zcc/decl.C99/Pass_class_def.hpp: tests/zcc/decl.C99/Pass_struct_def.hpp
 	$(SED) -e s/struct/class/ tests/zcc/decl.C99/Pass_struct_def.hpp > tests/zcc/decl.C99/Pass_class_def.hpp.alt 
@@ -107,4 +108,8 @@ tests/zcc/decl.C99/Pass_class_def.hpp: tests/zcc/decl.C99/Pass_struct_def.hpp
 tests/zcc/decl.C99/Pass_class_def_decl.hpp: tests/zcc/decl.C99/Pass_struct_def_decl.hpp
 	$(SED) -e s/struct/class/ tests/zcc/decl.C99/Pass_struct_def_decl.hpp > tests/zcc/decl.C99/Pass_class_def_decl.hpp.alt 
 	if cmp -s tests/zcc/decl.C99/Pass_class_def_decl.hpp tests/zcc/decl.C99/Pass_class_def_decl.hpp.alt; then rm tests/zcc/decl.C99/Pass_class_def_decl.hpp.alt ; else mv tests/zcc/decl.C99/Pass_class_def_decl.hpp.alt tests/zcc/decl.C99/Pass_class_def_decl.hpp; fi
+
+tests/zcc/decl.C99/Pass_class_def2.hpp: tests/zcc/decl.C99/Pass_struct_def2.hpp
+	$(SED) -e s/struct/class/ tests/zcc/decl.C99/Pass_struct_def2.hpp > tests/zcc/decl.C99/Pass_class_def2.hpp.alt 
+	if cmp -s tests/zcc/decl.C99/Pass_class_def2.hpp tests/zcc/decl.C99/Pass_class_def2.hpp.alt; then rm tests/zcc/decl.C99/Pass_class_def2.hpp.alt ; else mv tests/zcc/decl.C99/Pass_class_def2.hpp.alt tests/zcc/decl.C99/Pass_class_def2.hpp; fi
 	
