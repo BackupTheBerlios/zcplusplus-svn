@@ -10539,8 +10539,9 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 			//! \test decl.C99/Warn_dup_const2.h
 			//! \test decl.C99/Warn_dup_const2.hpp
 			record_qualifier_or_warn(src,type_spec::_const,i+k,i+offset,have_warned_about_const,warn_const);
-			src.DeleteIdx<0>(i-- +offset);
+			src.DeleteIdx<0>(i+offset);
 			invariant_decl_scanner.DeleteIdx(offset);
+			if (0<i) --i;
 			if (invariant_decl_scanner.size()<=k) return;
 			INVARIANT();
 			continue;
@@ -10550,8 +10551,9 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 			//! \test decl.C99/Warn_dup_volatile2.h
 			//! \test decl.C99/Warn_dup_volatile2.hpp
 			record_qualifier_or_warn(src,type_spec::_volatile,i+k,i+offset,have_warned_about_volatile,warn_volatile);
-			src.DeleteIdx<0>(i-- +offset);
+			src.DeleteIdx<0>(i+offset);
 			invariant_decl_scanner.DeleteIdx(offset);
+			if (0<i) --i;
 			if (invariant_decl_scanner.size()<=k) return;
 			INVARIANT();
 			continue;
@@ -10566,8 +10568,9 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 					zcc_errors.inc_error();
 					have_warned_too_many_types = true;
 					}
-				src.DeleteIdx<0>(i-- +offset);
+				src.DeleteIdx<0>(i+offset);
 				invariant_decl_scanner.DeleteIdx(offset);
+				if (0<i) --i;
 				if (invariant_decl_scanner.size()<=k) return;
 				INVARIANT();
 				continue;
