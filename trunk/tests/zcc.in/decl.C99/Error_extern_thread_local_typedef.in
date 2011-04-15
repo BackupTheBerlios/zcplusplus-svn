@@ -1,0 +1,6 @@
+SUFFIXES h hpp
+OBJECTLIKE_MACRO THREAD_LOCAL _Thread_Local thread_local
+// declaration with too many storage qualifiers
+// (C)2011 Kenneth Boyd, license: MIT.txt
+
+extern THREAD_LOCAL typedef int i;

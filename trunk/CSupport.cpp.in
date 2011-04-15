@@ -11804,22 +11804,25 @@ public:
 		{
 		assert(x.size<0>()>i);
 		assert(x.size<0>()-i>=decl_count);
-		if ((C99_CPP0X_DECLSPEC_TYPEDEF | C99_CPP0X_DECLSPEC_REGISTER | C99_CPP0X_DECLSPEC_STATIC | C99_CPP0X_DECLSPEC_EXTERN | C99_DECLSPEC_AUTO) & flags)
+		if ((C99_CPP0X_DECLSPEC_TYPEDEF | C99_CPP0X_DECLSPEC_REGISTER | C99_CPP0X_DECLSPEC_STATIC | C99_CPP0X_DECLSPEC_EXTERN | C99_CPP0X_DECLSPEC_THREAD_LOCAL | C99_DECLSPEC_AUTO) & flags)
 			{	// storage class specifiers
 			const char* specs[5];
 			unsigned int storage_count = 0;
-			unsigned int erased_count = 0;
+			bool thread_local_compat = false;
 			if (C99_CPP0X_DECLSPEC_TYPEDEF & flags)
 				specs[storage_count++] = "typedef";
 			if (C99_CPP0X_DECLSPEC_STATIC & flags)
 				specs[storage_count++] = "static";
 			if (C99_CPP0X_DECLSPEC_EXTERN & flags)
 				specs[storage_count++] = "extern";
+			if (C99_CPP0X_DECLSPEC_THREAD_LOCAL & flags)
+				{
+				specs[storage_count++] = "_Thread_Local";
+				thread_local_compat = ((C99_CPP0X_DECLSPEC_STATIC | C99_CPP0X_DECLSPEC_EXTERN) & flags);
+				}
 			if (C99_CPP0X_DECLSPEC_REGISTER & flags)
 				{	//! \test zcc/decl.C99/Error_register_global.h
 				//! \todo should be warning for --do-what-i-mean
-				specs[storage_count++] = "register";
-				++erased_count;
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("storage-class specifier register disallowed at translation-unit level (C99 6.9p2)");
@@ -11830,8 +11833,6 @@ public:
 			if (C99_DECLSPEC_AUTO & flags)
 				{	//! \test zcc/decl.C99/Error_auto_global.h
 				//! \todo should be warning for --do-what-i-mean
-				specs[storage_count++] = "auto";
-				++erased_count;
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("storage-class specifier auto disallowed at translation-unit level (C99 6.9p2)");
@@ -11839,7 +11840,7 @@ public:
 				decl_count -= flush_token(x,i,decl_count,"auto");
 				flags &= ~C99_DECLSPEC_AUTO;
 				};
-			if (1<storage_count)
+			if (1<storage_count-thread_local_compat)
 				{	//! \test zcc/decl.C99/Error_extern_static.h
 					//! \test zcc/decl.C99/Error_extern_typedef.h
 					//! \test zcc/decl.C99/Error_static_typedef.h
@@ -11851,7 +11852,6 @@ public:
 				INFORM(" (C99 6.7.1p2)");
 				zcc_errors.inc_error();
 				};
-			storage_count -= erased_count;
 			// inline requires a function type
 			// typedef must have a function type to tolerate anything (but kills inline)
 			return 1>=storage_count;
@@ -11914,22 +11914,25 @@ public:
 		{
 		assert(x.size<0>()>i);
 		assert(x.size<0>()-i>=decl_count);
-		if ((C99_CPP0X_DECLSPEC_TYPEDEF | C99_CPP0X_DECLSPEC_REGISTER | C99_CPP0X_DECLSPEC_STATIC | C99_CPP0X_DECLSPEC_EXTERN | CPP_DECLSPEC_MUTABLE | CPP_DECLSPEC_VIRTUAL | CPP_DECLSPEC_EXPLICIT | CPP_DECLSPEC_FRIEND) & flags)
+		if ((C99_CPP0X_DECLSPEC_TYPEDEF | C99_CPP0X_DECLSPEC_REGISTER | C99_CPP0X_DECLSPEC_STATIC | C99_CPP0X_DECLSPEC_EXTERN | C99_CPP0X_DECLSPEC_THREAD_LOCAL | CPP_DECLSPEC_MUTABLE | CPP_DECLSPEC_VIRTUAL | CPP_DECLSPEC_EXPLICIT | CPP_DECLSPEC_FRIEND) & flags)
 			{	// storage class specifiers
 			const char* specs[5];
 			unsigned int storage_count = 0;
-			unsigned int erased_count = 0;
+			bool thread_local_compat = false;
 			if (C99_CPP0X_DECLSPEC_TYPEDEF & flags)
 				specs[storage_count++] = "typedef";
 			if (C99_CPP0X_DECLSPEC_STATIC & flags)
 				specs[storage_count++] = "static";
 			if (C99_CPP0X_DECLSPEC_EXTERN & flags)
 				specs[storage_count++] = "extern";
+			if (C99_CPP0X_DECLSPEC_THREAD_LOCAL & flags)
+				{
+				specs[storage_count++] = "thread_local";
+				thread_local_compat = ((C99_CPP0X_DECLSPEC_STATIC | C99_CPP0X_DECLSPEC_EXTERN) & flags);
+				}
 			if (C99_CPP0X_DECLSPEC_REGISTER & flags)
 				{	//! \test zcc/default/decl.C99/Error_register_global.hpp
 				//! \todo should be warning for --do-what-i-mean
-				specs[storage_count++] = "register";
-				++erased_count;
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("storage-class specifier register allowed only to objects named in a block, or function parameters (C++98 7.1.1p2)");
@@ -11940,8 +11943,6 @@ public:
 			if (CPP_DECLSPEC_MUTABLE & flags)
 				{	//! \test zcc/default/decl.C99/Error_mutable_global.hpp
 				//! \todo should be warning for --do-what-i-mean
-				specs[storage_count++] = "mutable";
-				++erased_count;
 				message_header(x.data<0>()[i].index_tokens[0]);
 				INC_INFORM(ERR_STR);
 				INFORM("storage-class specifier mutable only allowed for non-static non-const non-reference class data members (C++0X 7.1.1p10)");
@@ -11949,7 +11950,7 @@ public:
 				decl_count -= flush_token(x,i,decl_count,"mutable");
 				flags &= ~CPP_DECLSPEC_MUTABLE;
 				};
-			if (1<storage_count)
+			if (1<storage_count-thread_local_compat)
 				{	//! \test zcc/decl.C99/Error_extern_static.hpp
 					//! \test zcc/decl.C99/Error_extern_typedef.hpp
 					//! \test zcc/decl.C99/Error_static_typedef.hpp
@@ -11962,7 +11963,6 @@ public:
 				INFORM(" (C++0X 7.1.1p1)");
 				zcc_errors.inc_error();
 				}
-			storage_count -= erased_count;
 			// thread_local ok at namespace scope for objects/references
 			// inline dies if not a function type
 			// typedef must have a function type to tolerate anything (but kills inline)
