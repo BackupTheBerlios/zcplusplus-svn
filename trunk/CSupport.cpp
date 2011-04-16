@@ -4453,13 +4453,6 @@ static void C99_notice_struct_union_enum(parse_tree& src)
 				src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
 				offset += 1;
 				assert(is_C99_anonymous_specifier(src.data<0>()[i],tmp2));
-				// parser is having normal-form issues.  Shove named specifier definitions ahead of any const/volatile type qualifiers
-				size_t j = i;
-				while(0<j && (robust_token_is_string<5>(src.data<0>()[j-1],"const") || robust_token_is_string<8>(src.data<0>()[j-1],"volatile")))
-					{
-					std::swap(src.c_array<0>()[j],src.c_array<0>()[j-1]);
-					--j;
-					};
 				continue;
 				};
 			if (!C99_looks_like_identifier(src.data<0>()[i+1]))
@@ -4484,13 +4477,6 @@ static void C99_notice_struct_union_enum(parse_tree& src)
 				src.DestroyNAtAndRotateTo<0>(2,i+1,src.size<0>()-offset);
 				offset += 2;
 				assert(is_C99_named_specifier_definition(src.data<0>()[i],tmp2));
-				// parser is having normal-form issues.  Shove named specifier definitions ahead of any const/volatile type qualifiers
-				size_t j = i;
-				while(0<j && (robust_token_is_string<5>(src.data<0>()[j-1],"const") || robust_token_is_string<8>(src.data<0>()[j-1],"volatile")))
-					{
-					std::swap(src.c_array<0>()[j],src.c_array<0>()[j-1]);
-					--j;
-					};
 				continue;
 				};
 			src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+1]);
@@ -4499,13 +4485,6 @@ static void C99_notice_struct_union_enum(parse_tree& src)
 			src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
 			offset += 1;
 			assert(is_C99_named_specifier(src.data<0>()[i],tmp2));
-			// parser is having normal-form issues.  Shove named specifiers ahead of any const/volatile type qualifiers
-			size_t j = i;
-			while(0<j && (robust_token_is_string<5>(src.data<0>()[j-1],"const") || robust_token_is_string<8>(src.data<0>()[j-1],"volatile")))
-				{
-				std::swap(src.c_array<0>()[j],src.c_array<0>()[j-1]);
-				--j;
-				};
 			continue;
 			}
 		++i;
@@ -4548,13 +4527,6 @@ static void CPP_notice_class_struct_union_enum(parse_tree& src)
 				src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
 				offset += 1;
 				assert(is_C99_anonymous_specifier(src.data<0>()[i],tmp2));
-				// parser is having normal-form issues.  Shove named specifiers ahead of any const/volatile type qualifiers
-				size_t j = i;
-				while(0<j && (robust_token_is_string<5>(src.data<0>()[j-1],"const") || robust_token_is_string<8>(src.data<0>()[j-1],"volatile")))
-					{
-					std::swap(src.c_array<0>()[j],src.c_array<0>()[j-1]);
-					--j;
-					};
 				continue;
 				};
 			if (!CPP_looks_like_identifier(src.data<0>()[i+1]))
@@ -4579,13 +4551,6 @@ static void CPP_notice_class_struct_union_enum(parse_tree& src)
 				src.DestroyNAtAndRotateTo<0>(2,i+1,src.size<0>()-offset);
 				offset += 2;
 				assert(is_C99_named_specifier_definition(src.data<0>()[i],tmp2));
-				// parser is having normal-form issues.  Shove named specifier definitions ahead of any const/volatile type qualifiers
-				size_t j = i;
-				while(0<j && (robust_token_is_string<5>(src.data<0>()[j-1],"const") || robust_token_is_string<8>(src.data<0>()[j-1],"volatile")))
-					{
-					std::swap(src.c_array<0>()[j],src.c_array<0>()[j-1]);
-					--j;
-					};
 				continue;
 				};
 			src.c_array<0>()[i].grab_index_token_from<1,0>(src.c_array<0>()[i+1]);
@@ -4594,13 +4559,6 @@ static void CPP_notice_class_struct_union_enum(parse_tree& src)
 			src.DestroyNAtAndRotateTo<0>(1,i+1,src.size<0>()-offset);
 			offset += 1;
 			assert(is_C99_named_specifier(src.data<0>()[i],tmp2));
-			// parser is having normal-form issues.  Shove named specifiers ahead of any const/volatile type qualifiers
-			size_t j = i;
-			while(0<j && (robust_token_is_string<5>(src.data<0>()[j-1],"const") || robust_token_is_string<8>(src.data<0>()[j-1],"volatile")))
-				{
-				std::swap(src.c_array<0>()[j],src.c_array<0>()[j-1]);
-				--j;
-				};
 			continue;
 			}
 		++i;
@@ -10541,7 +10499,7 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 			record_qualifier_or_warn(src,type_spec::_const,i+k,i+offset,have_warned_about_const,warn_const);
 			src.DeleteIdx<0>(i+offset);
 			invariant_decl_scanner.DeleteIdx(offset);
-			if (0<i) --i;
+			if (0<i) --i; else --k;
 			if (invariant_decl_scanner.size()<=k) return;
 			INVARIANT();
 			continue;
@@ -10553,7 +10511,7 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 			record_qualifier_or_warn(src,type_spec::_volatile,i+k,i+offset,have_warned_about_volatile,warn_volatile);
 			src.DeleteIdx<0>(i+offset);
 			invariant_decl_scanner.DeleteIdx(offset);
-			if (0<i) --i;
+			if (0<i) --i; else --k;
 			if (invariant_decl_scanner.size()<=k) return;
 			INVARIANT();
 			continue;
@@ -10570,7 +10528,7 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 					}
 				src.DeleteIdx<0>(i+offset);
 				invariant_decl_scanner.DeleteIdx(offset);
-				if (0<i) --i;
+				if (0<i) --i; else --k;
 				if (invariant_decl_scanner.size()<=k) return;
 				INVARIANT();
 				continue;
@@ -10613,7 +10571,7 @@ static void _condense_const_volatile_onto_type_preparsed(parse_tree& src,size_t&
 					zcc_errors.inc_error();
 					have_warned_too_many_types = true;
 					}
-				src.DeleteIdx<0>(i-- +offset);
+				src.DeleteIdx<0>(i+offset);
 				invariant_decl_scanner.DeleteIdx(offset);
 				INVARIANT();
 				continue;
