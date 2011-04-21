@@ -37,7 +37,9 @@ static const POD_triple<const char*, size_t, const char*> option_map_bool[]
 		{ "-funsigned-char",	boolopt::char_is_unsigned, 	"char acts like unsigned char (default)\n"},	// GCC compatibility
 		{ "--int-neg-div-rounds-away-from-zero",	boolopt::int_neg_div_rounds_away_from_zero, 	"make -3/-2==-2 contrary to C99 recommendation\n"},
 		{ "-Wc-c++-compat",	boolopt::warn_crosslang_compatibility,	"Warn when something legal in C/C++ would be an error in C++/C for C/C++\n"},
-		{ "-Wbackport",	boolopt::warn_backport,	"Warn when something legal would be an error under an older standard\n"}
+		{ "-Wbackport",	boolopt::warn_backport,	"Warn when something legal would be an error under an older standard\n"},
+		{ "--src-stdout",	boolopt::source_to_stdout,	"Modified source to stdout\n"},
+		{ "-E",	boolopt::preprocess_only,	"Only preprocess (should be equivalent to calling z_cpp).  Implies --src-stdout\n"}	// POSIX compatibility
 	};
 
 static const POD_triple<const char*, size_t, const char*> option_map_string[]
@@ -263,15 +265,30 @@ int main(int argc, char* argv[])
 		if (last_arg_used_in_option) FATAL("file not last argument provided");
 		if (!load_sourcefile(TokenList,register_string(argv[argc-1]),lexer_from_string(string_options[stringopt::lang]))) FATAL("target file not loaded");
 		cpp.preprocess(TokenList);
+		if (bool_options[boolopt::preprocess_only])
+			{
+			const size_t list_size = TokenList.size();
+			size_t i = 0;
+			while(list_size>i)
+				{
+				assert(NULL!=TokenList[i]);
+				STL_PTR_STRING_TO_STDOUT(TokenList[i]);
+				if (list_size<=i+1 || TokenList[i]->logical_line.first!=TokenList[i+1]->logical_line.first || strcmp(TokenList[i]->src_filename,TokenList[i+1]->src_filename))
+					STRING_LITERAL_TO_STDOUT("\n");
+				else if (cpp.require_padding(TokenList[i]->back(),TokenList[i+1]->front()))
+					STRING_LITERAL_TO_STDOUT(" ");
+				++i;
+				};
+			return EXIT_SUCCESS;
+			}
 		}
 
 		//! \todo parse the resulting TokenList...
 		ZParser parser(target_machine,string_options[stringopt::lang]);
 		if (bool_options[boolopt::test]) parser.set_debug(true);
 		const bool export_to_object_ok = parser.parse(TokenList,ParsedList);
-		if (export_to_object_ok)
-			{
-			// export to source code
+		if (export_to_object_ok && bool_options[boolopt::source_to_stdout])
+			{	// export to source code
 			const size_t ParsedList_size = ParsedList.size();
 			size_t i = 0;
 			while(i<ParsedList_size) INFORM(*ParsedList[i++]);

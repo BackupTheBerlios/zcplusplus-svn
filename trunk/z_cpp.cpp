@@ -192,6 +192,10 @@ int main(int argc, char* argv[])
 	if (!last_arg_used_in_option) guess_lang_from_filename(argv[argc-1]);
 	enforce_mutually_exclusive_exhaustive_options();
 
+	// preprocess-only is superfluous for a standalone preprocessor
+	// standalone preprocessor is useless if it doesn't send the result to stdout
+	bool_options[boolopt::source_to_stdout] = true;
+	
 	// error count enforcement
 	zcc_errors.set_error_ub(int_options[intopt::error_ub]);
 

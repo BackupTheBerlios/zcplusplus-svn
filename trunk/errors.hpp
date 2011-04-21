@@ -68,14 +68,22 @@ enum boolean_options {
 #define boolean_option_10 warn_crosslang_compatibility
 #define boolean_option_warn_crosslang_compatibility 10
 #define DEFAULT_warn_crosslang_compatibility false
-	warn_backport
+	warn_backport,
 #define boolean_option_11 warn_backport
 #define boolean_option_warn_backport 11
 #define DEFAULT_warn_backport false
+	source_to_stdout,
+#define boolean_option_12 source_to_stdout
+#define boolean_option_source_to_stdout 12
+#define DEFAULT_source_to_stdout false
+	preprocess_only
+#define boolean_option_13 preprocess_only
+#define boolean_option_preprocess_only 13
+#define DEFAULT_preprocess_only false
 };
 
 #define boolean_option(A) boolean_option_##A
-#define MAX_OPT_BOOL (boolopt::warn_backport+1)
+#define MAX_OPT_BOOL (boolopt::preprocess_only+1)
 
 }
 

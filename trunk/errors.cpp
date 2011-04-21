@@ -20,7 +20,8 @@ const bool bool_options_default[MAX_OPT_BOOL]
 			default_option(boolean_option(8)),
 			default_option(boolean_option(9)),
 			default_option(boolean_option(10)),
-			default_option(boolean_option(11))
+			default_option(boolean_option(11)),
+			default_option(boolean_option(12))
 		};
 
 bool bool_options[MAX_OPT_BOOL]
@@ -35,6 +36,7 @@ bool bool_options[MAX_OPT_BOOL]
 			default_option(boolean_option(8)),
 			default_option(boolean_option(9)),
 			default_option(boolean_option(10)),
+			default_option(boolean_option(12)),
 			default_option(boolean_option(11))
 		};
 
@@ -238,5 +240,8 @@ void enforce_mutually_exclusive_exhaustive_options(void)
 		unreal_config = true;
 		}
 	if (unreal_config) _fatal("Cannot target an unreal machine.");
+	// (silent) internal consistency fixups
+	// preprocess-only implies source-to-stdout
+	if (bool_options[boolopt::preprocess_only]) bool_options[boolopt::source_to_stdout] = true;
 }
 
