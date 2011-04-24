@@ -101,8 +101,6 @@ operator==(const c_var_array_CRTP<Derived,T>& lhs, const c_var_array_CRTP<Derive
 template<class Derived,class T>
 struct c_var_array_CRTP : public c_array_CRTP<c_var_array_CRTP<Derived,T>, T>
 {
-	friend bool operator==<>(const c_var_array_CRTP& lhs, const c_var_array_CRTP& rhs);
-
 	// other support
 #ifndef ZAIMONI_FORCE_ISO
 	void NULLPtr() {static_cast<Derived*>(this)->_ptr = NULL;};
@@ -160,6 +158,7 @@ class _meta_weakautoarray_ptr : public c_var_array_CRTP<_meta_weakautoarray_ptr<
 {
 private:
 	friend class c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>;
+	friend bool operator==<>(const c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>& lhs, const c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>& rhs);
 	T* _ptr;
 #ifdef ZAIMONI_FORCE_ISO
 	size_t _size;
@@ -298,6 +297,7 @@ class _meta_autoarray_ptr : public c_var_array_CRTP<_meta_autoarray_ptr<T>, T>
 {
 protected:
 	friend class c_var_array_CRTP<_meta_autoarray_ptr<T>, T>;
+	friend bool operator==<>(const c_var_array_CRTP<_meta_autoarray_ptr<T>, T>& lhs, const c_var_array_CRTP<_meta_autoarray_ptr<T>, T>& rhs);
 	T* _ptr;
 #ifdef ZAIMONI_FORCE_ISO
 	size_t _size;
@@ -569,7 +569,7 @@ operator==(const c_var_array_CRTP<Derived,T>& lhs, const c_var_array_CRTP<Derive
 	const size_t ub = rhs.size();
 	if (ub!=lhs.size()) return false;
 	if (0==ub) return true;
-	return _value_vector_equal(lhs._ptr,rhs._ptr,ub);
+	return _value_vector_equal(static_cast<const Derived&>(lhs)._ptr,static_cast<const Derived&>(rhs)._ptr,ub);
 }
 
 template<class Derived,class T>
