@@ -1,16 +1,11 @@
 // operator.hpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2011 Kenneth Boyd, license: MIT.txt
 
 // some macros to assist in extension of operators
 // modeled on <boost/operator.hpp>, this is a backup header
 
 #ifndef ZAIMONI_STL_METATYPE_OPERATOR_HPP
 #define ZAIMONI_STL_METATYPE_OPERATOR_HPP 1
-
-// this is a member function for operator!=
-// use Boost when cross-subtype not needed
-#define ZAIMONI_CROSSSUBTYPE_NOT_EQUAL(TEMPLATE_SPEC,CLASS_SPEC)	\
-	TEMPLATE_SPEC bool operator!=(const CLASS_SPEC& RHS) const {return !(*this==RHS);}
 
 // this defines non-member operators >, <=, >=
 // use Boost when cross-subtype not needed

@@ -1,5 +1,5 @@
 // c_array.hpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2011 Kenneth Boyd, license: MIT.txt
 
 // base types to signal that a class type is meant to be used like a C array.
 
@@ -133,14 +133,6 @@ struct static_c_array : public c_array_CRTP<static_c_array<T,N>, T>
 			return *this;
 		}
 
-	template<class T2>
-	bool operator==(const static_c_array<T2,N>& rhs) const
-		{	return _vector_equal(this->begin(),rhs.begin(),N);	}
-
-#define ZAIMONI_CROSS_STATIC_C_ARRAY static_c_array<T2,N>
-	ZAIMONI_CROSSSUBTYPE_NOT_EQUAL(template<class T2>,ZAIMONI_CROSS_STATIC_C_ARRAY)
-#undef ZAIMONI_CROSS_STATIC_C_ARRAY
-
 	void swap(static_c_array& y)
 	{	std::swap_ranges(this->begin(),this->end(),y.begin());	};
 
@@ -159,6 +151,14 @@ struct static_c_array : public c_array_CRTP<static_c_array<T,N>, T>
 	void resize(size_t Idx) const {if (N!=Idx) FATAL("can't resize static_c_array");};
 	template<size_t Idx> void resize() const {BOOST_STATIC_ASSERT(N==Idx);}
 };
+
+template<class T,size_t N,class U>
+bool operator==(const static_c_array<T,N>& lhs,const static_c_array<U,N>& rhs)
+{return _vector_equal(lhs.begin(),rhs.begin(),N);}
+
+template<class T,size_t N,class U>
+bool operator!=(const static_c_array<T,N>& lhs,const static_c_array<U,N>& rhs)
+{return !(lhs==rhs);}
 
 // optional comparisons
 template<class T, class U, size_t N>
