@@ -60,5 +60,6 @@ EXTERN_C char* C_make_string(const char* src,size_t src_len)
 	if (!tmp) _fatal("FATAL: RAM exhaustion");
 #endif
 	memmove(tmp,src,src_len);
+	return tmp;
 }
 
