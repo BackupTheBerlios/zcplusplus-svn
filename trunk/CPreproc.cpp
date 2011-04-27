@@ -4239,8 +4239,7 @@ CPreprocessor::hard_locked_macro(const char* const x,const size_t x_len) const
 	return 0<=linear_find_lencached(x,x_len,macro_locked_default,macro_locked_default_count);
 }
 
-size_t
-CPreprocessor::function_macro_argument_span(const char* const x) const
+size_t CPreprocessor::function_macro_argument_span(const char* const x) const
 {
 	assert(!is_empty_string(x));
 	if ('('!=x[0]) return 0;
@@ -4533,23 +4532,23 @@ CPreprocessor::flush_bad_stringize(Token<char>& x, const Token<char>& arglist)
 	return false;
 }
 
-void
-CPreprocessor::object_macro_concatenate(Token<char>& x)
+void CPreprocessor::object_macro_concatenate(Token<char>& x)
 {	//! \pre: x is normalized
 	//! \test cpp/default/Preprocess_macro_novar_concatenate.hpp, cpp/default/Preprocess_macro_novar_concatenate.h
 	if (4>x.size()) return;
 	assert(!strpbrk(x.data(),lang.WhiteSpace+2));	// check for normalization
 	assert(!strchr(x.data(),'\n'));					// check for normalization
 	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
-	if (lang.line_lex_find(x.data(),x.size(),"##",sizeof("##")-1,pretokenized) || lang.line_lex_find(x.data(),x.size(),"%:%:",sizeof("%:%:")-1,pretokenized))
+	const char* const x_data = x.data();
+	if (lang.line_lex_find(x_data,x.size(),"##",sizeof("##")-1,pretokenized) || lang.line_lex_find(x_data,x.size(),"%:%:",sizeof("%:%:")-1,pretokenized))
 		{
 		assert(!pretokenized.empty());
-		assert(!detect_C_concatenation_op(x.data()+pretokenized.front().first,pretokenized.front().second));
-		assert(!detect_C_concatenation_op(x.data()+pretokenized.back().first, pretokenized.back().second));
+		assert(!detect_C_concatenation_op(x_data+pretokenized.front().first,pretokenized.front().second));
+		assert(!detect_C_concatenation_op(x_data+pretokenized.back().first, pretokenized.back().second));
 		size_t i = pretokenized.size();
 		do	{
 			--i;
-			if (detect_C_concatenation_op(x.data()+pretokenized[i].first,pretokenized[i].second))
+			if (detect_C_concatenation_op(x_data+pretokenized[i].first,pretokenized[i].second))
 				{
 				assert(0<i && pretokenized.size()-1>i);
 				if (_concatenate_single(x,pretokenized.data()+(i-1),lang)) --i;
@@ -4566,29 +4565,31 @@ CPreprocessor::function_macro_concatenate_novars(Token<char>& x, const Token<cha
 	if (4>x.size()) return;
 	assert(!strpbrk(x.data(),lang.WhiteSpace+2));	// check for normalization
 	assert(!strchr(x.data(),'\n'));	// check for normalization
+	const char* const x_data = x.data();
 	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
-	if (lang.line_lex_find(x.data(),x.size(),"##",sizeof("##")-1,pretokenized) || lang.line_lex_find(x.data(),x.size(),"%:%:",sizeof("%:%:")-1,pretokenized))
+	if (lang.line_lex_find(x_data,x.size(),"##",sizeof("##")-1,pretokenized) || lang.line_lex_find(x_data,x.size(),"%:%:",sizeof("%:%:")-1,pretokenized))
 		{
 		assert(!pretokenized.empty());
-		assert(!detect_C_concatenation_op(x.data()+pretokenized.front().first,pretokenized.front().second));
-		assert(!detect_C_concatenation_op(x.data()+pretokenized.back().first, pretokenized.back().second));
+		assert(!detect_C_concatenation_op(x_data+pretokenized.front().first,pretokenized.front().second));
+		assert(!detect_C_concatenation_op(x_data+pretokenized.back().first, pretokenized.back().second));
 		size_t i = pretokenized.size();
 		do	{
 			--i;
-			if (detect_C_concatenation_op(x.data()+pretokenized[i].first,pretokenized[i].second))
+			if (detect_C_concatenation_op(x_data+pretokenized[i].first,pretokenized[i].second))
 				{
 				assert(0<i && pretokenized.size()-1>i);
-				const bool before_token_is_parameter = (C_TESTFLAG_IDENTIFIER==pretokenized[i-1].third) ? SIZE_MAX!=lang.lex_find(arglist.data(),arglist.size(),x.data()+pretokenized[i-1].first,pretokenized[i-1].second) : false;
+				const POD_triple<size_t,size_t,lex_flags>& tmp = pretokenized[i-1];
+				const bool before_token_is_parameter = (C_TESTFLAG_IDENTIFIER==tmp.third) ? SIZE_MAX!=lang.lex_find(arglist.data(),arglist.size(),x_data+tmp.first,tmp.second) : false;
 
-				if (detect_C_stringize_op(x.data()+pretokenized[i+1].first,pretokenized[i+1].second))
+				if (detect_C_stringize_op(x_data+pretokenized[i+1].first,pretokenized[i+1].second))
 					{
 					message_header(x);
 					INFORM("warning: order of evaluation of # and ## operators is undefined; evaluating # first (C99 6.10.3.2p2/C++98 16.3.2p2)");
 					message_header(x);
 					// would like these to be errors, but C99 requires accepting
 					if (   !before_token_is_parameter						// not a parameter at all
-						|| (1U<=pretokenized[i-1].first && '#'==x.data()[pretokenized[i-1].first-1])
-						|| (2U<=pretokenized[i-1].first && '%'==x.data()[pretokenized[i-1].first-2] && ':'==x.data()[pretokenized[i-1].first-1]))	// stringized parameter
+						|| (1U<=tmp.first && '#'==x_data[tmp.first-1])
+						|| (2U<=tmp.first && '%'==x_data[tmp.first-2] && ':'==x_data[tmp.first-1]))	// stringized parameter
 						{	//! \test Warn_autofail_concatenation1.hpp
 							//! \test default.nonconforming/Error_autofail_concatenation1.hpp
 							//! \test Warn_autofail_concatenation2.hpp
@@ -4600,7 +4601,7 @@ CPreprocessor::function_macro_concatenate_novars(Token<char>& x, const Token<cha
 							//! \test default.nonconforming/Error_empty_parameter_concatenation1.hpp
 						INC_INFORM((bool_options[boolopt::pedantic]) ? WARN_STR : ERR_STR);
 						INC_INFORM("concatenation fails at macro invocation if parameter ");
-						INC_INFORM(x.data()+pretokenized[i-1].first,pretokenized[i-1].second);
+						INC_INFORM(x_data+tmp.first,tmp.second);
 						INC_INFORM(" is not empty.");
 						}
 					INFORM((bool_options[boolopt::pedantic]) ? "" : " (ZCPP nonconforming pragmatism)");
@@ -4612,13 +4613,13 @@ CPreprocessor::function_macro_concatenate_novars(Token<char>& x, const Token<cha
 
 				// will not be be able to complete concatenation against a parameter, bail
 				// accept some inefficiency in a weird case to avoid code duplication
-				const bool after_token_is_parameter = (C_TESTFLAG_IDENTIFIER==pretokenized[i+1].third) ? SIZE_MAX!=lang.lex_find(arglist.data(),arglist.size(),x.data()+pretokenized[i+1].first,pretokenized[i+1].second) : false;
+				const bool after_token_is_parameter = (C_TESTFLAG_IDENTIFIER==pretokenized[i+1].third) ? SIZE_MAX!=lang.lex_find(arglist.data(),arglist.size(),x_data+pretokenized[i+1].first,pretokenized[i+1].second) : false;
 
 				// Of course, C/C++ can't concatenate a string with anything except an empty parameter.
 				if (before_token_is_parameter)
 					{
-					if (	(1U<=pretokenized[i-1].first && '#'==x.data()[pretokenized[i-1].first-1])
-						|| 	(2U<=pretokenized[i-1].first && '%'==x.data()[pretokenized[i-1].first-2] && ':'==x.data()[pretokenized[i-1].first-1]))
+					if (	(1U<=tmp.first && '#'==x_data[tmp.first-1])
+						|| 	(2U<=tmp.first && '%'==x_data[tmp.first-2] && ':'==x_data[tmp.first-1]))
 						{	// stringized parameter
 						message_header(x);
 						INFORM("warning: order of evaluation of # and ## operators is undefined; evaluating # first (C99 6.10.3.2p2/C++98 16.3.2p2)");
@@ -4628,7 +4629,7 @@ CPreprocessor::function_macro_concatenate_novars(Token<char>& x, const Token<cha
 							{	//! \test Warn_autofail_concatenation3.hpp
 								//! \test default.nonconforming/Error_autofail_concatenation3.hpp
 							INC_INFORM("concatenation fails at macro invocation if parameter ");
-							INC_INFORM(x.data()+pretokenized[i+1].first,pretokenized[i+1].second);
+							INC_INFORM(x_data+pretokenized[i+1].first,pretokenized[i+1].second);
 							INC_INFORM(" is not empty.");
 							}
 						else	//! \test Warn_empty_parameter_concatenation2.hpp
