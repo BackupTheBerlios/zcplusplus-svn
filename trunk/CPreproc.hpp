@@ -37,12 +37,12 @@ public:
 	bool raw_system_include(const char* const look_for, zaimoni::autovalarray_ptr<zaimoni::Token<char>* >& IncludeTokenList) const;
 
 	void set_debug(bool _debug_mode) {debug_mode = _debug_mode;};
-	bool require_padding(char lhs, char rhs) const;
+	const zaimoni::LangConf& lexer() {return lang;};
 private:
 	uintmax_t counter_macro;
 	uintmax_t include_level;
 	size_t lang_code;
-	zaimoni::LangConf& lang;					//!< lexer corresponding to the language being preprocessed
+	zaimoni::LangConf& lang;	//!< lexer corresponding to the language being preprocessed
 	const virtual_machine::CPUInfo& target_machine;	//!< target machine information
 	const zaimoni::POD_pair<const char*,const char*>* macro_identifier_default;
 	const zaimoni::POD_pair<const char*,size_t>* macro_locked_default; 

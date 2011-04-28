@@ -505,3 +505,28 @@ LangConf::_line_lex_find(const char* const x, const size_t x_len, const char* co
 	return true;
 }
 
+/*! 
+ * test whether two characters will glue two non-whitespace preprocessing tokens into one.
+ * This can tolerate false positives, but not false negatives.
+ * 
+ * \param lhs: left-hand character
+ * \param rhs: right-hand character
+ * 
+ * \return bool true iff they will glue tokens
+ */
+bool LangConf::_require_padding(char lhs, char rhs) const
+{
+	if (strchr(WhiteSpace+1,lhs)) return false;	// whitespace is fine
+	if (strchr(WhiteSpace+1,rhs)) return false;
+	if (strchr(AtomicSymbols,lhs)) return false;	// atomic characters are fine
+	if (strchr(AtomicSymbols,rhs)) return false;
+	if ('\''==lhs || '"'==lhs) return false;	// string/character literals are fine
+	if ('\''==rhs || '"'==rhs) return false;
+	// word-chars glue to word-chars
+	// symbol-chars glue to symbol-chars
+	// universal-char-names will glue as well as normal word-chars
+	const bool rhs_word_char = IsWordChar(rhs);
+	if (IsWordChar(lhs)) return '\\'==rhs || rhs_word_char;
+	return !rhs_word_char;
+}
+

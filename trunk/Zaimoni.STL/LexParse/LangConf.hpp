@@ -311,7 +311,14 @@ public:
 		assert(target_len<=strlen(target));
 		return _line_lex_find(x,x_len,target,target_len,pretokenized);
 		};
-
+	bool require_padding(char lhs, char rhs) const
+		{
+		assert(WhiteSpace);
+		assert(AtomicSymbols);
+		assert(IsWordChar);
+		return _require_padding(lhs,rhs);
+		};
+		
 	void NewContext(const char* _filename)	// no clients
 		{
 		error_count = 0;
@@ -350,6 +357,7 @@ private:
 #endif
 	void _line_lex(const char* const x, const size_t x_len, autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized) const;
 	bool _line_lex_find(const char* const x, const size_t x_len, const char* const target, size_t target_len, autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >& pretokenized) const;
+	bool _require_padding(char lhs, char rhs) const;
 };
 
 }	// namespace zaimoni

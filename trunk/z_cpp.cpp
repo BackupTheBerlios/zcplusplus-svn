@@ -16,6 +16,7 @@
 #include "_version.h"
 
 #include "Zaimoni.STL/POD.hpp"
+#include "Zaimoni.STL/LexParse/LangConf.hpp"
 #include <stdio.h>
 
 error_counter<size_t> zcc_errors(100,"FATAL: too many preprocessing errors");
@@ -258,7 +259,7 @@ int main(int argc, char* argv[])
 			STL_PTR_STRING_TO_STDOUT(TokenList[i]);
 			if (list_size<=i+1 || TokenList[i]->logical_line.first!=TokenList[i+1]->logical_line.first || strcmp(TokenList[i]->src_filename,TokenList[i+1]->src_filename))
 				STRING_LITERAL_TO_STDOUT("\n");
-			else if (cpp.require_padding(TokenList[i]->back(),TokenList[i+1]->front()))
+			else if (cpp.lexer().require_padding(TokenList[i]->back(),TokenList[i+1]->front()))
 				STRING_LITERAL_TO_STDOUT(" ");
 			++i;
 			};

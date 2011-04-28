@@ -2909,10 +2909,10 @@ CPreprocessor::replace_char_into_directive(Token<char>& x,const autovalarray_ptr
 
 	size_t buffer_used = 0;
 	char Buffer[4] = "";
-	if (0<pretokenized[i].first && require_padding(x.data()[pretokenized[i].first-1],src))
+	if (0<pretokenized[i].first && lang.require_padding(x.data()[pretokenized[i].first-1],src))
 		Buffer[buffer_used++] = ' ';
 	Buffer[buffer_used++] = src;
-	if (x.size()>pretokenized[i+delta].first+pretokenized[i+delta].second && require_padding(src,x.data()[pretokenized[i+delta].first+pretokenized[i+delta].second]))
+	if (x.size()>pretokenized[i+delta].first+pretokenized[i+delta].second && lang.require_padding(src,x.data()[pretokenized[i+delta].first+pretokenized[i+delta].second]))
 		Buffer[buffer_used++] = ' ';
 
 	x.replace_once(std::nothrow,pretokenized[i].first,(pretokenized[i+delta].first-pretokenized[i].first)+pretokenized[i+delta].second,Buffer);
@@ -3455,15 +3455,15 @@ CPreprocessor::_macro_replace(Token<char>& x, size_t& critical_offset, const siz
 			x.rtrim(token_len);
 		else if (0==critical_offset)
 			x.ltrim(token_len);
-		else if (require_padding(x.data()[critical_offset-1],x.data()[critical_offset+token_len]))
+		else if (lang.require_padding(x.data()[critical_offset-1],x.data()[critical_offset+token_len]))
 			x.replace_once(std::nothrow,critical_offset,token_len,' ');
 		else
 			x.intradelete(critical_offset,token_len);
 		return;
 		}
 
-	const bool pad_left = 0<critical_offset && require_padding(x.data()[critical_offset-1],macro_value[0]);
-	const bool pad_right = x.size()>critical_offset+token_len && require_padding(macro_value[strlen(macro_value)-1],x.data()[critical_offset+token_len]);
+	const bool pad_left = 0<critical_offset && lang.require_padding(x.data()[critical_offset-1],macro_value[0]);
+	const bool pad_right = x.size()>critical_offset+token_len && lang.require_padding(macro_value[strlen(macro_value)-1],x.data()[critical_offset+token_len]);
 
 	if (pad_right) x.replace_once(critical_offset+token_len,0,' ');
 	x.replace_once(critical_offset,token_len,macro_value);
@@ -4010,7 +4010,7 @@ CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,
 		size_t i = 0;
 		while(i<list_size)
 			{
-			if (0<i && TokenList[i-1]->logical_line.first==TokenList[i]->logical_line.first && !strcmp(TokenList[i-1]->src_filename,TokenList[i]->src_filename) && require_padding(TokenList[i-1]->back(),TokenList[i]->front()))
+			if (0<i && TokenList[i-1]->logical_line.first==TokenList[i]->logical_line.first && !strcmp(TokenList[i-1]->src_filename,TokenList[i]->src_filename) && lang.require_padding(TokenList[i-1]->back(),TokenList[i]->front()))
 				INC_INFORM(' ');
 
 			if (list_size<=i+1 || TokenList[i]->logical_line.first!=TokenList[i+1]->logical_line.first || strcmp(TokenList[i]->src_filename,TokenList[i+1]->src_filename))
@@ -4414,31 +4414,6 @@ CPreprocessor::defined_span(const Token<char>& x, const size_t logical_offset, P
 	if (x.size()<=offset) return 0;
 	if (')'==x.data()[offset]) return (offset-logical_offset)+1;
 	return 0;
-}
-
-/*! 
- * test whether two characters will glue two non-whitespace preprocessing tokens into one.
- * This can tolerate false positives, but not false negatives.
- * 
- * \param lhs: left-hand character
- * \param rhs: right-hand character
- * 
- * \return bool true iff they will glue tokens
- */
-bool CPreprocessor::require_padding(char lhs, char rhs) const
-{
-	if (strchr(lang.WhiteSpace+1,lhs)) return false;	// whitespace is fine
-	if (strchr(lang.WhiteSpace+1,rhs)) return false;
-	if (strchr(lang.AtomicSymbols,lhs)) return false;	// atomic characters are fine
-	if (strchr(lang.AtomicSymbols,rhs)) return false;
-	if ('\''==lhs || '"'==lhs) return false;	// string/character literals are fine
-	if ('\''==rhs || '"'==rhs) return false;
-	// word-chars glue to word-chars
-	// symbol-chars glue to symbol-chars
-	// universal-char-names will glue as well as normal word-chars
-	const bool rhs_word_char = lang.IsWordChar(rhs);
-	if (lang.IsWordChar(lhs)) return '\\'==rhs || rhs_word_char;
-	return !rhs_word_char;
 }
 
 /*! 
