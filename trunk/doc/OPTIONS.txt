@@ -1,4 +1,4 @@
-Z.C++ 0.0.7 zcc
+Z.C++ 0.0.8 zcc
 usage: zcc [options] infile
 boolean options
  --test: final internal state to stderr
@@ -13,7 +13,8 @@ boolean options
  --int-neg-div-rounds-away-from-zero: make -3/-2==-2 contrary to C99 recommendation
  -Wc-c++-compat: Warn when something legal in C/C++ would be an error in C++/C for C/C++
  -Wbackport: Warn when something legal would be an error under an older standard
-
+ --src-stdout: Modified source to stdout
+ -E: Only preprocess (should be equivalent to calling z_cpp).  Implies --src-stdout
 override-default options
  -x: language override
  --system-include: unpreprocessed #include<...> to stdout
@@ -25,7 +26,7 @@ override-default options
  --target-sizeof-long: target sizeof(long), sizeof(unsigned long)
  --target-sizeof-long-long: target sizeof(long long), sizeof(unsigned long long)
 
-Z.C++ 0.0.7 z_cpp
+Z.C++ 0.0.8 z_cpp
 usage: z_cpp [options] infile
 boolean options
  --test: final internal state to stderr
@@ -38,7 +39,6 @@ boolean options
  -fsigned-char: char acts like signed char
  -funsigned-char: char acts like unsigned char (default)
  --int-neg-div-rounds-away-from-zero: make -3/-2==-2 contrary to C99 recommendation
-
 override-default options
  -x: language override
  --system-include: unpreprocessed #include<...> to stdout
