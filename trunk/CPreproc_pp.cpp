@@ -3663,25 +3663,26 @@ static void remove_ws_from_token(Token<char>& x, const autovalarray_ptr<POD_trip
 void
 CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<Token<char>*>& macros_object_expansion, const autovalarray_ptr<char*>& macros_function, const autovalarray_ptr<Token<char>*>& macros_function_arglist, const autovalarray_ptr<Token<char>*>& macros_function_expansion,autovalarray_ptr<char*>* const used_macro_stack, const autovalarray_ptr<Token<char>*>& formal_arguments, const autovalarray_ptr<Token<char>*>& actual_arguments, Token<char>& x)
 {
+	assert(!actual_arguments.empty());
 	// deal with # operators before macro-replacing arguments
 	autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> > pretokenized;
 	if (lang.line_lex_find(x.data(),x.size(),"#",sizeof("#")-1,pretokenized) || lang.line_lex_find(x.data(),x.size(),"%:",sizeof("%:")-1,pretokenized))
 		{
 		size_t i = pretokenized.size();
 		do	{
-			--i;
-			if (detect_C_stringize_op(x.data()+pretokenized[i].first,pretokenized[i].second))
+			const POD_triple<size_t,size_t,lex_flags>* const origin = pretokenized.data() + --i; 
+			if (detect_C_stringize_op(x.data()+origin[0].first,origin[0].second))
 				{
 				assert(pretokenized.size()>i+1);
-				assert(pretokenized[i].first+pretokenized[i].second==pretokenized[i+1].first);
-				const errr j = (C_TESTFLAG_IDENTIFIER==pretokenized[i].third) ? linear_find_STL_deref2(x.data()+pretokenized[i+1].first,pretokenized[i+1].second,formal_arguments) : -1;
+				assert(origin[0].first+origin[0].second==origin[1].first);
+				const errr j = (C_TESTFLAG_IDENTIFIER==origin[0].third) ? linear_find_STL_deref2(x.data()+origin[1].first,origin[1].second,formal_arguments) : -1;
 				assert(0<=j);
 
 				{
 				autovalarray_ptr<char> stringized_actual;	//! \todo inefficient, should stringize any parameter only once and reuse
 				stringize(stringized_actual,actual_arguments[j]);
 				// safe because narrow string
-				x.replace_once(pretokenized[i].first,pretokenized[i+1].second+pretokenized[i].second,stringized_actual.data());
+				x.replace_once(origin[0].first,origin[1].second+origin[0].second,stringized_actual.data());
 				// XXX leave behind garbage in pretokenized
 				}
 				}
@@ -3700,36 +3701,40 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 				size_t k = pretokenized.size();
 				if (3<=k)
 					{
-					do	if (C_TESTFLAG_NONATOMIC_PP_OP_PUNC==pretokenized[--k].third && detect_C_concatenation_op(x.data()+pretokenized[k].first,pretokenized[k].second))
+					do	{
+						const POD_triple<size_t,size_t,lex_flags>* const origin = pretokenized.data() + --k; 
+						const char* const x_data = x.data();
+						if (C_TESTFLAG_NONATOMIC_PP_OP_PUNC==origin[0].third && detect_C_concatenation_op(x_data+origin[0].first,origin[0].second))
 							{
-							if (C_TESTFLAG_IDENTIFIER==pretokenized[k+1].third)
+							if (C_TESTFLAG_IDENTIFIER==origin[1].third)
 								{
-								const errr j2 = linear_find_STL_deref2(x.data()+pretokenized[k+1].first,pretokenized[k+1].second,formal_arguments);
+								const errr j2 = linear_find_STL_deref2(x_data+origin[1].first,origin[1].second,formal_arguments);
 								if (0<=j2 && !actual_arguments[j2])
 									{	// we matched an empty parameter (concatenation identity)
-									const size_t replace_start = pretokenized[k-1].first+pretokenized[k-1].second;
-									size_t replace_len = (pretokenized[k+1].first-replace_start)+pretokenized[k+1].second;
+									const size_t replace_start = origin[-1].first+origin[-1].second;
+									size_t replace_len = (origin[1].first-replace_start)+origin[1].second;
 									if (x.size()>replace_start+replace_len)
-										replace_len += strspn(x.data()+replace_start+replace_len,lang.WhiteSpace+1);
+										replace_len += strspn(x_data+replace_start+replace_len,lang.WhiteSpace+1);
 									x.replace_once(replace_start,replace_len,' ');
 									continue;
 									}
 								};
-							if (C_TESTFLAG_IDENTIFIER==pretokenized[k-1].third)
+							if (C_TESTFLAG_IDENTIFIER==origin[-1].third)
 								{	// don't need should_continue bypass for last check
-								const errr j2 = linear_find_STL_deref2(x.data()+pretokenized[k-1].first,pretokenized[k-1].second,formal_arguments);
+								const errr j2 = linear_find_STL_deref2(x_data+origin[-1].first,origin[-1].second,formal_arguments);
 								if (0<=j2 && !actual_arguments[j2])
 									{
-									const size_t replace_start = (0<k) ? pretokenized[k-2].first+pretokenized[k-2].second : 0U;
-									size_t replace_len = (pretokenized[k].first-replace_start)+pretokenized[k].second;
+									const size_t replace_start = (0<k) ? origin[-2].first+origin[-2].second : 0U;
+									size_t replace_len = (origin[0].first-replace_start)+origin[0].second;
 									if (x.size()>replace_start+replace_len)
-										replace_len += strspn(x.data()+replace_start+replace_len,lang.WhiteSpace+1);
+										replace_len += strspn(x_data+replace_start+replace_len,lang.WhiteSpace+1);
 	
-									x.replace_once(pretokenized[k-1].first,(pretokenized[k].first-pretokenized[k-1].first)+pretokenized[k].second,' ');
+									x.replace_once(origin[-1].first,(origin[0].first-origin[-1].first)+origin[0].second,' ');
 //									continue;
 									}
 								};
 							}
+						}
 					while(0<k);
 					};
 				}
@@ -3738,10 +3743,13 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 	while(0<j);
 
 	// macro-replace all arguments
-	j = actual_arguments.size();
-	do	if (actual_arguments[--j])
-			intradirective_preprocess(*actual_arguments[j],0,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion,used_macro_stack);
-	while(0<j);
+	{
+	Token<char>* const * const actual_begin = actual_arguments.begin();
+	Token<char>* const * iter = actual_arguments.end();
+	do	if (*(--iter))
+			intradirective_preprocess(**iter,0,macros_object,macros_object_expansion,macros_function,macros_function_arglist,macros_function_expansion,used_macro_stack);
+	while(actual_begin!=iter);
+	}
 
 	lang.line_lex(x.data(),x.size(),pretokenized);
 	assert(!pretokenized.empty());
