@@ -556,9 +556,9 @@ static errr find_directive(const char* const Text, const LangConf& lang)
 	assert(!is_empty_string(Text));
 	size_t i = STATIC_SIZE(valid_directives);
 	do	{
-		--i;
-		if (!strncmp(valid_directives[i].first,Text,valid_directives[i].second)
-			&& (valid_directives[i].second==strlen(Text) || lang.IsWS(Text[valid_directives[i].second])))
+		const POD_pair<const char*,size_t>& x = valid_directives[--i]; 
+		if (!strncmp(x.first,Text,x.second)
+			&& (x.second==strlen(Text) || lang.IsWS(Text[x.second])))
 			return i;
 		}
 	while(0<i);
