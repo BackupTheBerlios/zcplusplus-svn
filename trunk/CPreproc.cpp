@@ -1801,21 +1801,22 @@ FunctionLikeMacroEmptyString:	if (0<=function_macro_index)
 								}
 							assert(!macros_function_expansion_pre_eval[function_macro_index]->empty());
 							{	//! \test default/Preprocess_*.h/hpp 
-							Token<char>* Tmp = new Token<char>(*macros_function_expansion_pre_eval[function_macro_index]);
+							autoval_ptr<Token<char> > Tmp;
+							Tmp = new Token<char>(*macros_function_expansion_pre_eval[function_macro_index]);
 							Tmp->logical_line = TokenList[i]->logical_line;
 							if (!nonrecursive_macro_replacement_list(Tmp->data()))
 								{	// XXX trashes line information to reuse intrapreprocessing stuff
 								size_t discard = i;
-								Token<char>* Tmp2 = new Token<char>(*TokenList[i]);
+								autoval_ptr<Token<char> > Tmp2;
+								Tmp2 = new Token<char>(*TokenList[i]);
 								while(++discard <= j) Tmp2->append(TokenList[discard]->data());
 								discard = 0;
 								dynamic_macro_replace_once(*Tmp2,discard,TokenList[i]->size(),macros_object,macros_object_expansion_pre_eval,macros_function,macros_function_arglist,macros_function_expansion_pre_eval,NULL);
-								delete Tmp;
-								Tmp = Tmp2;
+								Tmp2.MoveInto(Tmp);
 								}
 							TokenList.DeleteNSlotsAt(j-i,i+1);
 							delete TokenList[i];
-							TokenList[i] = Tmp;
+							TokenList[i] = Tmp.release();
 							}
 							size_t actual_tokens = tokenize_line(TokenList,i);
 							assert(0<actual_tokens);
