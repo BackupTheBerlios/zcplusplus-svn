@@ -13,6 +13,7 @@
 #include "errors.hpp"
 #include "CPUInfo.hpp"
 #include "errcount.hpp"
+#include "to_stdout.hpp"
 #include "_version.h"
 
 #include "Zaimoni.STL/POD.hpp"
@@ -251,18 +252,7 @@ int main(int argc, char* argv[])
 			}
 
 		// go to stdout as this is the standalone one
-		const size_t list_size = TokenList.size();
-		size_t i = 0;
-		while(list_size>i)
-			{
-			assert(NULL!=TokenList[i]);
-			STL_PTR_STRING_TO_STDOUT(TokenList[i]);
-			if (list_size<=i+1 || TokenList[i]->logical_line.first!=TokenList[i+1]->logical_line.first || strcmp(TokenList[i]->src_filename,TokenList[i+1]->src_filename))
-				STRING_LITERAL_TO_STDOUT("\n");
-			else if (cpp.lexer().require_padding(TokenList[i]->back(),TokenList[i+1]->front()))
-				STRING_LITERAL_TO_STDOUT(" ");
-			++i;
-			};
+		tokens_to_stdout(TokenList,cpp.lexer());
 		}
 	catch(const std::bad_alloc&)
 		{
