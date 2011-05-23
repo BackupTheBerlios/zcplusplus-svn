@@ -106,6 +106,7 @@ public:
 
 	void set_typedef(const char* const alias, const char* filename, const size_t lineno, type_spec& src);	// invalidates src
 	void set_typedef_CPP(const char* const name, const char* const active_namespace, const char* filename, const size_t lineno, type_spec& src);	// invalidates src
+	const char* get_typedef_name(const type_index base_type_index) const;
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* get_typedef(const char* const alias) const;
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* get_typedef_CPP(const char* alias,const char* active_namespace) const;
 
@@ -129,6 +130,17 @@ public:
 	const enum_def* get_enum_def(type_index i) const {return _get_enum_def(i);};
 	void set_enum_underlying_type(type_index i,size_t new_type);
 	void upgrade_decl_to_def(type_index i,C_union_struct_def*& src);
+
+	int C_linkage_code(const char* alias) const
+		{
+		assert(alias && *alias);
+		return _C_linkage_code(alias);
+		};
+	int CPP_linkage_code(const char* alias,const char* active_namespace) const
+		{
+		assert(alias && *alias);
+		return _CPP_linkage_code(alias,active_namespace);
+		};
 private:
 	const char* _name(type_index id) const;
 	type_index _get_id_union(const char* x) const;
@@ -146,6 +158,9 @@ private:
 	const char* canonical_name_is_inline_namespace_alias_target(const char* name, size_t name_len, const char* active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len) const;
 	const char* construct_canonical_name_and_aliasing_CPP(const char* name, size_t name_len, const char* active_namespace, size_t active_namespace_len);
 
+	int _C_linkage_code(const char* x) const;	
+	int _CPP_linkage_code(const char* x,const char* active_namespace) const;	
+	
 	// can throw std::bad_alloc; returned string is owned by the caller (use free to deallocate)
 	static char* _namespace_concatenate(const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len);
 	static void _namespace_concatenate(char* buf, const char* const name, size_t name_len, const char* const active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len);
