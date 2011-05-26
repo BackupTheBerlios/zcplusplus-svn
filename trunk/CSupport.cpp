@@ -11,6 +11,7 @@
 #include "Zaimoni.STL/MetaRAM2.hpp"
 #include "Zaimoni.STL/lite_alg.hpp"
 #include "Zaimoni.STL/LexParse/LangConf.hpp"
+#include "Zaimoni.STL/Perl_localize.hpp"
 #include "Zaimoni.STL/search.hpp"
 #include "Zaimoni.STL/simple_lock.hpp"
 #include "AtomicString.h"
@@ -14162,6 +14163,7 @@ static void CPP_ParseNamespace(parse_tree& src,const char* const active_namespac
 		return;
 		}
 
+	zaimoni::Perl::localize<const char*>(parse_tree::active_namespace,active_namespace);		
 	size_t i = 0;
 restart_master_loop:
 	while(i<src.size<0>())
