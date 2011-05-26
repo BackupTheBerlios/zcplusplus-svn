@@ -9,6 +9,7 @@ using namespace zaimoni;
 
 bool (*parse_tree::hook_INC_INFORM)(const parse_tree&) = NULL;
 type_system* parse_tree::types = NULL;
+const char* parse_tree::active_namespace = NULL;
 
 // in case we have to debug memory corruption
 // #define IRRATIONAL_CAUTION 1

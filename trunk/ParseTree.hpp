@@ -53,6 +53,9 @@ struct parse_tree
     // language-specific helpers for INC_INFORM
     static bool (*hook_INC_INFORM)(const parse_tree&);
     static type_system* types;
+
+    // other parsing assistance
+    static const char* active_namespace;	// for C++ and similar languages 
     
 	void MoveInto(parse_tree& dest);
 	void OverwriteInto(parse_tree& dest);
