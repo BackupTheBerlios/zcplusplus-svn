@@ -3975,6 +3975,8 @@ static bool is_array_deref(const parse_tree& src)
 #define C99_UNARY_SUBTYPE_NOT 5
 #define C99_UNARY_SUBTYPE_COMPL 6
 #define C99_UNARY_SUBTYPE_SIZEOF 7
+// extensions
+#define ZCC_UNARY_SUBTYPE_LINKAGE 8
 
 template<char c> static bool is_C99_unary_operator_expression(const parse_tree& src)
 {
@@ -4030,6 +4032,18 @@ static bool is_CPP0X_typeid_expression(const parse_tree& src)
 static bool is_C99_CPP_sizeof_expression(const parse_tree& src)
 {
 	return		(robust_token_is_string<6>(src.index_tokens[0].token,"sizeof"))
+#ifndef NDEBUG
+			&&	src.index_tokens[0].src_filename
+#endif
+			&&	!src.index_tokens[1].token.first
+			&&	src.empty<0>() && src.empty<1>()
+			&&	1==src.size<2>() && ((PARSE_EXPRESSION | PARSE_TYPE) & src.data<2>()->flags);
+//			&&	1==src.size<2>() && ((PARSE_UNARY_EXPRESSION | PARSE_TYPE) & src.data<2>()->flags);
+}
+
+static bool is_ZCC_linkage_expression(const parse_tree& src)
+{
+	return		(robust_token_is_string<13>(src.index_tokens[0].token,"__zcc_linkage"))
 #ifndef NDEBUG
 			&&	src.index_tokens[0].src_filename
 #endif
@@ -6866,6 +6880,122 @@ static bool locate_CPP_sizeof(parse_tree& src, size_t& i, const type_system& typ
 	return false;
 }
 
+// handle our extension __zcc_linkage
+//! \throw std::bad_alloc
+static bool terse_locate_ZCC_linkage(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+	assert(!(PARSE_OBVIOUS & src.data<0>()[i].flags));
+	assert(src.data<0>()[i].is_atomic());
+
+	if (token_is_string<13>(src.data<0>()[i].index_tokens[0].token,"__zcc_linkage"))
+		{
+		assert(1<src.size<0>()-i);
+		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
+		if (is_C99_unary_operator_expression<'+'>(src.data<0>()[i+1]) || is_C99_unary_operator_expression<'-'>(src.data<0>()[i+1]))
+			C_unary_plusminus_easy_syntax_check(src.c_array<0>()[i+1],types);
+		else if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i+1]))
+			C_deref_easy_syntax_check(src.c_array<0>()[i+1],types);
+		if (is_naked_parentheses_pair(src.data<0>()[i+1]))
+			{
+			assemble_unary_postfix_arguments(src,i,ZCC_UNARY_SUBTYPE_LINKAGE);
+			src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	//! \todo would be nice to range-limit this
+			assert(is_ZCC_linkage_expression(src.c_array<0>()[i]));
+			return true;			
+			}
+		}
+	return false;
+}
+
+//! \throw std::bad_alloc()
+static bool eval_C99_ZCC_linkage(parse_tree& src,const type_system& types)
+{
+	assert(is_ZCC_linkage_expression(src));
+	if (	1==src.size<2>()
+		&& 	src.data<2>()->is_atomic()
+		&& 	C_TESTFLAG_IDENTIFIER==src.data<2>()->index_tokens[0].flags)
+		{
+		const int tmp = types.C_linkage_code(src.data<2>()->index_tokens[0].token.first);
+		const bool is_negative = 0>tmp;
+		const umaxint tmp2(is_negative ? -tmp : tmp);
+		parse_tree tmp3;
+		src.type_code.set_type(C_TYPE::INT);
+		VM_to_signed_literal(tmp3,is_negative,tmp2,src,types);
+		tmp3.MoveInto(src);
+		return true;
+		}
+	return false;
+}
+
+// deferring namespaces is not going to work, what about resolving identifiers as primary expressions
+// maybe go with a Perl-localization
+//! \throw std::bad_alloc()
+static bool eval_CPP_ZCC_linkage(parse_tree& src,const type_system& types)
+{
+	assert(is_ZCC_linkage_expression(src));
+	if (	1==src.size<2>()
+		&& 	src.data<2>()->is_atomic()
+		&& 	C_TESTFLAG_IDENTIFIER==src.data<2>()->index_tokens[0].flags)
+		{
+		const int tmp = types.CPP_linkage_code(src.data<2>()->index_tokens[0].token.first,parse_tree::active_namespace);
+		const bool is_negative = 0>tmp;
+		const umaxint tmp2(is_negative ? -tmp : tmp);
+		parse_tree tmp3;
+		src.type_code.set_type(C_TYPE::INT);
+		VM_to_signed_literal(tmp3,is_negative,tmp2,src,types);
+		tmp3.MoveInto(src);
+		return true;
+		}
+	return false;
+}
+
+//! \throw std::bad_alloc()
+static void C99_ZCC_linkage_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	assert(is_ZCC_linkage_expression(src));
+	if (eval_C99_ZCC_linkage(src,types)) return;
+}
+
+//! \throw std::bad_alloc()
+static void CPP_ZCC_linkage_easy_syntax_check(parse_tree& src,const type_system& types)
+{
+	assert(is_ZCC_linkage_expression(src));
+	if (eval_CPP_ZCC_linkage(src,types)) return;
+}
+
+//! \throw std::bad_alloc()
+static bool locate_C99_ZCC_linkage(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+
+	if (	!(PARSE_OBVIOUS & src.data<0>()[i].flags)
+		&&	src.data<0>()[i].is_atomic()
+		&&	terse_locate_ZCC_linkage(src,i,types))
+		{
+		C99_ZCC_linkage_easy_syntax_check(src.c_array<0>()[i],types);
+		return true;
+		}
+	return false;
+}
+
+//! \throw std::bad_alloc()
+static bool locate_CPP_ZCC_linkage(parse_tree& src, size_t& i, const type_system& types)
+{
+	assert(!src.empty<0>());
+	assert(i<src.size<0>());
+
+	if (	!(PARSE_OBVIOUS & src.data<0>()[i].flags)
+		&&	src.data<0>()[i].is_atomic()
+		&&	terse_locate_ZCC_linkage(src,i,types))
+		{
+		CPP_ZCC_linkage_easy_syntax_check(src.c_array<0>()[i],types);
+		return true;
+		}
+	return false;
+}
+
 /* Scan for unary operators and cast expressions
 unary-expression:
 	postfix-expression
@@ -6897,6 +7027,7 @@ static void locate_C99_unary_expression(parse_tree& src, size_t& i, const type_s
 	if (locate_C99_bitwise_complement(src,i,types)) return;
 	if (locate_C99_unary_plusminus(src,i,types)) return;
 	if (locate_C99_sizeof(src,i,types)) return;
+	if (locate_C99_ZCC_linkage(src,i,types)) return;
 
 #if 0
 	if (terse_locate_unary_operator(src,i))
@@ -6975,6 +7106,7 @@ static void locate_CPP_unary_expression(parse_tree& src, size_t& i, const type_s
 	if (locate_CPP_bitwise_complement(src,i,types)) return;
 	if (locate_CPP_unary_plusminus(src,i,types)) return;
 	if (locate_CPP_sizeof(src,i,types)) return;
+	if (locate_CPP_ZCC_linkage(src,i,types)) return;
 
 #if 0
 	if (token_is_string<2>(src.data<0>()[i].index_tokens[0].token,"++"))

@@ -2956,7 +2956,6 @@ static bool is_array_deref(const parse_tree& src)
 #define C99_UNARY_SUBTYPE_ADDRESSOF 4
 #define C99_UNARY_SUBTYPE_NOT 5
 #define C99_UNARY_SUBTYPE_COMPL 6
-#define C99_UNARY_SUBTYPE_SIZEOF 7
 
 template<char c> static bool is_C99_unary_operator_expression(const parse_tree& src)
 {
