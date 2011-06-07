@@ -1,5 +1,5 @@
 // zcc/Pass_cstddef.hpp
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2011 Kenneth Boyd, license: MIT.txt
 
 #include <cstddef>
 
@@ -95,3 +95,10 @@ extern const volatile int i13;
 extern const volatile std::ptrdiff_t j13;
 extern const volatile std::size_t k13;
 
+// following is guarded to be run only by ZCC and impersonators
+#if 9<=10000*__ZCC__+100*__ZCC_MINOR__+__ZCC_PATCHLEVEL__
+// ZC++ 0.0.9 supports __zcc_linkage
+// typedefs have no linkage in C
+static_assert(0==__zcc_linkage(std::ptrdiff_t),"std::ptrdiff_t should be defined with no linkage");
+static_assert(0==__zcc_linkage(std::size_t),"std::size_t should be defined with no linkage");
+#endif
