@@ -879,14 +879,24 @@ void _delete_n_slots(T**& _ptr, size_t& _ptr_size, size_t* _indexes, size_t n)
 }
 
 template<typename T>
+#ifndef ZAIMONI_FORCE_ISO
 void _weak_delete_n_slots_at(T**& _ptr, size_t n, size_t i)
 {
 	assert(_ptr);
 	const size_t _ptr_size = ArraySize(_ptr);
+#else
+void _weak_delete_n_slots_at(T**& _ptr, size_t& _ptr_size, size_t n, size_t i)
+{
+	assert(_ptr);
+	assert(0<_ptr_size);
+#endif
 	if (0==i && _ptr_size<=n)
 		{
 		_weak_flush(_ptr);
 		_ptr = NULL;
+#ifdef ZAIMONI_FORCE_ISO
+		_ptr_size = 0;
+#endif
 		return;
 		}
 	T** const _offset_ptr = _ptr+i;
@@ -895,10 +905,16 @@ void _weak_delete_n_slots_at(T**& _ptr, size_t n, size_t i)
 		if (i+n<_ptr_size)
 			memmove(_offset_ptr,_offset_ptr+n,sizeof(T*)*(_ptr_size-i-n));
 		_ptr = REALLOC(_ptr,sizeof(T*)*(_ptr_size-n));
+#ifdef ZAIMONI_FORCE_ISO
+		_ptr_size -= n;
+#endif
 		}
 	else{
 		free(_ptr);
 		_ptr = NULL;
+#ifdef ZAIMONI_FORCE_ISO
+		_ptr_size = 0;
+#endif
 		}
 }
 

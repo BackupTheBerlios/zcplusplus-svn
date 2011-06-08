@@ -216,15 +216,15 @@ public:
 	bool Resize(size_t n) {return _weak_resize(this->_ptr,n);};
 	void FastDeleteIdx(size_t n) {_weak_delete_idx(this->_ptr,n);};
 	void DeleteIdx(size_t n) {_safe_weak_delete_idx(this->_ptr,n);};
+	void DeleteNSlotsAt(size_t n, size_t Idx) {_weak_delete_n_slots_at(this->_ptr,n,Idx);};
 #else
 	void reset(T*& src,size_t n);
 	void MoveInto(_meta_weakautoarray_ptr<T>& dest) {dest.reset(this->_ptr,this->_size);};
 	bool Resize(size_t n) {return _weak_resize(this->_ptr,this->_size,n);};
 	void FastDeleteIdx(size_t n) {_weak_delete_idx(this->_ptr,this->_size,n);};
 	void DeleteIdx(size_t n) {_safe_weak_delete_idx(this->_ptr,this->_size,n);};
+	void DeleteNSlotsAt(size_t n, size_t Idx) {_weak_delete_n_slots_at(this->_ptr,this->_size,n,Idx);};
 #endif
-	//! \todo need an ISO version of _weak_delete_n_slots_at
-	void DeleteNSlotsAt(size_t n, size_t Idx) {_weak_delete_n_slots_at(this->_ptr,n,Idx);};
 	
 	// Perl grep
 	// next two require of U: STL size(),data()
