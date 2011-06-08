@@ -208,15 +208,17 @@ public:
 	void operator=(const _meta_weakautoarray_ptr& src);
 	template<typename U> bool value_copy_of(const U& src);	// STL interfaces required of U: size(),data()
 	void reset() {_weak_flush(this->_ptr); this->NULLPtr();};
+	void TransferOutAndNULL(T*& dest) {_weak_flush(dest); dest = this->_ptr; this->NULLPtr();}
+
+#ifndef ZAIMONI_FORCE_ISO
 	void reset(T*& src);
 	void MoveInto(_meta_weakautoarray_ptr<T>& dest) {dest.reset(this->_ptr);};
-
-	void TransferOutAndNULL(T*& dest) {_weak_flush(dest); dest = this->_ptr; this->NULLPtr();}
-#ifndef ZAIMONI_FORCE_ISO
 	bool Resize(size_t n) {return _weak_resize(this->_ptr,n);};
 	void FastDeleteIdx(size_t n) {_weak_delete_idx(this->_ptr,n);};
 	void DeleteIdx(size_t n) {_safe_weak_delete_idx(this->_ptr,n);};
 #else
+	void reset(T*& src,size_t n);
+	void MoveInto(_meta_weakautoarray_ptr<T>& dest) {dest.reset(this->_ptr,this->_size);};
 	bool Resize(size_t n) {return _weak_resize(this->_ptr,this->_size,n);};
 	void FastDeleteIdx(size_t n) {_weak_delete_idx(this->_ptr,this->_size,n);};
 	void DeleteIdx(size_t n) {_safe_weak_delete_idx(this->_ptr,this->_size,n);};
@@ -343,11 +345,11 @@ public:
 
 	template<typename U> bool value_copy_of(const U& src);	// STL interfaces required of U: size(),data()
 	void reset() {_flush(this->_ptr); this->NULLPtr();};
+	void TransferOutAndNULL(T*& dest) {_flush(dest); dest = this->_ptr; this->NULLPtr();};
+
+#ifndef ZAIMONI_FORCE_ISO
 	void reset(T*& src);
 	void MoveInto(_meta_autoarray_ptr<T>& dest) {dest.reset(this->_ptr);};
-
-	void TransferOutAndNULL(T*& dest) {_flush(dest); dest = this->_ptr; this->NULLPtr();};
-#ifndef ZAIMONI_FORCE_ISO
 	bool Resize(size_t n) {return _resize(this->_ptr,n);};
 	void Shrink(size_t n) {_shrink(this->_ptr,n);};
 	void FastDeleteIdx(size_t n) {_delete_idx(this->_ptr,n);};
@@ -356,6 +358,8 @@ public:
 	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(this->_ptr,indexes,n);};
 	template<typename U> bool InsertSlotAt(size_t Idx, U __default) {return _insert_slot_at(this->_ptr,Idx,__default);}
 #else
+	void reset(T*& src,size_t n);
+	void MoveInto(_meta_autoarray_ptr<T>& dest) {dest.reset(this->_ptr,this->_size);};
 	bool Resize(size_t n) {return _resize(this->_ptr,this->_size,n);};
 	void Shrink(size_t n) {_shrink(this->_ptr,this->_size,n);};
 	void FastDeleteIdx(size_t n) {_delete_idx(this->_ptr,this->_size,n);};
@@ -634,8 +638,11 @@ _meta_autoarray_ptr<T>::value_copy_of(const U& src)
 }
 
 template<typename T>
-void
-_meta_autoarray_ptr<T>::reset(T*& src)
+#ifndef ZAIMONI_FORCE_ISO
+void _meta_autoarray_ptr<T>::reset(T*& src)
+#else
+void _meta_autoarray_ptr<T>::reset(T*& src, size_t n)
+#endif
 {	// this convolution handles a recursion issue
 	T* tmp = src;
 	src = NULL;
@@ -643,12 +650,18 @@ _meta_autoarray_ptr<T>::reset(T*& src)
 		{
 		if (this->_ptr) _flush(this->_ptr);
 		this->_ptr = tmp;
+#ifdef ZAIMONI_FORCE_ISO
+		this->_size = n;
+#endif		
 		};
 }
 
 template<typename T>
-void
-_meta_weakautoarray_ptr<T>::reset(T*& src)
+#ifndef ZAIMONI_FORCE_ISO
+void _meta_weakautoarray_ptr<T>::reset(T*& src)
+#else
+void _meta_weakautoarray_ptr<T>::reset(T*& src,size_t n)
+#endif
 {	// this convolution handles a recursion issue
 	T* tmp = src;
 	src = NULL;
@@ -656,6 +669,9 @@ _meta_weakautoarray_ptr<T>::reset(T*& src)
 		{
 		if (this->_ptr) _weak_flush(this->_ptr);
 		this->_ptr = tmp;
+#ifdef ZAIMONI_FORCE_ISO
+		this->_size = n;
+#endif		
 		};
 }
 
