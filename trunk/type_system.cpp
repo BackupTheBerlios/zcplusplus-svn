@@ -1,5 +1,5 @@
 // type_system.cpp
-// (C)2009,2010 Kenneth Boyd, license: MIT.txt
+// (C)2009-2011 Kenneth Boyd, license: MIT.txt
 
 #include "type_system.hpp"
 #include "enum_type.hpp"
@@ -391,7 +391,8 @@ const char* type_system::get_typedef_name(const type_index base_type_index) cons
 	const zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> >* const iter_end = typedef_registry.end();
 	while(iter!=iter_end)
 		{
-		if (base_type_index==iter->second.first.base_type_index && 0==iter->second.first.pointer_power) return iter->first;
+		if (iter->second.first.is_type(base_type_index))
+			return iter->first;
 		++iter;
 		};
 	return NULL;

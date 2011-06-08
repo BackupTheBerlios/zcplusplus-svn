@@ -1,6 +1,6 @@
 // CSupport_pp.cpp
 // support for C/C++ parsing
-// (C)2009, 2010 Kenneth Boyd, license: MIT.txt
+// (C)2009-2011 Kenneth Boyd, license: MIT.txt
 
 #include "CSupport_pp.hpp"
 #include "_CSupport1.hpp"
@@ -4706,7 +4706,7 @@ static bool eval_logical_NOT(parse_tree& src, const type_system& types, func_tra
 	if (is_logical_NOT(*src.data<2>()))
 		{
 		if (	is_logical_NOT(*src.data<2>()->data<2>())
-			||	(C_TYPE::BOOL==src.data<2>()->type_code.base_type_index && 0==src.data<2>()->type_code.pointer_power))
+			||	src.data<2>()->type_code.is_type(C_TYPE::BOOL))
 			{
 			parse_tree tmp;
 			src.c_array<2>()->c_array<2>()->OverwriteInto(tmp);
@@ -5357,9 +5357,8 @@ static bool terse_C99_augment_mult_expression(parse_tree& src, size_t& i, const 
 			if (   is_C99_unary_operator_expression<'+'>(src.data<0>()[i-1])
 				|| is_C99_unary_operator_expression<'-'>(src.data<0>()[i-1]))
 				{
-				if (   C_TYPE::NOT_VOID==src.data<0>()[i-1].type_code.base_type_index
-					&& 0==src.data<0>()[i-1].type_code.pointer_power)
-					{	// ,src.data<0>()[i-1].front<2>()
+				if (src.data<0>()[i-1].type_code.is_type<C_TYPE::NOT_VOID>())
+					{
 #ifndef ZAIMONI_FORCE_ISO
 					if (!_insert_n_slots_at(src.args[0],1,i)) throw std::bad_alloc();
 #else
@@ -5399,9 +5398,8 @@ static bool terse_CPP_augment_mult_expression(parse_tree& src, size_t& i, const 
 			if (   is_C99_unary_operator_expression<'+'>(src.data<0>()[i-1])
 				|| is_C99_unary_operator_expression<'-'>(src.data<0>()[i-1]))
 				{
-				if (   C_TYPE::NOT_VOID==src.data<0>()[i-1].type_code.base_type_index
-					&& 0==src.data<0>()[i-1].type_code.pointer_power)
-					{	// ,src.data<0>()[i-1].front<2>()
+				if (src.data<0>()[i-1].type_code.is_type<C_TYPE::NOT_VOID>())
+					{
 #ifndef ZAIMONI_FORCE_ISO
 					if (!_insert_n_slots_at(src.args[0],1,i)) throw std::bad_alloc();
 #else

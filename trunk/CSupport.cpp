@@ -1,6 +1,6 @@
 // CSupport.cpp
 // support for C/C++ parsing
-// (C)2009, 2010 Kenneth Boyd, license: MIT.txt
+// (C)2009-2011 Kenneth Boyd, license: MIT.txt
 
 #include "CSupport.hpp"
 #include "_CSupport3.hpp"
@@ -4023,8 +4023,7 @@ static bool is_CPP0X_typeid_expression(const parse_tree& src)
 			&&	!src.index_tokens[1].token.first
 			&&	src.empty<0>() && src.empty<1>()
 			&&	1==src.size<2>() && ((PARSE_EXPRESSION | PARSE_TYPE) & src.data<2>()->flags)
-			&&	C_TYPE::TYPEINFO==src.type_code.base_type_index
-			&&	0==src.type_code.pointer_power
+			&&	src.type_code.is_type(C_TYPE::TYPEINFO)
 			&&	(src.type_code.qualifier<0>() & (type_spec::lvalue | type_spec::_const))==(type_spec::lvalue | type_spec::_const);
 }
 
@@ -6212,7 +6211,7 @@ static bool eval_logical_NOT(parse_tree& src, const type_system& types, func_tra
 	if (is_logical_NOT(*src.data<2>()))
 		{
 		if (	is_logical_NOT(*src.data<2>()->data<2>())
-			||	(C_TYPE::BOOL==src.data<2>()->type_code.base_type_index && 0==src.data<2>()->type_code.pointer_power))
+			||	src.data<2>()->type_code.is_type(C_TYPE::BOOL))
 			{
 			parse_tree tmp;
 			src.c_array<2>()->c_array<2>()->OverwriteInto(tmp);
@@ -7249,9 +7248,8 @@ static bool terse_C99_augment_mult_expression(parse_tree& src, size_t& i, const 
 			if (   is_C99_unary_operator_expression<'+'>(src.data<0>()[i-1])
 				|| is_C99_unary_operator_expression<'-'>(src.data<0>()[i-1]))
 				{
-				if (   C_TYPE::NOT_VOID==src.data<0>()[i-1].type_code.base_type_index
-					&& 0==src.data<0>()[i-1].type_code.pointer_power)
-					{	// ,src.data<0>()[i-1].front<2>()
+				if (src.data<0>()[i-1].type_code.is_type<C_TYPE::NOT_VOID>())
+					{
 #ifndef ZAIMONI_FORCE_ISO
 					if (!_insert_n_slots_at(src.args[0],1,i)) throw std::bad_alloc();
 #else
@@ -7291,9 +7289,8 @@ static bool terse_CPP_augment_mult_expression(parse_tree& src, size_t& i, const 
 			if (   is_C99_unary_operator_expression<'+'>(src.data<0>()[i-1])
 				|| is_C99_unary_operator_expression<'-'>(src.data<0>()[i-1]))
 				{
-				if (   C_TYPE::NOT_VOID==src.data<0>()[i-1].type_code.base_type_index
-					&& 0==src.data<0>()[i-1].type_code.pointer_power)
-					{	// ,src.data<0>()[i-1].front<2>()
+				if (src.data<0>()[i-1].type_code.is_type<C_TYPE::NOT_VOID>())
+					{
 #ifndef ZAIMONI_FORCE_ISO
 					if (!_insert_n_slots_at(src.args[0],1,i)) throw std::bad_alloc();
 #else

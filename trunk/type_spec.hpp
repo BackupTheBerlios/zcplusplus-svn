@@ -59,6 +59,8 @@ struct type_spec
 	void clear();	// XXX should be constructor; good way to leak memory in other contexts
 	void destroy();	// XXX should be destructor
 	void set_type(size_t _base_type_index);
+	template<size_t _base_type_index >bool is_type() const {return _base_type_index==base_type_index && 0==pointer_power;}
+	bool is_type(const size_t _base_type_index) const {return _base_type_index==base_type_index && 0==pointer_power;};
 	bool operator==(const type_spec& rhs) const;
 	bool operator!=(const type_spec& rhs) const {return !(*this==rhs);};
 
