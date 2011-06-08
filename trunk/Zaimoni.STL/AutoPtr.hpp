@@ -1,6 +1,6 @@
 // AutoPtr.hpp
 // a family of pointers that automatically delete themselves when going out of scope
-// (C)2009,2010 Kenneth Boyd, license: MIT.txt
+// (C)2009-2011 Kenneth Boyd, license: MIT.txt
 
 // autodel_ptr: single pointer
 // weakautoarray_ptr: array of weak pointers
@@ -38,7 +38,7 @@ public:
 	void reset(T*& src);
 	void MoveInto(_meta_auto_ptr<T>& dest) {dest.reset(_ptr);};
 
-	template<typename U> void TransferOutAndNULL(U*& Target) {_single_flush(Target); Target = _ptr; _ptr = NULL;}
+	template<typename U> void TransferOutAndNULL(U*& dest) {_single_flush(dest); dest = _ptr; _ptr = NULL;}
 	T* release() {T* tmp = _ptr; _ptr = NULL; return tmp;};
 	bool empty() const {return NULL==_ptr;};
 	void NULLPtr() {_ptr = NULL;};
@@ -153,62 +153,87 @@ struct c_var_array_CRTP : public c_array_CRTP<c_var_array_CRTP<Derived,T>, T>
 	void resize(size_t n) {if (!static_cast<Derived*>(this)->Resize(n)) throw std::bad_alloc();};	
 };
 
+// POD backing class for the autoarray and weak autoarray family
 template<typename T>
-class _meta_weakautoarray_ptr : public c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>
+class POD_autoarray_ptr
 {
-private:
-	friend class c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>;
-	friend bool operator==<>(const c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>& lhs, const c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>& rhs);
+protected:
 	T* _ptr;
 #ifdef ZAIMONI_FORCE_ISO
 	size_t _size;
 #endif
+};
+
+} // namespace zaimoni
+
+namespace boost {
+
+#define ZAIMONI_TEMPLATE_SPEC template<typename T>
+#define ZAIMONI_CLASS_SPEC zaimoni::POD_autoarray_ptr<T>
+ZAIMONI_POD_STRUCT(ZAIMONI_TEMPLATE_SPEC,ZAIMONI_CLASS_SPEC,char)
+#undef ZAIMONI_CLASS_SPEC
+#undef ZAIMONI_TEMPLATE_SPEC
+
+} // namespace boost
+
+namespace zaimoni {
+
+template<typename T>
+#if 2
+class _meta_weakautoarray_ptr : public c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>,public POD_autoarray_ptr<T>
+#else
+class _meta_weakautoarray_ptr : public c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>,protected POD_autoarray_ptr<T>
+#endif
+{
+private:
+	friend class c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>;
+	friend bool operator==<>(const c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>& lhs, const c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>& rhs);
 public:
 #ifndef ZAIMONI_FORCE_ISO
-	explicit _meta_weakautoarray_ptr() : _ptr(NULL) {};
-	explicit _meta_weakautoarray_ptr(T*& src) : _ptr(src) {src = NULL;};
-	explicit _meta_weakautoarray_ptr(size_t n) : _ptr(n ? _new_buffer_nonNULL_throws<T>(n) : NULL) {};
-	explicit _meta_weakautoarray_ptr(const std::nothrow_t& tracer, size_t n) : _ptr(_new_buffer<T>(n)) {};
-	explicit _meta_weakautoarray_ptr(const _meta_weakautoarray_ptr& src) : _ptr(NULL) {*this=src;};
+	explicit _meta_weakautoarray_ptr() {this->_ptr = NULL;};
+	explicit _meta_weakautoarray_ptr(T*& src) {this->_ptr = src; src = NULL;};
+	explicit _meta_weakautoarray_ptr(size_t n) {this->_ptr = n ? _new_buffer_nonNULL_throws<T>(n) : NULL;};
+	explicit _meta_weakautoarray_ptr(const std::nothrow_t& tracer, size_t n) {this->_ptr = _new_buffer<T>(n);};
+	explicit _meta_weakautoarray_ptr(const _meta_weakautoarray_ptr& src) {this->_ptr = NULL; *this=src;};
 #else
-	explicit _meta_weakautoarray_ptr() : _ptr(NULL),_size(0) {};
-	explicit _meta_weakautoarray_ptr(T*& src,size_t src_size) : _ptr(src),_size(src_size) {src = NULL;};
-	explicit _meta_weakautoarray_ptr(size_t n) : _ptr(n ? _new_buffer_nonNULL_throws<T>(n) : NULL),_size(n) {};
-	explicit _meta_weakautoarray_ptr(const std::nothrow_t& tracer, size_t n) : _ptr(_new_buffer<T>(n)),_size(n) {};
-	explicit _meta_weakautoarray_ptr(const _meta_weakautoarray_ptr& src) : _ptr(NULL),_size(0) {*this=src;};
+	explicit _meta_weakautoarray_ptr() {this->_ptr = NULL; this->_size = 0;};
+	explicit _meta_weakautoarray_ptr(T*& src,size_t src_size) {this->_ptr = src; this->_size = src_size; src = NULL;};
+	explicit _meta_weakautoarray_ptr(size_t n) {this->_ptr = n ? _new_buffer_nonNULL_throws<T>(n) : NULL; this->_size = n;};
+	explicit _meta_weakautoarray_ptr(const std::nothrow_t& tracer, size_t n) {this->_ptr = _new_buffer<T>(n); this->_size = n;};
+	explicit _meta_weakautoarray_ptr(const _meta_weakautoarray_ptr& src) {this->_ptr = NULL; this->_size = 0; *this=src;};
 #endif
-	~_meta_weakautoarray_ptr() {_weak_flush(_ptr);};
+	~_meta_weakautoarray_ptr() {_weak_flush(this->_ptr);};
 
 #ifndef ZAIMONI_FORCE_ISO
 	void operator=(T* src);
 #endif
 	void operator=(const _meta_weakautoarray_ptr& src);
 	template<typename U> bool value_copy_of(const U& src);	// STL interfaces required of U: size(),data()
-	void reset() {_weak_flush(_ptr); this->NULLPtr();};
+	void reset() {_weak_flush(this->_ptr); this->NULLPtr();};
 	void reset(T*& src);
-	void MoveInto(_meta_weakautoarray_ptr<T>& dest) {dest.reset(_ptr);};
+	void MoveInto(_meta_weakautoarray_ptr<T>& dest) {dest.reset(this->_ptr);};
 
-	void TransferOutAndNULL(T*& Target) {_weak_flush(Target); Target = _ptr; this->NULLPtr();}
+	void TransferOutAndNULL(T*& dest) {_weak_flush(dest); dest = this->_ptr; this->NULLPtr();}
 #ifndef ZAIMONI_FORCE_ISO
-	bool Resize(size_t n) {return _weak_resize(_ptr,n);};
+	bool Resize(size_t n) {return _weak_resize(this->_ptr,n);};
 #else
-	bool Resize(size_t n) {return _weak_resize(_ptr,_size,n);};
+	bool Resize(size_t n) {return _weak_resize(this->_ptr,this->_size,n);};
 #endif
-	void FastDeleteIdx(size_t n) {_weak_delete_idx(_ptr,n);};
+	void FastDeleteIdx(size_t n) {_weak_delete_idx(this->_ptr,n);};
 #ifndef ZAIMONI_FORCE_ISO
-	void DeleteIdx(size_t n) {_safe_weak_delete_idx(_ptr,n);};
+	void DeleteIdx(size_t n) {_safe_weak_delete_idx(this->_ptr,n);};
 #else
-	void DeleteIdx(size_t n) {_safe_weak_delete_idx(_ptr,_size,n);};
+	void DeleteIdx(size_t n) {_safe_weak_delete_idx(this->_ptr,this->_size,n);};
 #endif
-	void DeleteNSlotsAt(size_t n, size_t Idx) {_weak_delete_n_slots_at(_ptr,n,Idx);};
-
+	void DeleteNSlotsAt(size_t n, size_t Idx) {_weak_delete_n_slots_at(this->_ptr,n,Idx);};
+	
 	// Perl grep
 	// next two require of U: STL size(),data()
 	template<typename U,typename op> bool grep(const U& src,op Predicate);
 	template<typename U,typename op> bool invgrep(const U& src,op Predicate);
 
 	// erase all elements
-	void clear() {_weak_flush(_ptr); this->NULLPtr();};
+	void clear() {_weak_flush(this->_ptr); this->NULLPtr();};
 };
 
 template<typename T>
@@ -293,30 +318,30 @@ public:
 };
 
 template<typename T>
-class _meta_autoarray_ptr : public c_var_array_CRTP<_meta_autoarray_ptr<T>, T>
+#if 2
+class _meta_autoarray_ptr : public c_var_array_CRTP<_meta_autoarray_ptr<T>, T>,public POD_autoarray_ptr<T>
+#else
+class _meta_autoarray_ptr : public c_var_array_CRTP<_meta_autoarray_ptr<T>, T>,protected POD_autoarray_ptr<T>
+#endif
 {
 protected:
 	friend class c_var_array_CRTP<_meta_autoarray_ptr<T>, T>;
 	friend bool operator==<>(const c_var_array_CRTP<_meta_autoarray_ptr<T>, T>& lhs, const c_var_array_CRTP<_meta_autoarray_ptr<T>, T>& rhs);
-	T* _ptr;
-#ifdef ZAIMONI_FORCE_ISO
-	size_t _size;
-#endif
 
 #ifndef ZAIMONI_FORCE_ISO
-	explicit _meta_autoarray_ptr() : _ptr(NULL) {};
-	explicit _meta_autoarray_ptr(T*& src) : _ptr(src) {src = NULL;};
-	explicit _meta_autoarray_ptr(size_t n) : _ptr(n ? _new_buffer_nonNULL_throws<T>(n) : NULL) {};
-	explicit _meta_autoarray_ptr(const std::nothrow_t& tracer, size_t n) : _ptr(_new_buffer<T>(n)) {};
-	explicit _meta_autoarray_ptr(const _meta_autoarray_ptr& src) : _ptr(NULL) {*this=src;};
+	explicit _meta_autoarray_ptr() {this->_ptr = NULL;};
+	explicit _meta_autoarray_ptr(T*& src) {this->_ptr = src; src = NULL;};
+	explicit _meta_autoarray_ptr(size_t n) {this->_ptr = n ? _new_buffer_nonNULL_throws<T>(n) : NULL;};
+	explicit _meta_autoarray_ptr(const std::nothrow_t& tracer, size_t n) {this->_ptr = _new_buffer<T>(n);};
+	explicit _meta_autoarray_ptr(const _meta_autoarray_ptr& src) {this->_ptr = NULL; *this=src;};
 #else
-	explicit _meta_autoarray_ptr() : _ptr(NULL),_size(0) {};
-	explicit _meta_autoarray_ptr(T*& src,size_t src_size) : _ptr(src),_size(src_size) {src = NULL;};
-	explicit _meta_autoarray_ptr(size_t n) : _ptr(n ? _new_buffer_nonNULL_throws<T>(n) : NULL),_size(n) {};
-	explicit _meta_autoarray_ptr(const std::nothrow_t& tracer, size_t n) : _ptr(_new_buffer<T>(n)),_size(n) {};
-	explicit _meta_autoarray_ptr(const _meta_autoarray_ptr& src) : _ptr(NULL),_size(0) {*this=src;};
+	explicit _meta_autoarray_ptr() {this->_ptr = NULL; this->_size = 0;};
+	explicit _meta_autoarray_ptr(T*& src,size_t src_size) {this->_ptr = src; this->_size = src_size; src = NULL;};
+	explicit _meta_autoarray_ptr(size_t n) {this->_ptr = n ? _new_buffer_nonNULL_throws<T>(n) : NULL; this->_size = n;};
+	explicit _meta_autoarray_ptr(const std::nothrow_t& tracer, size_t n) {this->_ptr = _new_buffer<T>(n); this->_size = n;};
+	explicit _meta_autoarray_ptr(const _meta_autoarray_ptr& src) {this->_ptr = NULL; this->_size = 0; *this=src;};
 #endif
-	~_meta_autoarray_ptr() {_flush(_ptr);};
+	~_meta_autoarray_ptr() {_flush(this->_ptr);};
 
 #ifndef ZAIMONI_FORCE_ISO
 	void operator=(T* src);
@@ -328,38 +353,38 @@ public:
 	ZAIMONI_STL_TYPE_GLUE_ARRAY(T);
 
 	template<typename U> bool value_copy_of(const U& src);	// STL interfaces required of U: size(),data()
-	void reset() {_flush(_ptr); this->NULLPtr();};
+	void reset() {_flush(this->_ptr); this->NULLPtr();};
 	void reset(T*& src);
-	void MoveInto(_meta_autoarray_ptr<T>& dest) {dest.reset(_ptr);};
+	void MoveInto(_meta_autoarray_ptr<T>& dest) {dest.reset(this->_ptr);};
 
-	void TransferOutAndNULL(T*& Target) {_flush(Target); Target = _ptr; this->NULLPtr();};
+	void TransferOutAndNULL(T*& dest) {_flush(dest); dest = this->_ptr; this->NULLPtr();};
 #ifndef ZAIMONI_FORCE_ISO
-	bool Resize(size_t n) {return _resize(_ptr,n);};
-	void Shrink(size_t n) {_shrink(_ptr,n);};
+	bool Resize(size_t n) {return _resize(this->_ptr,n);};
+	void Shrink(size_t n) {_shrink(this->_ptr,n);};
 #else
-	bool Resize(size_t n) {return _resize(_ptr,_size,n);};
-	void Shrink(size_t n) {_shrink(_ptr,_size,n);};
+	bool Resize(size_t n) {return _resize(this->_ptr,this->_size,n);};
+	void Shrink(size_t n) {_shrink(this->_ptr,this->_size,n);};
 #endif
-	void FastDeleteIdx(size_t n) {_delete_idx(_ptr,n);};
+	void FastDeleteIdx(size_t n) {_delete_idx(this->_ptr,n);};
 #ifndef ZAIMONI_FORCE_ISO
-	void DeleteIdx(size_t n) {_safe_delete_idx(_ptr,n);};
-	void DeleteNSlotsAt(size_t n, size_t Idx) {_delete_n_slots_at(_ptr,n,Idx);};
-	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(_ptr,indexes,n);};
-	template<typename U> bool InsertSlotAt(size_t Idx, U __default) {return _insert_slot_at(_ptr,Idx,__default);}
+	void DeleteIdx(size_t n) {_safe_delete_idx(this->_ptr,n);};
+	void DeleteNSlotsAt(size_t n, size_t Idx) {_delete_n_slots_at(this->_ptr,n,Idx);};
+	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(this->_ptr,indexes,n);};
+	template<typename U> bool InsertSlotAt(size_t Idx, U __default) {return _insert_slot_at(this->_ptr,Idx,__default);}
 #else
-	void DeleteIdx(size_t n) {_safe_delete_idx(_ptr,_size,n);};
-	void DeleteNSlotsAt(size_t n, size_t Idx) {_delete_n_slots_at(_ptr,_size,n,Idx);};
-	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(_ptr,_size,indexes,n);};
-	template<typename U> bool InsertSlotAt(size_t Idx, U __default) {return _insert_slot_at(_ptr,_size,Idx,__default);}
+	void DeleteIdx(size_t n) {_safe_delete_idx(this->_ptr,this->_size,n);};
+	void DeleteNSlotsAt(size_t n, size_t Idx) {_delete_n_slots_at(this->_ptr,this->_size,n,Idx);};
+	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(this->_ptr,this->_size,indexes,n);};
+	template<typename U> bool InsertSlotAt(size_t Idx, U __default) {return _insert_slot_at(this->_ptr,this->_size,Idx,__default);}
 #endif
 
 	// Perl grep
 	// these two assume T has valid * operator
-	template<typename U> bool grep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*>& Target) const;
-	template<typename U> bool invgrep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*>& Target) const;
+	template<typename U> bool grep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*>& dest) const;
+	template<typename U> bool invgrep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*>& dest) const;
 
 	// erase all elements
-	void clear() {_flush(_ptr); this->NULLPtr();};
+	void clear() {_flush(this->_ptr); this->NULLPtr();};
 };
 
 template<typename T>
@@ -485,10 +510,10 @@ template<typename T>
 void
 _meta_weakautoarray_ptr<T>::operator=(T* src)
 {
-	if (_ptr!=src)
+	if (this->_ptr!=src)
 		{
-		_weak_flush(_ptr);
-		_ptr = src;
+		_weak_flush(this->_ptr);
+		this->_ptr = src;
 		}
 }
 #endif
@@ -524,19 +549,19 @@ bool
 _meta_weakautoarray_ptr<T>::grep(const U& src,op Predicate)
 {
 	if (src.empty()) return reset(),true;
-	size_t NonStrictLB = 0;
-	size_t StrictUB = src.size();
-	while(!Predicate(src.data()[NonStrictLB]) && StrictUB>++NonStrictLB);
-	if (StrictUB==NonStrictLB) return reset(),true;
-	while(!Predicate(src[--StrictUB]));
-	++StrictUB;
-	if (!Resize(StrictUB-NonStrictLB)) return false;
+	size_t lb = 0;
+	size_t strict_ub = src.size();
+	while(!Predicate(src.data()[lb]) && strict_ub> ++lb);
+	if (strict_ub==lb) return reset(),true;
+	while(!Predicate(src[--strict_ub]));
+	++strict_ub;
+	if (!Resize(strict_ub-lb)) return false;
 	size_t Offset = 0;
-	_ptr[Offset++] = src.data()[NonStrictLB++];
-	while(NonStrictLB<StrictUB-1)
-		if (Predicate(src.data()[NonStrictLB++]))
-			_ptr[Offset++] = src[NonStrictLB-1];
-	_ptr[Offset++] = src.data()[NonStrictLB++];
+	this->_ptr[Offset++] = src.data()[lb++];
+	while(lb<strict_ub-1)
+		if (Predicate(src.data()[lb++]))
+			this->_ptr[Offset++] = src[lb-1];
+	this->_ptr[Offset++] = src.data()[lb++];
 	return Resize(Offset),true;
 }
 
@@ -546,19 +571,19 @@ bool
 _meta_weakautoarray_ptr<T>::invgrep(const U& src,op Predicate)
 {
 	if (src.empty()) return reset(),true;
-	size_t NonStrictLB = 0;
-	size_t StrictUB = src.size();
-	while(Predicate(src.data()[NonStrictLB]) && StrictUB>++NonStrictLB);
-	if (StrictUB==NonStrictLB) return reset(),true;
-	while(Predicate(src[--StrictUB]));
-	++StrictUB;
-	if (!Resize(StrictUB-NonStrictLB)) return false;
+	size_t lb = 0;
+	size_t strict_ub = src.size();
+	while(Predicate(src.data()[lb]) && strict_ub> ++lb);
+	if (strict_ub==lb) return reset(),true;
+	while(Predicate(src[--strict_ub]));
+	++strict_ub;
+	if (!Resize(strict_ub-lb)) return false;
 	size_t Offset = 0;
-	_ptr[Offset++] = src.data()[NonStrictLB++];
-	while(NonStrictLB<StrictUB-1)
-		if (!Predicate(src.data()[NonStrictLB++]))
-			_ptr[Offset++] = src[NonStrictLB-1];
-	_ptr[Offset++] = src.data()[NonStrictLB++];
+	this->_ptr[Offset++] = src.data()[lb++];
+	while(lb<strict_ub-1)
+		if (!Predicate(src.data()[lb++]))
+			this->_ptr[Offset++] = src[lb-1];
+	this->_ptr[Offset++] = src.data()[lb++];
 	return Resize(Offset),true;
 }
 
@@ -582,10 +607,10 @@ template<typename T>
 void
 _meta_autoarray_ptr<T>::operator=(T* src)
 {
-	if (_ptr!=src)
+	if (this->_ptr!=src)
 		{
-		_flush(_ptr);
-		_ptr = src;
+		_flush(this->_ptr);
+		this->_ptr = src;
 		}
 }
 #endif
@@ -625,12 +650,12 @@ template<typename T>
 void
 _meta_autoarray_ptr<T>::reset(T*& src)
 {	// this convolution handles a recursion issue
-	T* TmpPtr = src;
+	T* tmp = src;
 	src = NULL;
-	if (TmpPtr!=_ptr)
+	if (tmp!=this->_ptr)
 		{
-		if (NULL!=_ptr) _flush(_ptr);
-		_ptr = TmpPtr;
+		if (this->_ptr) _flush(this->_ptr);
+		this->_ptr = tmp;
 		};
 }
 
@@ -640,10 +665,10 @@ _meta_weakautoarray_ptr<T>::reset(T*& src)
 {	// this convolution handles a recursion issue
 	T* tmp = src;
 	src = NULL;
-	if (tmp!=_ptr)
+	if (tmp!=this->_ptr)
 		{
-		if (NULL!=_ptr) _weak_flush(_ptr);
-		_ptr = tmp;
+		if (this->_ptr) _weak_flush(this->_ptr);
+		this->_ptr = tmp;
 		};
 }
 
@@ -655,22 +680,22 @@ _meta_autoarray_ptr<T>::grep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*>& 
 	dest.reset();
 	if (this->empty()) return true;
 
-	size_t NonStrictLB = 0;
-	size_t StrictUB = this->ArraySize();
-	while(!Predicate(*_ptr[NonStrictLB]) && StrictUB>++NonStrictLB);
-	if (StrictUB==NonStrictLB) return true;
+	size_t lb = 0;
+	size_t strict_ub = this->ArraySize();
+	while(!Predicate(*(this->_ptr)[lb]) && strict_ub> ++lb);
+	if (strict_ub==lb) return true;
 
-	while(!Predicate(*_ptr[--StrictUB]));
-	++StrictUB;
-	if (!dest.Resize(StrictUB-NonStrictLB)) return false;
+	while(!Predicate(*(this->_ptr)[--strict_ub]));
+	++strict_ub;
+	if (!dest.Resize(strict_ub-lb)) return false;
 
 	size_t Offset = 0;
 	try	{
-		dest[Offset++] = new U(*_ptr[NonStrictLB++]);
-		while(NonStrictLB<StrictUB-1)
-			if (Predicate(*_ptr[NonStrictLB++]))
-				dest[Offset++] = new U(*_ptr[NonStrictLB-1]);
-		dest[Offset++] = new U(*_ptr[NonStrictLB++]);
+		dest[Offset++] = new U(*(this->_ptr)[lb++]);
+		while(lb<strict_ub-1)
+			if (Predicate(*(this->_ptr)[lb++]))
+				dest[Offset++] = new U(*(this->_ptr)[lb-1]);
+		dest[Offset++] = new U(*(this->_ptr)[lb++]);
 		}
 	catch(const std::bad_alloc&)
 		{
@@ -687,22 +712,22 @@ _meta_autoarray_ptr<T>::invgrep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*
 	dest.reset();
 	if (this->empty()) return true;
 
-	size_t NonStrictLB = 0;
-	size_t StrictUB = this->ArraySize();
-	while(Predicate(*_ptr[NonStrictLB]) && StrictUB>++NonStrictLB);
-	if (StrictUB==NonStrictLB) return true;
+	size_t lb = 0;
+	size_t strict_ub = this->ArraySize();
+	while(Predicate(*(this->_ptr)[lb]) && strict_ub> ++lb);
+	if (strict_ub==lb) return true;
 
-	while(Predicate(*_ptr[--StrictUB]));
-	++StrictUB;
-	if (!dest.Resize(StrictUB-NonStrictLB)) return false;
+	while(Predicate(*(this->_ptr)[--strict_ub]));
+	++strict_ub;
+	if (!dest.Resize(strict_ub-lb)) return false;
 
 	size_t Offset = 0;
 	try	{
-		dest[Offset++] = new U(*_ptr[NonStrictLB++]);
-		while(NonStrictLB<StrictUB-1)
-			if (!Predicate(*_ptr[NonStrictLB++]))
-				dest[Offset++] = new U(*_ptr[NonStrictLB-1]);
-		dest[Offset++] = new U(*_ptr[NonStrictLB++]);
+		dest[Offset++] = new U(*(this->_ptr)[lb++]);
+		while(lb<strict_ub-1)
+			if (!Predicate(*(this->_ptr)[lb++]))
+				dest[Offset++] = new U(*(this->_ptr)[lb-1]);
+		dest[Offset++] = new U(*(this->_ptr)[lb++]);
 		}
 	catch(const std::bad_alloc&)
 		{
