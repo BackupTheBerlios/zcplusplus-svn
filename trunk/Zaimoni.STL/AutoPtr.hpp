@@ -101,7 +101,9 @@ protected:
 	size_t _size;
 #endif
 public:
+	ZAIMONI_STL_TYPE_GLUE_ARRAY(T);
 #ifndef ZAIMONI_FORCE_ISO
+	// core infrastructure
 	void NULLPtr() {_ptr = NULL;};
 	void de_novo(size_t n) {_ptr = n ? _new_buffer_nonNULL_throws<T>(n) : NULL;};
 	void de_novo_nothrow(size_t n) {_ptr = _new_buffer<T>(n);};
@@ -146,6 +148,24 @@ public:
 	// typecasts
 	operator T*&() {return _ptr;};
 	operator T* const&() const {return _ptr;};
+
+	// generic case is owned-values, so put autovalarray_ptr family implementations here
+#ifndef ZAIMONI_FORCE_ISO
+	bool Resize(size_t n) {return _resize(this->_ptr,n);};
+	void Shrink(size_t n) {_shrink(this->_ptr,n);};
+	void FastDeleteIdx(size_t n) {_delete_idx(this->_ptr,n);};
+	void DeleteIdx(size_t n) {_safe_delete_idx(this->_ptr,n);};
+	void DeleteNSlotsAt(size_t n, size_t Idx) {_delete_n_slots_at(this->_ptr,n,Idx);};
+	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(this->_ptr,indexes,n);};
+#else
+	bool Resize(size_t n) {return _resize(this->_ptr,this->_size,n);};
+	void Shrink(size_t n) {_shrink(this->_ptr,this->_size,n);};
+	void FastDeleteIdx(size_t n) {_delete_idx(this->_ptr,this->_size,n);};
+	void DeleteIdx(size_t n) {_safe_delete_idx(this->_ptr,this->_size,n);};
+	void DeleteNSlotsAt(size_t n, size_t Idx) {_delete_n_slots_at(this->_ptr,this->_size,n,Idx);};
+	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(this->_ptr,this->_size,indexes,n);};
+#endif
+	void resize(size_t n) {if (!this->Resize(n)) throw std::bad_alloc();};	
 };
 
 } // namespace zaimoni
@@ -323,23 +343,10 @@ public:
 #ifndef ZAIMONI_FORCE_ISO
 	void reset(T*& src);
 	void MoveInto(_meta_autoarray_ptr<T>& dest) {dest.reset(this->_ptr);};
-	bool Resize(size_t n) {return _resize(this->_ptr,n);};
-	void Shrink(size_t n) {_shrink(this->_ptr,n);};
-	void FastDeleteIdx(size_t n) {_delete_idx(this->_ptr,n);};
-	void DeleteIdx(size_t n) {_safe_delete_idx(this->_ptr,n);};
-	void DeleteNSlotsAt(size_t n, size_t Idx) {_delete_n_slots_at(this->_ptr,n,Idx);};
-	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(this->_ptr,indexes,n);};
 #else
 	void reset(T*& src,size_t n);
 	void MoveInto(_meta_autoarray_ptr<T>& dest) {dest.reset(this->_ptr,this->_size);};
-	bool Resize(size_t n) {return _resize(this->_ptr,this->_size,n);};
-	void Shrink(size_t n) {_shrink(this->_ptr,this->_size,n);};
-	void FastDeleteIdx(size_t n) {_delete_idx(this->_ptr,this->_size,n);};
-	void DeleteIdx(size_t n) {_safe_delete_idx(this->_ptr,this->_size,n);};
-	void DeleteNSlotsAt(size_t n, size_t Idx) {_delete_n_slots_at(this->_ptr,this->_size,n,Idx);};
-	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(this->_ptr,this->_size,indexes,n);};
 #endif
-	void resize(size_t n) {if (!Resize(n)) throw std::bad_alloc();};	
 
 	// Perl grep
 	// these two assume T has valid * operator
@@ -592,7 +599,7 @@ bool
 _meta_autoarray_ptr<T>::value_copy_of(const U& src)
 {
 	const size_t ub = src.size();
-	if (!Resize(ub)) return false;
+	if (!this->Resize(ub)) return false;
 	if (0<ub)
 		try	{
 			_value_copy_buffer(this->c_array(),src.data(),ub);
