@@ -91,47 +91,9 @@ struct has_MoveInto<autoval_ptr<T> > : public boost::true_type
 {
 };
 
-template<class Derived,class T> struct c_var_array_CRTP;
-
-template<class Derived,class T>
-bool
-operator==(const c_var_array_CRTP<Derived,T>& lhs, const c_var_array_CRTP<Derived,T>& rhs);
-
-// requires: _ptr
-template<class Derived,class T>
-struct c_var_array_CRTP : public c_array_CRTP<c_var_array_CRTP<Derived,T>, T>
-{
-	// STL support
-	T* c_array() {return static_cast<Derived*>(this)->_ptr;};
-	const T* data() const {return static_cast<const Derived*>(this)->_ptr;};
-
-	// at() with range check
-	T& at(size_t i) { rangecheck(i); return static_cast<Derived*>(this)->_ptr[i];}
-	const T& at(size_t i) const { rangecheck(i); return static_cast<const Derived*>(this)->_ptr[i]; };
-
-#ifndef ZAIMONI_FORCE_ISO
-	size_t size() const { return zaimoni::SafeArraySize(static_cast<const Derived*>(this)->_ptr); };
-#else
-	size_t size() const { return static_cast<const Derived*>(this)->_size; };
-#endif
-	bool empty() const { return NULL==static_cast<const Derived*>(this)->_ptr; };
-	static size_t max_size() { return size_t(-1)/sizeof(T); };	// XXX casting -1 to an unsigned type gets the maximum of that type
-
-	void rangecheck(size_t i) const { if (i>=size()) FATAL("out-of-bounds array access"); };
-
-	void swap(c_var_array_CRTP& RHS) {std::swap(static_cast<Derived*>(this)->_ptr,static_cast<Derived&>(RHS)._ptr);};
-
-	// Perl grep
-	template<typename U> void destructive_grep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));
-	template<typename U> void destructive_invgrep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));
-
-	// throwing resize
-	void resize(size_t n) {if (!static_cast<Derived*>(this)->Resize(n)) throw std::bad_alloc();};	
-};
-
 // POD backing class for the autoarray and weak autoarray family
 template<typename T>
-class POD_autoarray_ptr
+class POD_autoarray_ptr : public c_array_CRTP<POD_autoarray_ptr<T>, T>
 {
 protected:
 	T* _ptr;
@@ -149,7 +111,10 @@ public:
 	bool InsertNSlotsAt(size_t n,size_t i) {return _insert_n_slots_at(_ptr,n,i);};
 	void insertNSlotsAt(size_t n,size_t i) {if (!_insert_n_slots_at(_ptr,n,i)) throw std::bad_alloc();};
 
+	void swap(POD_autoarray_ptr<T>& rhs) {std::swap(_ptr,rhs._ptr);};
+	
 	// STL support	
+	size_t size() const { return zaimoni::SafeArraySize(_ptr); };
 	T* release() {T* tmp = _ptr; _ptr = NULL; return tmp;};
 #else
 	void NULLPtr() {_ptr = NULL; _size = 0;};
@@ -161,9 +126,22 @@ public:
 	bool InsertNSlotsAt(size_t n,size_t i) {return _insert_n_slots_at(_ptr,_size,n,i);};
 	void insertNSlotsAt(size_t n,size_t i) {if (!_insert_n_slots_at(_ptr,_size,n,i)) throw std::bad_alloc();};
 
+	void swap(POD_autoarray_ptr<T>& rhs) {std::swap(_ptr,rhs._ptr); std::swap(_size,rhs._size);};
+	
 	// STL support	
 	T* release() {T* tmp = _ptr; _ptr = NULL; _size = 0; return tmp;};
+	size_t size() const { return _size; };
 #endif	
+	T* c_array() {return _ptr;};
+	const T* data() const {return _ptr;};
+	bool empty() const { return NULL==_ptr; };
+	static size_t max_size() { return size_t(-1)/sizeof(T); };	// XXX casting -1 to an unsigned type gets the maximum of that type
+
+	void rangecheck(size_t i) const { if (i>=size()) FATAL("out-of-bounds array access"); };
+
+	// Perl grep
+	template<typename U> void destructive_grep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));
+	template<typename U> void destructive_invgrep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type));
 
 	// typecasts
 	operator T*&() {return _ptr;};
@@ -185,11 +163,8 @@ ZAIMONI_POD_STRUCT(ZAIMONI_TEMPLATE_SPEC,ZAIMONI_CLASS_SPEC,char)
 namespace zaimoni {
 
 template<typename T>
-class _meta_weakautoarray_ptr : public c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>,public POD_autoarray_ptr<T>
+class _meta_weakautoarray_ptr : public POD_autoarray_ptr<T>
 {
-private:
-	friend class c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>;
-	friend bool operator==<>(const c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>& lhs, const c_var_array_CRTP<_meta_weakautoarray_ptr<T>, T>& rhs);
 public:
 	explicit _meta_weakautoarray_ptr() {this->NULLPtr();};
 #ifndef ZAIMONI_FORCE_ISO
@@ -225,6 +200,7 @@ public:
 	void DeleteIdx(size_t n) {_safe_weak_delete_idx(this->_ptr,this->_size,n);};
 	void DeleteNSlotsAt(size_t n, size_t Idx) {_weak_delete_n_slots_at(this->_ptr,this->_size,n,Idx);};
 #endif
+	void resize(size_t n) {if (!Resize(n)) throw std::bad_alloc();};	
 	
 	// Perl grep
 	// next two require of U: STL size(),data()
@@ -317,12 +293,9 @@ public:
 };
 
 template<typename T>
-class _meta_autoarray_ptr : public c_var_array_CRTP<_meta_autoarray_ptr<T>, T>,public POD_autoarray_ptr<T>
+class _meta_autoarray_ptr : public POD_autoarray_ptr<T>
 {
 protected:
-	friend class c_var_array_CRTP<_meta_autoarray_ptr<T>, T>;
-	friend bool operator==<>(const c_var_array_CRTP<_meta_autoarray_ptr<T>, T>& lhs, const c_var_array_CRTP<_meta_autoarray_ptr<T>, T>& rhs);
-
 	explicit _meta_autoarray_ptr() {this->NULLPtr();};	
 #ifndef ZAIMONI_FORCE_ISO
 	explicit _meta_autoarray_ptr(T*& src) {this->_ptr = src; src = NULL;};
@@ -368,6 +341,7 @@ public:
 	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(this->_ptr,this->_size,indexes,n);};
 	template<typename U> bool InsertSlotAt(size_t Idx, U __default) {return _insert_slot_at(this->_ptr,this->_size,Idx,__default);}
 #endif
+	void resize(size_t n) {if (!Resize(n)) throw std::bad_alloc();};	
 
 	// Perl grep
 	// these two assume T has valid * operator
@@ -578,20 +552,15 @@ _meta_weakautoarray_ptr<T>::invgrep(const U& src,op Predicate)
 	return Resize(Offset),true;
 }
 
-template<class Derived,class T>
+template<class T>
 bool
-operator==(const c_var_array_CRTP<Derived,T>& lhs, const c_var_array_CRTP<Derived,T>& rhs)
+operator==(const POD_autoarray_ptr<T>& lhs, const POD_autoarray_ptr<T>& rhs)
 {
 	const size_t ub = rhs.size();
 	if (ub!=lhs.size()) return false;
 	if (0==ub) return true;
-	return _value_vector_equal(static_cast<const Derived&>(lhs)._ptr,static_cast<const Derived&>(rhs)._ptr,ub);
+	return _value_vector_equal(lhs.data(),rhs.data(),ub);
 }
-
-template<class Derived,class T>
-inline bool
-operator!=(const c_var_array_CRTP<Derived,T>& lhs, const c_var_array_CRTP<Derived,T>& rhs)
-{	return !(lhs==rhs); }
 
 #ifndef ZAIMONI_FORCE_ISO
 template<typename T>
@@ -739,44 +708,44 @@ _meta_autoarray_ptr<T>::invgrep(UnaryPredicate* Predicate,_meta_autoarray_ptr<U*
 	return dest.Resize(Offset),true;
 }
 
-template<class Derived,class T>
+template<class T>
 template<typename U>
 void
-c_var_array_CRTP<Derived,T>::destructive_grep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type))
+POD_autoarray_ptr<T>::destructive_grep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type))
 {
 	size_t i = this->size();
-	do	if (!equivalence(x,static_cast<Derived*>(this)->_ptr[--i]))
+	do	if (!equivalence(x,_ptr[--i]))
 			{
 			size_t j = i;
-			while(0<j && !equivalence(x,static_cast<Derived*>(this)->_ptr[j-1])) --j;
+			while(0<j && !equivalence(x,_ptr[j-1])) --j;
 			if (j<i)
 				{
-				static_cast<Derived*>(this)->DeleteNSlotsAt(j,(i-j)+1);
+				this->DeleteNSlotsAt(j,(i-j)+1);
 				i = j;
 				}
 			else
-				static_cast<Derived*>(this)->DeleteIdx(i);
+				this->DeleteIdx(i);
 			}
 	while(0<i);
 }
 
-template<class Derived,class T>
+template<class T>
 template<typename U>
 void
-c_var_array_CRTP<Derived,T>::destructive_invgrep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type))
+POD_autoarray_ptr<T>::destructive_invgrep(U& x,bool (&equivalence)(typename boost::call_traits<U>::param_type,typename boost::call_traits<T>::param_type))
 {
 	size_t i = this->size();
-	do	if (equivalence(x,static_cast<Derived*>(this)->_ptr[--i]))
+	do	if (equivalence(x,_ptr[--i]))
 			{
 			size_t j = i;
-			while(0<j && equivalence(x,static_cast<Derived*>(this)->_ptr[j-1])) --j;
+			while(0<j && equivalence(x,_ptr[j-1])) --j;
 			if (j<i)
 				{
-				static_cast<Derived*>(this)->DeleteNSlotsAt(j,(i-j)+1);
+				this->DeleteNSlotsAt(j,(i-j)+1);
 				i = j;
 				}
 			else
-				static_cast<Derived*>(this)->DeleteIdx(i);
+				this->DeleteIdx(i);
 			}
 	while(0<i);
 }
