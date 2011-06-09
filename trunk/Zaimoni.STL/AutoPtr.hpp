@@ -107,7 +107,7 @@ public:
 	void de_novo_nothrow(size_t n) {_ptr = _new_buffer<T>(n);};
 	
 	size_t ArraySize() const {return zaimoni::ArraySize(_ptr);};
-	template<typename U> bool InsertSlotAt(size_t Idx, U _default) {return _insert_slot_at(_ptr,Idx,_default);}
+	template<typename U> bool InsertSlotAt(size_t i, U _default) {return _insert_slot_at(_ptr,i,_default);}
 	bool InsertNSlotsAt(size_t n,size_t i) {return _insert_n_slots_at(_ptr,n,i);};
 	void insertNSlotsAt(size_t n,size_t i) {if (!_insert_n_slots_at(_ptr,n,i)) throw std::bad_alloc();};
 
@@ -122,7 +122,7 @@ public:
 	void de_novo_nothrow(size_t n) {_ptr = _new_buffer<T>(n); _size = n;};
 
 	size_t ArraySize() const {return _size;};
-	template<typename U> bool InsertSlotAt(size_t Idx, U _default) {return _insert_slot_at(_ptr,_size,Idx,_default);}
+	template<typename U> bool InsertSlotAt(size_t i, U _default) {return _insert_slot_at(_ptr,_size,i,_default);}
 	bool InsertNSlotsAt(size_t n,size_t i) {return _insert_n_slots_at(_ptr,_size,n,i);};
 	void insertNSlotsAt(size_t n,size_t i) {if (!_insert_n_slots_at(_ptr,_size,n,i)) throw std::bad_alloc();};
 
@@ -329,7 +329,6 @@ public:
 	void DeleteIdx(size_t n) {_safe_delete_idx(this->_ptr,n);};
 	void DeleteNSlotsAt(size_t n, size_t Idx) {_delete_n_slots_at(this->_ptr,n,Idx);};
 	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(this->_ptr,indexes,n);};
-	template<typename U> bool InsertSlotAt(size_t Idx, U __default) {return _insert_slot_at(this->_ptr,Idx,__default);}
 #else
 	void reset(T*& src,size_t n);
 	void MoveInto(_meta_autoarray_ptr<T>& dest) {dest.reset(this->_ptr,this->_size);};
@@ -339,7 +338,6 @@ public:
 	void DeleteIdx(size_t n) {_safe_delete_idx(this->_ptr,this->_size,n);};
 	void DeleteNSlotsAt(size_t n, size_t Idx) {_delete_n_slots_at(this->_ptr,this->_size,n,Idx);};
 	void DeleteNSlots(size_t* indexes,size_t n) {_delete_n_slots(this->_ptr,this->_size,indexes,n);};
-	template<typename U> bool InsertSlotAt(size_t Idx, U __default) {return _insert_slot_at(this->_ptr,this->_size,Idx,__default);}
 #endif
 	void resize(size_t n) {if (!Resize(n)) throw std::bad_alloc();};	
 
