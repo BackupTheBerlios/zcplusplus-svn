@@ -47,9 +47,9 @@ bool parse_tree::is_raw_list() const
 #ifndef ZAIMONI_FORCE_ISO
 bool parse_tree::syntax_ok() const
 {
-	if (args[0] && !_memory_block_start_valid(args[0])) return false;
-	if (args[1] && !_memory_block_start_valid(args[1])) return false;
-	if (args[2] && !_memory_block_start_valid(args[2])) return false;
+	if (data<0>() && !_memory_block_start_valid(data<0>())) return false;
+	if (data<1>() && !_memory_block_start_valid(data<1>())) return false;
+	if (data<2>() && !_memory_block_start_valid(data<2>())) return false;
 
 	if (own_index_token<0>())
 		{
@@ -93,15 +93,15 @@ bool parse_tree::entangled_with(const type_spec& x) const
 bool parse_tree::entangled_with(const parse_tree& x) const
 {
 	if (x.type_code.entangled_with(type_code)) return true;
-	if (args[0] && x.args[0] && args[0]==x.args[0]) return true;
-	if (args[0] && x.args[1] && args[0]==x.args[1]) return true;
-	if (args[0] && x.args[2] && args[0]==x.args[2]) return true;
-	if (args[1] && x.args[0] && args[1]==x.args[0]) return true;
-	if (args[1] && x.args[1] && args[1]==x.args[1]) return true;
-	if (args[1] && x.args[2] && args[1]==x.args[2]) return true;
-	if (args[2] && x.args[0] && args[2]==x.args[0]) return true;
-	if (args[2] && x.args[1] && args[2]==x.args[1]) return true;
-	if (args[2] && x.args[2] && args[2]==x.args[2]) return true;
+	if (begin<0>() && x.begin<0>() && begin<0>()==x.begin<0>()) return true;
+	if (begin<0>() && x.begin<1>() && begin<0>()==x.begin<1>()) return true;
+	if (begin<0>() && x.begin<2>() && begin<0>()==x.begin<2>()) return true;
+	if (begin<1>() && x.begin<0>() && begin<1>()==x.begin<0>()) return true;
+	if (begin<1>() && x.begin<1>() && begin<1>()==x.begin<1>()) return true;
+	if (begin<1>() && x.begin<2>() && begin<1>()==x.begin<2>()) return true;
+	if (begin<2>() && x.begin<0>() && begin<2>()==x.begin<0>()) return true;
+	if (begin<2>() && x.begin<1>() && begin<2>()==x.begin<1>()) return true;
+	if (begin<2>() && x.begin<2>() && begin<2>()==x.begin<2>()) return true;
 
 	size_t i = 0;
 	while(size<0>()>i)
@@ -132,9 +132,9 @@ bool parse_tree::entangled_with(const parse_tree& x) const
 
 bool parse_tree::self_entangled() const
 {
-	if (args[0] && args[1] && args[0]==args[1]) return true;
-	if (args[0] && args[2] && args[0]==args[2]) return true;
-	if (args[1] && args[2] && args[1]==args[2]) return true;
+	if (data<0>() && data<1>() && data<0>()==data<1>()) return true;
+	if (data<0>() && data<2>() && data<0>()==data<2>()) return true;
+	if (data<1>() && data<2>() && data<1>()==data<2>()) return true;
 
 	size_t i = 0;
 	while(size<0>()>i)
