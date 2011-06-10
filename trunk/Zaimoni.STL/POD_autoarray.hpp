@@ -35,6 +35,7 @@ public:
 	template<typename U> bool InsertSlotAt(size_t i, U _default) {return _insert_slot_at(_ptr,i,_default);}
 	bool InsertNSlotsAt(size_t n,size_t i) {return _insert_n_slots_at(_ptr,n,i);};
 	void insertNSlotsAt(size_t n,size_t i) {if (!_insert_n_slots_at(_ptr,n,i)) throw std::bad_alloc();};
+	void Overwrite(T*& src) {_ptr = src; src = NULL;};
 
 	void swap(POD_autoarray_ptr<T>& rhs) {std::swap(_ptr,rhs._ptr);};
 	
@@ -50,6 +51,7 @@ public:
 	template<typename U> bool InsertSlotAt(size_t i, U _default) {return _insert_slot_at(_ptr,_size,i,_default);}
 	bool InsertNSlotsAt(size_t n,size_t i) {return _insert_n_slots_at(_ptr,_size,n,i);};
 	void insertNSlotsAt(size_t n,size_t i) {if (!_insert_n_slots_at(_ptr,_size,n,i)) throw std::bad_alloc();};
+	void Overwrite(T*& src,size_t n) {_ptr = src; src = NULL; _size = n;};
 
 	void swap(POD_autoarray_ptr<T>& rhs) {std::swap(_ptr,rhs._ptr); std::swap(_size,rhs._size);};
 	
