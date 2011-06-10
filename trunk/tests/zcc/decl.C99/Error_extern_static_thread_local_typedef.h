@@ -2,4 +2,4 @@
 // declaration with too many storage qualifiers
 // (C)2011 Kenneth Boyd, license: MIT.txt
 
-extern static _Thread_Local typedef int i;
+extern static _Thread_local typedef int i;
