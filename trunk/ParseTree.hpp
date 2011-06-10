@@ -239,7 +239,7 @@ struct parse_tree
 		assert(size<arg_idx>()-i>=n);
 		assert(0<n);
 		size_t idx = n;
-		do	ZCC_PARSETREE_CARRAY(arg_idx)[i+ --idx].destroy();
+		do	c_array<arg_idx>()[i+ --idx].destroy();
 		while(0<idx);
 #ifdef ZAIMONI_FORCE_ISO
 		zaimoni::_delete_n_slots_at(args[arg_idx].first,args[arg_idx].second,n,i);
@@ -251,7 +251,7 @@ struct parse_tree
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>arg_idx);
 		assert(size<arg_idx>()>i);
-		ZCC_PARSETREE_CARRAY(arg_idx)[i].destroy();
+		c_array<arg_idx>()[i].destroy();
 #ifdef ZAIMONI_FORCE_ISO
 		zaimoni::_delete_idx(args[arg_idx].first,args[arg_idx].second,i);
 #else
@@ -291,7 +291,7 @@ struct parse_tree
 	template<size_t dest_idx> void fast_set_arg(parse_tree* src)
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(args)>dest_idx);
-		assert(NULL!=src);
+		assert(src);
 		assert(NULL==ZCC_PARSETREE_CARRAY(dest_idx));
 		ZCC_PARSETREE_CARRAY(dest_idx) = src;
 #ifdef ZAIMONI_FORCE_ISO
@@ -325,7 +325,7 @@ struct parse_tree
 	template<size_t dest_idx> void grab_index_token_from(char*& src,zaimoni::lex_flags src_flags)
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>dest_idx);
-		assert(NULL!=src);
+		assert(src);
 		if (own_index_token<dest_idx>()) free(const_cast<char*>(index_tokens[dest_idx].token.first));
 		index_tokens[dest_idx].token.first = src;
 		index_tokens[dest_idx].token.second = strlen(src);
@@ -336,7 +336,7 @@ struct parse_tree
 	template<size_t dest_idx> void grab_index_token_from(const char*& src,zaimoni::lex_flags src_flags)
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>dest_idx);
-		assert(NULL!=src);
+		assert(src);
 		if (own_index_token<dest_idx>()) free(const_cast<char*>(index_tokens[dest_idx].token.first));
 		index_tokens[dest_idx].token.first = src;
 		index_tokens[dest_idx].token.second = strlen(src);
@@ -347,7 +347,7 @@ struct parse_tree
 	template<size_t dest_idx> void grab_index_token_from_str_literal(const char* const src,zaimoni::lex_flags src_flags)
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>dest_idx);
-		assert(NULL!=src);
+		assert(src);
 		if (own_index_token<dest_idx>()) { free(const_cast<char*>(index_tokens[dest_idx].token.first)); };
 		index_tokens[dest_idx].token.first = src;
 		index_tokens[dest_idx].token.second = strlen(src);
@@ -357,7 +357,7 @@ struct parse_tree
 	template<size_t dest_idx> void set_index_token_from_str_literal(const char* const src)
 		{
 		BOOST_STATIC_ASSERT(STATIC_SIZE(index_tokens)>dest_idx);
-		assert(NULL!=src);
+		assert(src);
 		if (own_index_token<dest_idx>()) { free(const_cast<char*>(index_tokens[dest_idx].token.first)); };
 		index_tokens[dest_idx].token.first = src;
 		index_tokens[dest_idx].token.second = strlen(src);
