@@ -11,7 +11,7 @@ target_files3 = ['Pass_enum_def2.hpp', 'Pass_struct_def2.hpp', 'Pass_union_def2.
 
 invariant_header_lines = [
 'SUFFIXES h hpp\n'
-'OBJECTLIKE_MACRO THREAD_LOCAL _Thread_Local thread_local\n'
+'OBJECTLIKE_MACRO THREAD_LOCAL _Thread_local thread_local\n'
 '// (C)2009,2011 Kenneth Boyd, license: MIT.txt\n'
 ]
 
