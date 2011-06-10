@@ -4023,7 +4023,7 @@ static bool is_CPP0X_typeid_expression(const parse_tree& src)
 			&&	!src.index_tokens[1].token.first
 			&&	src.empty<0>() && src.empty<1>()
 			&&	1==src.size<2>() && ((PARSE_EXPRESSION | PARSE_TYPE) & src.data<2>()->flags)
-			&&	src.type_code.is_type(C_TYPE::TYPEINFO)
+			&&	src.type_code.is_type<C_TYPE::TYPEINFO>()
 			&&	(src.type_code.qualifier<0>() & (type_spec::lvalue | type_spec::_const))==(type_spec::lvalue | type_spec::_const);
 }
 
@@ -5009,7 +5009,7 @@ static bool _this_vaguely_where_it_could_be_cplusplus(const parse_tree& src)
 		zcc_errors.inc_error();
 		};
 
-	size_t j = STATIC_SIZE(src.args);
+	size_t j = STATIC_SIZE(src._args);
 	do	{
 		if (0== --j && src.index_tokens[0].token.first && src.index_tokens[1].token.first)
 			{
@@ -5163,15 +5163,11 @@ static zaimoni::Loki::CheckReturnDisallow<NULL,parse_tree*>::value_type repurpos
 {
 	if (1==src.size<0>() && is_naked_parentheses_pair(*src.data<0>()))
 		{
-		parse_tree::arglist_array tmp = src.c_array<0>()->args[0];
-#ifdef ZAIMONI_FORCE_ISO
-		src.c_array<0>()->args[0].first = NULL;				 
-#else
-		src.c_array<0>()->args[0] = NULL;
-#endif
+		zaimoni::POD_autoarray_ptr<parse_tree> tmp = src.c_array<0>()->_args[0];
+		src.c_array<0>()->_args[0].NULLPtr();
 		src.c_array<0>()->destroy();
 		parse_tree* const tmp2 = src.c_array<0>();
-		src.args[0] = tmp;
+		src._args[0] = tmp;
 		return tmp2;
 		};
 	return _new_buffer_nonNULL_throws<parse_tree>(1);
@@ -5181,15 +5177,11 @@ static void cancel_inner_parentheses(parse_tree& src)
 {
 	while(1==src.size<0>() && is_naked_parentheses_pair(*src.data<0>()))
 		{
-		parse_tree::arglist_array tmp = src.c_array<0>()->args[0];
-#ifdef ZAIMONI_FORCE_ISO
-		src.c_array<0>()->args[0].first = NULL;				 
-#else
-		src.c_array<0>()->args[0] = NULL;
-#endif
+		zaimoni::POD_autoarray_ptr<parse_tree> tmp = src.c_array<0>()->_args[0];
+		src.c_array<0>()->_args[0].NULLPtr();
 		src.c_array<0>()->destroy();
 		free(src.c_array<0>());
-		src.args[0] = tmp;
+		src._args[0] = tmp;
 		}
 }
 
@@ -6211,7 +6203,7 @@ static bool eval_logical_NOT(parse_tree& src, const type_system& types, func_tra
 	if (is_logical_NOT(*src.data<2>()))
 		{
 		if (	is_logical_NOT(*src.data<2>()->data<2>())
-			||	src.data<2>()->type_code.is_type(C_TYPE::BOOL))
+			||	src.data<2>()->type_code.is_type<C_TYPE::BOOL>())
 			{
 			parse_tree tmp;
 			src.c_array<2>()->c_array<2>()->OverwriteInto(tmp);
@@ -7250,11 +7242,7 @@ static bool terse_C99_augment_mult_expression(parse_tree& src, size_t& i, const 
 				{
 				if (src.data<0>()[i-1].type_code.is_type<C_TYPE::NOT_VOID>())
 					{
-#ifndef ZAIMONI_FORCE_ISO
-					if (!_insert_n_slots_at(src.args[0],1,i)) throw std::bad_alloc();
-#else
-					if (!_insert_n_slots_at(src.args[0].first,src.args[0].second,1,i)) throw std::bad_alloc();
-#endif
+					src._args[0].insertNSlotsAt(1,i);
 					src.c_array<0>()[i].clear();
 					src.c_array<0>()[i-1].front<2>().MoveInto(src.c_array<0>()[i]);
 					src.c_array<0>()[i-1].DeleteIdx<2>(0);
@@ -7291,11 +7279,7 @@ static bool terse_CPP_augment_mult_expression(parse_tree& src, size_t& i, const 
 				{
 				if (src.data<0>()[i-1].type_code.is_type<C_TYPE::NOT_VOID>())
 					{
-#ifndef ZAIMONI_FORCE_ISO
-					if (!_insert_n_slots_at(src.args[0],1,i)) throw std::bad_alloc();
-#else
-					if (!_insert_n_slots_at(src.args[0].first,src.args[0].second,1,i)) throw std::bad_alloc();
-#endif
+					src._args[0].insertNSlotsAt(1,i);
 					src.c_array<0>()[i].clear();
 					src.c_array<0>()[i-1].front<2>().MoveInto(src.c_array<0>()[i]);
 					src.c_array<0>()[i-1].DeleteIdx<2>(0);

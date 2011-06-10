@@ -16,32 +16,14 @@ const char* parse_tree::active_namespace = NULL;
 
 bool parse_tree::is_atomic() const
 {
-	return (	NULL!=index_tokens[0].token.first
-			&&	NULL==index_tokens[1].token.first
-#ifdef ZAIMONI_FORCE_ISO
-			&&	NULL==args[0].first
-			&&	NULL==args[1].first
-			&&	NULL==args[2].first);
-#else
-			&&	NULL==args[0]
-			&&	NULL==args[1]
-			&&	NULL==args[2]);
-#endif
+	return index_tokens[0].token.first && !index_tokens[1].token.first
+		&& _args[0].empty() && _args[1].empty() && _args[2].empty();
 }
 
 bool parse_tree::is_raw_list() const
 {
-	return (	NULL==index_tokens[0].token.first
-			&&	NULL==index_tokens[1].token.first
-#ifdef ZAIMONI_FORCE_ISO
-			&&	NULL!=args[0].first
-			&&	NULL==args[1].first
-			&&	NULL==args[2].first);
-#else
-			&&	NULL!=args[0]
-			&&	NULL==args[1]
-			&&	NULL==args[2]);
-#endif
+	return !index_tokens[0].token.first &&	!index_tokens[1].token.first
+		&& !_args[0].empty() && _args[1].empty() && _args[2].empty();
 }
 
 #ifndef ZAIMONI_FORCE_ISO
@@ -168,52 +150,30 @@ void parse_tree::clear()
 {
 	index_tokens[0].clear();
 	index_tokens[1].clear();
-#ifdef ZAIMONI_FORCE_ISO
-	args[0].first = NULL;
-	args[0].second = 0;
-	args[1].first = NULL;
-	args[1].second = 0;
-	args[2].first = NULL;
-	args[2].second = 0;
-#else
-	args[0] = NULL;
-	args[1] = NULL;
-	args[2] = NULL;
-#endif
+	_args[0].NULLPtr();
+	_args[1].NULLPtr();
+	_args[2].NULLPtr();
 	flags = 0;
 	subtype = 0;
 	type_code.clear();
 }
 
-#ifdef ZAIMONI_FORCE_ISO
-static void _destroy(zaimoni::POD_pair<parse_tree*,size_t>& target)
+static void _destroy(zaimoni::POD_autoarray_ptr<parse_tree>& target)
 {
-	if (NULL!=target.first)
+	if (!target.empty())
 		{
-		size_t i = target.second;
-		do	target.first[--i].destroy();
+		size_t i = target.size();
+		do	target.c_array()[--i].destroy();
 		while(0<i);
-		FREE_AND_NULL(target.first);
+		free(target.release());
 		}
 }
-#else
-static void _destroy(parse_tree*& target)
-{
-	if (NULL!=target)
-		{
-		size_t i = ArraySize(target);
-		do	target[--i].destroy();
-		while(0<i);
-		FREE_AND_NULL(target);
-		}
-}
-#endif
 
 void parse_tree::destroy()
 {
-	_destroy(args[2]);
-	_destroy(args[1]);
-	_destroy(args[0]);
+	_destroy(_args[2]);
+	_destroy(_args[1]);
+	_destroy(_args[0]);
 	if (own_index_token<1>()) free(const_cast<char*>(index_tokens[1].token.first));
 	if (own_index_token<0>()) free(const_cast<char*>(index_tokens[0].token.first));
 	index_tokens[1].token.first = NULL;
@@ -369,16 +329,10 @@ void parse_tree::_eval_to_arg(size_t arg_idx, size_t i)
 //! the new slots have no content, OverwriteInto won't leak memory
 bool parse_tree::_resize(const size_t arg_idx,size_t n)
 {
-	assert(STATIC_SIZE(args)>arg_idx);
-#ifdef ZAIMONI_FORCE_ISO
-	const size_t old_size = args[arg_idx].second;
-	if (!zaimoni::_resize(args[arg_idx].first,args[arg_idx].second,n)) return false;
-	while(old_size<n) args[arg_idx].first[--n].clear();
-#else
-	const size_t old_size = SafeArraySize(args[arg_idx]);
-	if (!zaimoni::_resize(args[arg_idx],n)) return false;
-	while(old_size<n) args[arg_idx][--n].clear();
-#endif
+	assert(STATIC_SIZE(_args)>arg_idx);
+	const size_t old_size = size(arg_idx);
+	if (!_args[arg_idx].Resize(n)) return false;
+	while(old_size<n) c_array(arg_idx)[--n].clear();
 	return true;
 }
 
@@ -458,7 +412,7 @@ void INC_INFORM(const parse_tree& src)
 // slicing copy constructor
 parse_tree_class::parse_tree_class(const parse_tree& src,size_t begin,size_t end,size_t dest_idx)
 {
-	assert(STATIC_SIZE(args)>dest_idx);
+	assert(STATIC_SIZE(_args)>dest_idx);
 	assert(begin<src.size(dest_idx));
 	assert(end<=src.size(dest_idx));
 	this->clear();
