@@ -440,7 +440,7 @@ BOOST_STATIC_ASSERT(NONATOMIC_PREPROC_OP_LB<C_PREPROC_OP_STRICT_UB);
 static const POD_pair<const char*,size_t> valid_keyword[]
 	=	{	DICT_STRUCT("__asm"),		// reserved to the implementation, so OK to make a keyword for C only
 			DICT_STRUCT("_Static_Assert"),	// C1X keywords not in C++0X
-			DICT_STRUCT("_Thread_Local"),
+			DICT_STRUCT("_Thread_local"),
 			DICT_STRUCT("restrict"),	// C99 keywords not in C++98
 			DICT_STRUCT("_Bool"),
 			DICT_STRUCT("_Complex"),
@@ -966,7 +966,7 @@ static const POD_pair<const char*,size_t> C99_decl_specifiers[] =
 		DICT_STRUCT("extern"),
 		DICT_STRUCT("inline"),
 		DICT_STRUCT("auto"),
-		DICT_STRUCT("_Thread_Local")	// C1X, but in reserved class of identifiers
+		DICT_STRUCT("_Thread_local")	// C1X, but in reserved class of identifiers
 	};
 
 // we implement C++0X, not C++98.  auto as storage specifier is pretty much a waste of source code anyway.
@@ -1028,7 +1028,7 @@ static const POD_pair<const char*,size_t> C99_decl_specifier_list[] =
 		DICT_STRUCT("unsigned"),
 		DICT_STRUCT("_Complex"),
 		DICT_STRUCT("_Bool"),
-		DICT_STRUCT("_Thread_Local"),	// C1X, actually
+		DICT_STRUCT("_Thread_local"),	// C1X, actually
 	};
 
 // we implement C++0X, not C++98.  auto as storage specifier is pretty much a waste of source code anyway.
@@ -10782,7 +10782,7 @@ static const POD_pair<const char*,size_t> C99_nontype_decl_specifier_list[] =
 		DICT_STRUCT("extern"),
 		DICT_STRUCT("inline"),
 		DICT_STRUCT("auto"),
-		DICT_STRUCT("_Thread_Local"),	// C1X, actually
+		DICT_STRUCT("_Thread_local"),	// C1X, actually
 	};
 
 static const POD_pair<const char*,size_t> CPP0X_nontype_decl_specifier_list[] =
@@ -12027,7 +12027,7 @@ public:
 				specs[storage_count++] = "extern";
 			if (C99_CPP0X_DECLSPEC_THREAD_LOCAL & flags)
 				{
-				specs[storage_count++] = "_Thread_Local";
+				specs[storage_count++] = "_Thread_local";
 				thread_local_compat = ((C99_CPP0X_DECLSPEC_STATIC | C99_CPP0X_DECLSPEC_EXTERN) & flags);
 				}
 			if (C99_CPP0X_DECLSPEC_REGISTER & flags)
@@ -16066,7 +16066,7 @@ void InitializeCLexerDefs(const virtual_machine::CPUInfo& target)
 	assert(C99_CPP_COMPLEX_IDX==linear_find("_Complex",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
 	assert(C99_CPP_COMPLEX_IDX==linear_find("_Complex",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
 	assert(C99_CPP_COMPLEX_IDX==linear_find("_Complex",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
-	assert(C1X_CPP0X_THREAD_LOCAL_IDX==linear_find("_Thread_Local",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
+	assert(C1X_CPP0X_THREAD_LOCAL_IDX==linear_find("_Thread_local",C99_decl_specifier_list,STATIC_SIZE(C99_decl_specifier_list)));
 	assert(C1X_CPP0X_THREAD_LOCAL_IDX==linear_find("thread_local",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
 	assert(CPP_MUTABLE_IDX==linear_find("mutable",CPP0X_decl_specifier_list,STATIC_SIZE(CPP0X_decl_specifier_list)));
 #/*cut-cpp*/
