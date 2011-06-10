@@ -1,5 +1,5 @@
 SUFFIXES h hpp
-OBJECTLIKE_MACRO THREAD_LOCAL _Thread_Local thread_local
+OBJECTLIKE_MACRO THREAD_LOCAL _Thread_local thread_local
 // (C)2009,2011 Kenneth Boyd, license: MIT.txt
 // using singly defined struct
 
