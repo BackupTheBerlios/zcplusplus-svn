@@ -118,7 +118,7 @@ extern const volatile wchar_t m13;
 #if 9<=10000*__ZCC__+100*__ZCC_MINOR__+__ZCC_PATCHLEVEL__
 // ZC++ 0.0.9 supports __zcc_linkage
 // typedefs have no linkage in C
-_Static_Assert(0==__zcc_linkage(ptrdiff_t),"ptrdiff_t should be defined with no linkage");
-_Static_Assert(0==__zcc_linkage(size_t),"ptrdiff_t should be defined with no linkage");
-_Static_Assert(0==__zcc_linkage(wchar_t),"wchar_t should be defined with no linkage");
+_Static_assert(0==__zcc_linkage(ptrdiff_t),"ptrdiff_t should be defined with no linkage");
+_Static_assert(0==__zcc_linkage(size_t),"ptrdiff_t should be defined with no linkage");
+_Static_assert(0==__zcc_linkage(wchar_t),"wchar_t should be defined with no linkage");
 #endif

@@ -414,7 +414,7 @@ BOOST_STATIC_ASSERT(NONATOMIC_PREPROC_OP_LB<C_PREPROC_OP_STRICT_UB);
 
 static const POD_pair<const char*,size_t> valid_keyword[]
 	=	{	DICT_STRUCT("__asm"),		// reserved to the implementation, so OK to make a keyword for C only
-			DICT_STRUCT("_Static_Assert"),	// C1X keywords not in C++0X
+			DICT_STRUCT("_Static_assert"),	// C1X keywords not in C++0X
 			DICT_STRUCT("_Thread_local"),
 			DICT_STRUCT("restrict"),	// C99 keywords not in C++98
 			DICT_STRUCT("_Bool"),
@@ -13322,8 +13322,8 @@ restart_master_loop:
 		{
 		conserve_tokens(src.c_array<0>()[i]);
 		// C static assertion scanner
-		if (robust_token_is_string<14>(src.data<0>()[i],"_Static_Assert"))
-			{	// _Static_Assert ( constant-expression , string-literal ) ;
+		if (robust_token_is_string<14>(src.data<0>()[i],"_Static_assert"))
+			{	// _Static_assert ( constant-expression , string-literal ) ;
 			C99_CPP_handle_static_assertion(src,*CLexer->pp_support,i,"control expression for static assertion must evaluate to a single integer constant (C1X 6.7.9p3)",NULL);
 			continue;
 			};
