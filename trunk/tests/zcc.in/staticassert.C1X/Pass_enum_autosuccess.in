@@ -1,5 +1,5 @@
 SUFFIXES h hpp
-OBJECTLIKE_MACRO STATIC_ASSERT _Static_Assert static_assert
+OBJECTLIKE_MACRO STATIC_ASSERT _Static_assert static_assert
 // (C)2010 Kenneth Boyd, license: MIT.txt
 
 enum test {
