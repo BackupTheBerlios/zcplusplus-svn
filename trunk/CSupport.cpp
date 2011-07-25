@@ -11902,6 +11902,8 @@ public:
 				decl_count -= flush_token(x,i,decl_count,"auto");
 				flags &= ~C99_DECLSPEC_AUTO;
 				};
+			// inline requires a function type
+			// typedef must have a function type to tolerate anything (but kills inline)
 			if (1<storage_count-thread_local_compat)
 				{	//! \test zcc/decl.C99/Error_extern_static.h
 					//! \test zcc/decl.C99/Error_extern_typedef.h
@@ -11913,10 +11915,9 @@ public:
 				INFORM_separated_list(specs,storage_count,", ");
 				INFORM(" (C99 6.7.1p2)");
 				zcc_errors.inc_error();
+				return false;
 				};
-			// inline requires a function type
-			// typedef must have a function type to tolerate anything (but kills inline)
-			return 1>=storage_count;
+//			return true;
 			};
 		return true;
 		}
@@ -11987,6 +11988,7 @@ public:
 				specs[storage_count++] = "static";
 			if (C99_CPP0X_DECLSPEC_EXTERN & flags)
 				specs[storage_count++] = "extern";
+			// thread_local ok at namespace scope for objects/references
 			if (C99_CPP0X_DECLSPEC_THREAD_LOCAL & flags)
 				{
 				specs[storage_count++] = "thread_local";
@@ -12012,22 +12014,6 @@ public:
 				decl_count -= flush_token(x,i,decl_count,"mutable");
 				flags &= ~CPP_DECLSPEC_MUTABLE;
 				};
-			if (1<storage_count-thread_local_compat)
-				{	//! \test zcc/decl.C99/Error_extern_static.hpp
-					//! \test zcc/decl.C99/Error_extern_typedef.hpp
-					//! \test zcc/decl.C99/Error_static_typedef.hpp
-					//! \test zcc/decl.C99/Error_extern_static_typedef.hpp
-				//! \todo should be warning for --do-what-i-mean
-				message_header(x.data<0>()[i].index_tokens[0]);
-				INC_INFORM(ERR_STR);
-				INC_INFORM("declaration has too many storage-class specifiers: ");
-				INFORM_separated_list(specs,storage_count,", ");
-				INFORM(" (C++0X 7.1.1p1)");
-				zcc_errors.inc_error();
-				}
-			// thread_local ok at namespace scope for objects/references
-			// inline dies if not a function type
-			// typedef must have a function type to tolerate anything (but kills inline)
 			// virtual and explicit can only be used in class declarations: erase (C++0X 7.1.2p5, 7.1.2p6
 			if (CPP_DECLSPEC_VIRTUAL & flags)
 				{	//! \test zcc/default/decl.C99/Error_virtual_global.hpp
@@ -12060,7 +12046,23 @@ public:
 				decl_count -= flush_token(x,i,decl_count,"friend");
 				flags &= ~CPP_DECLSPEC_FRIEND;
 				};
-			return 1>=storage_count;
+			if (1<storage_count-thread_local_compat)
+				{	//! \test zcc/decl.C99/Error_extern_static.hpp
+					//! \test zcc/decl.C99/Error_extern_typedef.hpp
+					//! \test zcc/decl.C99/Error_static_typedef.hpp
+					//! \test zcc/decl.C99/Error_extern_static_typedef.hpp
+				//! \todo should be warning for --do-what-i-mean
+				message_header(x.data<0>()[i].index_tokens[0]);
+				INC_INFORM(ERR_STR);
+				INC_INFORM("declaration has too many storage-class specifiers: ");
+				INFORM_separated_list(specs,storage_count,", ");
+				INFORM(" (C++0X 7.1.1p1)");
+				zcc_errors.inc_error();
+				return false;
+				}
+			// inline dies if not a function type
+			// typedef must have a function type to tolerate anything (but kills inline)
+//			return true;
 			};
 		return true;
 		};
@@ -14136,6 +14138,8 @@ reparse:
 							parse_tree::types->set_typedef(initdecl_identifier->index_tokens[0].token.first,initdecl_identifier->index_tokens[0].src_filename,initdecl_identifier->index_tokens[0].logical_line.first,bootstrap);
 							}
 						}
+					// for routing purposes, we care about: extern, static, _Thread_local
+					// function definitions also care about inline
 #if 0
 					else{	// something else
 						};
@@ -15656,7 +15660,12 @@ reparse:
 							parse_tree::types->set_typedef_CPP(initdecl_identifier->index_tokens[0].token.first,active_namespace,initdecl_identifier->index_tokens[0].src_filename,initdecl_identifier->index_tokens[0].logical_line.first,bootstrap);
 							}
 						}
+					// for routing purposes, we care about: extern, static, thread_local
+					// function definitions also care about inline
 #if 0
+					else if (() & declFind.get_flags())
+						{
+						}
 					else{	// something else
 						};
 #endif
