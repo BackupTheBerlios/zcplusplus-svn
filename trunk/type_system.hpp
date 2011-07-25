@@ -29,6 +29,7 @@ private:
 	typedef zaimoni::POD_quartet<const char*,size_t,zaimoni::POD_pair<zaimoni::union_quartet<function_type*,union_struct_decl*,C_union_struct_def*,enum_def*>, unsigned char>, size_t> dynamic_type_format;
 	zaimoni::autovalarray_ptr<dynamic_type_format> dynamic_types;
 	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> > > typedef_registry;
+	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> > > object_registry;
 	zaimoni::weakautovalarray_ptr<const char*> inline_namespace_alias_targets;
 	zaimoni::autovalarray_ptr<zaimoni::POD_pair<const char*,const char*> > inline_namespace_alias_map;
 	zaimoni::autovalarray_ptr<enumerator_info> enumerator_registry;
@@ -110,6 +111,12 @@ public:
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* get_typedef(const char* const alias) const;
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* get_typedef_CPP(const char* alias,const char* active_namespace) const;
 
+	void set_object(const char* const alias, const char* filename, const size_t lineno, type_spec& src);	// invalidates src
+	void set_object_CPP(const char* const name, const char* const active_namespace, const char* filename, const size_t lineno, type_spec& src);	// invalidates src
+	const char* get_object_name(const type_index base_type_index) const;
+	const zaimoni::POD_triple<type_spec,const char*,size_t>* get_object(const char* const alias) const;
+	const zaimoni::POD_triple<type_spec,const char*,size_t>* get_object_CPP(const char* alias,const char* active_namespace) const;
+	
 	void set_enumerator_def(const char* alias, zaimoni::POD_pair<size_t,size_t> logical_line, const char* src_filename,unsigned char representation,const uchar_blob& src,type_index type);
 	void set_enumerator_def_CPP(const char* name, const char* active_namespace, zaimoni::POD_pair<size_t,size_t> logical_line, const char* src_filename,unsigned char representation,const uchar_blob& src,type_index type);
 	const enumerator_info* get_enumerator(const char* alias) const;
@@ -153,6 +160,7 @@ private:
 	
 	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> dealias_inline_namespace_index(const char* alias) const;
 	const zaimoni::POD_triple<type_spec,const char*,size_t>* _get_typedef_CPP(const char* alias) const;
+	const zaimoni::POD_triple<type_spec,const char*,size_t>* _get_object_CPP(const char* alias) const;
 	const enumerator_info* _get_enumerator_CPP(const char* alias) const;
 	bool is_inline_namespace_CPP(const char* active_namespace, size_t active_namespace_len) const;
 	const char* canonical_name_is_inline_namespace_alias_target(const char* name, size_t name_len, const char* active_namespace, size_t active_namespace_len,const char* namespace_separator, size_t namespace_separator_len) const;

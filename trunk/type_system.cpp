@@ -463,6 +463,112 @@ const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_typede
 	return _get_typedef_CPP(alias);
 }
 
+// implement C/C++ object system
+void type_system::set_object(const char* const alias, const char* filename, const size_t lineno, type_spec& src)
+{
+	assert(alias && *alias);
+	assert(filename && *filename);
+	errr tmp = binary_find(alias,strlen(alias),object_registry.data(),object_registry.size());
+	assert(0>tmp);		// error to call with conflicting prior definition
+	if (0<=tmp) return;	// conflicting prior definition
+#if UINTMAX_MAX==SIZE_MAX
+	if (-1==tmp) _fatal("implementation limit exceeded (objects registered at once)");
+#endif
+	zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> > tmp2 = {alias, {src, filename, lineno}};
+	if (!object_registry.InsertSlotAt(BINARY_SEARCH_DECODE_INSERTION_POINT(tmp),tmp2)) throw std::bad_alloc();
+	src.clear();
+}
+
+void type_system::set_object_CPP(const char* name, const char* const active_namespace, const char* filename, const size_t lineno, type_spec& src)
+{
+	assert(name && *name);
+	assert(filename && *filename);
+
+	// use active namespace if present
+	if (active_namespace && *active_namespace)
+		name = construct_canonical_name_and_aliasing_CPP(name,strlen(name),active_namespace,strlen(active_namespace));
+
+	return set_object(name,filename,lineno,src);
+}
+
+const char* type_system::get_object_name(const type_index base_type_index) const
+{
+	const zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> >* iter = object_registry.begin();
+	const zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> >* const iter_end = object_registry.end();
+	while(iter!=iter_end)
+		{
+		if (iter->second.first.is_type(base_type_index))
+			return iter->first;
+		++iter;
+		};
+	return NULL;
+}
+
+const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_object(const char* const alias) const
+{
+	assert(alias && *alias);
+	//! \todo: strip off trailing inline namespaces
+	// <unknown> is the hack for anonymous namespaces taken from GCC, it's always inline
+	errr tmp = binary_find(alias,strlen(alias),object_registry.data(),object_registry.size());
+	if (0<=tmp) return &object_registry[tmp].second;
+	return NULL;
+}
+
+const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::_get_object_CPP(const char* const alias) const
+{
+	const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = get_object(alias);
+	if (tmp) return tmp;
+
+	// hmm...not an exact match
+	zaimoni::POD_pair<ptrdiff_t,ptrdiff_t> tmp2 = dealias_inline_namespace_index(alias);
+	if (0>tmp2.first) return NULL;
+
+	// it was remapped
+	while(tmp2.first<tmp2.second)
+		{
+		tmp = get_object(inline_namespace_alias_map.data()[tmp2.first++].second);
+		if (tmp) return tmp;
+		}
+	return get_object(inline_namespace_alias_map.data()[tmp2.first].second);
+}
+
+const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_object_CPP(const char* alias,const char* active_namespace) const
+{
+	assert(alias && *alias);
+
+	if (!strncmp(alias,"::",2))
+		{	// fully-qualified object name
+			// cheat: pretend not fully qualified but no surrounding namespace
+		alias += 2;
+		active_namespace = NULL;
+		};
+	if (active_namespace && *active_namespace)
+		{	// ok..march up to global
+		char* tmp_alias = namespace_concatenate(alias,active_namespace,"::");
+		if (is_string_registered(tmp_alias))
+			{	// registered, so could be indexed
+			const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp2 = _get_object_CPP(tmp_alias);
+			if (tmp2) return (free(tmp_alias),tmp2);
+			}
+
+		const size_t extra_namespaces = count_disjoint_substring_instances(active_namespace,"::");
+		if (extra_namespaces)
+			{
+			zaimoni::weakautovalarray_ptr_throws<const char*> intra_namespace(extra_namespaces);
+			report_disjoint_substring_instances(active_namespace,"::",intra_namespace.c_array(),extra_namespaces);
+			size_t i = extra_namespaces;
+			do	{
+				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[--i]-active_namespace,"::");
+				const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp2 = _get_object_CPP(tmp_alias);
+				if (tmp2) return (free(tmp_alias),tmp2);
+				}
+			while(0<i);
+			}
+		free(tmp_alias);
+		}
+	return _get_object_CPP(alias);
+}
+
 void type_system::set_enumerator_def(const char* const alias, zaimoni::POD_pair<size_t,size_t> logical_line, const char* const src_filename,unsigned char representation,const uchar_blob& src,type_index type)
 {
 	assert(alias && *alias);
@@ -529,7 +635,7 @@ const type_system::enumerator_info* type_system::get_enumerator_CPP(const char* 
 	assert(alias && *alias);
 
 	if (!strncmp(alias,"::",2))
-		{	// fully-qualified typedef name
+		{	// fully-qualified enumerator name
 			// cheat: pretend not fully qualified but no surrounding namespace
 		alias += 2;
 		active_namespace = NULL;
