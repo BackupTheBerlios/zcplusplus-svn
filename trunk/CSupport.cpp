@@ -12842,7 +12842,7 @@ static bool record_enum_values(parse_tree& src, const type_system::type_index en
 			zcc_errors.inc_error();
 			return false;
 			};
-		if (const zaimoni::POD_triple<type_spec,const char*,size_t>* const tmp = parse_tree::types->get_object(fullname))
+		if (const type_system::object_type_loc_linkage* const tmp = parse_tree::types->get_object(fullname))
 			{	// C++: One Definition Rule
 				//! \bug needs test cases 
 			message_header(src.data<0>()[i].index_tokens[0]);
@@ -14095,7 +14095,7 @@ reparse:
 					{	// typedef
 					register_token<0>(*initdecl_identifier);
 					// verify that there is no prior definition
-					if (const zaimoni::POD_triple<type_spec,const char*,size_t>* const tmp = parse_tree::types->get_object(initdecl_identifier->index_tokens[0].token.first))
+					if (const type_system::object_type_loc_linkage* const tmp = parse_tree::types->get_object(initdecl_identifier->index_tokens[0].token.first))
 						{	//! \bug needs test case
 						message_header(initdecl_identifier->index_tokens[0]);
 						INC_INFORM(ERR_STR);
@@ -14194,7 +14194,8 @@ reparse:
 						}
 					else if (C99_CPP0X_DECLSPEC_EXTERN & declFind.get_flags())
 						{	// explicit extern.
-							// no effect on pre-existing declaration, other than to convert no-linkage to extern (implies masking non-object/function declaraton, review what's going on)
+							// no effect on pre-existing declaration, other than to convert no-linkage to extern (if this can indeed be tripped)
+							// we need a cross-lang warning if there is a pre-existing static declaration, as this will error in C++
 						}
 					else{	// something else: C99 defaults to extern no matter what for global functions and objects.
 							// we need a cross-lang warning for const objects as C++ will default to static then
@@ -15668,7 +15669,7 @@ reparse:
 					const char* fullname = namespace_name ? namespace_name : initdecl_identifier->index_tokens[0].token.first;
 					// We could run an is_string_registered check to try to conserve RAM, but in this case conserving RAM 
 					// doesn't actually reduce maximum RAM loading before the types.set_typedef_CPP call.
-					if (const zaimoni::POD_triple<type_spec,const char*,size_t>* const tmp = parse_tree::types->get_object(fullname))
+					if (const type_system::object_type_loc_linkage* const tmp = parse_tree::types->get_object(fullname))
 						{	//! \bug needs test case
 						message_header(initdecl_identifier->index_tokens[0]);
 						INC_INFORM(ERR_STR);
@@ -15771,14 +15772,22 @@ reparse:
 						};
 					free(namespace_name);
 #if 0
+					// so...type_system needs to handle following when registering an object/function as well
+					// linkage: static/internal, extern/external
+					// external linkage class: C, C++
+					// it is an error to have more than one object definition
+					// it is an error to have more than one function type (including parameter list) for a given identifier with C linkage
+					// obviously C cannot name most things with C++ linkage
 					if (C99_CPP0X_DECLSPEC_STATIC & declFind.get_flags())
 						{	// explicit static.
+							// pre-existing extern declaration is an error: C++0X 7.1.1p8
 						}
 					else if (C99_CPP0X_DECLSPEC_EXTERN & declFind.get_flags())
 						{	// explicit extern.
+							// pre-existing static declaration is an error: C++0X 7.1.1p8
 						}
 					else{	// something else: C++ defaults to extern no matter what for global functions and objects.
-							// const defaults to static.  All others default to enclosing namespace.
+							// const objects default to static.  All others default to enclosing namespace.  
 							// we need a cross-lang warning for global const objects as C will default to extern then
 							// redeclaration will go with whatever was there previously
 						}

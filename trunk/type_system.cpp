@@ -464,7 +464,7 @@ const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_typede
 }
 
 // implement C/C++ object system
-void type_system::set_object(const char* const alias, const char* filename, const size_t lineno, type_spec& src)
+void type_system::set_object(const char* const alias, const char* filename, const size_t lineno, type_spec& src, type_system::linkage _linkage)
 {
 	assert(alias && *alias);
 	assert(filename && *filename);
@@ -474,12 +474,12 @@ void type_system::set_object(const char* const alias, const char* filename, cons
 #if UINTMAX_MAX==SIZE_MAX
 	if (-1==tmp) _fatal("implementation limit exceeded (objects registered at once)");
 #endif
-	zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> > tmp2 = {alias, {src, filename, lineno}};
+	zaimoni::POD_pair<const char*,object_type_loc_linkage > tmp2 = {alias, {src, filename, lineno, _linkage}};
 	if (!object_registry.InsertSlotAt(BINARY_SEARCH_DECODE_INSERTION_POINT(tmp),tmp2)) throw std::bad_alloc();
 	src.clear();
 }
 
-void type_system::set_object_CPP(const char* name, const char* const active_namespace, const char* filename, const size_t lineno, type_spec& src)
+void type_system::set_object_CPP(const char* name, const char* const active_namespace, const char* filename, const size_t lineno, type_spec& src, type_system::linkage _linkage)
 {
 	assert(name && *name);
 	assert(filename && *filename);
@@ -488,13 +488,14 @@ void type_system::set_object_CPP(const char* name, const char* const active_name
 	if (active_namespace && *active_namespace)
 		name = construct_canonical_name_and_aliasing_CPP(name,strlen(name),active_namespace,strlen(active_namespace));
 
-	return set_object(name,filename,lineno,src);
+	// C++, so C++ linkage by default
+	return set_object(name,filename,lineno,src,_linkage);
 }
 
 const char* type_system::get_object_name(const type_index base_type_index) const
 {
-	const zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> >* iter = object_registry.begin();
-	const zaimoni::POD_pair<const char*,zaimoni::POD_triple<type_spec,const char*,size_t> >* const iter_end = object_registry.end();
+	const zaimoni::POD_pair<const char*,object_type_loc_linkage >* iter = object_registry.begin();
+	const zaimoni::POD_pair<const char*,object_type_loc_linkage >* const iter_end = object_registry.end();
 	while(iter!=iter_end)
 		{
 		if (iter->second.first.is_type(base_type_index))
@@ -504,7 +505,7 @@ const char* type_system::get_object_name(const type_index base_type_index) const
 	return NULL;
 }
 
-const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_object(const char* const alias) const
+const type_system::object_type_loc_linkage* type_system::get_object(const char* const alias) const
 {
 	assert(alias && *alias);
 	//! \todo: strip off trailing inline namespaces
@@ -514,9 +515,9 @@ const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_object
 	return NULL;
 }
 
-const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::_get_object_CPP(const char* const alias) const
+const type_system::object_type_loc_linkage* type_system::_get_object_CPP(const char* const alias) const
 {
-	const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp = get_object(alias);
+	const object_type_loc_linkage* tmp = get_object(alias);
 	if (tmp) return tmp;
 
 	// hmm...not an exact match
@@ -532,7 +533,7 @@ const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::_get_objec
 	return get_object(inline_namespace_alias_map.data()[tmp2.first].second);
 }
 
-const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_object_CPP(const char* alias,const char* active_namespace) const
+const type_system::object_type_loc_linkage* type_system::get_object_CPP(const char* alias,const char* active_namespace) const
 {
 	assert(alias && *alias);
 
@@ -547,7 +548,7 @@ const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_object
 		char* tmp_alias = namespace_concatenate(alias,active_namespace,"::");
 		if (is_string_registered(tmp_alias))
 			{	// registered, so could be indexed
-			const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp2 = _get_object_CPP(tmp_alias);
+			const object_type_loc_linkage* tmp2 = _get_object_CPP(tmp_alias);
 			if (tmp2) return (free(tmp_alias),tmp2);
 			}
 
@@ -559,7 +560,7 @@ const zaimoni::POD_triple<type_spec,const char*,size_t>* type_system::get_object
 			size_t i = extra_namespaces;
 			do	{
 				namespace_concatenate(tmp_alias,alias,active_namespace,intra_namespace[--i]-active_namespace,"::");
-				const zaimoni::POD_triple<type_spec,const char*,size_t>* tmp2 = _get_object_CPP(tmp_alias);
+				const object_type_loc_linkage* tmp2 = _get_object_CPP(tmp_alias);
 				if (tmp2) return (free(tmp_alias),tmp2);
 				}
 			while(0<i);
