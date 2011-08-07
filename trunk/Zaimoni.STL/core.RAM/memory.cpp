@@ -215,7 +215,7 @@ __IdxOfPointerInPtrList(const void* const Target, size_t strict_ub, const _track
 	// binary-searching the array pointed to by BasePtrIndex.  
 	// Idx is a strict upper bound to the valid indices.
 	size_t lb = 0;
-	while(lb<=strict_ub)
+	while(lb<strict_ub)
 		{
 		const size_t midpoint = lb + (strict_ub-lb)/2;
 		if (Target==BasePtrIndex[midpoint]._address)
