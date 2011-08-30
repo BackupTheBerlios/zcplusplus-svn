@@ -12190,14 +12190,14 @@ static size_t C99_recognize_direct_declaratorlike_section(parse_tree& x, size_t 
 			{
 			if (is_naked_bracket_pair(x.data<0>()[i+ub]))
 				{	// we'll catch the array size, etc. later
-				if (!(target_type.qualifier<0>() & type_spec::_function_return_value))
+				if (target_type.is_function())
 					target_type.make_C_array(0);
 				++ub;
 				continue;
 				}
 			else if (is_naked_parentheses_pair(x.data<0>()[i+ub]))
 				{	// handle the prototype later
-				target_type.qualifier<0>() |= type_spec::_function_return_value;
+				target_type.set_function();
 				++ub;
 				continue;
 				}
@@ -12352,7 +12352,7 @@ static size_t CPP_recognize_noptr_declaratorlike_section(parse_tree& x, size_t i
 			{
 			if (is_naked_bracket_pair(x.data<0>()[i+ub]))
 				{	// we'll catch the array size, etc. later
-				if (!(target_type.qualifier<0>() & type_spec::_function_return_value))
+				if (!target_type.is_function())
 					target_type.make_C_array(0);
 				++ub;
 				if (x.size<0>()-i>ub) ub += is_CPP0X_attribute(x.data<0>()[i+ub]);
@@ -12360,7 +12360,7 @@ static size_t CPP_recognize_noptr_declaratorlike_section(parse_tree& x, size_t i
 				}
 			else if (is_naked_parentheses_pair(x.data<0>()[i+ub]))
 				{	// handle the prototype later
-				target_type.qualifier<0>() |= type_spec::_function_return_value;
+				target_type.set_function();
 				++ub;
 				if (x.size<0>()-i>ub) ub += is_CPP0X_attribute(x.data<0>()[i+ub]);
 				if (x.size<0>()-i>ub) ub += CPP_cv_qualifier_span(x,i+ub,target_type);
