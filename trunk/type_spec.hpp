@@ -56,6 +56,11 @@ struct type_spec
 	template<size_t i> unsigned char& qualifier() {return q_vector.c_array()[i];}
 	template<size_t i> unsigned char qualifier() const {return q_vector.data()[i];}
 
+	// standardize function return value weirdness
+	bool is_function() const {return q_vector.front() & _function_return_value;};
+	void set_function() {q_vector.front() |= _function_return_value;};
+	bool CPP_global_linkage_is_static() const {return (q_vector.front() & type_spec::_function_return_value) && (q_vector.back() & _const);};
+	
 	void clear();	// XXX should be constructor; good way to leak memory in other contexts
 	void destroy();	// XXX should be destructor
 	void set_type(size_t _base_type_index);
