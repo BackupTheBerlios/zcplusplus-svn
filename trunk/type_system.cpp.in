@@ -1086,13 +1086,26 @@ int type_system::_C_linkage_code(const char* alias) const
 ** block-scope identifier for an object not declared extern
 */
 	if (  get_typedef(alias)
-	   || get_enumerator(alias)
-	   || get_id_enum(alias)
-	   || get_id_union(alias)
-	   || get_id_struct_class(alias))
-	   return 0;	// no linkage
-	// we have to handle objects and functions correctly before replacing the -2 with -1	
-	return -2;	// not implemented yet
+	    || get_enumerator(alias)
+	    || get_id_enum(alias)
+	    || get_id_union(alias)
+	    || get_id_struct_class(alias))
+	    return 0;	// no linkage
+
+	if (const object_type_loc_linkage* const tmp = get_object(alias))
+		{
+		// this is draconian; we should try to allow C to call non-overloadable
+		// functions in other supported languages.  C++ is not an option.
+		switch(tmp->fourth)
+		{
+		default: _fatal_code("internal data format error: C linkage not one of none, static, extern-C",3);
+		case linkage_none: return 0;	// no linkage
+		case linkage_static: return 1;	// internal linkage
+		case linkage_extern_C: return 2; // native/C linkage
+		}
+		return -2;	// not implemented yet
+		};
+	return -1; // not defined
 }
 
 /*
@@ -1167,8 +1180,20 @@ int type_system::_CPP_linkage_code(const char* alias,const char* active_namespac
 		if (1==_CPP_namespace_linkage(active_namespace)) return 1;	// internal
 		return _CPP_namespace_linkage(alias);
 		}
-	// we have to handle objects and functions correctly before replacing the -2 with -1	
-	return -2;	// not implemented yet
+
+	if (const object_type_loc_linkage* const tmp = get_object_CPP(alias,active_namespace))
+		{
+		switch(tmp->fourth)
+		{
+		default: _fatal_code("internal data format error: object does not have supported linkage in C++",3);
+		case linkage_none: return 0;	// no linkage
+		case linkage_static: return 1;	// internal linkage
+		case linkage_extern_C: return 3; // C linkage
+		case linkage_extern_CPP: return 2; // native/C++ linkage
+		}
+		return -2;	// not implemented yet
+		};
+	return -1; // not defined
 }
 #/*cut-cpp*/
 
