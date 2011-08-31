@@ -6953,6 +6953,15 @@ static bool terse_locate_ZCC_linkage(parse_tree& src, size_t& i, const type_syst
 		inspect_potential_paren_primary_expression(src.c_array<0>()[i+1]);
 		if (is_C99_unary_operator_expression<'*'>(src.data<0>()[i+1]))
 			C_deref_easy_syntax_check(src.c_array<0>()[i+1],types);
+		if (   src.data<0>()[i+1].is_atomic()
+			&& C_TESTFLAG_IDENTIFIER==src.data<0>()[i+1].index_tokens[0].flags)
+			{
+			assemble_unary_postfix_arguments(src,i,ZCC_UNARY_SUBTYPE_LINKAGE);
+			src.c_array<0>()[i].type_code.set_type(C_TYPE::INT);	//! \todo would be nice to range-limit this
+			assert(is_ZCC_linkage_expression(src.c_array<0>()[i]));
+			return true;			
+			}
+		// we don't actually know how to evaluate these -- it could get messy
 		if (is_naked_parentheses_pair(src.data<0>()[i+1]))
 			{
 			assemble_unary_postfix_arguments(src,i,ZCC_UNARY_SUBTYPE_LINKAGE);

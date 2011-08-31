@@ -1,8 +1,14 @@
 SUFFIXES h hpp
+OBJECTLIKE_MACRO STATIC_ASSERT _Static_assert static_assert
 // using singly defined enum
-// (C)2009 Kenneth Boyd, license: MIT.txt
+// (C)2009,2011 Kenneth Boyd, license: MIT.txt
 
 enum {
 	x_factor = 1
 };
 
+// check ZCC compiler extensions
+#if 9<=10000*__ZCC__+100*__ZCC_MINOR__+__ZCC_PATCHLEVEL__
+STATIC_ASSERT(0<=__zcc_linkage(x_factor),"x_factor is not defined");
+STATIC_ASSERT(0>=__zcc_linkage(x_factor),"x_factor has linkage");
+#endif
