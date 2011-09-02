@@ -10,8 +10,11 @@ target_files2 = ['Pass_enum_def_decl.in', 'Pass_struct_def_decl.in', 'Pass_union
 target_files3 = ['Pass_enum_def2.hpp', 'Pass_struct_def2.hpp', 'Pass_union_def2.hpp']
 
 invariant_header_lines = [
-'SUFFIXES h hpp\n'
-'OBJECTLIKE_MACRO THREAD_LOCAL _Thread_local thread_local\n'
+'SUFFIXES h hpp\n',
+'OBJECTLIKE_MACRO THREAD_LOCAL _Thread_local thread_local\n',
+'OBJECTLIKE_MACRO STATIC_ASSERT _Static_assert static_assert\n',
+'OBJECTLIKE_MACRO TYPE_LINKAGE_CODE 0 2\n',
+'OBJECTLIKE_MACRO DEFAULT_CONST_LINKAGE_CODE 2 1\n',
 '// (C)2009,2011 Kenneth Boyd, license: MIT.txt\n'
 ]
 
@@ -36,12 +39,12 @@ global_define = {	'Pass_enum_def.in':'\nenum good_test {\n\tx_factor = 1\n};\n\n
 					'Pass_union_def2.hpp':'\nunion good_test {\n\tint x_factor\n};\n\n'}
 
 section_comments = ['// ringing the changes on extern\n',
-"// ringing the changes on static\n// (don't test static const -- no chance to initialize before use)\n",
-'// extern/static not in first postion is deprecated, but legal\n',
+"// ringing the changes on static\n",
+'// extern/static not in first position is deprecated, but legal\n',
 '// ringing the changes on THREAD_LOCAL extern\n',
 '// ringing the changes on THREAD_LOCAL static\n',
-'// THREAD_LOCAL extern not in first two postions is deprecated, but legal\n',
-'// THREAD_LOCAL static not in first two postions is deprecated, but legal\n']
+'// THREAD_LOCAL extern not in first two positions is deprecated, but legal\n',
+'// THREAD_LOCAL static not in first two positions is deprecated, but legal\n']
 
 def enum_decl(i):
 	return "enum good_test x"+i
@@ -83,6 +86,15 @@ var_def = {	'Pass_enum_def.in':enum_def, 'Pass_struct_def.in':struct_def,
 			'Pass_union_def.in':union_def, 'Pass_enum_def2.hpp':enum_def,
 			'Pass_struct_def2.hpp':struct_def, 'Pass_union_def2.hpp':union_def}
 
+#so...generally (decl family)
+#* linkage of struct/union/enum good_test... is none in C, namespace-default in C++ (in practice C++ extern)
+#* linkage of variables is static:internal or extern:C/C++ external
+#** that is: 1 or 2
+#** default linkage: extern in general, const is extern/C static/C++ (2/C 1/C++)
+
+# in general, static const non-volatile variations should warn (the optimizer will go wild)
+# on the other hand, C99 6.7.8p10/C1X 6.7.9p10 gives full default initialization (as zero-initialization) so C is fine
+# C++0X 8.5p9: static storage duration is zero-initialized so C++ is fine as well
 test_qualifiers = [
 'extern',
 'extern const',
@@ -91,6 +103,7 @@ test_qualifiers = [
 'extern volatile const',
 
 'static',
+'static const',
 'static volatile',
 'static const volatile',
 'static volatile const',
@@ -102,6 +115,7 @@ test_qualifiers = [
 'volatile extern const',
 'volatile const extern',
 
+'const static',
 'volatile static',
 'const static volatile',
 'const volatile static',
@@ -120,7 +134,7 @@ test_qualifiers = [
 'THREAD_LOCAL extern volatile const',
 
 'static THREAD_LOCAL',
-'static THREAD_LOCAL const',	# next
+'static THREAD_LOCAL const',
 'static THREAD_LOCAL volatile',
 'static THREAD_LOCAL const volatile',
 'static THREAD_LOCAL volatile const',
@@ -202,33 +216,33 @@ def SpawnTestCase(dest_file):
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[1])
-	for i in xrange(4):
+	for i in xrange(5):
 		TargetFile.write(test_qualifiers[i+5]+' '+var_decl[dest_file](str(i+6))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[2])
-	for i in xrange(11):
-		TargetFile.write(test_qualifiers[i+9]+' '+var_decl[dest_file](str(i+10))+';\n')
+	for i in xrange(12):
+		TargetFile.write(test_qualifiers[i+10]+' '+var_decl[dest_file](str(i+11))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[3])
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+20]+' '+var_decl[dest_file](str(i+21))+';\n')
+		TargetFile.write(test_qualifiers[i+22]+' '+var_decl[dest_file](str(i+23))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[4])
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+30]+' '+var_decl[dest_file](str(i+31))+';\n')
+		TargetFile.write(test_qualifiers[i+32]+' '+var_decl[dest_file](str(i+33))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[5])
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+40]+' '+var_decl[dest_file](str(i+41))+';\n')
+		TargetFile.write(test_qualifiers[i+42]+' '+var_decl[dest_file](str(i+43))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[6])
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+68]+' '+var_decl[dest_file](str(i+69))+';\n')
+		TargetFile.write(test_qualifiers[i+70]+' '+var_decl[dest_file](str(i+71))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write('// define-declares\n')
@@ -238,35 +252,78 @@ def SpawnTestCase(dest_file):
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[1])
-	for i in xrange(4):
+	for i in xrange(5):
 		TargetFile.write(test_qualifiers[i+5]+' '+var_def[dest_file](str(i+6))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[2])
-	for i in xrange(11):
-		TargetFile.write(test_qualifiers[i+9]+' '+var_def[dest_file](str(i+10))+';\n')
+	for i in xrange(12):
+		TargetFile.write(test_qualifiers[i+10]+' '+var_def[dest_file](str(i+11))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[3])
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+20]+' '+var_def[dest_file](str(i+21))+';\n')
+		TargetFile.write(test_qualifiers[i+22]+' '+var_def[dest_file](str(i+23))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[4])
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+30]+' '+var_def[dest_file](str(i+31))+';\n')
+		TargetFile.write(test_qualifiers[i+32]+' '+var_def[dest_file](str(i+33))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[5])
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+40]+' '+var_def[dest_file](str(i+41))+';\n')
+		TargetFile.write(test_qualifiers[i+42]+' '+var_def[dest_file](str(i+43))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[6])
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+68]+' '+var_def[dest_file](str(i+69))+';\n')
+		TargetFile.write(test_qualifiers[i+70]+' '+var_def[dest_file](str(i+71))+';\n')
 	TargetFile.write('\n')
 
+#	check ZCC compiler extensions
+	TargetFile.write('\n// check ZCC compiler extensions\n')
+	TargetFile.write('#if 9<=10000*__ZCC__+100*__ZCC_MINOR__+__ZCC_PATCHLEVEL__\n')
+	TargetFile.write('// the type names should have no linkage in C, external linkage in C++\n')
+	TargetFile.write('STATIC_ASSERT(TYPE_LINKAGE_CODE==__zcc_linkage(good_test),"good_test has incorrect linkage");\n')
+	for i in xrange(5+5+12+10+10+28+18):
+		TargetFile.write('STATIC_ASSERT(TYPE_LINKAGE_CODE==__zcc_linkage(good_test'+str(i+1)+'),"good_test'+str(i+1)+' has incorrect linkage");\n')
+
+	TargetFile.write('\n// check external linkage of variables\n')	
+	for i in xrange(5):
+		TargetFile.write('STATIC_ASSERT(2==__zcc_linkage(x'+str(i+1)+'),"x'+str(i+1)+' has incorrect linkage");\n')
+		TargetFile.write('STATIC_ASSERT(2==__zcc_linkage(x_'+str(i+1)+'),"x_'+str(i+1)+' has incorrect linkage");\n')
+
+	for i in xrange(6):
+		TargetFile.write('STATIC_ASSERT(2==__zcc_linkage(x'+str(i+11)+'),"x'+str(i+11)+' has incorrect linkage");\n')
+		TargetFile.write('STATIC_ASSERT(2==__zcc_linkage(x_'+str(i+11)+'),"x_'+str(i+11)+' has incorrect linkage");\n')
+
+	for i in xrange(10):
+		TargetFile.write('STATIC_ASSERT(2==__zcc_linkage(x'+str(i+23)+'),"x'+str(i+23)+' has incorrect linkage");\n')
+		TargetFile.write('STATIC_ASSERT(2==__zcc_linkage(x_'+str(i+23)+'),"x_'+str(i+23)+' has incorrect linkage");\n')
+
+	for i in xrange(28):
+		TargetFile.write('STATIC_ASSERT(2==__zcc_linkage(x'+str(i+43)+'),"x'+str(i+43)+' has incorrect linkage");\n')
+		TargetFile.write('STATIC_ASSERT(2==__zcc_linkage(x_'+str(i+43)+'),"x_'+str(i+43)+' has incorrect linkage");\n')
+
+	TargetFile.write('\n// check internal linkage of variables\n')
+	for i in xrange(5):
+		TargetFile.write('STATIC_ASSERT(1==__zcc_linkage(x'+str(i+6)+'),"x'+str(i+6)+' has incorrect linkage");\n')
+		TargetFile.write('STATIC_ASSERT(1==__zcc_linkage(x_'+str(i+6)+'),"x_'+str(i+6)+' has incorrect linkage");\n')
+
+	for i in xrange(6):
+		TargetFile.write('STATIC_ASSERT(1==__zcc_linkage(x'+str(i+17)+'),"x'+str(i+17)+' has incorrect linkage");\n')
+		TargetFile.write('STATIC_ASSERT(1==__zcc_linkage(x_'+str(i+17)+'),"x_'+str(i+17)+' has incorrect linkage");\n')
+
+	for i in xrange(10):
+		TargetFile.write('STATIC_ASSERT(1==__zcc_linkage(x'+str(i+33)+'),"x'+str(i+33)+' has incorrect linkage");\n')
+		TargetFile.write('STATIC_ASSERT(1==__zcc_linkage(x_'+str(i+33)+'),"x_'+str(i+33)+' has incorrect linkage");\n')
+
+	for i in xrange(28):
+		TargetFile.write('STATIC_ASSERT(1==__zcc_linkage(x'+str(i+71)+'),"x'+str(i+71)+' has incorrect linkage");\n')
+		TargetFile.write('STATIC_ASSERT(1==__zcc_linkage(x_'+str(i+71)+'),"x_'+str(i+71)+' has incorrect linkage");\n')
+
+	TargetFile.write('#endif\n')
 	TargetFile.close()
 
 def SpawnTestCase2(dest_file):
@@ -283,34 +340,69 @@ def SpawnTestCase2(dest_file):
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[1])
-	for i in xrange(4):
+	for i in xrange(5):
 		TargetFile.write(test_qualifiers[i+5]+' '+var_decl[dest_file](str(i+6))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[2])
-	for i in xrange(11):
-		TargetFile.write(test_qualifiers[i+9]+' '+var_decl[dest_file](str(i+10))+';\n')
+	for i in xrange(12):
+		TargetFile.write(test_qualifiers[i+10]+' '+var_decl[dest_file](str(i+11))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[3])
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+20]+' '+var_decl[dest_file](str(i+21))+';\n')
+		TargetFile.write(test_qualifiers[i+22]+' '+var_decl[dest_file](str(i+23))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[4])
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+30]+' '+var_decl[dest_file](str(i+31))+';\n')
+		TargetFile.write(test_qualifiers[i+32]+' '+var_decl[dest_file](str(i+33))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[5])
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+40]+' '+var_decl[dest_file](str(i+41))+';\n')
+		TargetFile.write(test_qualifiers[i+42]+' '+var_decl[dest_file](str(i+43))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[6])
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+68]+' '+var_decl[dest_file](str(i+69))+';\n')
+		TargetFile.write(test_qualifiers[i+70]+' '+var_decl[dest_file](str(i+71))+';\n')
 	TargetFile.write('\n')
+
+#	check ZCC compiler extensions
+	TargetFile.write('\n// check ZCC compiler extensions\n')
+	TargetFile.write('#if 9<=10000*__ZCC__+100*__ZCC_MINOR__+__ZCC_PATCHLEVEL__\n')
+
+	TargetFile.write('// the type names should have no linkage in C, external linkage in C++\n')
+	TargetFile.write('STATIC_ASSERT(TYPE_LINKAGE_CODE==__zcc_linkage(good_test),"good_test has incorrect linkage");\n')
+
+	TargetFile.write('\n// check external linkage of variables\n')	
+	for i in xrange(5):
+		TargetFile.write('STATIC_ASSERT(2==__zcc_linkage(x'+str(i+1)+'),"x'+str(i+1)+' has incorrect linkage");\n')
+
+	for i in xrange(6):
+		TargetFile.write('STATIC_ASSERT(2==__zcc_linkage(x'+str(i+11)+'),"x'+str(i+11)+' has incorrect linkage");\n')
+
+	for i in xrange(10):
+		TargetFile.write('STATIC_ASSERT(2==__zcc_linkage(x'+str(i+23)+'),"x'+str(i+23)+' has incorrect linkage");\n')
+
+	for i in xrange(28):
+		TargetFile.write('STATIC_ASSERT(2==__zcc_linkage(x'+str(i+43)+'),"x'+str(i+43)+' has incorrect linkage");\n')
+
+	TargetFile.write('\n// check internal linkage of variables\n')
+	for i in xrange(5):
+		TargetFile.write('STATIC_ASSERT(1==__zcc_linkage(x'+str(i+6)+'),"x'+str(i+6)+' has incorrect linkage");\n')
+
+	for i in xrange(6):
+		TargetFile.write('STATIC_ASSERT(1==__zcc_linkage(x'+str(i+17)+'),"x'+str(i+17)+' has incorrect linkage");\n')
+
+	for i in xrange(10):
+		TargetFile.write('STATIC_ASSERT(1==__zcc_linkage(x'+str(i+33)+'),"x'+str(i+33)+' has incorrect linkage");\n')
+
+	for i in xrange(28):
+		TargetFile.write('STATIC_ASSERT(1==__zcc_linkage(x'+str(i+71)+'),"x'+str(i+71)+' has incorrect linkage");\n')
+
+	TargetFile.write('#endif\n')
 
 	# no define-declares
 	TargetFile.close()
@@ -319,7 +411,7 @@ def SpawnTestCase3(dest_file):
 	TargetFile = open(dest_file,'w')
 	TargetFile.write('// decl.C99/'+dest_file+'\n')
 
-	for line in invariant_header_lines[2:]:
+	for line in invariant_header_lines[5:]:
 		TargetFile.write(line)
 	TargetFile.write(context[dest_file])
 	TargetFile.write(global_define[dest_file])
@@ -332,33 +424,33 @@ def SpawnTestCase3(dest_file):
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[1].replace('THREAD_LOCAL','thread_local'))
-	for i in xrange(4):
+	for i in xrange(5):
 		TargetFile.write(test_qualifiers[i+5].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+6))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[2].replace('THREAD_LOCAL','thread_local'))
-	for i in xrange(11):
-		TargetFile.write(test_qualifiers[i+9].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+10))+';\n')
+	for i in xrange(12):
+		TargetFile.write(test_qualifiers[i+10].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+11))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[3].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+20].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+21))+';\n')
+		TargetFile.write(test_qualifiers[i+22].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+23))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[4].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+30].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+31))+';\n')
+		TargetFile.write(test_qualifiers[i+32].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+33))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[5].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+40].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+41))+';\n')
+		TargetFile.write(test_qualifiers[i+42].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+43))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[6].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+68].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+69))+';\n')
+		TargetFile.write(test_qualifiers[i+70].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+71))+';\n')
 	TargetFile.write('\n')
 
 	# need: normal decl, def_decl work in namespaces
@@ -371,33 +463,33 @@ def SpawnTestCase3(dest_file):
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[1].replace('THREAD_LOCAL','thread_local'))
-	for i in xrange(4):
+	for i in xrange(5):
 		TargetFile.write(test_qualifiers[i+5].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+6))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[2].replace('THREAD_LOCAL','thread_local'))
-	for i in xrange(11):
-		TargetFile.write(test_qualifiers[i+9].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+10))+';\n')
+	for i in xrange(12):
+		TargetFile.write(test_qualifiers[i+10].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+11))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[3].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+20].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+21))+';\n')
+		TargetFile.write(test_qualifiers[i+22].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+23))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[4].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+30].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+31))+';\n')
+		TargetFile.write(test_qualifiers[i+32].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+33))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[5].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+40].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+41))+';\n')
+		TargetFile.write(test_qualifiers[i+42].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+43))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[6].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+68].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+69))+';\n')
+		TargetFile.write(test_qualifiers[i+70].replace('THREAD_LOCAL','thread_local')+' '+var_decl[dest_file](str(i+71))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write('// define-declares\n')
@@ -407,33 +499,33 @@ def SpawnTestCase3(dest_file):
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[1].replace('THREAD_LOCAL','thread_local'))
-	for i in xrange(4):
+	for i in xrange(5):
 		TargetFile.write(test_qualifiers[i+5].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+6))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[2].replace('THREAD_LOCAL','thread_local'))
-	for i in xrange(11):
-		TargetFile.write(test_qualifiers[i+9].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+10))+';\n')
+	for i in xrange(12):
+		TargetFile.write(test_qualifiers[i+10].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+11))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[3].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+20].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+21))+';\n')
+		TargetFile.write(test_qualifiers[i+22].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+23))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[4].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+30].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+31))+';\n')
+		TargetFile.write(test_qualifiers[i+32].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+33))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[5].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+40].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+41))+';\n')
+		TargetFile.write(test_qualifiers[i+42].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+43))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[6].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+68].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+69))+';\n')
+		TargetFile.write(test_qualifiers[i+70].replace('THREAD_LOCAL','thread_local')+' '+var_def[dest_file](str(i+71))+';\n')
 	TargetFile.write('\n')
 
 	# need: keyword suppression works in namespaces
@@ -446,33 +538,33 @@ def SpawnTestCase3(dest_file):
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[1].replace('THREAD_LOCAL','thread_local'))
-	for i in xrange(4):
+	for i in xrange(5):
 		TargetFile.write(test_qualifiers[i+5].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+6))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[2].replace('THREAD_LOCAL','thread_local'))
-	for i in xrange(11):
-		TargetFile.write(test_qualifiers[i+9].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+10))+';\n')
+	for i in xrange(12):
+		TargetFile.write(test_qualifiers[i+10].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+11))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[3].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+20].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+21))+';\n')
+		TargetFile.write(test_qualifiers[i+22].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+23))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[4].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(10):
-		TargetFile.write(test_qualifiers[i+30].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+31))+';\n')
+		TargetFile.write(test_qualifiers[i+32].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+33))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[5].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+40].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+41))+';\n')
+		TargetFile.write(test_qualifiers[i+42].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+43))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write(section_comments[6].replace('THREAD_LOCAL','thread_local'))
 	for i in xrange(28):
-		TargetFile.write(test_qualifiers[i+68].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+69))+';\n')
+		TargetFile.write(test_qualifiers[i+70].replace('THREAD_LOCAL','thread_local')+' '+var_decl_terse[dest_file](str(i+71))+';\n')
 	TargetFile.write('\n')
 
 	TargetFile.write('}	// end namespace test2\n')
