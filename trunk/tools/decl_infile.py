@@ -569,6 +569,106 @@ def SpawnTestCase3(dest_file):
 
 	TargetFile.write('}	// end namespace test2\n')
 
+#   this is only called for C++ test cases
+#	check ZCC compiler extensions
+	TargetFile.write('\n// check ZCC compiler extensions\n')
+	TargetFile.write('#if 9<=10000*__ZCC__+100*__ZCC_MINOR__+__ZCC_PATCHLEVEL__\n')
+
+	TargetFile.write('// the type names should have external linkage in C++\n')
+	TargetFile.write('static_assert(2==__zcc_linkage(good_test),"good_test has incorrect linkage");\n')
+	TargetFile.write('static_assert(2==__zcc_linkage(::good_test),"good_test has incorrect linkage");\n')
+	TargetFile.write('static_assert(2==__zcc_linkage(test::good_test),"good_test has incorrect linkage");\n')
+	TargetFile.write('static_assert(2==__zcc_linkage(::test::good_test),"good_test has incorrect linkage");\n')
+	TargetFile.write('static_assert(2==__zcc_linkage(test2::good_test),"good_test has incorrect linkage");\n')
+	TargetFile.write('static_assert(2==__zcc_linkage(::test2::good_test),"good_test has incorrect linkage");\n')
+	for i in xrange(5+5+12+10+10+28+18):
+		TargetFile.write('static_assert(2==__zcc_linkage(test::good_test'+str(i+1)+'),"good_test'+str(i+1)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::test::good_test'+str(i+1)+'),"good_test'+str(i+1)+' has incorrect linkage");\n')
+
+	TargetFile.write('\n// check external linkage of variables\n')	
+	for i in xrange(5):
+		TargetFile.write('static_assert(2==__zcc_linkage(x'+str(i+1)+'),"x'+str(i+1)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::x'+str(i+1)+'),"x'+str(i+1)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(test::x'+str(i+1)+'),"x'+str(i+1)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(test::x_'+str(i+1)+'),"x_'+str(i+1)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::test::x'+str(i+1)+'),"x'+str(i+1)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::test::x_'+str(i+1)+'),"x_'+str(i+1)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(test2::x'+str(i+1)+'),"x'+str(i+1)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::test2::x'+str(i+1)+'),"x'+str(i+1)+' has incorrect linkage");\n')
+
+	for i in xrange(6):
+		TargetFile.write('static_assert(2==__zcc_linkage(x'+str(i+11)+'),"x'+str(i+11)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::x'+str(i+11)+'),"x'+str(i+11)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(test::x'+str(i+11)+'),"x'+str(i+11)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(test::x_'+str(i+11)+'),"x_'+str(i+11)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::test::x'+str(i+11)+'),"x'+str(i+11)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::test::x_'+str(i+11)+'),"x_'+str(i+11)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(test2::x'+str(i+11)+'),"x'+str(i+11)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::test2::x'+str(i+11)+'),"x'+str(i+11)+' has incorrect linkage");\n')
+
+	for i in xrange(10):
+		TargetFile.write('static_assert(2==__zcc_linkage(x'+str(i+23)+'),"x'+str(i+23)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::x'+str(i+23)+'),"x'+str(i+23)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(test::x'+str(i+23)+'),"x'+str(i+23)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(test::x_'+str(i+23)+'),"x_'+str(i+23)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::test::x'+str(i+23)+'),"x'+str(i+23)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::test::x_'+str(i+23)+'),"x_'+str(i+23)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(test2::x'+str(i+23)+'),"x'+str(i+23)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::test2::x'+str(i+23)+'),"x'+str(i+23)+' has incorrect linkage");\n')
+
+	for i in xrange(28):
+		TargetFile.write('static_assert(2==__zcc_linkage(x'+str(i+43)+'),"x'+str(i+43)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::x'+str(i+43)+'),"x'+str(i+43)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(test::x'+str(i+43)+'),"x'+str(i+43)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(test::x_'+str(i+43)+'),"x_'+str(i+43)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::test::x'+str(i+43)+'),"x'+str(i+43)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::test::x_'+str(i+43)+'),"x_'+str(i+43)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(test2::x'+str(i+43)+'),"x'+str(i+43)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(2==__zcc_linkage(::test2::x'+str(i+43)+'),"x'+str(i+43)+' has incorrect linkage");\n')
+
+	TargetFile.write('\n// check internal linkage of variables\n')
+	for i in xrange(5):
+		TargetFile.write('static_assert(1==__zcc_linkage(x'+str(i+6)+'),"x'+str(i+6)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::x'+str(i+6)+'),"x'+str(i+6)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(test::x'+str(i+6)+'),"x'+str(i+6)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(test::x_'+str(i+6)+'),"x_'+str(i+6)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::test::x'+str(i+6)+'),"x'+str(i+6)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::test::x_'+str(i+6)+'),"x_'+str(i+6)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(test2::x'+str(i+6)+'),"x'+str(i+6)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::test2::x'+str(i+6)+'),"x'+str(i+6)+' has incorrect linkage");\n')
+
+	for i in xrange(6):
+		TargetFile.write('static_assert(1==__zcc_linkage(x'+str(i+17)+'),"x'+str(i+17)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::x'+str(i+17)+'),"x'+str(i+17)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(test::x'+str(i+17)+'),"x'+str(i+17)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(test::x_'+str(i+17)+'),"x_'+str(i+17)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::test::x'+str(i+17)+'),"x'+str(i+17)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::test::x_'+str(i+17)+'),"x_'+str(i+17)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(test2::x'+str(i+17)+'),"x'+str(i+17)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::test2::x'+str(i+17)+'),"x'+str(i+17)+' has incorrect linkage");\n')
+
+	for i in xrange(10):
+		TargetFile.write('static_assert(1==__zcc_linkage(x'+str(i+33)+'),"x'+str(i+33)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::x'+str(i+33)+'),"x'+str(i+33)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(test::x'+str(i+33)+'),"x'+str(i+33)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(test::x_'+str(i+33)+'),"x_'+str(i+33)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::test::x'+str(i+33)+'),"x'+str(i+33)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::test::x_'+str(i+33)+'),"x_'+str(i+33)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(test2::x'+str(i+33)+'),"x'+str(i+33)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::test2::x'+str(i+33)+'),"x'+str(i+33)+' has incorrect linkage");\n')
+
+	for i in xrange(28):
+		TargetFile.write('static_assert(1==__zcc_linkage(x'+str(i+71)+'),"x'+str(i+71)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::x'+str(i+71)+'),"x'+str(i+71)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(test::x'+str(i+71)+'),"x'+str(i+71)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(test::x_'+str(i+71)+'),"x_'+str(i+71)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::test::x'+str(i+71)+'),"x'+str(i+71)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::test::x_'+str(i+71)+'),"x_'+str(i+71)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(test2::x'+str(i+71)+'),"x'+str(i+71)+' has incorrect linkage");\n')
+		TargetFile.write('static_assert(1==__zcc_linkage(::test2::x'+str(i+71)+'),"x'+str(i+71)+' has incorrect linkage");\n')
+
+	TargetFile.write('#endif\n')
+
 	TargetFile.close()
 
 if __name__ == '__main__':
