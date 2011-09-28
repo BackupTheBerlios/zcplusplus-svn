@@ -11119,7 +11119,7 @@ static void CPP_notice_scope_glue(parse_tree& src)
 		{
 		if (robust_token_is_string<2>(src.data<0>()[i],"::"))
 			{
-			const bool is_global = (0<i) && !CPP_ok_for_toplevel_qualified_name(src.data<0>()[i-1]);
+			const bool is_global = 0==i || !CPP_ok_for_toplevel_qualified_name(src.data<0>()[i-1]);
 			size_t resize_to = src.data<0>()[i].index_tokens[0].token.second;
 			size_t forward_span = 0;
 			bool last_scope = true;
