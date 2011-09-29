@@ -68,24 +68,22 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 		Token<char>& tmp_front = *TokenList.front();
 		lang.line_lex(tmp_front.data(), tmp_front.size(), pretokenized);
 
-		// handle unused relay keywords here
-		if (!pretokenized.empty())
+		// handle unused C preprocessor relay keywords here
+		if (!pretokenized.empty()
+			&& (Lang::C==lang_code || Lang::CPlusPlus==lang_code))
 			{
 			size_t i = pretokenized.size();
-			if (Lang::C==lang_code || Lang::CPlusPlus==lang_code)
-				do	{
-					--i;
-					const errr Idx = linear_find(tmp_front.data()+pretokenized[i].first, pretokenized[i].second,pragma_relay_keywords,PRAGMA_RELAY_KEYWORDS_STRICT_UB);
-					if (0<=Idx)
-						{	// permit any relay keywords that actually mean anything here
-						bool blacklist = true;
-						// allow #include <typeinfo> to turn off context-free syntax errors for typeid
-						if (RELAY_ZCC_ENABLE_TYPEID==Idx && Lang::CPlusPlus==lang_code) blacklist = false;
-						if (blacklist) pretokenized.DeleteIdx(i);
-						continue;			
-						}
-					}
-				while(0<i);
+			do	{
+				--i;
+				const errr Idx = linear_find(tmp_front.data()+pretokenized[i].first, pretokenized[i].second,pragma_relay_keywords,PRAGMA_RELAY_KEYWORDS_STRICT_UB);
+				if (0>Idx) continue;
+				// permit any relay keywords that actually mean anything here
+				bool blacklist = true;
+				// allow #include <typeinfo> to turn off context-free syntax errors for typeid
+				if (RELAY_ZCC_ENABLE_TYPEID==Idx && Lang::CPlusPlus==lang_code) blacklist = false;
+				if (blacklist) pretokenized.DeleteIdx(i);
+				}
+			while(0<i);
 			}
 
 		if (!pretokenized.empty())
@@ -183,17 +181,14 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 }
 
 void ZParser::debug_to_stderr(const autovalarray_ptr<parse_tree*>& x) const
-{
-	// need whitespace tokens here to force pretty-printing
-	if (debug_mode)
+{	// need whitespace tokens here to force pretty-printing
+	if (!debug_mode) return;
+	autovalarray_ptr<parse_tree*>::const_iterator iter = x.begin();
+	autovalarray_ptr<parse_tree*>::const_iterator const iter_end = x.end();
+	while(iter!=iter_end)
 		{
-		const size_t list_size = x.size();
-		size_t i = 0;
-		while(i<list_size)
-			{
-			assert(NULL!=x[i]);
-			INFORM(*x[i++]);
-			};
+		assert(!*iter);
+		INFORM(**(iter++));
 		};
 }
 
