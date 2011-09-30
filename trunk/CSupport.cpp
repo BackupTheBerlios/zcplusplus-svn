@@ -3120,15 +3120,13 @@ BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>
 static void simple_error(parse_tree& src, const char* const err_str)
 {
 	assert(err_str && *err_str);
-	if (!(parse_tree::INVALID & src.flags))
-		{
-		src.flags |= parse_tree::INVALID;
-		message_header(src.index_tokens[0]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM(src);
-		INFORM(err_str);
-		zcc_errors.inc_error();
-		};
+	if (parse_tree::INVALID & src.flags) return;
+	src.flags |= parse_tree::INVALID;
+	message_header(src.index_tokens[0]);
+	INC_INFORM(ERR_STR);
+	INC_INFORM(src);
+	INFORM(err_str);
+	zcc_errors.inc_error();
 }
 
 /* deal with following type catalog
@@ -6832,8 +6830,7 @@ static bool eval_C99_CPP_sizeof(parse_tree& src,const type_system& types, func_t
 
 static size_t _C99_failover_sizeof(parse_tree& src,const type_system& types)
 {
-	const enum_def* const tmp = types.get_enum_def(src.data<2>()->type_code.base_type_index);
-	if (tmp)
+	if (const enum_def* const tmp = types.get_enum_def(src.data<2>()->type_code.base_type_index))
 		{
 		if (0==src.data<2>()->type_code.pointer_power && is_noticed_enumerator(src,types))
 			return _eval_sizeof_core_type(C_TYPE::INT); // type is int per C99 6.7.2.2p3
@@ -6861,8 +6858,7 @@ static size_t _CPP_failover_sizeof(parse_tree& src,const type_system& types)
 {
 	if (C_TYPE::WCHAR_T==src.data<2>()->type_code.base_type_index)
 		return _eval_sizeof_core_type(unsigned_type_from_machine_type(target_machine->UNICODE_wchar_t()));
-	const enum_def* const tmp = types.get_enum_def(src.data<2>()->type_code.base_type_index);
-	if (tmp)
+	if (const enum_def* const tmp = types.get_enum_def(src.data<2>()->type_code.base_type_index))
 		{
 		if (0==src.data<2>()->type_code.pointer_power && is_noticed_enumerator(*src.data<2>(),types))
 			{
@@ -11750,8 +11746,7 @@ static void conserve_tokens(parse_tree& x)
 {
 	if (x.own_index_token<0>())
 		{
-		const char* const tmp = is_substring_registered(x.index_tokens[0].token.first,x.index_tokens[0].token.second);
-		if (tmp)
+		if (const char* const tmp = is_substring_registered(x.index_tokens[0].token.first,x.index_tokens[0].token.second))
 			{
 			assert(tmp!=x.index_tokens[0].token.first);
 			free(const_cast<char*>(x.index_tokens[0].token.first));
@@ -11761,8 +11756,7 @@ static void conserve_tokens(parse_tree& x)
 		}
 	if (x.own_index_token<1>())
 		{
-		const char* const tmp = is_substring_registered(x.index_tokens[1].token.first,x.index_tokens[1].token.second);
-		if (tmp)
+		if (const char* const tmp = is_substring_registered(x.index_tokens[1].token.first,x.index_tokens[1].token.second))
 			{
 			assert(tmp!=x.index_tokens[1].token.first);
 			free(const_cast<char*>(x.index_tokens[1].token.first));

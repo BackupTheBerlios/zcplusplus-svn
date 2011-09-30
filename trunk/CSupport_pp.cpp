@@ -2890,15 +2890,13 @@ BOOST_STATIC_ASSERT(sizeof(lex_flags)*CHAR_BIT-parse_tree::PREDEFINED_STRICT_UB>
 static void simple_error(parse_tree& src, const char* const err_str)
 {
 	assert(err_str && *err_str);
-	if (!(parse_tree::INVALID & src.flags))
-		{
-		src.flags |= parse_tree::INVALID;
-		message_header(src.index_tokens[0]);
-		INC_INFORM(ERR_STR);
-		INC_INFORM(src);
-		INFORM(err_str);
-		zcc_errors.inc_error();
-		};
+	if (parse_tree::INVALID & src.flags) return;
+	src.flags |= parse_tree::INVALID;
+	message_header(src.index_tokens[0]);
+	INC_INFORM(ERR_STR);
+	INC_INFORM(src);
+	INFORM(err_str);
+	zcc_errors.inc_error();
 }
 
 //! \todo generalize -- function pointer parameter target, functor target
