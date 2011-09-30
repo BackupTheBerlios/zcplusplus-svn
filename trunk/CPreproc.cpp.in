@@ -761,12 +761,7 @@ bool CPreprocessor::preprocess(autovalarray_ptr<Token<char>* >& TokenList)
 	die_on_pp_errors();
 	if (TokenList.empty())
 		{	//! \todo make this more efficient by providing a global flush-all
-		const char* atom_string = string_from_index(0);
-		while(NULL!=atom_string)
-			{
-			deregister_index(0);
-			atom_string = string_from_index(0);
-			};
+		while(string_from_index(0)) deregister_index(0);
 		return true;
 		}
 
@@ -797,8 +792,7 @@ bool CPreprocessor::preprocess(autovalarray_ptr<Token<char>* >& TokenList)
 	// check for unused atomic strings
 	{
 	size_t x = 0;
-	const char* atom_string = string_from_index(x);
-	while(NULL!=atom_string)
+	while(const char* atom_string = string_from_index(x))
 		{
 		bool string_used = false;
 		i = TokenList.size();
@@ -813,7 +807,6 @@ bool CPreprocessor::preprocess(autovalarray_ptr<Token<char>* >& TokenList)
 			++x;
 		else
 			deregister_index(x);
-		atom_string = string_from_index(x);
 		};
 	}
 	return true;
@@ -3126,6 +3119,7 @@ CPreprocessor::if_elif_syntax_ok(Token<char>& x, const autovalarray_ptr<char*>& 
 	// if we went invalid do not proceed further
 	if (x.flags & INVALID_DIRECTIVE_FLAG) return false;
 
+	// Hmm...intradirective_flush_identifiers_to_zero already called, this is redundant?
 	intradirective_flush_identifiers_to_zero(x,valid_directives[if_directive].second+2);
 
 	// ZCC should actually calculate the control expression completely to 0/1  Error reporting for this isn't particularly compatible with destructive-evaluate.
@@ -3875,18 +3869,16 @@ CPreprocessor::dynamic_function_macro_prereplace_once(const autovalarray_ptr<cha
 
 static void _complete_string_character_literal_define(Token<char>& x, const Token<char>& src, size_t critical_offset, size_t first_token_len,const char delim, const char* const end_error)
 {
-	if (delim!=x.back())
-		{
-		message_header(src);
-		INC_INFORM(ERR_STR);
-		INC_INFORM("#define ");
-		INC_INFORM(src.data()+critical_offset,first_token_len);
-		INC_INFORM(" ends in an unterminated");
-		if ('L'==x.front()) INC_INFORM(" wide");
-		INFORM(end_error);
-		zcc_errors.inc_error();
-		x.append(delim);
-		}
+	if (delim==x.back()) return;
+	message_header(src);
+	INC_INFORM(ERR_STR);
+	INC_INFORM("#define ");
+	INC_INFORM(src.data()+critical_offset,first_token_len);
+	INC_INFORM(" ends in an unterminated");
+	if ('L'==x.front()) INC_INFORM(" wide");
+	INFORM(end_error);
+	zcc_errors.inc_error();
+	x.append(delim);
 }
 
 /*! 
@@ -4004,75 +3996,73 @@ void CPreprocessor::die_on_pp_errors() const
 void
 CPreprocessor::debug_to_stderr(const autovalarray_ptr<Token<char>* >& TokenList,const autovalarray_ptr<char*>& macros_object, const autovalarray_ptr<Token<char>*>& macros_object_expansion, const autovalarray_ptr<char*>& macros_function, const autovalarray_ptr<Token<char>*>& macros_function_arglist, const autovalarray_ptr<Token<char>*>& macros_function_expansion,const autovalarray_ptr<char*>& locked_macros) const
 {	// need whitespace tokens here to force pretty-printing
-	if (debug_mode)
+	if (!debug_mode) return;
+	const size_t list_size = TokenList.size();
+	size_t i = 0;
+	while(i<list_size)
 		{
-		const size_t list_size = TokenList.size();
-		size_t i = 0;
-		while(i<list_size)
-			{
-			if (0<i && TokenList[i-1]->logical_line.first==TokenList[i]->logical_line.first && !strcmp(TokenList[i-1]->src_filename,TokenList[i]->src_filename) && lang.require_padding(TokenList[i-1]->back(),TokenList[i]->front()))
-				INC_INFORM(' ');
+		if (0<i && TokenList[i-1]->logical_line.first==TokenList[i]->logical_line.first && !strcmp(TokenList[i-1]->src_filename,TokenList[i]->src_filename) && lang.require_padding(TokenList[i-1]->back(),TokenList[i]->front()))
+			INC_INFORM(' ');
 
-			if (list_size<=i+1 || TokenList[i]->logical_line.first!=TokenList[i+1]->logical_line.first || strcmp(TokenList[i]->src_filename,TokenList[i+1]->src_filename))
-				INFORM(TokenList[i]->data());
-			else
-				INC_INFORM(TokenList[i]->data());
-			++i;
-			};
-		// dump macros and locked macros
-		INC_INFORM("#define __DATE__ ");
-		INFORM(date_buffer);
-		INC_INFORM("#define __TIME__ ");
-		INFORM(time_buffer);
-		INC_INFORM("#define __TIMESTAMP__ ");
-		INFORM(time_date_buffer);
-		i = 7;
-		while(i<macro_identifier_default_count)
+		if (list_size<=i+1 || TokenList[i]->logical_line.first!=TokenList[i+1]->logical_line.first || strcmp(TokenList[i]->src_filename,TokenList[i+1]->src_filename))
+			INFORM(TokenList[i]->data());
+		else
+			INC_INFORM(TokenList[i]->data());
+		++i;
+		};
+	// dump macros and locked macros
+	INC_INFORM("#define __DATE__ ");
+	INFORM(date_buffer);
+	INC_INFORM("#define __TIME__ ");
+	INFORM(time_buffer);
+	INC_INFORM("#define __TIMESTAMP__ ");
+	INFORM(time_date_buffer);
+	i = 7;
+	while(i<macro_identifier_default_count)
+		{
+		INC_INFORM("#define ");
+		INC_INFORM(macro_identifier_default[i].first);
+		INC_INFORM(" ");
+		INFORM(macro_identifier_default[i].second);
+		++i;
+		};
+	const size_t object_macro_size = macros_object.size();
+	i = 0;
+	while(i<object_macro_size)
+		{
+		INC_INFORM("#define ");
+		INC_INFORM(macros_object[i]);
+		if (macros_object_expansion[i])
 			{
-			INC_INFORM("#define ");
-			INC_INFORM(macro_identifier_default[i].first);
 			INC_INFORM(" ");
-			INFORM(macro_identifier_default[i].second);
-			++i;
-			};
-		const size_t object_macro_size = macros_object.size();
-		i = 0;
-		while(i<object_macro_size)
-			{
-			INC_INFORM("#define ");
-			INC_INFORM(macros_object[i]);
-			if (macros_object_expansion[i])
-				{
-				INC_INFORM(" ");
-				INFORM(macros_object_expansion[i]->data());
-				}
-			else
-				INC_INFORM("\n");
-			++i;
+			INFORM(macros_object_expansion[i]->data());
 			}
-		const size_t function_macro_size = macros_function.size();
-		i = 0;
-		while(i<function_macro_size)
+		else
+			INC_INFORM("\n");
+		++i;
+		}
+	const size_t function_macro_size = macros_function.size();
+	i = 0;
+	while(i<function_macro_size)
+		{
+		INC_INFORM("#define ");
+		INC_INFORM(macros_function[i]);
+		INC_INFORM(macros_function_arglist[i]->data());
+		if (macros_function_expansion[i])
 			{
-			INC_INFORM("#define ");
-			INC_INFORM(macros_function[i]);
-			INC_INFORM(macros_function_arglist[i]->data());
-			if (macros_function_expansion[i])
-				{
-				INC_INFORM(" ");
-				INFORM(macros_function_expansion[i]->data());
-				}
-			else
-				INC_INFORM("\n");
-			++i;
+			INC_INFORM(" ");
+			INFORM(macros_function_expansion[i]->data());
 			}
-		const size_t locked_macro_size = locked_macros.size();
-		i = 0;
-		while(i<locked_macro_size)
-			{
-			INC_INFORM("#pragma ZCC lock ");
-			INFORM(locked_macros[i++]);
-			}
+		else
+			INC_INFORM("\n");
+		++i;
+		}
+	const size_t locked_macro_size = locked_macros.size();
+	i = 0;
+	while(i<locked_macro_size)
+		{
+		INC_INFORM("#pragma ZCC lock ");
+		INFORM(locked_macros[i++]);
 		};
 }
 
@@ -4523,7 +4513,6 @@ CPreprocessor::flush_bad_stringize(Token<char>& x, const Token<char>& arglist)
 	if (lang.line_lex_find(x.data(),x.size(),"#",sizeof("#")-1,pretokenized) || lang.line_lex_find(x.data(),x.size(),"%:",sizeof("%:")-1,pretokenized))
 		{
 		size_t i = 0;
-		bool created_ws = false;
 		while(pretokenized.size()-1>i)
 			{
 			if (detect_C_stringize_op(x.data()+pretokenized[i].first,pretokenized[i].second))
@@ -4536,7 +4525,6 @@ CPreprocessor::flush_bad_stringize(Token<char>& x, const Token<char>& arglist)
 					zcc_errors.inc_error();
 					memset(x.c_array()+pretokenized[i].first,' ',pretokenized[i].second);
 					pretokenized.DeleteIdx(i);
-					created_ws = true;
 					continue;
 					}
 				if (   C_TESTFLAG_IDENTIFIER!=pretokenized[i+1].third
@@ -4548,7 +4536,6 @@ CPreprocessor::flush_bad_stringize(Token<char>& x, const Token<char>& arglist)
 					zcc_errors.inc_error();
 					memset(x.c_array()+pretokenized[i].first,' ',pretokenized[i].second);
 					pretokenized.DeleteIdx(i);
-					created_ws = true;
 					continue;
 					}
 				}
