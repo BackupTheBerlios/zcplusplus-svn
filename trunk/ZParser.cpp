@@ -14,6 +14,7 @@
 #include "type_system.hpp"
 
 #include "Zaimoni.STL/AutoPtr.hpp"
+#include "Zaimoni.STL/Perl_localize.hpp"
 #include "Zaimoni.STL/search.hpp"
 #include "Zaimoni.STL/LexParse/LangConf.hpp"
 #include "Zaimoni.STL/LexParse/Token.hpp"
@@ -100,18 +101,19 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 #endif
 				};
 			if (!ParsedList[0]->resize<0>(old_parsed_size+append_tokens)) throw std::bad_alloc();
+			{
+			// XXX optimized for preprocessor -- should actually be its own hook
+			// disable pedantic warnings to avoid fake warnings about string literals
+			const zaimoni::Perl::localize<bool> pedantic_backup(bool_options[boolopt::pedantic],false);				
 			// error the illegal preprocessing tokens here, not in CPreprocessor
-			i = pretokenized.size();
-			do	{
-				--i;
-				// XXX optimized for preprocessor -- should actually be its own hook
-				// disable pedantic warnings to avoid fake warnings about string literals
-				const bool pedantic_backup = bool_options[boolopt::pedantic];
-				bool_options[boolopt::pedantic] = false;
-				lang.pp_support->AddPostLexFlags(tmp_front.data()+pretokenized[i].first, pretokenized[i].second, pretokenized[i].third, tmp_front.src_filename, tmp_front.original_line.first);
-				bool_options[boolopt::pedantic] = pedantic_backup;
-				if (	(C_TESTFLAG_PP_OP_PUNC & pretokenized[i].third)
-					&& 	(C_DISALLOW_POSTPROCESSED_SOURCE & lang.pp_support->GetPPOpPuncFlags(C_PP_DECODE(pretokenized[i].third))))
+			const autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >::iterator iter_begin = pretokenized.begin();
+			autovalarray_ptr<POD_triple<size_t,size_t,lex_flags> >::iterator iter = pretokenized.end();
+			while(iter_begin!=iter)
+				{
+				--iter;
+				lang.pp_support->AddPostLexFlags(tmp_front.data()+iter->first, iter->second, iter->third, tmp_front.src_filename, tmp_front.original_line.first);
+				if (	(C_TESTFLAG_PP_OP_PUNC & iter->third)
+					&& 	(C_DISALLOW_POSTPROCESSED_SOURCE & lang.pp_support->GetPPOpPuncFlags(C_PP_DECODE(iter->third))))
 					{
 					INC_INFORM(tmp_front.src_filename);
 					INC_INFORM(':');
@@ -119,13 +121,13 @@ bool ZParser::parse(autovalarray_ptr<Token<char>*>& TokenList,autovalarray_ptr<p
 					INC_INFORM(": ");
 					INC_INFORM(ERR_STR);
 					INC_INFORM("Forbidden token ");
-					INC_INFORM(tmp_front.data()+pretokenized[i].first, pretokenized[i].second);
+					INC_INFORM(tmp_front.data()+iter->first, iter->second);
 					INFORM(" in postprocessed source.");
 					zcc_errors.inc_error();
 					};
 				}
-			while(0<i);
-
+			}
+			
 			if (1==append_tokens)
 				{	// only one token: grab the memory from Token and just do it
 				tmp_front.ltrim(pretokenized[0].first);
