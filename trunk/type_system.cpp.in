@@ -792,7 +792,7 @@ const char* type_system::construct_canonical_name_and_aliasing_CPP(const char* c
 	assert(strncmp(active_namespace,"::",2));
 	// check for whether we already are aliased
 	const char* retval = canonical_name_is_inline_namespace_alias_target(name,name_len,active_namespace,active_namespace_len,"::",2);
-	if (NULL!=retval) return retval;
+	if (retval) return retval;
 
 	// canonical name is simply active_namespace::name
 	zaimoni::autoval_ptr<char> retval_tmp;
@@ -839,8 +839,7 @@ const char* type_system::construct_canonical_name_and_aliasing_CPP(const char* c
 			throw;
 			}
 
-		retval = register_string(retval_tmp);	//! \todo would prefer to consume the string; changes reset() to NULLPtr() to be safe
-		retval_tmp.reset();
+		retval = consume_string(retval_tmp.release());
 		/* do a downward insertsort against the second index*/
 		while(origin2 && 1==strcmp(inline_namespace_alias_targets.c_array()[origin2-1],retval))
 			{
@@ -876,11 +875,7 @@ const char* type_system::construct_canonical_name_and_aliasing_CPP(const char* c
 			}
 		}
 
-	if (!retval)
-		{
-		retval = register_string(retval_tmp);	//! \todo would prefer to consume the string; changes reset() to NULLPtr() to be safe
-		retval_tmp.reset();
-		};
+	if (!retval) retval = consume_string(retval_tmp.release());
 	return retval;	// return the canonical name
 }
 

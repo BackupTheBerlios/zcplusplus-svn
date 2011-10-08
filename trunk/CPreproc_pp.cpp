@@ -4147,7 +4147,7 @@ CPreprocessor::use_line_directive_and_discard(autovalarray_ptr<Token<char>* >& T
 			else{
 				autovalarray_ptr_throws<char> tmp(escape_length);
 				lang.UnescapeString(tmp.c_array(),TokenList[i]->data()+critical_offset+1,second_token_len-2);
-				new_FILE = register_string(tmp.data());
+				new_FILE = consume_string(tmp.release());
 				}
 			}
 		else

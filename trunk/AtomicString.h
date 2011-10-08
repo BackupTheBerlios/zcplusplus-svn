@@ -19,6 +19,15 @@ const char* register_string(const char* const x);
 /*! 
  * Returns strings meant to be weak pointers safe to use through the end of the program.
  * 
+ * \param x pointer to a dynamically allocated string to be registered.  Ownership is taken.  
+ * 
+ * \return const char* pointer to registered string safe to pin indefinitely (invokes Zaimoni.STL _fatal rather than return NULL)
+ */
+const char* consume_string(char* const x);
+
+/*! 
+ * Returns strings meant to be weak pointers safe to use through the end of the program.
+ * 
  * \param x substring to be registered
  * \param x_len length of substring to be registered
  * 

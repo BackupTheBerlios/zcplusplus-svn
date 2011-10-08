@@ -115,6 +115,36 @@ EXTERN_C const char* register_string(const char* const x)
 	return string_cache[LB];
 }
 
+EXTERN_C const char* consume_string(char* const x)
+{
+	if (!x || !*x) return NULL;
+	size_t LB = 0;
+	size_t StrictUB = string_cache_size;
+	while(LB<StrictUB)
+		{
+		const size_t midpoint = LB + (StrictUB-LB)/2;
+		const int test = strcmp(x,string_cache[midpoint]);
+		if (0==test)
+			{
+			free(x);
+			return string_cache[midpoint];
+			}
+		if (0<test)
+			LB = midpoint+1;
+		else
+			StrictUB = midpoint;
+		};
+	char** Tmp = reinterpret_cast<char**>(realloc(string_cache,sizeof(char*)*(string_cache_size+1)));
+	if (!Tmp) _fatal(RAM_FAIL);
+	string_cache = Tmp;
+	if (string_cache_size>LB+1) memmove(string_cache+LB+1,string_cache+LB,sizeof(char*)*(string_cache_size-(LB+1)));
+	string_cache[LB] = x;
+#ifdef ZAIMONI_FORCE_ISO
+	++string_cache_size;
+#endif
+	return string_cache[LB];
+}
+
 EXTERN_C const char* is_string_registered(const char* const x)
 {
 	if (NULL==x) return NULL;
